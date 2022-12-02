@@ -5,4 +5,5 @@
 :caption: Contents
 
 ./overview.md
+./schema.md
 ```
