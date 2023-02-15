@@ -5,5 +5,6 @@
 :caption: Contents
 
 ./overview.md
+./known-challenges.md
 ./schema.md
 ```
