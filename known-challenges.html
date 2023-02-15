@@ -288,6 +288,23 @@ is still padded.  Meanwhile, for strings and bytestrings, the computation is
 instead <code class="docutils literal notranslate"><span class="pre">keccak(p.keccak(k))</span></code> (again with no padding on <code class="docutils literal notranslate"><span class="pre">k</span></code>).  There will need
 to be a way to specify this additional complexity.</p>
 </section>
+<section id="markings-for-mapping-keys">
+<h2>Markings for mapping keys<a class="headerlink" href="#markings-for-mapping-keys" title="Permalink to this heading">#</a></h2>
+<p>The problem of keeping track of mapping keys is worth discussing separately.</p>
+<p>Mappings do not keep track of their keys; as such, it is up to the debugger to
+keep track of mapping keys touched in a given transaction.  This will require
+some kind of markings.</p>
+<p>Truffle Debugger currently handles this by using the AST and determining what
+value on the stack corresponds to the key specified for a given mapping access.
+However, this process is complex and requires several workarounds for unusual
+cases.  While presumably markings could be devised that allow this process to
+work in more generality, it’s not clear that it’s actually a good solution.</p>
+<p>An alternate approach, suggested some time ago by Nomic Labs, would be to have
+markings applied to the SHA3 instructions that hash key/slot combinations.
+However, in the case of Vyper, for strings and bytestrings, one would presumably
+also need to separately (and differently) mark the SHA3 instruction where the
+string or bytestring is pre-hashed, prior to the main hashing.</p>
+</section>
 <section id="the-use-of-pointers-in-or-to-calldata">
 <h2>The use of pointers in or to calldata<a class="headerlink" href="#the-use-of-pointers-in-or-to-calldata" title="Permalink to this heading">#</a></h2>
 <p>In Solidity’s ABI encoding format (used also by Vyper), which is necessarily
@@ -400,6 +417,7 @@ Solidity or Vyper.</p>
 <li><a class="reference internal" href="#the-use-of-hash-based-locations">The use of hash-based locations</a></li>
 <li><a class="reference internal" href="#solidity-s-two-case-string-storage">Solidity’s two-case string storage</a></li>
 <li><a class="reference internal" href="#mappings">Mappings</a></li>
+<li><a class="reference internal" href="#markings-for-mapping-keys">Markings for mapping keys</a></li>
 <li><a class="reference internal" href="#the-use-of-pointers-in-or-to-calldata">The use of pointers in or to calldata</a></li>
 <li><a class="reference internal" href="#internal-function-pointers">Internal function pointers</a></li>
 <li><a class="reference internal" href="#lack-of-fixed-variable-locations-on-the-stack">Lack of fixed variable locations on the stack</a></li>
