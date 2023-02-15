@@ -104,26 +104,6 @@ is still padded.  Meanwhile, for strings and bytestrings, the computation is
 instead `keccak(p.keccak(k))` (again with no padding on `k`).  There will need
 to be a way to specify this additional complexity.
 
-## Markings for mapping keys
-
-The problem of keeping track of mapping keys is worth discussing separately.
-
-Mappings do not keep track of their keys; as such, it is up to the debugger to
-keep track of mapping keys touched in a given transaction.  This will require
-some kind of markings.
-
-Truffle Debugger currently handles this by using the AST and determining what
-value on the stack corresponds to the key specified for a given mapping access.
-However, this process is complex and requires several workarounds for unusual
-cases.  While presumably markings could be devised that allow this process to
-work in more generality, it's not clear that it's actually a good solution.
-
-An alternate approach, suggested some time ago by Nomic Labs, would be to have
-markings applied to the SHA3 instructions that hash key/slot combinations.
-However, in the case of Vyper, for strings and bytestrings, one would presumbly
-also need to separately (and differently) mark the SHA3 instruction where the
-string or bytestring is pre-hashed, prior to the main hashing.
-
 ## The use of pointers in or to calldata
 
 In Solidity's ABI encoding format (used also by Vyper), which is necessarily
