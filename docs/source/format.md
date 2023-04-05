@@ -1,5 +1,8 @@
 # Debug Format Prototype
 
+## Status of this document
+This is an initial draft for review and comment. It does not have consensus and should only be cited as work in progress.
+
 ## Scope of this Document
 
 This document proposes a "general" shape of the ultimate debugging format to be decided upon
@@ -89,6 +92,8 @@ and indeed, they will likely reference the types defined here. However, as event
 first class in any language targeting the EVM that I'm aware of (i.e., you cannot declare a variable `x` to be of
 type `error Foo()`) they should be described elsewhere.
 
+**Notes**: some preference was expressed for `kind` over `sort`. In addition,it was suggested we use `pointer` or `reference` over `located`.
+
 #### Mappings
 
 The type descriptor for a mapping type has the following additional fields defined.
@@ -100,6 +105,7 @@ The type descriptor for a mapping type has the following additional fields defin
 The type descriptor for a primitive has the following additional fields:
 * `keyword`: the source keyword for the type. Examples include `uint256`, `boolean` etc.
 * `bitwidth`: the maximum number of bits a value of this type may occupy
+* `alignment`: one of `high` / `low`, indicating if the bits occur in the most significant bits (`high`) or least significant bits (`low`) of 256-bit EVM word.
 
 **Discussion**: The bitwidth field is an initial attempt to come up with some language agnostic way to
 describe primitive types. It is expected that further fields may be added, or perhaps the Primitive sort
