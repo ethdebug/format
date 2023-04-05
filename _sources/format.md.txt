@@ -1,0 +1,325 @@
+# Debug Format Prototype
+
+## Status of this document
+This is an initial draft for review and comment. It does not have consensus and should only be cited as work in progress.
+
+## Scope of this Document
+
+This document proposes a "general" shape of the ultimate debugging format to be decided upon
+by the ethdebug working group. As such, it does not aim to be a complete formal specification
+of a JSON format that is expected to cover every single case. Rather, it aims to provide a basis
+from which a fully formal specification will be developed based on discussions generated around
+this document.
+
+Under this vague scope, it is worth noting some non-goals. This document is describes a debug
+format for EVM bytecode; support for other VMs is at least initially out of scope. In addition,
+this proposal is necessarily geared towards the state of the Solidity/Vyper languages as they
+exist now. It cannot (and will not) account for any possible future changes to the source language
+(Solidity, Vyper, etc.); rather, any significant changes to source languages/target VMs
+that require fundamental extensions to this format should be developed as needed and gated
+with a versioning scheme.
+
+## Goals of this Format
+
+Before describing the format, it is useful to lay out the information that this initial proposal is
+attempting to provide to end-users of the format. Extensions to this format to support other use
+cases not explicitly identified here are expected.
+
+### Local Variable Information
+
+Currently decompilers and formal methods tools must use interally generated names to give names to
+the values stored on the stack. The debugging format should provide information about what stack slots correspond
+to which source level identifiers.
+
+### Type Information
+
+The EVM has one "type": a 256-bit word. Source languages that compile to the EVM have richer type information
+which can  aid in debugging and fuzzing; for example, the counterexample generation used by the Certora prover
+could use type information to pretty print values according to their high-level type.
+
+### Jump Resolution
+
+The EVM allows jumping to an arbitrary values on the stack (subject to the restriction that the destination has a corresponding JUMPDEST opcode).
+This makes construction of a static control flow graph challenging (albeit not impossible). The format should provide reasonable hints
+about possible targets of jump commands.
+
+### Internal Function Calls
+
+The EVM has no built-in concept of internal functions. Rather, Solidity internal function implementations are placed at some offset in the
+contract's bytecode, and callers jump to this predetermined location, passing arguments on the stack along with the return location (this is
+one possible complication when attempting to statically resolving jump destinations).
+
+Statically detecting these internal calls and informing an end-user can be surprisingly complicated.
+For example, the Solidity compiler will in some cases perform a "tail-call" optimization: for nested calls like `f(g(x))`
+the compiler will push the entry point of `f` as the return address for the call to `g`. The format should
+help explicitly identify the targets of internal function calls and what arguments are being passed on the stack.
+
+## The Format
+
+The format will be JSON so that it may be included in the standard input/output APIs that the Vyper and Solidity compilers support.
+
+### Top Level
+
+The "top-level" artifact of the debug format will be a JSON dictionary with (at least) the following fields:
+
+* `version`: A representation of the major/minor version of the format. The actual representation of this version (a string, an array, etc.) can be decided later.
+* `types`: An array describing the layout of user-defined types defined in contracts referenced during compilation (see below).
+* `bytecode`: Debug information about the bytecode output by the compiler.
+
+### Type Descriptions
+
+When describing user defined types in contracts or describing the types of values on the stack, the format
+will use `type descriptors` to describe the type in question. There is one type descriptor per type in the
+source language. Each descriptor is a JSON object with at least the following fields:
+
+* `id`: a unique numeric id. This may be referenced by type descriptors for aggregate types (arrays, structs, etc.)
+* `sort`: A string representing the sort of the type. Possible values include:
+  * `"mapping"` for a dynamic mapping from a key type to a value type
+  * `"primitive"` built in primitive type
+  * `"array"` for a homogeneous dynamic array of bounded/unbounded size
+  * `"static_array"` for homogeneous static arrays
+  * `"struct"` for user defined aggregate struct types
+  * `"enum"` user defined enumeration types
+  * `"contract"` a refinement of an address primitive with information about the contract deployed at the address
+  * `"alias"` a user defined alias for some type
+  * `"located"` a reference to another type with a data location attached
+* `label`: a (not necessarily human-readable) string representation of the type. Expected to be used for debugging
+
+Depending on the value of `sort` the type descriptor will have additional fields.
+
+**Discussion** The types here do *not* include events or errors. These can be described elsewhere in the format,
+and indeed, they will likely reference the types defined here. However, as events and errors are not currently
+first class in any language targeting the EVM that I'm aware of (i.e., you cannot declare a variable `x` to be of
+type `error Foo()`) they should be described elsewhere.
+
+**Notes**: some preference was expressed for `kind` over `sort`. In addition,it was suggested we use `pointer` or `reference` over `located`.
+
+#### Mappings
+
+The type descriptor for a mapping type has the following additional fields defined.
+* `keyType`: contains the `id` of the type that is the domain of the mapping.
+* `valueType`: contains the `id` of the type that is the codomain of the mapping.
+
+#### Primitives
+
+The type descriptor for a primitive has the following additional fields:
+* `keyword`: the source keyword for the type. Examples include `uint256`, `boolean` etc.
+* `bitwidth`: the maximum number of bits a value of this type may occupy
+* `alignment`: one of `high` / `low`, indicating if the bits occur in the most significant bits (`high`) or least significant bits (`low`) of 256-bit EVM word.
+
+**Discussion**: The bitwidth field is an initial attempt to come up with some language agnostic way to
+describe primitive types. It is expected that further fields may be added, or perhaps the Primitive sort
+should be split up into more specific units, like `Integral` and `Real` etc.
+
+#### Array
+
+The type descriptor for an array is further subdivided depending on whether the array
+is a bytes array or any other array. It has at least the following fields:
+* `arraySort`: either the string `"bytes"` or `"generic"` (names not final).
+* `bound`: a field indicating the statically known upper bound on the size of this array (for Vyper). If null the array is unbounded.
+
+If `arraySort` is `"bytes"` then the descriptor has the following field:
+* `keyword`: the keyword used to declare this type, to account for `string` vs `bytes`
+
+If the `arraySort` is `"generic"` then descriptor has the following field:
+* `elementType`: a numeric id that references the type of values held in each element of the array.
+
+**Discussion**: Here, as elsewhere, no attempt is made here in the type descriptors to describe the physical representation
+of the type. Short of some semi-turing complete DSL, there doesn't seem to be a compact way
+to describe declaratively the packed storage representation of strings in storage for example.
+
+#### Static Arrays
+
+The type descriptor for a static array has the following additional fields:
+* `size`: the static, pre-declared size of the fixed size array/list
+* `elementType`: a numeric id that references the type of values held in each element of the array.
+
+#### Struct
+
+This format assumes that all struct types are user defined types and thus have a declaration site.
+The type descriptor for a struct has the following addition fields:
+* `declaration`: A dictionary describing the definition site of the struct, see below.
+* `fields`: An ordered list of dictionaries describing the fields of the struct.
+* `name`: The name of the struct without the `struct` keyword and without contract qualifiers.
+
+The order of the elements in `fields` is significant, and should match the order that fields are declared in the source file.
+
+Each element of the `fields` array is a dictionary with the following fields:
+* `name`: the name of the field
+* `type`: the numeric id of the type held in this field
+
+#### Enums
+
+As with structs, this format assumes that all enumeration types are user defined. The descriptor for an enum contains the following fields:
+* `declaration`: A dictionary describing the definition site of the enum, see elow.
+* `name`: the name of the enum, without the `enum` keyword and without any contract qualifiers.
+* `members`: A list of members of the enum, as strings.
+
+The order of elements within `members` is significant, and should match the order that members of the enum are declared in the source file.
+
+#### Contracts
+
+The contract type refers to a primitive value that is known/expected to be an address of a contract deployed on the blockchain
+which implements the given type. It contains the following field:
+* `contractDeclaration`: The AST id of the declaration of the contract type.
+* `name`: A string holding the (fully qualified) name of the contract type.
+
+**Discussion** It is unclear to me whether this should actually be separate from primitives. I lean towards no, but it is presented this
+way to prompt discussion. Note that this format assumes that the declaration of the contract type is "visible" to the compiler
+during compilation and thus the declaration site is available for reference.
+
+#### Aliases
+
+As with enums and structs, this format assumes that all aliases are user defined, but this restriction could be relaxed by making the `definitionScope` field optional.
+An alias type descriptor has the following additional fields:
+* `aliasName`: The user provided name of the alias type, without qualifiers.
+* `definitionScope`: A dictionary describing the site of the definition, see below
+* `aliasedType`: The numeric id of the type for which this is an alias.
+
+**Discussion**: This could be extended with information such as "is this alias opaque" a la private types in OCaml.
+
+#### Located Types
+
+A "located" type is simply a type that is additionally qualified with a data location, that is, a refinement on some other type to restrict its location.
+A located type has the following fields defined:
+* `location`: A string describing EVM data locations. Possible values are `"memory"`, `"storage"`, `"calldata"`, `"returndata"`, `"code"`.
+* `type`: The numeric ID of the type with this location.
+
+It is expected that the type referenced in `type` is not itself a located type, as this would indicate a type like `uint[] calldata memory` which is not
+valid and is never expected to be.
+
+**Discussion**: The lack of a `stack` or `default` location is intentional, but can be added if needed. The choice to separate the location from rest of
+the type was to avoid multiple descriptors for a struct depending on where that struct is located. Under this design, there is a single definition for the
+shape of the struct, and the different data locations of that struct are handled by located type descriptors. 
+
+#### Definition Scopes
+
+To provide information about where a user defined type was declared, the descriptors for those type include a `definitionScope` field.
+This field is a dictionary with the following fields:
+
+* `definitionScope`: A dictionary describing where the type is defined. It has at least the following fields
+  * `sort`: a string, either `"file"` indicating a top-level declaration or `"contract"` indicating a type defined withing a contract
+* `name`: The string representation of the type name. For struct types this is the name of the struct, and does *not* include the `struct` keyword, and similarly for enums.
+
+The `definitionScope` dictionary has additional fields depending on the value of `sort`. If it is `"contract"` 
+then it has the following field:
+* `definingContract`: A dictionary with the following fields:
+  * `name`: the source name of the defining contract
+  * `astId`: the numeric AST id of the declaration which holds this definition
+
+If the field is `"file"`, then it instead has:
+* `definingFile`: A dictionary with the following fields:
+  * `name`: The path to the file (John: Fully resolved path? The path as understood by the compiler?)
+
+It is expected that the combination of `definitionScope` and `name` is unique within the `types` array 
+(otherwise we would have multiple declarations in the same scope).
+
+#### Unresolved Questions
+
+What about generics? Do we want to try to describe their format before any implementation is ready?
+
+### Bytecode Debug Information
+
+The debug information for the bytecode is a dictionary of bytecode offsets to debug information. It is **not**
+required that every opcode in the bytecode has a corresponding entry in the debug dictionary. Implementers
+are encouraged, however, to have as much coverage as possible. Each entry in the debug information dictionary
+is itself a dictionary that (optionally) includes some of the following:
+
+* The source location(s) that "correspond" to the opcode
+* The AST ID(s) that "correspond" to the opcode
+* The layout of the stack, including type information and local variable names (if available)
+* Jump target information (if available/applicable)
+
+In the above "correspond" roughly means "what source code caused the generation of this opcode".
+
+Specifically the dictionary may have the following fields:
+* `source`: a list of source location specifiers. The format of these source location specifiers should be decided later. Every element should provide the location of the textual source code
+that contributed to the generation of this opcode.
+* `ast`: A list of AST ids for the "closest" AST node that contributed to the generation of this opcode.
+* `stack` A layout of the stack as understood by the compiler, represented as a list.
+* `jumps`: If present, provides hints about the location being jumped to by a jumping command (JUMP or JUMPI)
+
+#### Source Locations
+
+The choice of which source location should be attached to each opcode is likely an inexact science. However, implementers are encouraged to be as exact as possible: while it
+is technically correct to give the entirety of the a contract file as the "source" of every opcode, this is not a useful result. Consumers of this information should also take care
+to assume that source code operations may map to (surprising) AST ids. For example, an optimizing compiler may tag a `PUSH` of a constant `16` with the AST id of the following expression
+`(5 + 11)`. An even more aggressive optimizing compiler could even tag the same push with the AST ids of the literals `5` and `11` in the following `(5 + x) + 11`.
+
+#### Stack Information
+
+Given internal function calls, the format will not (and cannot) represent the entire stack at every point during execution; a program can be reached at many different stack depths.
+However, it is expected that all compilers will have a view of some "prefix" of the stack at each program point analogous to an activation frame in low-level assembly code.
+The list contained in the `stack` field exposes this view; consumers can combine this information with the `jumps` information to build a complete representation of the stack.
+
+The list is ordered such that the first element provides information about the top of the stack, the second element is the next element below it, and so on. Each element is a dictionary
+with the following fields:
+* `type`: The type of the value stored in this stack slot. This is *not* a reference to a type descriptor or an embedding of the type descriptor, see below.
+* `sourceName`: A nullable string representation of the identifier held in this stack slot. A value of null indicates that the value does not come from any single identifier.
+* `sourceId`: A nullable numerical AST id that holds the definition (John: declaration?) of the identifier held in this stack slot. A value of null indicates the value does not come from
+any single identifier.
+
+Note that due to `dup` commands, multiple stack locations may hold the same variable name. If a compiler knows that a stack slot that holds
+a variable will be later overwritten with a new value, it should mark the to be overwritten value with the "junk" type (see below).
+
+The `type` dictionary provides information about the value stored in the stack slot. The types used here here are a superset of the types described by type descriptors.
+
+The `type` dictionary has the following field:
+* `sort`: A string indicating the sort of value stored in the stack slot, drawn from one of the following values:
+  * `"junk"` indicates a value that is dead or about to be popped.
+  * `"pc"` A refinement of the numeric type, indicating the slot holds a location which is a jump destination target
+  * `"program"` The stack slot holds a value with a "program" type, i.e., one that can be expressed using type descriptors.
+  * `"internal"` Indicates that the stack slot holds a value that is being used by the compiler but does not correspond to a user type.
+
+The dictionaries for `pc` and `junk` sorts do not have any additional information. The `internal` type is to be used for, e.g., "scratch" pointers that are used to
+marshal calldata buffers or hash storage keys. Compilers may insert their own information into the `internal` dictionary but this format remains intentionally agnostic
+on these contents. (John: every time a standard has allowed a "vendor specific" extension, it goes badly. Maybe we want to just say, consumers shouldn't look at this field)
+
+If the `sort` is `"program"` then the dictionary has the following field:
+* `typeId`: The numeric ID of the type held in this slot
+
+Additionally, the compiler may insert a field to provide additional information about the representation on the stack. This field, if present, has the name `representation` and holds a dictionary.
+This dictionary has the following optional fields:
+* `published`: A boolean field which, if present, indicates that this stack slot holds a pointer to some location in memory/storage. Further, if the field is true, then the object is "fully initialized" (the formal definition of
+fully initialized is to be decided on later)
+* `componentOf`: If the representation of a single value spans multiple stack slots, this field provides information about how the value is spread across the stack. It is a dictionary with the following fields:
+  * `id`: an ID unique within each stack list. All stack slots with the same value of `id` are considered to represent the same logical value. It is allowed to re-use the same ID in different entries of the `stack` list.
+  * `componentName`: The name of the component. The only known use case for this is the decomposition of calldata arrays, so there are two possible values `"ELEM_PTR"` and `"LENGTH"` indicating the stack slots hold the pointer to the calldata location of the array's elements or the logical length of the array respectively.
+
+#### Jumps
+
+For jumping commands, the `jumps` field provides information about the expected target of the jump, and information about the internal function stack.
+
+The value of the `jumps` field is a dictionary with the following (potentialy optional) fields:
+* `targets`: if present, a list of known PCs to which this command may jump. For JUMPI, this does **not** include the fallthrough case, as this is readily computible. This list may be non-singleton due to, 
+e.g., function pointers, but the compiler is able to restrict the potential callees.
+* `sort`: A string indicating the type of jump being performed. One of the following values:
+  * `"return"`: Used for a jump out of an internal function
+  * `"call"`: Used for a jump into an internal function
+  * `"normal"`: Used for all other jumps
+
+**Discussion**: It may be useful to ask compilers to provide richer information about some jumps. For example, tagging a loop exit as a "break" or a backjump as a "continue". This may be redundant given sufficiently
+reliable source information however.
+
+As elsewhere, the dictionary may contain additional fields depending on the value in `sort`.
+
+If the value is `"call"`, then the dictionary contains the following fields:
+* `arguments`: A list describing the calling convention. As in the `stack` layout, the first element of this list describes the value on the top of the stack (**after** popping the jump destination). Each element is a 
+ dictionary described below.
+
+If the callee of the call is known, then the dictionary with sort `"call"` has the following field:
+* `callee`: a dictionary with the following fields:
+  * `target`: a human readable string name for the function being called
+  * `astId`: the AST id of the declaration site of the callee
+
+Note that if the function is being called is `virtual` then the declaration site may not have any corresponding body.
+
+Each element of the arguments array is a dictionary with the following fields:
+* `sort`: `"program"` or `"return_address"`. `"program"` has the same interpretation as in the `type` dictionary above. `"return_address"` is a refinement of the `pc` type indicating this stack slot holds
+the return address of the call being performed.
+* `position`: The logical position of the argument. The first argument to the function has position `0`, the next `1`, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same `position` value, then those arguments should have a `representation` field that has a `componentOf` entry.
+
+If the value of `sort` is `"return"`, then the dictionary has the following field:
+* `returns`: A list of dictionaries with the same format of as the `arguments` array of `call`, but without any `return_address` entries.
+
+**Discussion**: The above proposal doesn't really handle the case of "tail-calls" identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something debug format must explicitly model?
