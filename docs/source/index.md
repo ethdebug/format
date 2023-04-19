@@ -7,4 +7,5 @@
 ./overview.md
 ./known-challenges.md
 ./schema.md
+./format.md
 ```
