@@ -11,7 +11,7 @@ of a JSON format that is expected to cover every single case. Rather, it aims to
 from which a fully formal specification will be developed based on discussions generated around
 this document.
 
-Under this vague scope, it is worth noting some non-goals. This document is describes a debug
+Under this vague scope, it is worth noting some non-goals. This document describes a debug
 format for EVM bytecode; support for other VMs is at least initially out of scope. In addition,
 this proposal is necessarily geared towards the state of the Solidity/Vyper languages as they
 exist now. It cannot (and will not) account for any possible future changes to the source language
@@ -39,7 +39,7 @@ could use type information to pretty print values according to their high-level 
 
 ### Jump Resolution
 
-The EVM allows jumping to an arbitrary values on the stack (subject to the restriction that the destination has a corresponding JUMPDEST opcode).
+The EVM allows jumping to arbitrary values on the stack (subject to the restriction that the destination has a corresponding JUMPDEST opcode).
 This makes construction of a static control flow graph challenging (albeit not impossible). The format should provide reasonable hints
 about possible targets of jump commands.
 
@@ -198,7 +198,7 @@ To provide information about where a user defined type was declared, the descrip
 This field is a dictionary with the following fields:
 
 * `definitionScope`: A dictionary describing where the type is defined. It has at least the following fields
-  * `sort`: a string, either `"file"` indicating a top-level declaration or `"contract"` indicating a type defined withing a contract
+  * `sort`: a string, either `"file"` indicating a top-level declaration or `"contract"` indicating a type defined within a contract
 * `name`: The string representation of the type name. For struct types this is the name of the struct, and does *not* include the `struct` keyword, and similarly for enums.
 
 The `definitionScope` dictionary has additional fields depending on the value of `sort`. If it is `"contract"` 
@@ -291,7 +291,7 @@ fully initialized is to be decided on later)
 For jumping commands, the `jumps` field provides information about the expected target of the jump, and information about the internal function stack.
 
 The value of the `jumps` field is a dictionary with the following (potentialy optional) fields:
-* `targets`: if present, a list of known PCs to which this command may jump. For JUMPI, this does **not** include the fallthrough case, as this is readily computible. This list may be non-singleton due to, 
+* `targets`: if present, a list of known PCs to which this command may jump. For JUMPI, this does **not** include the fallthrough case, as this is readily computable. This list may be non-singleton due to,
 e.g., function pointers, but the compiler is able to restrict the potential callees.
 * `sort`: A string indicating the type of jump being performed. One of the following values:
   * `"return"`: Used for a jump out of an internal function

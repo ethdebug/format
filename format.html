@@ -207,7 +207,7 @@ by the ethdebug working group. As such, it does not aim to be a complete formal 
 of a JSON format that is expected to cover every single case. Rather, it aims to provide a basis
 from which a fully formal specification will be developed based on discussions generated around
 this document.</p>
-<p>Under this vague scope, it is worth noting some non-goals. This document is describes a debug
+<p>Under this vague scope, it is worth noting some non-goals. This document describes a debug
 format for EVM bytecode; support for other VMs is at least initially out of scope. In addition,
 this proposal is necessarily geared towards the state of the Solidity/Vyper languages as they
 exist now. It cannot (and will not) account for any possible future changes to the source language
@@ -234,7 +234,7 @@ could use type information to pretty print values according to their high-level 
 </section>
 <section id="jump-resolution">
 <h3>Jump Resolution<a class="headerlink" href="#jump-resolution" title="Permalink to this heading">#</a></h3>
-<p>The EVM allows jumping to an arbitrary values on the stack (subject to the restriction that the destination has a corresponding JUMPDEST opcode).
+<p>The EVM allows jumping to arbitrary values on the stack (subject to the restriction that the destination has a corresponding JUMPDEST opcode).
 This makes construction of a static control flow graph challenging (albeit not impossible). The format should provide reasonable hints
 about possible targets of jump commands.</p>
 </section>
@@ -407,7 +407,7 @@ This field is a dictionary with the following fields:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">definitionScope</span></code>: A dictionary describing where the type is defined. It has at least the following fields</p>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">sort</span></code>: a string, either <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code> indicating a top-level declaration or <code class="docutils literal notranslate"><span class="pre">&quot;contract&quot;</span></code> indicating a type defined withing a contract</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sort</span></code>: a string, either <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code> indicating a top-level declaration or <code class="docutils literal notranslate"><span class="pre">&quot;contract&quot;</span></code> indicating a type defined within a contract</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: The string representation of the type name. For struct types this is the name of the struct, and does <em>not</em> include the <code class="docutils literal notranslate"><span class="pre">struct</span></code> keyword, and similarly for enums.</p></li>
@@ -518,7 +518,7 @@ fully initialized is to be decided on later)</p></li>
 <p>For jumping commands, the <code class="docutils literal notranslate"><span class="pre">jumps</span></code> field provides information about the expected target of the jump, and information about the internal function stack.</p>
 <p>The value of the <code class="docutils literal notranslate"><span class="pre">jumps</span></code> field is a dictionary with the following (potentialy optional) fields:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">targets</span></code>: if present, a list of known PCs to which this command may jump. For JUMPI, this does <strong>not</strong> include the fallthrough case, as this is readily computible. This list may be non-singleton due to,
+<li><p><code class="docutils literal notranslate"><span class="pre">targets</span></code>: if present, a list of known PCs to which this command may jump. For JUMPI, this does <strong>not</strong> include the fallthrough case, as this is readily computable. This list may be non-singleton due to,
 e.g., function pointers, but the compiler is able to restrict the potential callees.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sort</span></code>: A string indicating the type of jump being performed. One of the following values:</p>
 <ul>
