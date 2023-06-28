@@ -312,8 +312,6 @@ If the callee of the call is known, then the dictionary with sort `"call"` has t
   * `target`: a human readable string name for the function being called
   * `astId`: the AST id of the declaration site of the callee
 
-Note that if the function is being called is `virtual` then the declaration site may not have any corresponding body.
-
 Each element of the arguments array is a dictionary with the following fields:
 * `sort`: `"program"` or `"return_address"`. `"program"` has the same interpretation as in the `type` dictionary above. `"return_address"` is a refinement of the `pc` type indicating this stack slot holds
 the return address of the call being performed.
