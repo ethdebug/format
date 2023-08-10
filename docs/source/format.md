@@ -244,7 +244,7 @@ that contributed to the generation of this opcode.
 * `ast`: A list of AST ids for the "closest" AST node that contributed to the generation of this opcode.
 * `stack` A layout of the stack as understood by the compiler, represented as a list.
 * `jumps`: If present, provides hints about the location being jumped to by a jumping command (JUMP or JUMPI)
-* `mappings`: If preent, contains information about how the opcode relates to mapping keys.
+* `mappings`: If present, contains information about how the opcode relates to mapping keys.
 
 #### Source Locations
 
