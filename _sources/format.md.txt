@@ -54,6 +54,11 @@ For example, the Solidity compiler will in some cases perform a "tail-call" opti
 the compiler will push the entry point of `f` as the return address for the call to `g`. The format should
 help explicitly identify the targets of internal function calls and what arguments are being passed on the stack.
 
+### Mapping key identification
+
+EVM languages commonly include non-enumerable mappings.  As such, it is useful to be able to dynamically identify any mapping keys that may appear
+while analyzing a transaction trace or debugging.
+
 ## The Format
 
 The format will be JSON so that it may be included in the standard input/output APIs that the Vyper and Solidity compilers support.
@@ -229,6 +234,7 @@ is itself a dictionary that (optionally) includes some of the following:
 * The AST ID(s) that "correspond" to the opcode
 * The layout of the stack, including type information and local variable names (if available)
 * Jump target information (if available/applicable)
+* Identification of mapping key information
 
 In the above "correspond" roughly means "what source code caused the generation of this opcode".
 
@@ -238,6 +244,7 @@ that contributed to the generation of this opcode.
 * `ast`: A list of AST ids for the "closest" AST node that contributed to the generation of this opcode.
 * `stack` A layout of the stack as understood by the compiler, represented as a list.
 * `jumps`: If present, provides hints about the location being jumped to by a jumping command (JUMP or JUMPI)
+* `mappings`: If present, contains information about how the opcode relates to mapping keys.
 
 #### Source Locations
 
@@ -321,3 +328,10 @@ If the value of `sort` is `"return"`, then the dictionary has the following fiel
 * `returns`: A list of dictionaries with the same format of as the `arguments` array of `call`, but without any `return_address` entries.
 
 **Discussion**: The above proposal doesn't really handle the case of "tail-calls" identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something debug format must explicitly model?
+
+#### Mapping key identification
+
+The value of this field (when present) is a dictionary with (some of) the following fields:
+* `isMappingHash`: A boolean that identifies whether the opcode is computing a hash for a mapping.
+* `isMappingPreHash`: For mappings that use two hashes, this boolean can identify whether the opcode is computing the first of the two hashes.  Possibly this field should be combined with a previous one into some sort of enum?
+* `mappingHashFormat`: An enumeration; specifies the format of what gets hashed for the mapping.  Formats could include "prefix" (for Solidity), "postfix" (for Vyper value types), and "postfix-prehashed" (for Vyper strings and bytestrings).  Possibly "prefix" could be split further into "prefix-padded" (for Solidity value types) and "prefix-unpadded" (for Solidity strings and bytestrings).  This could be expanded in the future if necessary.  (Also, potentially `"prefix-padded"`, if split out, could be broken down even further, by padding type -- zero padding (left) vs sign-padding vs zero-padding (right)...)
