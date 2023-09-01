@@ -197,7 +197,7 @@ shape of the struct, and the different data locations of that struct are handled
 Reference types (that is, those types for which data location is relevant: `mapping`, `array`,
  `static_array`, or `struct`) do **not** explicitly include location information.
 Rather, the location specified in a `located` type propagates to any reference types
- reachable along some path the type referenced in the `located` type's `type` field,
+ reachable along some path from the type referenced in the `located` type's `type` field,
  provided there is no intermediate `located` type field.
 
 What follows is an attempt at formal rigor. 
@@ -216,14 +216,14 @@ if a reference type `r` is encountered along two different paths with different 
 then the values of type `r` have different locations, depending on the path. For example, consider
 the following type definition (using hypothetical syntax):
 
-```
+```solidity
 struct MyStruct {
    OtherStruct f1;
    OtherStruct calldata f2;
 }
 ```
 
-Let the id the `OtherStruct` descriptor be `n`.
+Let the id of the `OtherStruct` descriptor be `n`.
 Then the entry corresponding to `MyStruct` in the `types` array would be:
 
 ```
@@ -232,7 +232,7 @@ Then the entry corresponding to `MyStruct` in the `types` array would be:
    "sort": "struct",
    "declaration": /* ... */,
    "name": "MyStruct",
-   fields: [
+   "fields": [
       { "name": "f1", "type": n },
 	  { "name": "f2", "type": {
 	     "sort": "located",
@@ -266,13 +266,13 @@ The type descriptor `MyStruct memory` will be as follows:
 
 ...recalling that `m` is the id of the `MyStruct` definition above. 
 
-Given the definition of location propagation, the location of `x.f1` will `memory`,
+Given the definition of location propagation, the location of `x.f1` will be `memory`,
  as that location has been propagated from the containing "located" type to the occurence of `n` in
  the description of the `f1` field.
 The location of `x.f2` will however be `calldata`, as the explicit `located` type encountered for `f2`
  overrides the location given in the outer located type.
 NB that the descriptions of the types for `f1` and `f2` both 
- ultimately reference the description `n` (i.e., `OtherStruct`) but the locations were different.
+ ultimately reference the description of `n` (i.e., `OtherStruct`) but the locations were different.
  
 
 **Discussion**: This design was chosen as it more closely mirrors the syntax and semantics
@@ -282,8 +282,8 @@ That is, by themselves, type declarations do not (by default) have any informati
 As an added benefit, this encoding ensures there is a one-to-one mapping between Solidity
  type declarations and an entry in the `types` array, rather than _n_ different versions
  for _n_ different combinations of location combinations.
-The downside of this choice is that not all entries in the `types` array have an unambigous interpretation,
- only those that meet the criteria of well-located given above.
+The downside of this choice is that not all entries in the `types` array have an unambiguous interpretation,
+ only those that meet the criteria of being well-located given above.
 
 #### Definition Scopes
 
