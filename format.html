@@ -552,12 +552,25 @@ dictionary described below.</p></li>
 </ul>
 </li>
 </ul>
-<p>Each element of the arguments array is a dictionary with the following fields:</p>
+<p>Note that if the function is being called is <code class="docutils literal notranslate"><span class="pre">virtual</span></code> then the declaration site may not have any corresponding body.</p>
+<p>Each element of the <code class="docutils literal notranslate"><span class="pre">arguments</span></code> array is a dictionary with the following fields:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">sort</span></code>: <code class="docutils literal notranslate"><span class="pre">&quot;program&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;return_address&quot;</span></code>. <code class="docutils literal notranslate"><span class="pre">&quot;program&quot;</span></code> has the same interpretation as in the <code class="docutils literal notranslate"><span class="pre">type</span></code> dictionary above. <code class="docutils literal notranslate"><span class="pre">&quot;return_address&quot;</span></code> is a refinement of the <code class="docutils literal notranslate"><span class="pre">pc</span></code> type indicating this stack slot holds
 the return address of the call being performed.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">position</span></code>: The logical position of the argument. The first argument to the function has position <code class="docutils literal notranslate"><span class="pre">0</span></code>, the next <code class="docutils literal notranslate"><span class="pre">1</span></code>, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same <code class="docutils literal notranslate"><span class="pre">position</span></code> value, then those arguments should have a <code class="docutils literal notranslate"><span class="pre">representation</span></code> field that has a <code class="docutils literal notranslate"><span class="pre">componentOf</span></code> entry.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">position</span></code>: The logical position of the <strong>parameter</strong> represented by this stack value. The ordering of parameters is defined by their program declaration order, where the first formal parameter to a function has position <code class="docutils literal notranslate"><span class="pre">0</span></code>,
+the next <code class="docutils literal notranslate"><span class="pre">1</span></code>, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same <code class="docutils literal notranslate"><span class="pre">position</span></code> value, then those arguments
+should have a <code class="docutils literal notranslate"><span class="pre">representation</span></code> field that has a <code class="docutils literal notranslate"><span class="pre">componentOf</span></code> entry.</p></li>
 </ul>
+<p><strong>Note</strong>
+Due to named arguments, the order given in the debug information may not match the order of parameters as they appear at a call-site. For example, given a declaration:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">function</span> <span class="n">myFunction</span><span class="p">(</span><span class="n">uint</span> <span class="n">a</span><span class="p">,</span> <span class="n">uint</span> <span class="n">b</span><span class="p">)</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>and an invocation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myFunction</span><span class="p">(</span><span class="n">b</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>the stack location which contains the <code class="docutils literal notranslate"><span class="pre">4</span></code> argument value will be tagged with position <code class="docutils literal notranslate"><span class="pre">0</span></code>, as that is the <code class="docutils literal notranslate"><span class="pre">a</span></code> parameter’s position in the declaration.</p>
 <p>If the value of <code class="docutils literal notranslate"><span class="pre">sort</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;return&quot;</span></code>, then the dictionary has the following field:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">returns</span></code>: A list of dictionaries with the same format of as the <code class="docutils literal notranslate"><span class="pre">arguments</span></code> array of <code class="docutils literal notranslate"><span class="pre">call</span></code>, but without any <code class="docutils literal notranslate"><span class="pre">return_address</span></code> entries.</p></li>
