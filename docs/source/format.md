@@ -319,10 +319,29 @@ If the callee of the call is known, then the dictionary with sort `"call"` has t
   * `target`: a human readable string name for the function being called
   * `astId`: the AST id of the declaration site of the callee
 
-Each element of the arguments array is a dictionary with the following fields:
+Note that if the function is being called is `virtual` then the declaration site may not have any corresponding body.
+
+Each element of the `arguments` array is a dictionary with the following fields:
 * `sort`: `"program"` or `"return_address"`. `"program"` has the same interpretation as in the `type` dictionary above. `"return_address"` is a refinement of the `pc` type indicating this stack slot holds
 the return address of the call being performed.
-* `position`: The logical position of the argument. The first argument to the function has position `0`, the next `1`, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same `position` value, then those arguments should have a `representation` field that has a `componentOf` entry.
+* `position`: The logical position of the **parameter** represented by this stack value. The ordering of parameters is defined by their program declaration order, where the first formal parameter to a function has position `0`, 
+the next `1`, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same `position` value, then those arguments
+should have a `representation` field that has a `componentOf` entry.
+
+**Note**
+Due to named arguments, the order given in the debug information may not match the order of parameters as they appear at a call-site. For example, given a declaration:
+
+```
+function myFunction(uint a, uint b) ...
+```
+
+and an invocation:
+
+```
+myFunction(b = 3, a = 4)
+```
+
+the stack location which contains the `4` argument value will be tagged with position `0`, as that is the `a` parameter's position in the declaration.
 
 If the value of `sort` is `"return"`, then the dictionary has the following field:
 * `returns`: A list of dictionaries with the same format of as the `arguments` array of `call`, but without any `return_address` entries.
