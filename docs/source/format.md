@@ -97,7 +97,7 @@ and indeed, they will likely reference the types defined here. However, as event
 first class in any language targeting the EVM that I'm aware of (i.e., you cannot declare a variable `x` to be of
 type `error Foo()`) they should be described elsewhere.
 
-**Notes**: some preference was expressed for `kind` over `sort`. In addition,it was suggested we use `pointer` or `reference` over `located`.
+**Notes**: some preference was expressed for `kind` over `sort`. In addition, it was suggested we use `pointer` or `reference` over `located`.
 
 #### Mappings
 
@@ -196,6 +196,99 @@ valid and is never expected to be.
 **Discussion**: The lack of a `stack` or `default` location is intentional, but can be added if needed. The choice to separate the location from rest of
 the type was to avoid multiple descriptors for a struct depending on where that struct is located. Under this design, there is a single definition for the
 shape of the struct, and the different data locations of that struct are handled by located type descriptors. 
+
+##### Location Propagation
+
+Reference types (that is, those types for which data location is relevant: `mapping`, `array`,
+ `static_array`, or `struct`) do **not** explicitly include location information.
+Rather, the location specified in a `located` type propagates to any reference types
+ reachable along some path from the type referenced in the `located` type's `type` field,
+ provided there is no intermediate `located` type field.
+
+What follows is an attempt at formal rigor. 
+Define a "well-located" type description _wt_ to be an entry
+ in the `types` array where the following condition is true: any reference type (`mapping`, `array`, 
+ `static_array`, or `struct`) reachable from _wt_ must encounter at least one `located` type. 
+Let _r_ be any *occurrence* of such a reference type reachable from _wt_. 
+The data location for _r_ is the location specified in the most recent occurrence of a `located` type
+ along the path from _wt_ to _r_.
+The location for reference types that appear in types that are not
+ "well-located" is undefined.
+It is required that any references to type descriptors outside the `types` array are "well-located".
+
+Note that the above definition is chosen to differentiate between *occurrences* of type references. Thus
+if a reference type `r` is encountered along two different paths with different data locations,
+then the values of type `r` have different locations, depending on the path. For example, consider
+the following type definition (using hypothetical syntax):
+
+```solidity
+struct MyStruct {
+   OtherStruct f1;
+   OtherStruct calldata f2;
+}
+```
+
+Let the id of the `OtherStruct` descriptor be `n`.
+Then the entry corresponding to `MyStruct` in the `types` array would be:
+
+```
+{
+   "id": m,
+   "sort": "struct",
+   "declaration": /* ... */,
+   "name": "MyStruct",
+   "fields": [
+      { "name": "f1", "type": n },
+	  { "name": "f2", "type": {
+	     "sort": "located",
+		 "location": "calldata",
+		 "type": n
+	  } }
+   ]
+}
+```
+
+... where the reference to the `located` type definition used for `f2` has been inlined
+for brevity.
+
+Note that this type descriptor is **not** well-located, as by itself it provides no information on the
+ location of the `f1` field.
+Now, consider the use of the `MyStruct` type in some declaration like:
+
+```
+MyStruct memory x
+```
+
+The type descriptor `MyStruct memory` will be as follows:
+
+```
+{
+   "sort": "located",
+   "location": "memory",
+   "type": m
+}
+```
+
+...recalling that `m` is the id of the `MyStruct` definition above. 
+
+Given the definition of location propagation, the location of `x.f1` will be `memory`,
+ as that location has been propagated from the containing "located" type to the occurence of `n` in
+ the description of the `f1` field.
+The location of `x.f2` will however be `calldata`, as the explicit `located` type encountered for `f2`
+ overrides the location given in the outer located type.
+NB that the descriptions of the types for `f1` and `f2` both 
+ ultimately reference the description of `n` (i.e., `OtherStruct`) but the locations were different.
+ 
+
+**Discussion**: This design was chosen as it more closely mirrors the syntax and semantics
+ of Solidity. 
+That is, by themselves, type declarations do not (by default) have any information about where reference
+ types are located, it is instead "inherited" from variable/parameter/etc. declarations.
+As an added benefit, this encoding ensures there is a one-to-one mapping between Solidity
+ type declarations and an entry in the `types` array, rather than _n_ different versions
+ for _n_ different combinations of location combinations.
+The downside of this choice is that not all entries in the `types` array have an unambiguous interpretation,
+ only those that meet the criteria of being well-located given above.
 
 #### Definition Scopes
 
