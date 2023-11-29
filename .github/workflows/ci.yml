@@ -6,14 +6,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
 
-    - uses: ammaraskar/sphinx-action@master
-      with:
-        docs-folder: "docs/"
-        build-command: "sphinx-build -nW -b html source/ build/html/"
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: ./web/yarn.lock
 
-    - uses: actions/upload-artifact@v1
-      with:
-        name: ethdebug-format-html
-        path: docs/build/html/
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./web
+
+      - name: Build website
+        run: yarn build
+        working-directory: ./web

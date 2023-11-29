@@ -1,0 +1,440 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/types"
+
+title: ethdebug/format/types Schema
+description: Mapping from type identifier to type definition
+type: object
+patternProperties:
+  ^[a-zA-Z0-9_-]+$:
+    $ref: "#/$defs/Type"
+additionalProperties: false
+
+$defs:
+  Type:
+    title: Type
+    type: object
+    properties:
+      kind:
+        type: string
+        enum:
+          - elementary
+          - container
+    required:
+      - kind
+    allOf:
+      - title: ElementaryType
+        if:
+          properties:
+            kind:
+              const: elementary
+        then:
+          $ref: "#/$defs/ElementaryType"
+      - title: ContainerType
+        if:
+          properties:
+            kind:
+              const: container
+        then:
+          $ref: "#/$defs/ContainerType"
+
+  BaseType:
+    title: BaseType
+    type: object
+    properties:
+      kind:
+        type: string
+    required:
+      - kind
+
+  ElementaryType:
+    title: ElementaryType
+    type: object
+    properties:
+      class:
+        type: string
+        enum:
+          - bool
+          - uint
+          - int
+          - address
+          - contract
+          - bytes
+          - enum
+          - internal-function
+          - external-function
+          - ufixed
+          - fixed
+    required:
+      - class
+    oneOf:
+      - title: BoolType
+        if:
+          properties:
+            class:
+              const: bool
+        then:
+          $ref: "#/$defs/BoolType"
+      - title: UintType
+        if:
+          properties:
+            class:
+              const: uint
+        then:
+          $ref: "#/$defs/UintType"
+      - title: IntType
+        if:
+          properties:
+            class:
+              const: int
+        then:
+          $ref: "#/$defs/IntType"
+      - title: AddressType
+        if:
+          properties:
+            class:
+              const: address
+        then:
+          $ref: "#/$defs/AddressType"
+      - title: ContractType
+        if:
+          properties:
+            class:
+              const: contract
+        then:
+          $ref: "#/$defs/ContractType"
+      - title: StaticBytesType
+        if:
+          properties:
+            class:
+              const: bytes
+        then:
+          $ref: "#/$defs/StaticBytesType"
+      - title: EnumType
+        if:
+          properties:
+            class:
+              const: enum
+        then:
+          $ref: "#/$defs/EnumType"
+      - title: InternalFunctionType
+        if:
+          properties:
+            class:
+              const: internal-function
+        then:
+          $ref: "#/$defs/InternalFunctionType"
+      - title: ExternalFunctionType
+        if:
+          properties:
+            class:
+              const: external-function
+        then:
+          $ref: "#/$defs/ExternalFunctionType"
+      - title: UfixedType
+        if:
+          properties:
+            class:
+              const: ufixed
+        then:
+          $ref: "#/$defs/UfixedType"
+      - title: FixedType
+        if:
+          properties:
+            class:
+              const: fixed
+        then:
+          $ref: "#/$defs/FixedType"
+
+  BaseElementaryType:
+    title: BaseElementaryType
+    type: object
+    allOf:
+      - properties:
+          kind:
+            type: string
+            const: elementary
+          class:
+            type: string
+        required:
+          - class
+      - $ref: "#/$defs/BaseType"
+
+  BoolType:
+    title: BoolType
+    description: Represents a boolean type
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: bool
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: bool
+
+  UintType:
+    title: UintType
+    description: Represents an unsigned integer type with a fixed bit width
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: uint
+          bits:
+            type: number
+            multipleOf: 8
+        required:
+          - bits
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: uint
+        bits: 256
+
+  IntType:
+    title: IntType
+    description: Represents a signed integer type with a fixed bit width
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: int
+          bits:
+            type: number
+        required:
+          - bits
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: int
+        bits: 256
+
+  AddressType:
+    title: AddressType
+    description: Represents an address type with optional payability constraint
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: address
+          payable:
+            type: boolean
+            description:
+              May be excluded for types without known payability
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: address
+        payable: false
+      - kind: elementary
+        class: address
+
+  ContractType:
+    title: ContractType
+    description:
+      Represents an contract type (i.e., an address adhering to a known
+      contract or interface)
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: contract
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: contract
+
+  StaticBytesType:
+    title: StaticBytesType
+    description: Represents a fixed-size bytes primitive type (e.g. `bytes32`)
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: bytes
+          size:
+            type: number
+            description: Number of bytes
+        required:
+          - size
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: bytes
+        size: 32
+
+  EnumType:
+    title: EnumType
+    description: Represents an enumeration type, optionally with known variants
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: enum
+          options:
+            type: array
+            items:
+              type: string
+              # add format?
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: enum
+        options:
+          - A
+          - B
+          - C
+      - kind: elementary
+        class: enum
+
+  InternalFunctionType:
+    title: InternalFunctionType
+    description:
+      Represents an internal function type, i.e., the type of a function
+      variable that can be invoked via a `JUMP` instruction and other language
+      "call" semantics
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: internal-function
+      - $ref: "#/$defs/BaseElementaryType"
+    examples:
+      - kind: elementary
+        class: internal-function
+
+  ExternalFunctionType:
+    title: ExternalFunctionType
+    description:
+      Represents an external function type, i.e., the type of a function
+      variable that can be invoked via a `CALL` instruction and ABI dispatch
+      semantics
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - $ref: "#/$defs/BaseElementaryType"
+      - properties:
+          class:
+            const: external-function
+    examples:
+      - kind: elementary
+        class: external-function
+
+  UfixedType:
+    title: UfixedType
+    description:
+      Represents an unsigned fixed decimal value with a fixed bit width and
+      number of decimal places
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: ufixed
+          bits:
+            type: number
+          places:
+            type: number
+        required:
+          - bits
+          - places
+      - $ref: "#/$defs/BaseElementaryType"
+
+  FixedType:
+    title: FixedType
+    description:
+      Represents a signed fixed decimal value with a fixed bit width and
+      number of decimal places
+    type: object
+    unevaluatedProperties: false
+    allOf:
+      - properties:
+          class:
+            const: fixed
+          bits:
+            type: number
+          places:
+            type: number
+        required:
+          - bits
+          - places
+      - $ref: "#/$defs/BaseElementaryType"
+
+  ContainerType:
+    type: object
+    properties:
+      class:
+        type: string
+        enum:
+          - array
+          - struct
+    required:
+      - class
+    allOf:
+      - if:
+          properties:
+            class:
+              const: array
+        then:
+          $ref: "#/$defs/StaticArrayType"
+      - if:
+          properties:
+            class:
+              const: struct
+        then:
+          $ref: "#/$defs/StructType"
+
+  BaseContainerType:
+    type: object
+    $ref: "#/$defs/BaseType"
+    properties:
+      kind:
+        const: container
+      class:
+        type: string
+    required:
+      - class
+
+  StaticArrayType:
+    type: object
+    $ref: "#/$defs/BaseContainerType"
+    unevaluatedProperties: false
+    properties:
+      class:
+        const: array
+      itemType:
+        $ref: "#/$defs/Type"
+      length:
+        type: number
+    required:
+      - length
+      - itemType
+
+  StructType:
+    type: object
+    $ref: "#/$defs/BaseContainerType"
+    unevaluatedProperties: false
+    properties:
+      class:
+        const: struct
+      memberTypes:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            type:
+              $ref: "#/$defs/Type"
+          required:
+            - type
+    required:
+      - memberTypes

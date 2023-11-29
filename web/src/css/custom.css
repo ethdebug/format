@@ -1,0 +1,30 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* NOTE: config here is just a placeholder (suggestions by GPT-4) */
+
+:root {
+  --ifm-color-primary: #1A7F7E; /* Deep Blue-Green */
+  --ifm-color-primary-dark: #146B6C; /* Darker Shade for Hover States */
+  --ifm-color-primary-darker: #105957; /* Even Darker for Deep Contrast */
+  --ifm-color-primary-darkest: #0B4748; /* Almost Black Blue-Green */
+  --ifm-color-primary-light: #33A6A6; /* Lighter Shade for Active States */
+  --ifm-color-primary-lighter: #66BFBF; /* Even Lighter for Variety */
+  --ifm-color-primary-lightest: #99D8D8; /* Very Light for Subtle Backgrounds */
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #25C2A0; /* Lighter Blue-Green for Dark Mode */
+  --ifm-color-primary-dark: #21AF90; /* Slightly Darker for Contrast */
+  --ifm-color-primary-darker: #1FA588; /* Further Darkened for Depth */
+  --ifm-color-primary-darkest: #1A8870; /* Rich Dark Green-Blue */
+  --ifm-color-primary-light: #29D5B0; /* Brighter for Highlights */
+  --ifm-color-primary-lighter: #32D8B4; /* Softer Shade for Balance */
+  --ifm-color-primary-lightest: #4FDDC1; /* Almost Pastel for Light Backgrounds */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
