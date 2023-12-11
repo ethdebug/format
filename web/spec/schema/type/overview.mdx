@@ -1,0 +1,96 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::tip
+**ethdebug/format/type** defines how to write data types as JSON.
+
+Debuggers critically rely on having representations of the data types
+used by a piece of code. This information is used to highlight code display,
+offer links to where user-defined types are defined, and to render runtime
+values correctly.
+
+For a quick introduction to type representations, please see these example
+JSON values:
+
+<details>
+<summary>A valid type representation</summary>
+
+```json
+{
+  "kind": "uint",
+  "bits": 256
+}
+```
+
+</details>
+
+<details>
+<summary>An invalid type representation</summary>
+
+```json
+"uh, some kind of number"
+```
+
+</details>
+
+<!-- TODO add this
+See [additional examples](#example-valid-representations) below
+for a broad sample of valid type representations according to this schema.
+-->
+:::
+
+
+This format defines this **ethdebug/format/type** schema for representing the
+data types allowable in a supporting high-level language.
+
+JSON values that adhere to this schema may (for example) represent a particular
+`uint` type (like `uint256`), a `struct` type with a particular set of member
+fields, a particular `mapping` type from a certain key type to a certain value
+type, and so on.
+
+This schema is broadly divided into two sections:
+1. A canonical Type schema (**ethdebug/format/type**), which includes
+   subschemas for included known types.
+
+   When adhering to this format, this schema is considered **sufficient** for
+   representing any supported type.
+
+2. A base Type schema (**ethdebug/format/type/base**), which specifies a
+   minimal definition of any type, known or unknown.
+
+   When adhering to this format, this schema is considered **necessary** for
+   representing any supported type.
+
+In other words:
+
+- Compilers adhering to this format **should** use the canonical
+  **ethdebug/format/type** schema when representing known types
+  (e.g., uints, arrays, structs, etc.).
+
+- Compilers **must** still adhere to the **ethdebug/format/type/base** schema
+  when representing types not known to this format.
+
+:::note
+Any representation adhering to the former also adheres to the latter,
+since **ethdebug/format/type** extends **ethdebug/format/type/base**.
+:::
+
+:::info
+To highlight one purpose behind this separation, consider that this format
+seeks to be complete enough to be useful _and_ flexible enough to afford
+extension.
+
+While **ethdebug/format/type** aims to cover all of the available kinds of
+types available in EVM languages today, languages in the future may offer
+additional kinds of types. **ethdebug/format/type/base** serves to address
+this concern.
+:::
+
+<!-- TODO pull from `examples` in various $defs so as to avoid duplication
+
+## Example valid representations
+
+-->

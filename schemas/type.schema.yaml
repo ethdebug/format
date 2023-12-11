@@ -1,0 +1,59 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type"
+
+$ref: "#/$defs/Type"
+
+$defs:
+  Type:
+    title: ethdebug/format/type
+    description:
+      Canonical representation for all types.
+    oneOf:
+      - title: Known types
+        oneOf:
+          - title: Known elementary types
+            oneOf:
+              - $ref: "#/$defs/UintType"
+
+          - title: Known complex types
+            oneOf:
+              - $ref: "#/$defs/ArrayType"
+
+      - $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+
+  UintType:
+    title: UintType
+    properties:
+      class:
+        const: elementary
+      kind:
+        const: uint
+      bits:
+        type: number
+        multipleOf: 8
+        minimum: 8
+        maximum: 256
+    required:
+      - kind
+      - bits
+
+  ArrayType:
+    title: ArrayType
+    type: object
+    properties:
+      class:
+        type: string
+        const: complex
+      kind:
+        type: string
+        const: array
+      contains:
+        type: object
+        properties:
+          type:
+            $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+        required:
+          - type
+    required:
+      - kind
+      - contains

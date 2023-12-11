@@ -53,6 +53,22 @@ const config: Config = {
       };
     },
 
+    async function ignoreBuffer(context, options) {
+      return {
+        name: "ignore-buffer",
+        configureWebpack(config: Configuration) {
+          return {
+            resolve: {
+              fallback: {
+                buffer: false
+              }
+            }
+          };
+        }
+      }
+
+    },
+
     // Used to maintain separate spec/ directory, outside the core docs/
     [
       '@docusaurus/plugin-content-docs',
@@ -157,6 +173,9 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        "json"
+      ],
     },
   } satisfies Preset.ThemeConfig,
 };

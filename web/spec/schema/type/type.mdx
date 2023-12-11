@@ -1,0 +1,27 @@
+---
+sidebar_position: 3
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Canonical Type schema
+
+This page specifies the canonical **ethdebug/format/type** schema for
+
+<SchemaViewer
+    schema="schema:ethdebug/format/type"
+    pointer="#/$defs/Type"
+    detect={
+    (item) =>
+      typeof item === "object" &&
+        !("$schema" in item) &&
+        item["$ref"] === "#/$defs/Type"}
+    transform={
+      ({ $ref, ...rest }, root) => ({
+        ...rest,
+        type: "object",
+        title: root.$defs.Type.title + " [RECURSIVE]",
+        description: "The root Type schema"
+      })
+    }
+    />
