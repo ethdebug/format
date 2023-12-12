@@ -36,7 +36,7 @@ cases not explicitly identified here are expected.
 
 ### Local Variable Information
 
-Currently decompilers and formal methods tools must use interally generated names to give names to
+Currently decompilers and formal methods tools must use internally generated names to give names to
 the values stored on the stack. The debugging format should provide information about what stack slots correspond
 to which source level identifiers.
 
@@ -56,7 +56,7 @@ about possible targets of jump commands.
 
 The EVM has no built-in concept of internal functions. Rather, Solidity internal function implementations are placed at some offset in the
 contract's bytecode, and callers jump to this predetermined location, passing arguments on the stack along with the return location (this is
-one possible complication when attempting to statically resolving jump destinations).
+one possible complication when attempting to statically resolve jump destinations).
 
 Statically detecting these internal calls and informing an end-user can be surprisingly complicated.
 For example, the Solidity compiler will in some cases perform a "tail-call" optimization: for nested calls like `f(g(x))`
@@ -106,7 +106,7 @@ and indeed, they will likely reference the types defined here. However, as event
 first class in any language targeting the EVM that I'm aware of (i.e., you cannot declare a variable `x` to be of
 type `error Foo()`) they should be described elsewhere.
 
-**Notes**: some preference was expressed for `kind` over `sort`. In addition,it was suggested we use `pointer` or `reference` over `located`.
+**Notes**: some preference was expressed for `kind` over `sort`. In addition, it was suggested we use `pointer` or `reference` over `located`.
 
 #### Mappings
 
@@ -258,7 +258,7 @@ that contributed to the generation of this opcode.
 #### Source Locations
 
 The choice of which source location should be attached to each opcode is likely an inexact science. However, implementers are encouraged to be as exact as possible: while it
-is technically correct to give the entirety of the a contract file as the "source" of every opcode, this is not a useful result. Consumers of this information should also take care
+is technically correct to give the entirety of the contract file as the "source" of every opcode, this is not a useful result. Consumers of this information should also take care
 to assume that source code operations may map to (surprising) AST ids. For example, an optimizing compiler may tag a `PUSH` of a constant `16` with the AST id of the following expression
 `(5 + 11)`. An even more aggressive optimizing compiler could even tag the same push with the AST ids of the literals `5` and `11` in the following `(5 + x) + 11`.
 
@@ -278,7 +278,7 @@ any single identifier.
 Note that due to `dup` commands, multiple stack locations may hold the same variable name. If a compiler knows that a stack slot that holds
 a variable will be later overwritten with a new value, it should mark the to be overwritten value with the "junk" type (see below).
 
-The `type` dictionary provides information about the value stored in the stack slot. The types used here here are a superset of the types described by type descriptors.
+The `type` dictionary provides information about the value stored in the stack slot. The types used here are a superset of the types described by type descriptors.
 
 The `type` dictionary has the following field:
 * `sort`: A string indicating the sort of value stored in the stack slot, drawn from one of the following values:
@@ -306,7 +306,7 @@ fully initialized is to be decided on later)
 
 For jumping commands, the `jumps` field provides information about the expected target of the jump, and information about the internal function stack.
 
-The value of the `jumps` field is a dictionary with the following (potentialy optional) fields:
+The value of the `jumps` field is a dictionary with the following (potentially optional) fields:
 * `targets`: if present, a list of known PCs to which this command may jump. For JUMPI, this does **not** include the fallthrough case, as this is readily computable. This list may be non-singleton due to,
 e.g., function pointers, but the compiler is able to restrict the potential callees.
 * `sort`: A string indicating the type of jump being performed. One of the following values:
@@ -328,7 +328,7 @@ If the callee of the call is known, then the dictionary with sort `"call"` has t
   * `target`: a human readable string name for the function being called
   * `astId`: the AST id of the declaration site of the callee
 
-Note that if the function is being called is `virtual` then the declaration site may not have any corresponding body.
+Note that if the function being called is `virtual` then the declaration site may not have any corresponding body.
 
 Each element of the `arguments` array is a dictionary with the following fields:
 * `sort`: `"program"` or `"return_address"`. `"program"` has the same interpretation as in the `type` dictionary above. `"return_address"` is a refinement of the `pc` type indicating this stack slot holds
@@ -350,12 +350,12 @@ and an invocation:
 myFunction(b = 3, a = 4)
 ```
 
-the stack location which contains the `4` argument value will be tagged with position `0`, as that is the `a` parameter's position in the declaration.
+the stack location which contains the `4` argument value will be tagged with position `0`, as that is the position of parameter `a` in the declaration.
 
 If the value of `sort` is `"return"`, then the dictionary has the following field:
-* `returns`: A list of dictionaries with the same format of as the `arguments` array of `call`, but without any `return_address` entries.
+* `returns`: A list of dictionaries with the same format as the `arguments` array of `call`, but without any `return_address` entries.
 
-**Discussion**: The above proposal doesn't really handle the case of "tail-calls" identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something debug format must explicitly model?
+**Discussion**: The above proposal doesn't really handle the case of "tail-calls" identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something the debug format must explicitly model?
 
 #### Mapping key identification
 
