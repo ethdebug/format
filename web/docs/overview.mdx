@@ -4,6 +4,13 @@ description: Summary, rationale, and project goals
 ---
 
 # Project overview
+The security of smart contracts hinges on the availability of robust debugging tools. As the compiler optimizes a contract, it may move instructions around or remove them thus weakening its relationship with the original source code. The debugger then faces the challenging task of reversing these transformations to enrich the often cryptic artifacts with contexts mapping back to the contract's source.
+
+The ETH debug standard aims to bridge this intricate dichotomy between the compiler and debugger, guided by the following key goals:
+
+- **Minimal Overhead**: Extend compiler output without duplication or excessive disk footprint.
+- **Language Agnostic**: Remain independent of any specific programming language or compiler, ensuring wide applicability within the Ethereum Virtual Machine (EVM) ecosystem.
+- **Robust Interface**: Provide a comprehensive and standardized interface for debuggers, enabling a rich and industry-standard debugging experience for developers.
 
 ## Summary
 
