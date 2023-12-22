@@ -7,18 +7,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v2
-      - uses: actions/checkout@master
-        with:
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-      - name: Build and Commit
-        uses: sphinx-notes/pages@v2
-        with:
-          documentation_path: "./docs/source"
-          requirements_path: "./docs/requirements.txt"
+      - uses: actions/checkout@v3
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: ./web/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./web
+
+      - name: Build website
+        run: yarn build
+        working-directory: ./web
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
+
+          publish_dir: ./web/build
+
+          # default deployer
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+

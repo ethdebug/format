@@ -1,6 +1,15 @@
-# Debug Format Prototype
+---
+description: Initial format sketch
+---
+
+import TOCInline from '@theme/TOCInline';
+
+# @jtoman's format prototype
+
+<TOCInline toc={toc} />
 
 ## Status of this document
+
 This is an initial draft for review and comment. It does not have consensus and should only be cited as work in progress.
 
 ## Scope of this Document
@@ -195,7 +204,7 @@ valid and is never expected to be.
 
 **Discussion**: The lack of a `stack` or `default` location is intentional, but can be added if needed. The choice to separate the location from rest of
 the type was to avoid multiple descriptors for a struct depending on where that struct is located. Under this design, there is a single definition for the
-shape of the struct, and the different data locations of that struct are handled by located type descriptors. 
+shape of the struct, and the different data locations of that struct are handled by located type descriptors.
 
 #### Definition Scopes
 
@@ -206,7 +215,7 @@ This field is a dictionary with the following fields:
   * `sort`: a string, either `"file"` indicating a top-level declaration or `"contract"` indicating a type defined within a contract
 * `name`: The string representation of the type name. For struct types this is the name of the struct, and does *not* include the `struct` keyword, and similarly for enums.
 
-The `definitionScope` dictionary has additional fields depending on the value of `sort`. If it is `"contract"` 
+The `definitionScope` dictionary has additional fields depending on the value of `sort`. If it is `"contract"`
 then it has the following field:
 * `definingContract`: A dictionary with the following fields:
   * `name`: the source name of the defining contract
@@ -216,7 +225,7 @@ If the field is `"file"`, then it instead has:
 * `definingFile`: A dictionary with the following fields:
   * `name`: The path to the file (John: Fully resolved path? The path as understood by the compiler?)
 
-It is expected that the combination of `definitionScope` and `name` is unique within the `types` array 
+It is expected that the combination of `definitionScope` and `name` is unique within the `types` array
 (otherwise we would have multiple declarations in the same scope).
 
 #### Unresolved Questions
@@ -311,7 +320,7 @@ reliable source information however.
 As elsewhere, the dictionary may contain additional fields depending on the value in `sort`.
 
 If the value is `"call"`, then the dictionary contains the following fields:
-* `arguments`: A list describing the calling convention. As in the `stack` layout, the first element of this list describes the value on the top of the stack (**after** popping the jump destination). Each element is a 
+* `arguments`: A list describing the calling convention. As in the `stack` layout, the first element of this list describes the value on the top of the stack (**after** popping the jump destination). Each element is a
  dictionary described below.
 
 If the callee of the call is known, then the dictionary with sort `"call"` has the following field:
@@ -324,7 +333,7 @@ Note that if the function is being called is `virtual` then the declaration site
 Each element of the `arguments` array is a dictionary with the following fields:
 * `sort`: `"program"` or `"return_address"`. `"program"` has the same interpretation as in the `type` dictionary above. `"return_address"` is a refinement of the `pc` type indicating this stack slot holds
 the return address of the call being performed.
-* `position`: The logical position of the **parameter** represented by this stack value. The ordering of parameters is defined by their program declaration order, where the first formal parameter to a function has position `0`, 
+* `position`: The logical position of the **parameter** represented by this stack value. The ordering of parameters is defined by their program declaration order, where the first formal parameter to a function has position `0`,
 the next `1`, etc. As with the stack, a single logical argument can be spread across multiple stack slots. If multiple entries share the same `position` value, then those arguments
 should have a `representation` field that has a `componentOf` entry.
 
