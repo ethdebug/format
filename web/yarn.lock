@@ -3756,10 +3756,10 @@ dns-packet@^5.2.2:
   dependencies:
     "@leichtgewicht/ip-codec" "^2.0.1"
 
-docusaurus-json-schema-plugin@^1.7.0:
-  version "1.7.0"
-  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.7.0.tgz#e001e1089f13eeca61db9d552cff6e3a520d9576"
-  integrity sha512-Q9m6kIcCzA3CEtzaWBsgXbve8dWHInhO2XRvmJfFM6PYxcabGnmYBgJ13gI3PaIrt8SdBebc9v2ewj2Y0XfpLQ==
+docusaurus-json-schema-plugin@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.9.0.tgz#c217c88f14b034c182d98dc1344c55907068bb7b"
+  integrity sha512-MZiaNyI/VY8wj3hfAqn6WFCDcmBaLSURlzk+NWT43o+3dw6h0pwJW9GN3NFgqZED2eNSJzJ3c2Y/OBKKKampkA==
   dependencies:
     "@stoplight/json-ref-resolver" "^3.1.5"
     monaco-editor "^0.39.0"
@@ -4737,6 +4737,11 @@ html-tags@^3.3.1:
   resolved "https://registry.yarnpkg.com/html-tags/-/html-tags-3.3.1.tgz#a04026a18c882e4bba8a01a3d39cfe465d40b5ce"
   integrity sha512-ztqyC3kLto0e9WbNp0aeP+M3kTt+nbaIveGmUxAtZa+8iFgKLUOD4YKM5j+f3QD89bra7UeumolZHKuOXnTmeQ==
 
+html-url-attributes@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/html-url-attributes/-/html-url-attributes-3.0.0.tgz#fc4abf0c3fb437e2329c678b80abb3c62cff6f08"
+  integrity sha512-/sXbVCWayk6GDVg3ctOX6nxaVj7So40FcFAnWlWGNAB1LpYKcV5Cd10APjPjW80O7zYW2MsjBV4zZ7IZO5fVow==
+
 html-void-elements@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/html-void-elements/-/html-void-elements-3.0.0.tgz#fc9dbd84af9e747249034d4d62602def6517f1d7"
@@ -5206,7 +5211,7 @@ joi@^17.9.2:
   resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
 
-js-yaml@^3.13.1:
+js-yaml@^3.13.1, js-yaml@^3.8.4:
   version "3.14.1"
   resolved "https://registry.yarnpkg.com/js-yaml/-/js-yaml-3.14.1.tgz#dae812fdb3825fa306609a8717383c50c36a0537"
   integrity sha512-okMH7OXXJ7YrN9Ok3/SXrnu4iX9yOk+25nqX4imS2npuvTYDmo/QEZoqwZkYaIDk3jVvBOTOIEgEhaLOynBS9g==
@@ -7150,6 +7155,22 @@ react-loadable-ssr-addon-v5-slorber@^1.0.1:
   dependencies:
     "@babel/runtime" "^7.10.3"
 
+react-markdown@^9.0.1:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/react-markdown/-/react-markdown-9.0.1.tgz#c05ddbff67fd3b3f839f8c648e6fb35d022397d1"
+  integrity sha512-186Gw/vF1uRkydbsOIkcGXw7aHq0sZOCRFFjGrr7b9+nVZg4UfA4enXCaxm4fUzecU38sWfrNDitGhshuU7rdg==
+  dependencies:
+    "@types/hast" "^3.0.0"
+    devlop "^1.0.0"
+    hast-util-to-jsx-runtime "^2.0.0"
+    html-url-attributes "^3.0.0"
+    mdast-util-to-hast "^13.0.0"
+    remark-parse "^11.0.0"
+    remark-rehype "^11.0.0"
+    unified "^11.0.0"
+    unist-util-visit "^5.0.0"
+    vfile "^6.0.0"
+
 react-monaco-editor@^0.54.0:
   version "0.54.0"
   resolved "https://registry.yarnpkg.com/react-monaco-editor/-/react-monaco-editor-0.54.0.tgz#ec9293249a991b08264be723c1ec0ca3a6d480d8"
@@ -8599,6 +8620,13 @@ yaml-loader@^0.8.0:
     javascript-stringify "^2.0.1"
     loader-utils "^2.0.0"
     yaml "^2.0.0"
+
+yaml-template@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/yaml-template/-/yaml-template-1.0.0.tgz#e32e8d4077e67bbfae1e803e0b34e9f2b9298ceb"
+  integrity sha512-TD8Jkay9ScFUBshJAbe4RSWTiRDGBnINXgF5md5O49VZxlzYT3GeIumaA3/hKVLZ3g1p9+BTF0jtoOnyeJ5Dcg==
+  dependencies:
+    js-yaml "^3.8.4"
 
 yaml@^1.10.0, yaml@^1.10.2, yaml@^1.7.2:
   version "1.10.2"
