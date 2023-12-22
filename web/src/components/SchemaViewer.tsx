@@ -1,4 +1,5 @@
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import CodeBlock from "@theme/CodeBlock";
 import { loadSchema } from "@site/src/loadSchema";
 import ReactMarkdown from "react-markdown";
 
@@ -70,6 +71,24 @@ export default function SchemaViewer({
       }}
       viewerOptions={{
         showExamples: true,
+        ValueComponent: ({ value }) => {
+          // deal with simple types first
+          if ([
+            "string",
+            "number",
+            "bigint",
+            "boolean"
+          ].includes(typeof value)) {
+            return <code>{
+              (value as string | number | bigint | boolean).toString()
+            }</code>;
+          }
+
+          // for complex types use a whole CodeBlock
+          return <CodeBlock language="json">{`${
+            JSON.stringify(value, undefined, 2)
+          }`}</CodeBlock>;
+        },
         DescriptionComponent: ({description}) =>
           <ReactMarkdown children={description} />
       }} />
