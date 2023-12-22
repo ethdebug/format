@@ -16,11 +16,11 @@ e.g., in our discussion of endianness, we'll say that we don't need to support l
 difficult; but note this is a property of the EVM, not any particular language.)
 
 This is something of a skeleton.  One big problem that needs to be solved is to what extent this is applied to types vs to what
-extend it's applied to individual variables.  For now this will basically assume it's applied to types.  Of course, it is also necessary
+extent it's applied to individual variables.  For now this will basically assume it's applied to types.  Of course, it is also necessary
 to describe the placement of individual variables, but hopefully with type layout information it's not necessary to individually describe
 their layout.
 
-So, for each type, we'll discuss what needs to specified to specify the type itself, and then what needs to be specified to specify how it's laid out
+So, for each type, we'll discuss what needs to be specified to specify the type itself, and then what needs to be specified to specify how it's laid out
 in each particular location.
 Also, we'll discuss how to specify locations of individual variables.
 
@@ -197,7 +197,7 @@ each *part* of those is meaningful without this annotation.)
 
 ## Specifying more complex types
 
-### Structs and similar inhomogeneous things
+### Structs and tuples
 
 This can include things that may not necessarily be structs according to the language, but similarly contain a fixed number of parts and which aren't arrays.
 So, for instance, as suggested above, external function pointers could be handled here, as well as internal function pointers in non-IR Solidity (of course then the two
@@ -255,7 +255,7 @@ For each option, then, we can give a layout specification and a start point.
 
 So, this is a bit funky, but what if we allowed union representations of non-union types?
 
-That is, a type cound indicate that in a particular location, it had a tagged union representation;
+That is, a type could indicate that in a particular location, it had a tagged union representation;
 as with tagged unions, it would be specified where to find the tag, and then there'd be an object for each case.
 But the object would specify a layout, not a type!
 
@@ -352,7 +352,7 @@ a relative pointer and of what sort.
 You can once again also specify an overall length for the whole thing, which is useful for in storage specifying that it should take up a whole number of words;
 for storage this should be allowed in bytes or in words.
 
-What about paddingo of the elements?  Well, that's the messy part... the stride pattern.
+What about padding of the elements?  Well, that's the messy part... the stride pattern.
 
 See, we *could* just specify padding for the base type (what it's padded to and with what padding type).  But this wouldn't suffice to
 handle the case of how Solidity does arrays in storage!  Maybe we can make this optional -- you can give a `paddedWith` and `paddingType`,
@@ -385,7 +385,7 @@ Solidity examples:
 * `uint96[3][]` -- a `uint96[3]` takes up two full words always, so just `[{ type: "element" }]` suffices; what goes on inside the `uint96[3]` can be handled inside there
 * `uint96[3]` -- the stride pattern is `[{ type: "element" }, { type: "element" }, { type: "zero", length: 64 }]` as above, but now we should *also* specify that the array as
                  a whole has an overall length of two words, so that in a `uint96[3][]`, there's no confusion about the fact that each one should start on a fresh word boundary.
-                 (Not that it would be legal to start it anywhere else, but it should still be explciitly specified, not left as error-recovery behavior.)
+                 (Not that it would be legal to start it anywhere else, but it should still be explicitly specified, not left as error-recovery behavior.)
  
 #### Things probably not to include for now
 
