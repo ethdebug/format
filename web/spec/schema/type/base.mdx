@@ -11,8 +11,9 @@ import yaml from "yaml-template";
 # Base schema
 
 :::warning
-This format extends the schema on this page by defining more specific
-schemas for many common kinds of types (e.g. including signed/unsigned
+The schema on this page is extended by other, more specific schemas as part of
+the larger **ethdebug/format** specification. These other schemas specify the
+representation of many common kinds of types (e.g. including signed/unsigned
 integers, arrays, structs, mappings, etc.). In order to adhere to this format
 fully, compilers that represent known types **should** do so with the
 appropriate more-specific schema. Please see the
@@ -221,17 +222,16 @@ complex types.
 
 <SchemaViewer
     schema="schema:ethdebug/format/type/base"
-    pointer="#/$defs/Type"
     detect={
     (item) =>
       typeof item === "object" &&
         !("$schema" in item) &&
-        item["$ref"] === "#/$defs/Type"}
+        item["$ref"] === "schema:ethdebug/format/type/base"}
     transform={
       ({ $ref, ...rest }, root) => ({
         ...rest,
         type: "object",
-        title: root.$defs.Type.title + " [RECURSIVE]",
+        title: root.title + " [RECURSIVE]",
         description: "The root Type schema"
       })
     }

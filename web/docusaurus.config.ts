@@ -1,4 +1,5 @@
 import {themes as prismThemes} from 'prism-react-renderer';
+import path from "path";
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Configuration } from "webpack";
@@ -59,6 +60,9 @@ const config: Config = {
         configureWebpack(config: Configuration) {
           return {
             resolve: {
+              alias: {
+                react: path.resolve('./node_modules/react'),
+              },
               fallback: {
                 buffer: false
               }
