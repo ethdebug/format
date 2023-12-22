@@ -1,25 +1,57 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type"
 
-$ref: "#/$defs/Type"
+title: ethdebug/format/type
+description:
+  Canonical representation for all types.
+type: object
+
+if:
+  description:
+    If `kind` adheres to the set of known kinds defined by this format
+  properties:
+    kind:
+      $ref: "#/$defs/KnownKind"
+then:
+  description:
+    Then the object must adhere to exactly one known kind of type
+  $ref: "#/$defs/KnownType"
+
+else:
+  description:
+    Else the object must be a valid base Type and specify `class`
+  allOf:
+    - $ref: "schema:ethdebug/format/type/base"
+    - required:
+        - class
 
 $defs:
-  Type:
-    title: ethdebug/format/type
-    description:
-      Canonical representation for all types.
+  KnownKind:
+    title: KnownKind
     oneOf:
-      - title: Known types
+      - $ref: "#/$defs/KnownElementaryKind"
+      - $ref: "#/$defs/KnownComplexKind"
+
+  KnownElementaryKind:
+    title: KnownElementaryKind
+    type: string
+    enum:
+      - uint
+
+  KnownComplexKind:
+    title: KnownComplexKind
+    type: string
+    enum:
+      - array
+
+  KnownType:
+    oneOf:
+      - title: Known elementary types
         oneOf:
-          - title: Known elementary types
-            oneOf:
-              - $ref: "#/$defs/UintType"
-
-          - title: Known complex types
-            oneOf:
-              - $ref: "#/$defs/ArrayType"
-
-      - $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+          - $ref: "#/$defs/UintType"
+      - title: Known complex types
+        oneOf:
+          - $ref: "#/$defs/ArrayType"
 
   UintType:
     title: UintType
@@ -36,6 +68,9 @@ $defs:
     required:
       - kind
       - bits
+    examples:
+      - kind: uint
+        bits: 256
 
   ArrayType:
     title: ArrayType
@@ -51,9 +86,25 @@ $defs:
         type: object
         properties:
           type:
-            $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+            $ref: "schema:ethdebug/format/type"
         required:
           - type
     required:
       - kind
       - contains
+    examples:
+      - kind: array
+        contains:
+          type:
+            kind: uint
+            bits: 256
+
+      - kind: array
+        contains:
+          type:
+            kind: array
+            contains:
+              type:
+                class: elementary
+                kind: super-uint # unsupported type
+                blits: -256

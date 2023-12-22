@@ -3,14 +3,32 @@ sidebar_position: 3
 ---
 
 import SchemaViewer from "@site/src/components/SchemaViewer";
+import { Collapsible, CreateTypes } from "@theme/JSONSchemaViewer/components";
+import { schemas } from "@site/src/loadSchema";
 
 # Canonical Type schema
 
 This page specifies the canonical **ethdebug/format/type** schema for
 
+<Collapsible
+  summary={
+    <strong>ethdebug/format/type</strong>
+  }
+  detailsProps={{
+    open: true,
+  }}
+>
+  <CreateTypes schema={schemas["schema:ethdebug/format/type"]} />
+
+  <SchemaViewer
+    schema="schema:ethdebug/format/type"
+    pointer="#/if" />
+
+</Collapsible>
+
+
 <SchemaViewer
     schema="schema:ethdebug/format/type"
-    pointer="#/$defs/Type"
     detect={
     (item) =>
       typeof item === "object" &&
