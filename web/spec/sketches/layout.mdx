@@ -1,4 +1,8 @@
-# Describing variable layout
+---
+description: Initial format sketch
+---
+
+# @haltman-at's allocation data draft
 
 ## Status of this document
 This is an initial draft for review and comment. It does not have consensus and should only be cited as work in progress.
@@ -386,7 +390,7 @@ Solidity examples:
 * `uint96[3]` -- the stride pattern is `[{ type: "element" }, { type: "element" }, { type: "zero", length: 64 }]` as above, but now we should *also* specify that the array as
                  a whole has an overall length of two words, so that in a `uint96[3][]`, there's no confusion about the fact that each one should start on a fresh word boundary.
                  (Not that it would be legal to start it anywhere else, but it should still be explicitly specified, not left as error-recovery behavior.)
- 
+
 #### Things probably not to include for now
 
 Probably don't attempt to handle arrays that are directly multidimensional (as opposed to
