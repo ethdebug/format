@@ -28,7 +28,7 @@ So, for each type, we'll discuss what needs to be specified to specify the type 
 in each particular location.
 Also, we'll discuss how to specify locations of individual variables.
 
-What's written here might not be entirely compatible with what's in [format.md](./format.md).  That will need to be hammered out.
+What's written here might not be entirely compatible with what's in [prototype.mdx](./prototype.mdx).  That will need to be hammered out.
 
 ### Things this doesn't do
 
@@ -52,6 +52,15 @@ but in some cases, it could conceptually be possible.  The problem is that using
 doesn't gain much generality.  But, it does gain us one important case (regarding how strings are stored in storage in Solidity),
 so we need it at least there.  It seems inconsistent to use it only there and not more generally, though.  So likely we should more
 often be using bits instead of bytes?  Something for later.
+
+:::note
+@cameel comments here:
+
+> The string format does not really require this though. You can always look at
+> the last bit just as a part of the length field. I.e. the length is specified
+> as either 2N or 2N+1 and odd numbers indicate one format and even ones the
+> other.
+:::
 
 ### Positions in memory, calldata, or code
 
@@ -80,6 +89,11 @@ Assuming any particular endianness in storage seems bad (in Solidity e.g. it's d
 specified -- which does not need to agree with the endianness of its component types!  It covers only the outermost layer.
 For something like an integer this is meaningless per se, but it is necessary to make sense of the "start" of that integer.
 
+:::note
+@cameel asks about this:
+> How do you define endianness for arrays?
+:::
+
 #### Specifying complex storage slots (if necessary)
 
 A storage slot can be specified as one of the following objects:
@@ -89,6 +103,14 @@ A storage slot can be specified as one of the following objects:
 `{ slotType: "offset", path: Slot, offset: bigint }`
 
 `{ slotType: "hashedoffset", path: Slot, offset: bigint }`
+
+:::note
+@cameel asks:
+> Do we need a distinction between relative and absolute locations? I.e. when
+> describing the nested layout or something like a struct you might want to
+> interpret locations as relative but then you might still want to have some
+> things interpreted as absolute (specifically the hashed locations).
+:::
 
 ```
 {
@@ -113,7 +135,7 @@ Question: Allow offset on map entry?  Don't really see a need for this.
 
 ## Specifying basic types
 
-This might not need to be this complex.  The suggestions in [format.md](./format.md) suggest group all these together as just primitive types
+This might not need to be this complex.  The suggestions in [prototype.mdx](./prototype.mdx) suggest group all these together as just primitive types
 with just `keyword`, `bitwidth`, and `alignment`.  Maybe that's better?  Although `alignment` should likely distinguish between zero-padding and sign-padding.
 
 ### Integers
@@ -136,6 +158,14 @@ are more significant.
 That leaves padding. We can specify this as follows:
 
 `{ paddedBytes: number, paddingType: "zero" | "sign" | "right" }`
+
+:::note
+@cameel asks about this:
+> Does bytes include paddedBytes or not?
+>
+> From the note below about "bytewidth of the unpadded type" I assume it does
+> not, but perhaps that should be said explicitly.
+:::
 
 (Here `"zero"` means left-padded with zeroes, and `"right"` means right-padded with zeroes; `"sign"` means sign-padding.)
 
@@ -199,6 +229,13 @@ But, in IR Solidity, they don't decompose.  Also, in non-IR Solidity, what do th
 as an internal function pointer, so that whatever's reading this format can know to treat them as that.  (I don't see that we need this for external function pointers, since
 each *part* of those is meaningful without this annotation.)
 
+:::note
+@cameel adds:
+> They decompose into two separate jump destinations: one into the creation
+> code, the other into the deployed code. But this is something that feels like
+> an implementation detail so not sure it has a place here.
+:::
+
 ## Specifying more complex types
 
 ### Structs and tuples
@@ -223,10 +260,23 @@ but they're inline for our purposes.)
 the current location, they're relative to the start of the container they're inside.  We can allow for both possibilities,
 probably (relative pointers aren't so exotic).  And of course we need to know the length of the pointer.
 
+:::note
+@cameel adds:
+> In the future in Solidity also pointers to data stored in other locations
+> will be possible. Things like a storage struct nested inside a memory struct.
+> The concept of located types in the main spec already allows for that in full
+> generality.
+:::
+
 For the stack: Overall this is similar?  Structs don't live on the stack, but function pointers do.  It'll be necessary here
 to use the ability to specify particular bytes within a stack slot.  Alternatively, if we don't want to allow that,
 because we don't think splitting up internal function pointers is a good idea, we could allow separately specifying the padding
 in each stack slot (this is necessary to handle Solidity's external function pointers, assuming we're handling them under this).
+
+:::note
+@cameel adds:
+> In the future structs will be allowed to live anywhere.
+:::
 
 For storage: We *could* do something complicated, assuming that structs might get relocated in all sorts of weird ways,
 but this is probably not a good idea to start with.  Instead we'll just assume that each struct either:
@@ -243,6 +293,13 @@ case is included to cover things that aren't actually structs but decompose into
 
 These don't currently exist in Solidity or Vyper, but we should probably handle them?  Pyramid had them (in that
 it was dynamically typed so everything was one).
+
+:::note
+@cameel notes:
+> They're planned in Solidity and may already exist in Fe. In Solidity they
+> will most likely be implemented in a form similar to Rust's enums with data.
+> Algebraic types in general will be possible in the future.
+:::
 
 For the type, we say what it's a union of.
 
@@ -277,6 +334,15 @@ description, to avoid that?
 
 Maybe these are treated like primitive types?  Maybe they're treated like tagged unions whose unioned types are all the unit type?  In that case we'd need to be able
 to represent the unit type.
+
+:::note
+@cameel adds:
+> This *might* need specifying the size in bytes. In older Solidity versions
+> enums took a variable number of bytes, depending on the number of members.
+> Now they're limited to 256 members so 1 byte
+> (https://github.com/ethereum/solidity/pull/10247). Other languages could be
+> doing it differently.
+:::
 
 ### Strings and bytestrings
 
@@ -334,7 +400,7 @@ Probably it is best to combine (1) and (2) into a `mapType` and keep (3) separat
 
 ### Arrays
 
-Note: This will exclude strings and bytestrings, handling them separately above, unlike [format.md](./format.md); another difference that will have to be figured out.
+Note: This will exclude strings and bytestrings, handling them separately above, unlike [prototype.mdx](./prototype.mdx); another difference that will have to be figured out.
 
 We can split these into fixed-length and variable length (whether bounded or unbounded).  And then you've got the base type.
 
@@ -396,3 +462,23 @@ Solidity examples:
 Probably don't attempt to handle arrays that are directly multidimensional (as opposed to
 multidimensional arrays just being ordinary arrays of arrays).  Allowing this also raises possibility
 of a flag for row-major vs column-major order.  Probably best to just exclude this for now.
+
+:::note
+@haltman-at notes in a comment (after writing this)
+> Oh, geez, I just realized there's something big I left out: How things are
+> pointed to on the stack.  Actually, one could perhaps speak of cross-location
+> pointers in general, but as that doesn't exist mostly at the moment, probably
+> no sense in includng that; it's premature.
+>
+> But, I guess something that needs to be added is, for each type, for the
+> stack location, I talked about from/to but really we also need to say, does
+> this thing live directly on the stack or is it pointed to.  And if it's
+> pointed to, we need to specify the pointer format -- do we just point to the
+> start, or do we have start/length?  And then if it's start/length we need to
+> break down which part is the start and which part is the length... also, for
+> length, we likely want to be able to specify what the length is measured in
+> -- for instance it could potentially be `"bytes"` or `"words"` or `"items"`.
+>
+> (Yes this should be added to the PR itself but I don't have a lot of time at
+> the moment)
+:::
