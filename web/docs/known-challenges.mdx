@@ -40,7 +40,7 @@ elements into the same storage word, starting from the low byte.  However,
 segments of strings in storage start at the high byte of their word.  So it will
 be necessary to have a way to specify this.  (In particular, consider the case
 of a `bytes2[] storage`; each `bytes2` is packed into the word in a
-little-endian order, but each `bytes2` itself is stord in a big-endian order.)
+little-endian order, but each `bytes2` itself is stored in a big-endian order.)
 
 (Of course, there can also be a need to specify endianness in byte-based
 locations, e.g. for storage of integers.  Currently all EVM languages known to
@@ -93,7 +93,7 @@ representations, somewhat similar to the notion of union types?
 ## Mappings
 
 Both Solidity and Vyper use mappings, and while these work similarly in both
-languages, the two aren't the same.  It will necessary to handle both styles,
+languages, the two aren't the same.  It will be necessary to handle both styles,
 and ideally other potential styles as well.
 
 In both languages, given a mapping at position `p` and a key `k`, the value
@@ -154,7 +154,7 @@ challenges.
 Firstly, there are two different formats for these (depending on whether or not
 `viaIR` was set in compilation), so it will be necessary to handle both.
 
-Secondly, the format with `viaIR` turned on relies on assigning functions
+Secondly, the format with `viaIR` turned on relies on assigning functions to
 arbitrary numeric indices, so the format will have to include information
 mapping indices to functions.
 
@@ -175,11 +175,11 @@ will need to be a way to keep track of variables that move around on the stack.
 
 ## The possibility of handling other languages
 
-This is something of a reiteration of the initial point, but, it would be ideal
+This is something of a reiteration of the initial point, but it would be ideal
 to be able to handle features that we may expect to see in other languages even
 if they do not appear in Solidity or Vyper.
 
 For instance, the (now-defunct) EVM language Pyramid was (largely) dynamically
 typed, making each variable effectively a sum type.  Sum types are an example of
-a feature we may want to be able to handle even if is not present in either
+a feature we may want to be able to handle even if not present in either
 Solidity or Vyper.
