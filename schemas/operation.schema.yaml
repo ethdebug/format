@@ -1,0 +1,13 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation"
+
+$ref: "#/$defs/Operation"
+
+$defs:
+  Operation:
+    title: ethdebug/format/operation
+    description:
+      Canonical representation of a high-level operation that might occur as
+      the result of executing a machine instruction.
+    oneOf: []
+

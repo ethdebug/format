@@ -1,0 +1,67 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/base"
+
+$ref: "#/$defs/Operation"
+
+$defs:
+  Operation:
+    title: ethdebug/format/operation/base
+    description:
+      Schema for the minimally necessary representation for an operation in a
+      high-level language, such as would correspond to the execution of a
+      low-level machine instruction.
+    oneOf:
+      - $ref: "#/$defs/SignalOperation"
+      - $ref: "#/$defs/ModeOperation"
+
+  SignalOperation:
+    title: SignalOperation
+    description:
+      Base schema for representing a high-level program operation for some
+      point-in-time effect.
+
+  ModeOperation:
+    title: ModeOperation
+    description:
+      Base schema for operations relating to a change in operating mode. A
+      ModeOperation corresponds either to the start of a mode or the end of a
+      mode.
+    properties:
+      mode:
+        type: string
+        description:
+          The kind of mode that is starting or stopping
+      control:
+        type: string
+        enum:
+          - begin
+          - end
+        description:
+          Whether the mode is starting or stopping
+    oneOf:
+      - $ref: "#/$defs/StartModeOperation"
+      - $ref: "#/$defs/EndModeOperation"
+
+  StartModeOperation:
+    title: StartModeOperation
+    description:
+      Base schema for an operation that starts a high-level operating mode
+      (e.g., to represent that the machine is now inside a particular function
+      body, or to represent that a set of variables are now in scope, etc.)
+    properties:
+      mode:
+        type: string
+        description:
+          The kind of mode that is starting
+      control:
+        type: string
+        const: begin
+
+  EndModeOperation:
+    title: EndModeOperation
+    description:
+      Base schema for an operation that ends a high-level operating mode
+      (e.g., to represent that the machine is now no longer inside a particular
+      function body, or to represent that a set of variables has left scope,
+      etc.)
+

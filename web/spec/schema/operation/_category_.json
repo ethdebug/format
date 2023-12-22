@@ -1,0 +1,8 @@
+{
+  "label": "ethdebug/format/operation",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Work-in-progress formal schema for ethdebug format"
+  }
+}
