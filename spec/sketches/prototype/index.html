@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.0.1">
 <title data-rh="true">@jtoman&#x27;s format prototype | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/spec/sketches/prototype"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="@jtoman&#x27;s format prototype | ethdebug format"><meta data-rh="true" name="description" content="Initial format sketch"><meta data-rh="true" property="og:description" content="Initial format sketch"><link data-rh="true" rel="icon" href="/format/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/spec/sketches/prototype"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/sketches/prototype" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/sketches/prototype" hreflang="x-default"><link rel="stylesheet" href="/format/assets/css/styles.fb3c0b52.css">
-<script src="/format/assets/js/runtime~main.cbc4c7d0.js" defer="defer"></script>
+<script src="/format/assets/js/runtime~main.1e1a49d3.js" defer="defer"></script>
 <script src="/format/assets/js/main.d3b7faba.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -30,7 +30,7 @@ with a versioning scheme.</p>
 attempting to provide to end-users of the format. Extensions to this format to support other use
 cases not explicitly identified here are expected.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="local-variable-information">Local Variable Information<a href="#local-variable-information" class="hash-link" aria-label="Direct link to Local Variable Information" title="Direct link to Local Variable Information">​</a></h3>
-<p>Currently decompilers and formal methods tools must use interally generated names to give names to
+<p>Currently decompilers and formal methods tools must use internally generated names to give names to
 the values stored on the stack. The debugging format should provide information about what stack slots correspond
 to which source level identifiers.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="type-information">Type Information<a href="#type-information" class="hash-link" aria-label="Direct link to Type Information" title="Direct link to Type Information">​</a></h3>
@@ -44,7 +44,7 @@ about possible targets of jump commands.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="internal-function-calls">Internal Function Calls<a href="#internal-function-calls" class="hash-link" aria-label="Direct link to Internal Function Calls" title="Direct link to Internal Function Calls">​</a></h3>
 <p>The EVM has no built-in concept of internal functions. Rather, Solidity internal function implementations are placed at some offset in the
 contract&#x27;s bytecode, and callers jump to this predetermined location, passing arguments on the stack along with the return location (this is
-one possible complication when attempting to statically resolving jump destinations).</p>
+one possible complication when attempting to statically resolve jump destinations).</p>
 <p>Statically detecting these internal calls and informing an end-user can be surprisingly complicated.
 For example, the Solidity compiler will in some cases perform a &quot;tail-call&quot; optimization: for nested calls like <code>f(g(x))</code>
 the compiler will push the entry point of <code>f</code> as the return address for the call to <code>g</code>. The format should
@@ -87,7 +87,7 @@ source language. Each descriptor is a JSON object with at least the following fi
 and indeed, they will likely reference the types defined here. However, as events and errors are not currently
 first class in any language targeting the EVM that I&#x27;m aware of (i.e., you cannot declare a variable <code>x</code> to be of
 type <code>error Foo()</code>) they should be described elsewhere.</p>
-<p><strong>Notes</strong>: some preference was expressed for <code>kind</code> over <code>sort</code>. In addition,it was suggested we use <code>pointer</code> or <code>reference</code> over <code>located</code>.</p>
+<p><strong>Notes</strong>: some preference was expressed for <code>kind</code> over <code>sort</code>. In addition, it was suggested we use <code>pointer</code> or <code>reference</code> over <code>located</code>.</p>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="mappings">Mappings<a href="#mappings" class="hash-link" aria-label="Direct link to Mappings" title="Direct link to Mappings">​</a></h4>
 <p>The type descriptor for a mapping type has the following additional fields defined.</p>
 <ul>
@@ -238,7 +238,7 @@ that contributed to the generation of this opcode.</li>
 </ul>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="source-locations">Source Locations<a href="#source-locations" class="hash-link" aria-label="Direct link to Source Locations" title="Direct link to Source Locations">​</a></h4>
 <p>The choice of which source location should be attached to each opcode is likely an inexact science. However, implementers are encouraged to be as exact as possible: while it
-is technically correct to give the entirety of the a contract file as the &quot;source&quot; of every opcode, this is not a useful result. Consumers of this information should also take care
+is technically correct to give the entirety of the contract file as the &quot;source&quot; of every opcode, this is not a useful result. Consumers of this information should also take care
 to assume that source code operations may map to (surprising) AST ids. For example, an optimizing compiler may tag a <code>PUSH</code> of a constant <code>16</code> with the AST id of the following expression
 <code>(5 + 11)</code>. An even more aggressive optimizing compiler could even tag the same push with the AST ids of the literals <code>5</code> and <code>11</code> in the following <code>(5 + x) + 11</code>.</p>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="stack-information">Stack Information<a href="#stack-information" class="hash-link" aria-label="Direct link to Stack Information" title="Direct link to Stack Information">​</a></h4>
@@ -255,7 +255,7 @@ any single identifier.</li>
 </ul>
 <p>Note that due to <code>dup</code> commands, multiple stack locations may hold the same variable name. If a compiler knows that a stack slot that holds
 a variable will be later overwritten with a new value, it should mark the to be overwritten value with the &quot;junk&quot; type (see below).</p>
-<p>The <code>type</code> dictionary provides information about the value stored in the stack slot. The types used here here are a superset of the types described by type descriptors.</p>
+<p>The <code>type</code> dictionary provides information about the value stored in the stack slot. The types used here are a superset of the types described by type descriptors.</p>
 <p>The <code>type</code> dictionary has the following field:</p>
 <ul>
 <li><code>sort</code>: A string indicating the sort of value stored in the stack slot, drawn from one of the following values:<!-- -->
@@ -288,7 +288,7 @@ fully initialized is to be decided on later)</li>
 </ul>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="jumps">Jumps<a href="#jumps" class="hash-link" aria-label="Direct link to Jumps" title="Direct link to Jumps">​</a></h4>
 <p>For jumping commands, the <code>jumps</code> field provides information about the expected target of the jump, and information about the internal function stack.</p>
-<p>The value of the <code>jumps</code> field is a dictionary with the following (potentialy optional) fields:</p>
+<p>The value of the <code>jumps</code> field is a dictionary with the following (potentially optional) fields:</p>
 <ul>
 <li><code>targets</code>: if present, a list of known PCs to which this command may jump. For JUMPI, this does <strong>not</strong> include the fallthrough case, as this is readily computable. This list may be non-singleton due to,
 e.g., function pointers, but the compiler is able to restrict the potential callees.</li>
@@ -317,7 +317,7 @@ dictionary described below.</li>
 </ul>
 </li>
 </ul>
-<p>Note that if the function is being called is <code>virtual</code> then the declaration site may not have any corresponding body.</p>
+<p>Note that if the function being called is <code>virtual</code> then the declaration site may not have any corresponding body.</p>
 <p>Each element of the <code>arguments</code> array is a dictionary with the following fields:</p>
 <ul>
 <li><code>sort</code>: <code>&quot;program&quot;</code> or <code>&quot;return_address&quot;</code>. <code>&quot;program&quot;</code> has the same interpretation as in the <code>type</code> dictionary above. <code>&quot;return_address&quot;</code> is a refinement of the <code>pc</code> type indicating this stack slot holds
@@ -331,12 +331,12 @@ Due to named arguments, the order given in the debug information may not match t
 <div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">function myFunction(uint a, uint b) ...</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>and an invocation:</p>
 <div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">myFunction(b = 3, a = 4)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
-<p>the stack location which contains the <code>4</code> argument value will be tagged with position <code>0</code>, as that is the <code>a</code> parameter&#x27;s position in the declaration.</p>
+<p>the stack location which contains the <code>4</code> argument value will be tagged with position <code>0</code>, as that is the position of parameter <code>a</code> in the declaration.</p>
 <p>If the value of <code>sort</code> is <code>&quot;return&quot;</code>, then the dictionary has the following field:</p>
 <ul>
-<li><code>returns</code>: A list of dictionaries with the same format of as the <code>arguments</code> array of <code>call</code>, but without any <code>return_address</code> entries.</li>
+<li><code>returns</code>: A list of dictionaries with the same format as the <code>arguments</code> array of <code>call</code>, but without any <code>return_address</code> entries.</li>
 </ul>
-<p><strong>Discussion</strong>: The above proposal doesn&#x27;t really handle the case of &quot;tail-calls&quot; identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something debug format must explicitly model?</p>
+<p><strong>Discussion</strong>: The above proposal doesn&#x27;t really handle the case of &quot;tail-calls&quot; identified at the beginning of this document, where multiple return addresses can be pushed onto the stack. Is that something the debug format must explicitly model?</p>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="mapping-key-identification-1">Mapping key identification<a href="#mapping-key-identification-1" class="hash-link" aria-label="Direct link to Mapping key identification" title="Direct link to Mapping key identification">​</a></h4>
 <p>The value of this field (when present) is a dictionary with (some of) the following fields:</p>
 <ul>
