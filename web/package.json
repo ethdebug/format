@@ -30,13 +30,13 @@
     "react-dom": "^18.0.0",
     "react-markdown": "^9.0.1",
     "yaml": "^2.3.4",
-    "yaml-loader": "^0.8.0",
     "yaml-template": "^1.0.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.0.1",
     "@docusaurus/tsconfig": "^3.0.1",
     "@docusaurus/types": "^3.0.1",
+    "raw-loader": "^4.0.2",
     "typescript": "~5.2.2"
   },
   "browserslist": {

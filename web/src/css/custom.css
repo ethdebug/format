@@ -28,3 +28,8 @@
   --ifm-color-primary-lightest: #4FDDC1; /* Almost Pastel for Light Backgrounds */
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+.schema-listing pre {
+  max-height: 500px;
+  overflow: auto;
+}
