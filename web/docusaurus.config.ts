@@ -103,6 +103,12 @@ const config: Config = {
           activeBaseRegex: `/spec/`,
         },
         {
+          to: '/status',
+          label: "⚠️ DRAFT ⚠️",
+          className: "draft-warning",
+          position: "right"
+        },
+        {
           href: 'https://github.com/ethdebug/format',
           label: 'GitHub',
           position: 'right',
