@@ -91,6 +91,7 @@ export default function SchemaViewer({
         },
         DescriptionComponent: ({description}) =>
           <ReactMarkdown children={description} />
+        }
       }} />
   );
 }
