@@ -1,9 +1,11 @@
 import YAML from "yaml";
 
 import typeBaseSchemaYaml from "../../schemas/type/base.schema.yaml";
+import typeSchemaYaml from "../../schemas/type.schema.yaml";
 
 export const schemaYamls = [
   typeBaseSchemaYaml,
+  typeSchemaYaml
 ].map(schema => ({
   [YAML.parse(schema).$id]: schema
 })).reduce((a, b) => ({ ...a, ...b }), {});

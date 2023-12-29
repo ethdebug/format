@@ -12,7 +12,8 @@ const readSchemas = (): {
   [id: string]: JSONSchema
 } => {
   const schemaPaths = [
-    "type/base.schema.yaml"
+    "type/base.schema.yaml",
+    "type.schema.yaml"
   ];
 
   const schemas = schemaPaths
@@ -52,7 +53,26 @@ export const schemaExtensions: {
         "schema:ethdebug/format/type/base"
       ])
     },
-  }
+  },
+  "schema:ethdebug/format/type": {
+    "Type": {
+      extends: new Set([
+        "schema:ethdebug/format/type/base"
+      ])
+    },
+    "UintType": {
+      extends: new Set([
+        "schema:ethdebug/format/type",
+        "schema:ethdebug/format/type/base#/$defs/ElementaryType"
+      ])
+    },
+    "ArrayType": {
+      extends: new Set([
+        "schema:ethdebug/format/type",
+        "schema:ethdebug/format/type/base#/$defs/ComplexType"
+      ])
+    },
+  },
 }
 
 const schemas = readSchemas();
