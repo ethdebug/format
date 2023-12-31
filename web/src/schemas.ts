@@ -1,11 +1,33 @@
 import YAML from "yaml";
 
 import typeBaseSchemaYaml from "../../schemas/type/base.schema.yaml";
+import typeElementaryUintSchemaYaml from "../../schemas/type/elementary/uint.schema.yaml";
+import typeElementaryIntSchemaYaml from "../../schemas/type/elementary/int.schema.yaml";
+import typeElementaryBoolSchemaYaml from "../../schemas/type/elementary/bool.schema.yaml";
+import typeElementaryBytesSchemaYaml from "../../schemas/type/elementary/bytes.schema.yaml";
+import typeElementaryStringSchemaYaml from "../../schemas/type/elementary/string.schema.yaml";
+import typeElementaryUfixedSchemaYaml from "../../schemas/type/elementary/ufixed.schema.yaml";
+import typeElementaryFixedSchemaYaml from "../../schemas/type/elementary/fixed.schema.yaml";
+import typeElementaryAddressSchemaYaml from "../../schemas/type/elementary/address.schema.yaml";
+import typeElementaryContractSchemaYaml from "../../schemas/type/elementary/contract.schema.yaml";
+import typeElementaryEnumSchemaYaml from "../../schemas/type/elementary/enum.schema.yaml";
+import typeElementarySchemaYaml from "../../schemas/type/elementary.schema.yaml";
 import typeSchemaYaml from "../../schemas/type.schema.yaml";
 
 export const schemaYamls = [
   typeBaseSchemaYaml,
-  typeSchemaYaml
+  typeElementaryUintSchemaYaml,
+  typeElementaryIntSchemaYaml,
+  typeElementaryUfixedSchemaYaml,
+  typeElementaryFixedSchemaYaml,
+  typeElementaryBoolSchemaYaml,
+  typeElementaryBytesSchemaYaml,
+  typeElementaryStringSchemaYaml,
+  typeElementaryAddressSchemaYaml,
+  typeElementaryContractSchemaYaml,
+  typeElementaryEnumSchemaYaml,
+  typeElementarySchemaYaml,
+  typeSchemaYaml,
 ].map(schema => ({
   [YAML.parse(schema).$id]: schema
 })).reduce((a, b) => ({ ...a, ...b }), {});

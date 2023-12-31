@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/struct"
+
+title: ethdebug/format/type/complex/struct
+description:
+  Schema for representing struct types
+
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: struct
+  contains:
+    type: array
+    items:
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "schema:ethdebug/format/type"
+      required:
+        - type
+
+required:
+  - kind
+  - contains
+
+examples:
+  - kind: struct
+    contains:
+      - name: x
+        type:
+          kind: uint
+          bits: 128
+      - name: y
+        type:
+          kind: uint
+          bits: 128

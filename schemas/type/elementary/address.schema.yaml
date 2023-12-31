@@ -1,0 +1,27 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/address"
+
+title: ethdebug/format/type/elementary/address
+description:
+  Schema describing the representation of an address type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: address
+  payable:
+    type: boolean
+    description:
+      If this field is omitted, this type represents an address whose
+      payability is not known.
+required:
+  - kind
+examples:
+  - # a type for addresses of unknown payability
+    kind: address
+
+  - # a type for payable addresses
+    kind: address
+    payable: true

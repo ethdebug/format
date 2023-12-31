@@ -1,0 +1,24 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/uint"
+
+title: ethdebug/format/type/elementary/uint
+description:
+  Schema describing the representation of an unsigned integer type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: uint
+  bits:
+    type: number
+    multipleOf: 8
+    minimum: 8
+    maximum: 256
+required:
+  - kind
+  - bits
+examples:
+  - kind: uint
+    bits: 256

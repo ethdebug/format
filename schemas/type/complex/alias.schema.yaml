@@ -1,0 +1,43 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/alias"
+
+title: ethdebug/format/type/complex/alias
+description:
+  Schema representing a type alias to another type
+
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: alias
+  contains:
+    type: object
+    properties:
+      type:
+        $ref: "schema:ethdebug/format/type"
+    required:
+      - type
+
+required:
+  - kind
+  - contains
+
+examples:
+  - kind: alias
+    contains:
+      type:
+        kind: uint
+        bits: 256
+
+  - kind: alias
+    contains:
+      type:
+        kind: array
+        contains:
+          type:
+            class: elementary
+            kind: super-uint # unsupported type
+            blits: -256

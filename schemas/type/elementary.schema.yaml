@@ -1,0 +1,102 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary"
+
+title: ethdebug/format/type/elementary
+description:
+  Canonical representation of an elementary type
+
+type: object
+properties:
+  kind:
+    $ref: "#/$defs/Kind"
+required:
+  - kind
+
+allOf:
+  - if:
+      properties:
+        kind:
+          const: uint
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/uint"
+
+  - if:
+      properties:
+        kind:
+          const: int
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/int"
+
+  - if:
+      properties:
+        kind:
+          const: bool
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/bool"
+
+  - if:
+      properties:
+        kind:
+          const: bytes
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/bytes"
+
+  - if:
+      properties:
+        kind:
+          const: string
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/string"
+
+  - if:
+      properties:
+        kind:
+          const: ufixed
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/ufixed"
+
+  - if:
+      properties:
+        kind:
+          const: fixed
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/fixed"
+  - if:
+      properties:
+        kind:
+          const: address
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/address"
+
+  - if:
+      properties:
+        kind:
+          const: contract
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/contract"
+
+  - if:
+      properties:
+        kind:
+          const: enum
+    then:
+      $ref: "schema:ethdebug/format/type/elementary/enum"
+
+$defs:
+  Kind:
+    title: Known Elementary Kind
+    description:
+      A schema for the values of `kind` reserved for known elementary types
+      included in ethdebug/format
+    type: string
+    enum:
+      - uint
+      - int
+      - bool
+      - bytes
+      - string
+      - ufixed
+      - fixed
+      - address
+      - contract
+      - enum

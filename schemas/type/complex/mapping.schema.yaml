@@ -1,0 +1,50 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/mapping"
+
+title: ethdebug/format/type/complex/mapping
+description:
+  Schema for representing mapping types
+
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: mapping
+  contains:
+    type: object
+    properties:
+      key:
+        type: object
+        properties:
+          type:
+            $ref: "schema:ethdebug/format/type"
+        required:
+          - type
+      value:
+        type: object
+        properties:
+          type:
+            $ref: "schema:ethdebug/format/type"
+        required:
+          - type
+    required:
+      - key
+      - value
+
+required:
+  - kind
+  - contains
+
+examples:
+  - kind: mapping
+    contains:
+      key:
+        type:
+          kind: address
+      value:
+        type:
+          kind: uint
+          bits: 256

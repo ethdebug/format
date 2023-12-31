@@ -1,0 +1,24 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/int"
+
+title: ethdebug/format/type/elementary/int
+description:
+  Schema describing the representation of a signed integer type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: int
+  bits:
+    type: number
+    multipleOf: 8
+    minimum: 8
+    maximum: 256
+required:
+  - kind
+  - bits
+examples:
+  - kind: int
+    bits: 256
