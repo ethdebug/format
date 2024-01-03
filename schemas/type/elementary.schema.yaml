@@ -84,7 +84,7 @@ allOf:
 
 $defs:
   Kind:
-    title: Known Elementary Kind
+    title: Known elementary kind
     description:
       A schema for the values of `kind` reserved for known elementary types
       included in ethdebug/format

@@ -16,6 +16,7 @@ properties:
   contains:
     type: array
     items:
+      title: '{ name?, type }'
       properties:
         name:
           type: string
@@ -27,7 +28,7 @@ properties:
             names, and so this field may be sparse across elements of the same
             tuple.
         type:
-          $ref: "schema:ethdebug/format/type"
+          $ref: "schema:ethdebug/format/type#/$defs/TypeWrapper/properties/type"
       required:
         - type
 

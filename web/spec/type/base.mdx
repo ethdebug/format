@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 import SchemaViewer from "@site/src/components/SchemaViewer";
@@ -8,7 +8,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import yaml from "yaml-template";
 
-# ethdebug/format/type/base
+# Base type schema
 
 :::warning
 The schema on this page is extended by other, more specific schemas as part of
@@ -149,19 +149,6 @@ must be a string or a number.
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/type/base" }}
   pointer="#/$defs/TypeWrapper"
-  detect={
-  (item) =>
-    typeof item === "object" &&
-      !("$schema" in item) &&
-      item["$ref"] === "#/$defs/Type"}
-  transform={
-    ({ $ref, ...rest }, root) => ({
-      ...rest,
-      type: "object",
-      title: root.$defs.Type.title + " [RECURSIVE]",
-      description: "The root Type schema"
-    })
-  }
   />
 
 ### ComplexType's `"contains"` field
@@ -249,19 +236,6 @@ complex types.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/type/base" }}
-  detect={
-  (item) =>
-    typeof item === "object" &&
-      !("$schema" in item) &&
-      item["$ref"] === "schema:ethdebug/format/type/base"}
-  transform={
-    ({ $ref, ...rest }, root) => ({
-      ...rest,
-      type: "object",
-      title: root.title + " [RECURSIVE]",
-      description: "The root Type schema"
-    })
-  }
   />
 
 ## Example schema extensions for particular types
@@ -322,7 +296,7 @@ correspond to the canonical **ethdebug/format/type** schema._
             type: object
             properties:
               type:
-                $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                $ref: "schema:ethdebug/format/type/base"
             required:
               - type
         required:
@@ -359,14 +333,14 @@ correspond to the canonical **ethdebug/format/type** schema._
                 type: object
                 properties:
                   type:
-                    $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                    $ref: "schema:ethdebug/format/type/base"
                 required:
                   - type
               value:
                 type: object
                 properties:
                   type:
-                    $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                    $ref: "schema:ethdebug/format/type/base"
                 required:
                   - type
             required:

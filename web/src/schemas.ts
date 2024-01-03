@@ -12,6 +12,12 @@ import typeElementaryAddressSchemaYaml from "../../schemas/type/elementary/addre
 import typeElementaryContractSchemaYaml from "../../schemas/type/elementary/contract.schema.yaml";
 import typeElementaryEnumSchemaYaml from "../../schemas/type/elementary/enum.schema.yaml";
 import typeElementarySchemaYaml from "../../schemas/type/elementary.schema.yaml";
+import typeComplexAliasSchemaYaml from "../../schemas/type/complex/alias.schema.yaml";
+import typeComplexArraySchemaYaml from "../../schemas/type/complex/array.schema.yaml";
+import typeComplexMappingSchemaYaml from "../../schemas/type/complex/mapping.schema.yaml";
+import typeComplexStructSchemaYaml from "../../schemas/type/complex/struct.schema.yaml";
+import typeComplexTupleSchemaYaml from "../../schemas/type/complex/tuple.schema.yaml";
+import typeComplexSchemaYaml from "../../schemas/type/complex.schema.yaml";
 import typeSchemaYaml from "../../schemas/type.schema.yaml";
 
 export const schemaYamls = [
@@ -27,10 +33,71 @@ export const schemaYamls = [
   typeElementaryContractSchemaYaml,
   typeElementaryEnumSchemaYaml,
   typeElementarySchemaYaml,
+  typeComplexAliasSchemaYaml,
+  typeComplexArraySchemaYaml,
+  typeComplexMappingSchemaYaml,
+  typeComplexStructSchemaYaml,
+  typeComplexTupleSchemaYaml,
+  typeComplexSchemaYaml,
   typeSchemaYaml,
 ].map(schema => ({
   [YAML.parse(schema).$id]: schema
 })).reduce((a, b) => ({ ...a, ...b }), {});
+
+export type SchemaIndex = {
+  [schemaId: `schema:${string}`]: {
+      href: string /* relative or external URL */;
+      title?: string;
+  };
+};
+
+export const schemaIndex: SchemaIndex = {
+  "schema:ethdebug/format/type/base": {
+    title: "ethdebug/format/type/base schema",
+    href: "/spec/type/base#full-base-schema"
+  },
+  "schema:ethdebug/format/type/base#/$defs/TypeWrapper": {
+    title: "Type wrapper schema",
+    href: "/spec/type/base#type-wrapper-schema",
+  },
+  "schema:ethdebug/format/type/base#/$defs/TypeReference": {
+    title: "Type reference schema",
+    href: "/spec/type/base#type-reference-schema"
+  },
+  "schema:ethdebug/format/type": {
+    href: "/spec/type#full-schema"
+  },
+  "schema:ethdebug/format/type/elementary": {
+    href: "/spec/type#elementary-type-schema"
+  },
+  "schema:ethdebug/format/type/complex": {
+    href: "/spec/type#complex-type-schema"
+  },
+  ...(
+    [
+      "uint", "int", "ufixed", "fixed", "bool", "bytes", "string", "address",
+      "contract", "enum"
+    ].map(kind => ({
+      [`schema:ethdebug/format/type/elementary/${kind}`]: {
+        href: `/spec/type/elementary/${kind}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+  ...(
+    [
+      "alias", "tuple", "array", "mapping", "struct"
+    ].map(kind => ({
+      [`schema:ethdebug/format/type/complex/${kind}`]: {
+        href: `/spec/type/complex/${kind}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  )
+
+
+
+};
 
 export interface DescribeSchemaOptions<
   S extends SchemaReference = SchemaReference
@@ -39,17 +106,18 @@ export interface DescribeSchemaOptions<
   pointer?: SchemaPointer;
 };
 
-export interface DescribedSchema {
+export interface SchemaInfo {
   id?: string; // root ID only
   pointer: SchemaPointer; // normalized from root ID
-  schema: object;
   yaml: string;
+  schema: object;
+  rootSchema: object;
 }
 
 export function describeSchema({
   schema,
   pointer
-}: DescribeSchemaOptions): DescribedSchema {
+}: DescribeSchemaOptions): SchemaInfo {
   if (typeof pointer === "string" && !pointer.startsWith("#")) {
     throw new Error("`pointer` option must start with '#'");
   }
@@ -64,7 +132,7 @@ export function describeSchema({
 function describeSchemaById({
   schema: { id: referencedId },
   pointer: relativePointer
-}: DescribeSchemaOptions<SchemaById>): DescribedSchema {
+}: DescribeSchemaOptions<SchemaById>): SchemaInfo {
   // we need to handle the case where the schema is referenced by an ID
   // with a pointer specified, possibly with a separate `pointer` field too
   const [id, rawReferencedPointer] = referencedId.split("#");
@@ -81,22 +149,25 @@ function describeSchemaById({
   const yaml = pointToYaml(rootYaml, pointer);
 
   const schema = YAML.parse(yaml);
+  const rootSchema = YAML.parse(rootYaml);
 
   return {
     id,
     pointer,
     yaml,
-    schema
+    schema,
+    rootSchema
   }
 }
 
 function describeSchemaByYaml({
   schema: { yaml: referencedYaml },
   pointer
-}: DescribeSchemaOptions<SchemaByYaml>): DescribedSchema {
+}: DescribeSchemaOptions<SchemaByYaml>): SchemaInfo {
   const yaml = pointToYaml(referencedYaml, pointer);
 
   const schema = YAML.parse(yaml);
+  const rootSchema = YAML.parse(referencedYaml);
 
   const id = schema.$id;
 
@@ -105,22 +176,24 @@ function describeSchemaByYaml({
       id,
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   } else {
     return {
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   }
 }
 
 function describeSchemaByObject({
-  schema: referencedSchema,
+  schema: rootSchema,
   pointer
-}: DescribeSchemaOptions<object>): DescribedSchema {
-  const rootYaml = YAML.stringify(referencedSchema);
+}: DescribeSchemaOptions<object>): SchemaInfo {
+  const rootYaml = YAML.stringify(rootSchema);
 
   const yaml = pointToYaml(rootYaml, pointer);
 
@@ -133,13 +206,15 @@ function describeSchemaByObject({
       id,
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   } else {
     return {
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   }
 }

@@ -14,12 +14,7 @@ properties:
     type: string
     const: alias
   contains:
-    type: object
-    properties:
-      type:
-        $ref: "schema:ethdebug/format/type"
-    required:
-      - type
+    $ref: "schema:ethdebug/format/type#/$defs/TypeWrapper"
 
 required:
   - kind

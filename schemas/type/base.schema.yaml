@@ -109,6 +109,7 @@ $defs:
         oneOf:
           - $ref: "schema:ethdebug/format/type/base"
           - $ref: "#/$defs/TypeReference"
+
     required:
       - type
 

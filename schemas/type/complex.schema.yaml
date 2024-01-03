@@ -50,7 +50,7 @@ allOf:
 
 $defs:
   Kind:
-    title: Known Complex Kind
+    title: Known complex kind
     description:
       A schema for the values of `kind` reserved for known complex types
       included in ethdebug/format

@@ -7,12 +7,12 @@ description:
 type: object
 
 if:
-  title: KnownKind
+  title: Known kind
   description:
     If `kind` adheres to the set of known kinds defined by this format
   properties:
     kind:
-      oneOf:
+      anyOf:
         - $ref: "schema:ethdebug/format/type/elementary#/$defs/Kind"
         - $ref: "schema:ethdebug/format/type/complex#/$defs/Kind"
 
@@ -31,3 +31,32 @@ else:
     - $ref: "schema:ethdebug/format/type/base"
     - required:
         - class
+
+$defs:
+  TypeReference:
+    title: '{ "id": ... }'
+    description: A reference to a known type by ID
+    type: object
+    properties:
+      id:
+        type:
+          - string
+          - number
+    additionalProperties: false
+    required:
+      - id
+
+  TypeWrapper:
+    title: '{ "type": ... }'
+    description:
+      A wrapper around a type. Defines a `"type"` field that may include a full
+      Type representation or a reference to a known Type by ID. Note that this
+      schema permits additional properties on the same object.
+    type: object
+    properties:
+      type:
+        oneOf:
+          - $ref: "schema:ethdebug/format/type"
+          - $ref: "#/$defs/TypeReference"
+    required:
+      - type
