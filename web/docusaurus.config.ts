@@ -45,7 +45,7 @@ const config: Config = {
               rules: [
                 {
                   test: /\.yaml$/,
-                  use: "yaml-loader"
+                  use: "raw-loader"
                 }
               ]
             }

@@ -141,28 +141,28 @@ A type reference is an object containing the single `"id"` field. This field
 must be a string or a number.
 
 <SchemaViewer
-    schema="schema:ethdebug/format/type/base"
-    pointer="#/$defs/TypeReference" />
+  schema={{ id: "schema:ethdebug/format/type/base" }}
+  pointer="#/$defs/TypeReference" />
 
 #### Type wrapper schema
 
 <SchemaViewer
-    schema="schema:ethdebug/format/type/base"
-    pointer="#/$defs/TypeWrapper"
-    detect={
-    (item) =>
-      typeof item === "object" &&
-        !("$schema" in item) &&
-        item["$ref"] === "#/$defs/Type"}
-    transform={
-      ({ $ref, ...rest }, root) => ({
-        ...rest,
-        type: "object",
-        title: root.$defs.Type.title + " [RECURSIVE]",
-        description: "The root Type schema"
-      })
-    }
-    />
+  schema={{ id: "schema:ethdebug/format/type/base" }}
+  pointer="#/$defs/TypeWrapper"
+  detect={
+  (item) =>
+    typeof item === "object" &&
+      !("$schema" in item) &&
+      item["$ref"] === "#/$defs/Type"}
+  transform={
+    ({ $ref, ...rest }, root) => ({
+      ...rest,
+      type: "object",
+      title: root.$defs.Type.title + " [RECURSIVE]",
+      description: "The root Type schema"
+    })
+  }
+  />
 
 ### ComplexType's `"contains"` field
 
@@ -175,99 +175,95 @@ As described [above](#type-wrappers-and-type-references), complex types compose
 other types. This composition occurs inside the `"contains"` field for all
 complex types.
 
-#### Example complex types to show different forms
+<details open>
+  <summary>Example complex types to show different forms</summary>
+  <Tabs>
+    <TabItem value="singleton" label="Single type">
+      This is an example array type, which composes exactly one other type.
 
-<Tabs
-  defaultValue="singleton"
-  values={[
-    { value: "singleton", label: "Single type" },
-    { value: "list", label: "Ordered list of types" },
-    { value: "object", label: "Object mapping of types by key" }
-  ]}>
-  <TabItem value="singleton">
-    This is an example array type, which composes exactly one other type.
-
-    ```json
-    {
-      "kind": "array",
-      "contains": {
-        "type": {
-          "kind": "uint",
-          "bits": 256
-        }
-      }
-    }
-    ```
-  </TabItem>
-  <TabItem value="list">
-    This is an example array type, which composes an ordered list of member
-    types.
-
-    ```json
-    {
-      "kind": "struct",
-      "contains": [{
-        "member": "balance",
-        "type": {
-          "kind": "uint",
-          "bits": 256
-        }
-      }, {
-        "member": "scoreSheet",
-        "type": {
-          "id": "<some opaque ID for some `ScoreSheet` type>"
-        }
-      }]
-    }
-    ```
-
-    In this example, please note how this struct type represents member names
-    with a `"member"` field alongside the `"type"` field, and note how the
-    value of `"type"` can be either a complete representation or a reference
-    object in the form of `{ id }`.
-  </TabItem>
-  <TabItem value="object">
-    This is an example mapping type, which composes an object mapping of types
-    by key.
-    ```json
-    {
-      "kind": "mapping",
-      "contains": {
-        "key": {
-          "type": {
-            "kind": "address"
-          }
-        },
-        "value": {
+      ```json
+      {
+        "kind": "array",
+        "contains": {
           "type": {
             "kind": "uint",
             "bits": 256
           }
         }
       }
-    }
-    ```
-  </TabItem>
-</Tabs>
+      ```
+    </TabItem>
+    <TabItem value="list" label="Ordered list of types">
+      This is an example array type, which composes an ordered list of member
+      types.
+
+      ```json
+      {
+        "kind": "struct",
+        "contains": [{
+          "member": "balance",
+          "type": {
+            "kind": "uint",
+            "bits": 256
+          }
+        }, {
+          "member": "scoreSheet",
+          "type": {
+            "id": "<some opaque ID for some `ScoreSheet` type>"
+          }
+        }]
+      }
+      ```
+
+      In this example, please note how this struct type represents member names
+      with a `"member"` field alongside the `"type"` field, and note how the
+      value of `"type"` can be either a complete representation or a reference
+      object in the form of `{ id }`.
+    </TabItem>
+    <TabItem value="object" label="Object mapping of types by key">
+      This is an example mapping type, which composes an object mapping of types
+      by key.
+      ```json
+      {
+        "kind": "mapping",
+        "contains": {
+          "key": {
+            "type": {
+              "kind": "address"
+            }
+          },
+          "value": {
+            "type": {
+              "kind": "uint",
+              "bits": 256
+            }
+          }
+        }
+      }
+      ```
+    </TabItem>
+  </Tabs>
+</details>
 
 ## Full base schema
 
 <SchemaViewer
-    schema="schema:ethdebug/format/type/base"
-    detect={
-    (item) =>
-      typeof item === "object" &&
-        !("$schema" in item) &&
-        item["$ref"] === "schema:ethdebug/format/type/base"}
-    transform={
-      ({ $ref, ...rest }, root) => ({
-        ...rest,
-        type: "object",
-        title: root.title + " [RECURSIVE]",
-        description: "The root Type schema"
-      })
-    }
-    />
+  schema={{ id: "schema:ethdebug/format/type/base" }}
+  detect={
+  (item) =>
+    typeof item === "object" &&
+      !("$schema" in item) &&
+      item["$ref"] === "schema:ethdebug/format/type/base"}
+  transform={
+    ({ $ref, ...rest }, root) => ({
+      ...rest,
+      type: "object",
+      title: root.title + " [RECURSIVE]",
+      description: "The root Type schema"
+    })
+  }
+  />
+
 ## Example schema extensions for particular types
 
 These examples show valid schemas that extend **ethdebug/format/types/base**

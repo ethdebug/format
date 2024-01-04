@@ -29,6 +29,11 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
+.schema-listing pre {
+  max-height: 500px;
+  overflow: auto;
+}
+
 .navbar .draft-warning {
   font-weight: bold;
   text-decoration: underline;
