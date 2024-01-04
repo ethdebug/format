@@ -28,3 +28,8 @@
   --ifm-color-primary-lightest: #4FDDC1; /* Almost Pastel for Light Backgrounds */
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+.navbar .draft-warning {
+  font-weight: bold;
+  text-decoration: underline;
+}

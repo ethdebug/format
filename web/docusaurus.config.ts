@@ -1,4 +1,5 @@
 import {themes as prismThemes} from 'prism-react-renderer';
+import path from "path";
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Configuration } from "webpack";
@@ -53,6 +54,25 @@ const config: Config = {
       };
     },
 
+    async function ignoreBuffer(context, options) {
+      return {
+        name: "ignore-buffer",
+        configureWebpack(config: Configuration) {
+          return {
+            resolve: {
+              alias: {
+                react: path.resolve('./node_modules/react'),
+              },
+              fallback: {
+                buffer: false
+              }
+            }
+          };
+        }
+      }
+
+    },
+
     // Used to maintain separate spec/ directory, outside the core docs/
     [
       '@docusaurus/plugin-content-docs',
@@ -101,6 +121,12 @@ const config: Config = {
           label: 'Specification',
           position: 'left',
           activeBaseRegex: `/spec/`,
+        },
+        {
+          to: '/status',
+          label: "⚠️ DRAFT ⚠️",
+          className: "draft-warning",
+          position: "right"
         },
         {
           href: 'https://github.com/ethdebug/format',
@@ -157,6 +183,9 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        "json"
+      ],
     },
   } satisfies Preset.ThemeConfig,
 };

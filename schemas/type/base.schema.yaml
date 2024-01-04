@@ -1,0 +1,128 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/base"
+
+title: ethdebug/format/type/base
+description:
+  Defines the minimally necessary schema for a data type.
+  Types belong to a particular `class` (`"elementary"` or `"complex"`),
+  and are further identified by a particular `kind`.
+type: object
+oneOf:
+  - $ref: "#/$defs/ElementaryType"
+  - $ref: "#/$defs/ComplexType"
+
+$defs:
+  ElementaryType:
+    title: ElementaryType
+    description:
+      Represents an elementary type (one that does not compose other types)
+    type: object
+    properties:
+      class:
+        type: string
+        const: elementary
+      kind:
+        type: string
+      contains:
+        not:
+          description:
+            "**Elementary types must not specify a `contains` field
+            (to make it easier to discriminate elementary vs. complex)**"
+    required:
+      - kind
+    examples:
+      - kind: uint
+        bits: 256
+
+  ComplexType:
+    title: ComplexType
+    description:
+      Represents a complex type, one that composes other types (e.g., arrays,
+      structs, mappings)
+    type: object
+    properties:
+      class:
+        type: string
+        const: complex
+        description: Indicates that this is a complex type
+      kind:
+        type: string
+        description: The specific kind of complex type, e.g., array or struct
+      contains:
+        title: ComplexType.contains
+        oneOf:
+          - $ref: "#/$defs/TypeWrapper"
+          - $ref: "#/$defs/TypeWrapperArray"
+          - $ref: "#/$defs/TypeWrapperObject"
+    required:
+      - kind
+      - contains
+    examples:
+      - kind: array
+        contains:
+          type:
+            kind: uint
+            bits: 256
+      - kind: struct
+        contains:
+          - member: x
+            type:
+              kind: uint
+              bits: 256
+          - member: y
+            type:
+              kind: uint
+              bits: 256
+      - kind: mapping
+        contains:
+          key:
+            type:
+              kind: address
+              payable: true
+          value:
+            type:
+              kind: uint
+              bits: 256
+
+  TypeReference:
+    title: '{ "id": ... }'
+    description: A reference to a known type by ID
+    type: object
+    properties:
+      id:
+        type:
+          - string
+          - number
+    additionalProperties: false
+    required:
+      - id
+
+  TypeWrapper:
+    title: '{ "type": ... }'
+    description:
+      A wrapper around a type. Defines a `"type"` field that may include a full
+      Type representation or a reference to a known Type by ID. Note that this
+      schema permits additional properties on the same object.
+    type: object
+    properties:
+      type:
+        oneOf:
+          - $ref: "schema:ethdebug/format/type/base"
+          - $ref: "#/$defs/TypeReference"
+    required:
+      - type
+
+  TypeWrapperArray:
+    title: '{ "type": ... }[]'
+    description: A list of wrapped types, where the wrapper may add fields
+    type: array
+    items:
+      $ref: "#/$defs/TypeWrapper"
+
+  TypeWrapperObject:
+    title: '{ "key": { "type": ... }, ... }'
+    description:
+      A key-value mapping of wrapped types, where the wrapper may add fields
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/TypeWrapper"
