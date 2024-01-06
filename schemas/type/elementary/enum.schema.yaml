@@ -1,0 +1,30 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/enum"
+
+title: ethdebug/format/type/elementary/enum
+description:
+  Schema describing the representation of an enumerated type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: enum
+  values:
+    description:
+      The allowed values of an enum. This format makes no restriction on which
+      values are allowed here.
+    type: array
+    items: true
+
+required:
+  - kind
+  - values
+
+examples:
+  - kind: enum
+    values:
+      - A
+      - B
+      - C

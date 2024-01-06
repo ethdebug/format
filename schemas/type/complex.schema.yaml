@@ -1,0 +1,64 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex"
+
+title: ethdebug/format/type/complex
+description:
+  Canonical representation of a complex type
+
+type: object
+properties:
+  kind:
+    $ref: "#/$defs/Kind"
+required:
+  - kind
+
+allOf:
+  - if:
+      properties:
+        kind:
+          const: alias
+    then:
+      $ref: "schema:ethdebug/format/type/complex/alias"
+
+  - if:
+      properties:
+        kind:
+          const: tuple
+    then:
+      $ref: "schema:ethdebug/format/type/complex/tuple"
+
+  - if:
+      properties:
+        kind:
+          const: array
+    then:
+      $ref: "schema:ethdebug/format/type/complex/array"
+
+  - if:
+      properties:
+        kind:
+          const: mapping
+    then:
+      $ref: "schema:ethdebug/format/type/complex/mapping"
+
+  - if:
+      properties:
+        kind:
+          const: struct
+    then:
+      $ref: "schema:ethdebug/format/type/complex/struct"
+
+$defs:
+  Kind:
+    title: Known complex kind
+    description:
+      A schema for the values of `kind` reserved for known complex types
+      included in ethdebug/format
+    type: string
+    enum:
+      - alias
+      - tuple
+      - array
+      - mapping
+      - struct
+

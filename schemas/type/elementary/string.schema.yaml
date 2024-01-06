@@ -1,0 +1,22 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/string"
+
+title: ethdebug/format/type/elementary/string
+description:
+  Schema describing the representation of a string type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: string
+  encoding:
+    type: string
+    default: utf-8
+required:
+  - kind
+examples:
+  - kind: string
+  - kind: string
+    encoding: utf-16

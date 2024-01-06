@@ -2,6 +2,11 @@
 sidebar_position: 1
 ---
 
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import { describeSchema } from "@site/src/schemas";
+import CodeBlock from "@theme/CodeBlock";
+
 # Overview
 
 :::tip
@@ -36,10 +41,8 @@ JSON values:
 
 </details>
 
-<!-- TODO add this
 See [additional examples](#example-valid-representations) below
-for a broad sample of valid type representations according to this schema.
--->
+for a sample of valid type representations according to this schema.
 :::
 
 
@@ -51,48 +54,52 @@ JSON values that adhere to this schema may (for example) represent a particular
 fields, a particular `mapping` type from a certain key type to a certain value
 type, and so on.
 
-This schema is broadly divided into two sections:
-1. A canonical Type schema
-   ([**ethdebug/format/type**](/spec/type)), which includes
-   subschemas for included known types.
+## Reading this schema
 
-   When adhering to this format, this schema is considered **sufficient** for
-   representing any supported type.
+The **ethdebug/format/type** schema is a root schema that conditionally defers
+to one or more other related schemas in the ethdebug/format/type/* namespace.
 
-2. A base Type schema
-   ([**ethdebug/format/type/base**](/spec/type)), which specifies a
-   minimal definition of any type, known or unknown.
+These schemas (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.
 
-   When adhering to this format, this schema is considered **necessary** for
-   representing any supported type.
+Please refer to one or more of the following resources in this section:
 
-In other words:
+- [Key concepts](/spec/type/concepts) introduces how types are represented in
+  this schema.
 
-- Compilers adhering to this format **should** use the canonical
-  **ethdebug/format/type** schema when representing known types
-  (e.g., uints, arrays, structs, etc.).
+- [Schema](/spec/type) presents the root **ethdebug/format/type** schema, which
+  aggregates links to all relevant subschemas.
 
-- Compilers **must** still adhere to the **ethdebug/format/type/base** schema
-  when representing types not known to this format.
+- The categories [Elementary types](/spec/category/elementary-types)
+  and [Complex types](/spec/category/complex-types) comprise individual
+  subschemas for all known kinds of types.
 
-:::note
-Any representation adhering to the former also adheres to the latter,
-since **ethdebug/format/type** extends **ethdebug/format/type/base**.
-:::
+- The [Base schema](/spec/type/base) defines the mimimum overall structure of
+  **ethdebug/format/type** objects for purposes of schema extension.
 
-:::info
-To highlight one purpose behind this separation, consider that this format
-seeks to be complete enough to be useful _and_ flexible enough to afford
-extension.
-
-While **ethdebug/format/type** aims to cover all of the available kinds of
-types available in EVM languages today, languages in the future may offer
-additional kinds of types. **ethdebug/format/type/base** serves to address
-this concern.
-:::
-
-<!-- TODO pull from `examples` in various $defs so as to avoid duplication
 
 ## Example valid representations
 
--->
+Here are some example **ethdebug/format/type** type representations.
+
+<Tabs>{
+  [
+    "ethdebug/format/type/elementary/address",
+    "ethdebug/format/type/complex/mapping",
+    "ethdebug/format/type/complex/struct"
+  ].map((id, index) => {
+    const { schema } = describeSchema({ schema: { id: `schema:${id}` } });
+    return <TabItem
+      key={index}
+      value={index}
+      label={id.split("/").pop()}
+    >
+      <CodeBlock
+        language="json"
+        title={`Example ${id} type`}
+      >{
+        JSON.stringify(schema.examples[0], undefined, 2)
+      }</CodeBlock>
+    </TabItem>
+  })
+}</Tabs>

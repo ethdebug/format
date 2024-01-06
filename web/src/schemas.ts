@@ -1,9 +1,49 @@
 import YAML from "yaml";
 
 import typeBaseSchemaYaml from "../../schemas/type/base.schema.yaml";
+import typeWrapperSchemaYaml from "../../schemas/type/wrapper.schema.yaml";
+import typeReferenceSchemaYaml from "../../schemas/type/reference.schema.yaml";
+import typeElementaryUintSchemaYaml from "../../schemas/type/elementary/uint.schema.yaml";
+import typeElementaryIntSchemaYaml from "../../schemas/type/elementary/int.schema.yaml";
+import typeElementaryBoolSchemaYaml from "../../schemas/type/elementary/bool.schema.yaml";
+import typeElementaryBytesSchemaYaml from "../../schemas/type/elementary/bytes.schema.yaml";
+import typeElementaryStringSchemaYaml from "../../schemas/type/elementary/string.schema.yaml";
+import typeElementaryUfixedSchemaYaml from "../../schemas/type/elementary/ufixed.schema.yaml";
+import typeElementaryFixedSchemaYaml from "../../schemas/type/elementary/fixed.schema.yaml";
+import typeElementaryAddressSchemaYaml from "../../schemas/type/elementary/address.schema.yaml";
+import typeElementaryContractSchemaYaml from "../../schemas/type/elementary/contract.schema.yaml";
+import typeElementaryEnumSchemaYaml from "../../schemas/type/elementary/enum.schema.yaml";
+import typeElementarySchemaYaml from "../../schemas/type/elementary.schema.yaml";
+import typeComplexAliasSchemaYaml from "../../schemas/type/complex/alias.schema.yaml";
+import typeComplexArraySchemaYaml from "../../schemas/type/complex/array.schema.yaml";
+import typeComplexMappingSchemaYaml from "../../schemas/type/complex/mapping.schema.yaml";
+import typeComplexStructSchemaYaml from "../../schemas/type/complex/struct.schema.yaml";
+import typeComplexTupleSchemaYaml from "../../schemas/type/complex/tuple.schema.yaml";
+import typeComplexSchemaYaml from "../../schemas/type/complex.schema.yaml";
+import typeSchemaYaml from "../../schemas/type.schema.yaml";
 
 export const schemaYamls = [
   typeBaseSchemaYaml,
+  typeWrapperSchemaYaml,
+  typeReferenceSchemaYaml,
+  typeElementaryUintSchemaYaml,
+  typeElementaryIntSchemaYaml,
+  typeElementaryUfixedSchemaYaml,
+  typeElementaryFixedSchemaYaml,
+  typeElementaryBoolSchemaYaml,
+  typeElementaryBytesSchemaYaml,
+  typeElementaryStringSchemaYaml,
+  typeElementaryAddressSchemaYaml,
+  typeElementaryContractSchemaYaml,
+  typeElementaryEnumSchemaYaml,
+  typeElementarySchemaYaml,
+  typeComplexAliasSchemaYaml,
+  typeComplexArraySchemaYaml,
+  typeComplexMappingSchemaYaml,
+  typeComplexStructSchemaYaml,
+  typeComplexTupleSchemaYaml,
+  typeComplexSchemaYaml,
+  typeSchemaYaml,
 ].map(schema => ({
   [YAML.parse(schema).$id]: schema
 })).reduce((a, b) => ({ ...a, ...b }), {});
@@ -24,6 +64,47 @@ export const schemaIndex: SchemaIndex = {
     title: "Base type wrapper schema",
     href: "/spec/type/base#base-type-wrapper-schema",
   },
+  "schema:ethdebug/format/type/wrapper": {
+    title: "Type wrapper schema",
+    href: "/spec/type/concepts#type-wrapper-schema",
+  },
+  "schema:ethdebug/format/type/reference": {
+    title: "Type reference schema",
+    href: "/spec/type/concepts#type-reference-schema"
+  },
+  "schema:ethdebug/format/type": {
+    href: "/spec/type"
+  },
+  "schema:ethdebug/format/type/elementary": {
+    href: "/spec/type#elementary-type-schema"
+  },
+  "schema:ethdebug/format/type/complex": {
+    href: "/spec/type#complex-type-schema"
+  },
+  ...(
+    [
+      "uint", "int", "ufixed", "fixed", "bool", "bytes", "string", "address",
+      "contract", "enum"
+    ].map(kind => ({
+      [`schema:ethdebug/format/type/elementary/${kind}`]: {
+        href: `/spec/type/elementary/${kind}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+  ...(
+    [
+      "alias", "tuple", "array", "mapping", "struct"
+    ].map(kind => ({
+      [`schema:ethdebug/format/type/complex/${kind}`]: {
+        href: `/spec/type/complex/${kind}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  )
+
+
+
 };
 
 export interface DescribeSchemaOptions<
