@@ -155,6 +155,7 @@ possibly includes other fields alongside `"type"`.
     </TabItem>
   </Tabs>
 </details>
+
 ## Type wrappers and type references
 
 This schema defines the concept of a type wrapper and the related concept of a
@@ -212,4 +213,37 @@ must be a string or a number.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/type/reference" }}
+  />
+
+## Sometimes types are defined in code
+
+Languages provide certain kinds of types by way of allowing their definition
+in user (or runtime) code. These include [struct](/spec/type/complex/struct),
+[enum](/spec/type/elementary/enum), and [alias](/spec/type/complex/alias)
+types.
+
+Types with definition information **may** include a `definition` field that
+specifies the name of the type (its identifier) and/or the source location of
+its definition.
+
+:::note
+
+When extending the [base type schema](/spec/type/base) for custom kinds of
+types with definitions, these custom schemas **must** require the specification
+of such definitions by way of this same `definition` field and its associated
+schema.
+
+:::
+
+This format does not prohibit the inclusion of this `definition` field for any
+type, so as to support languages where array types, etc. may be defined by name
+directly. It is recommended, however, that
+compilers implementing this format **should** prefer to use
+[alias](/spec/type/complex/alias) type for the common case of assigning a name
+to a type expression.
+
+### Type definition schema
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/type/definition" }}
   />

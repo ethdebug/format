@@ -16,6 +16,9 @@ properties:
     description:
       If this field is omitted, this type represents an address whose
       payability is not known.
+  definition:
+    $ref: "schema:ethdebug/format/type/definition"
+
 oneOf:
   - properties:
       library:

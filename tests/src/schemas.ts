@@ -15,6 +15,7 @@ const readSchemas = (): {
     "type/base.schema.yaml",
     "type/wrapper.schema.yaml",
     "type/reference.schema.yaml",
+    "type/definition.schema.yaml",
     "type/elementary/uint.schema.yaml",
     "type/elementary/int.schema.yaml",
     "type/elementary/bool.schema.yaml",

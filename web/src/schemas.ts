@@ -3,6 +3,7 @@ import YAML from "yaml";
 import typeBaseSchemaYaml from "../../schemas/type/base.schema.yaml";
 import typeWrapperSchemaYaml from "../../schemas/type/wrapper.schema.yaml";
 import typeReferenceSchemaYaml from "../../schemas/type/reference.schema.yaml";
+import typeDefinitionSchemaYaml from "../../schemas/type/definition.schema.yaml";
 import typeElementaryUintSchemaYaml from "../../schemas/type/elementary/uint.schema.yaml";
 import typeElementaryIntSchemaYaml from "../../schemas/type/elementary/int.schema.yaml";
 import typeElementaryBoolSchemaYaml from "../../schemas/type/elementary/bool.schema.yaml";
@@ -26,6 +27,7 @@ export const schemaYamls = [
   typeBaseSchemaYaml,
   typeWrapperSchemaYaml,
   typeReferenceSchemaYaml,
+  typeDefinitionSchemaYaml,
   typeElementaryUintSchemaYaml,
   typeElementaryIntSchemaYaml,
   typeElementaryUfixedSchemaYaml,
@@ -71,6 +73,10 @@ export const schemaIndex: SchemaIndex = {
   "schema:ethdebug/format/type/reference": {
     title: "Type reference schema",
     href: "/spec/type/concepts#type-reference-schema"
+  },
+  "schema:ethdebug/format/type/definition": {
+    title: "Type definition schema",
+    href: "/spec/type/concepts#type-definition-schema"
   },
   "schema:ethdebug/format/type": {
     href: "/spec/type"
