@@ -1,0 +1,16 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/reference"
+
+title: ethdebug/format/type/reference
+description: A reference to a known type by ID
+type: object
+properties:
+  id:
+    type:
+      - string
+      - number
+additionalProperties: false
+required:
+  - id
+examples:
+  - id: 5

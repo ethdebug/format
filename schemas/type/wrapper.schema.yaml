@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/wrapper"
+
+title: ethdebug/format/type/wrapper
+description:
+  A wrapper around a type. Defines a `"type"` field that may include a full
+  Type representation or a reference to a known Type by ID. Note that this
+  schema permits additional properties on the same object.
+type: object
+properties:
+  type:
+    oneOf:
+      - $ref: "schema:ethdebug/format/type"
+      - $ref: "schema:ethdebug/format/type/reference"
+
+required:
+  - type
+
+examples:
+  - name: beneficiary
+    type:
+      kind: address
+      payable: true
+  - type:
+      id: "<opaque-id>"
+
+$defs:
+  Array:
+    title: '{ "type": ... }[]'
+    description: A list of wrapped types, where the wrapper may add fields
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/type/wrapper"
+
+  Object:
+    title: '{ "key": { "type": ... }, ... }'
+    description:
+      A key-value mapping of wrapped types, where the wrapper may add fields
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/type/wrapper"

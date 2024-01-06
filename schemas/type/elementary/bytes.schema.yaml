@@ -1,0 +1,28 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/bytes"
+
+title: ethdebug/format/type/elementary/bytes
+description:
+  Schema describing the representation of a type of bytes string
+  (either dynamic or static)
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: bytes
+  size:
+    type: number
+    description:
+      The number of bytes in the bytes string. If this field is omitted, this
+      type is the dynamic bytes string type.
+    minimum: 1
+required:
+  - kind
+examples:
+  - # example static bytes type
+    kind: bytes
+    size: 32
+  - # example dynamic bytes type
+    kind: bytes

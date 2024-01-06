@@ -1,0 +1,17 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/bool"
+
+title: ethdebug/format/type/elementary/bool
+description:
+  Schema describing the representation of the boolean type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: bool
+required:
+  - kind
+examples:
+  - kind: bool

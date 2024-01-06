@@ -1,0 +1,51 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/contract"
+
+title: ethdebug/format/type/elementary/contract
+description:
+  Schema describing the representation of a contract type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: contract
+  payable:
+    type: boolean
+    description:
+      If this field is omitted, this type represents an address whose
+      payability is not known.
+oneOf:
+  - properties:
+      library:
+        const: false
+      interface:
+        const: false
+
+  - properties:
+      library:
+        const: true
+        description:
+          Indicates that this is a type representing a library
+    required:
+      - library
+
+  - properties:
+      interface:
+        const: true
+        description:
+          Indicates that this is a type representing an interface
+    required:
+      - interface
+
+required:
+  - kind
+
+examples:
+  - kind: contract
+
+  - kind: contract
+    library: false
+    interface: false
+    payable: true

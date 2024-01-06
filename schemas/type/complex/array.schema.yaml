@@ -1,0 +1,35 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/array"
+
+title: ethdebug/format/type/complex/array
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: array
+  contains:
+    $ref: "schema:ethdebug/format/type/wrapper"
+
+required:
+  - kind
+  - contains
+
+examples:
+  - kind: array
+    contains:
+      type:
+        kind: uint
+        bits: 256
+
+  - kind: array
+    contains:
+      type:
+        kind: array
+        contains:
+          type:
+            class: elementary
+            kind: super-uint # unsupported type
+            blits: -256

@@ -1,0 +1,54 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/struct"
+
+title: ethdebug/format/type/complex/struct
+description:
+  Schema for representing struct types
+
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: struct
+  contains:
+    type: array
+    items:
+      $ref: "#/$defs/MemberField"
+
+required:
+  - kind
+  - contains
+
+examples:
+  - kind: struct
+    contains:
+      - name: x
+        type:
+          kind: uint
+          bits: 128
+      - name: y
+        type:
+          kind: uint
+          bits: 128
+
+$defs:
+  MemberField:
+    type: object
+    title: MemberField
+    description:
+      A schema representing a member field inside a struct type. This is an
+      **ethdebug/format/type/wrapper** with additional fields.
+    allOf:
+      - $ref: "schema:ethdebug/format/type/wrapper"
+      - type: object
+        title: Additional fields
+        description:
+          An object with optional `name` property for identifying named struct
+          member fields. **Note** that this language does not specify that a
+          struct must be consistent in its use of naming for all fields or none
+        properties:
+          name:
+            type: string

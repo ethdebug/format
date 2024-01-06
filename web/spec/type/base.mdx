@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 6
 ---
 
 import SchemaViewer from "@site/src/components/SchemaViewer";
@@ -8,7 +8,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import yaml from "yaml-template";
 
-# ethdebug/format/type/base
+# Base schema
 
 :::warning
 The schema on this page is extended by other, more specific schemas as part of
@@ -22,7 +22,7 @@ Please see the [**ethdebug/format/type**](/spec/type) schema for representing
 these supported types.
 :::
 
-This format defines this base schema (**ethdebug/format/type/base**) for
+This format defines the **ethdebug/format/type/base** schema for
 representing data types from high-level languages. These types may be
 user-defined or supplied as native data types in a language. This schema
 affords the representation of complex/parametric types, whose definition
@@ -30,238 +30,75 @@ composes other types (e.g., arrays and structs, which contain at least one
 underlying type).
 
 This base schema itself is designed to be extended by other schemas in this
-format. It serves to specify what is _minimally necessary_ for a type to be
-a valid representation (i.e., all type representations **must** adhere to at
-least this base schema).
+format, namely **ethdebug/format/type**. It serves to specify what is
+_minimally necessary_ for a type to be a valid representation (i.e., all type
+representations **must** adhere to at least this base schema).
 
 <TOCInline toc={toc} />
 
-## Key concepts
+## Differences from **ethdebug/format/type**
 
-The **ethdebug/format/type/base** schema includes definitions for a few
-concepts that are worth highlighting here.
+This base schema defines the structure of a type representation without respect
+to any known kind of type.
 
-### Types are organized by `kind`
+### Unconstrained `kind` field
 
-:::info[Example: Boolean type]
-```json
-{
-  "kind": "bool"
-}
-```
-:::
+As described in key concepts
+[Types are organized by `kind`](/spec/type/concepts#types-are-organized-by-kind)
+and
+[Known vs. unknown kinds](/spec/type/concepts#known-vs-unknown-kinds),
+**ethdebug/format/type** imposes constraints on type representations' `kind`
+field. This base schema makes no restriction on the value of this field
+(other than it **must** be defined and **must** be a string).
 
-An **ethdebug/format/type/base** type representation is a JSON object with a
-`kind` field containing a string value.
-
-This field is intended for use by other **ethdebug/format** schemas, which
-reserve specific string values for the various `kind`s of types that
-this format supports, and for use by implementers of compilers and debuggers
-in situations where coordinating outside this specification is necessary or
-beneficial.
-
-`kind` is a required field for all type representations.
-
-The primary purpose for the `kind` field is to discriminate type objects into
-the appropriate corresponding subschema for a well-understood family of type.
+:::note[Note to implementers]
+The primary purpose for the `kind` field is to discriminate type objects
+into the appropriate corresponding subschema for a well-understood family of type.
 Although **ethdebug/format/type/base** does not impose any constraints on
 objects based on the `kind` field, it includes this field so as to encourage
 the one-to-one pairing between values for this field and corresponding
 subschemas.
 
-In other words: when extending this schema, ensure there exists exactly one
-corresponding subschema for each defined value of `kind`.
+When extending this schema, there **should** exist exactly one corresponding
+schema for each `kind` value.
+:::
 
-### Elementary vs. complex types
+### The `class` field is always optional
 
-Type representations in this schema fall into one of two `class`es: either
-`"elementary"` or `"complex"`. Type representations express this disinction in
-two ways (the optional `"class"` field, and the absence or existence of a
-`"contains"` field).
+Although **ethdebug/format/type** does not require the `class` field to be
+defined for known types, it does require this field for representations of
+unknown types.
 
-- Elementary types do not compose any other types. For example, `uint256` is an
-  elementary type. `string` may be an elementary type for languages that whose
-  semantics treat strings differently than simply an array of characters (like
-  Solidity does).
+The **ethdebug/format/type/base** schema does not ever require this field.
 
-- Complex types compose at least one other type. For instance, `uint256[]` is
-  an array type that composes an elementary type. Complex types in this schema
-  are polymorphic in how they represent this composition; see
-  [below](#complextypes-contains-field) for information about complex types'
-  `"contains"` field.
+### A complex base type `contains` other base types
 
-### Type wrappers and type references
+As described in key concepts
+[Elementary vs. complex types](/spec/type/concepts#elementary-vs-complex-types),
+this format allows the representation of types whose definition
+includes other types. Both the primary schema and this base schema
+require type composition to be represented via complex types' `contains` field.
 
-This schema defines the concept of a type wrapper and the related concept of a
-type reference.
+These two schemas differ by which type schema this field is
+permitted to compose. Naturally, **ethdebug/format/type**'s `contains` field
+composes **ethdebug/format/type** representations, and
+**ethdebug/format/type/base**'s `contains` field composes
+**ethdebug/format/type/base** representations.
 
-Type wrappers serve to encapsulate a type representation alongside other fields
-in the same object, and to facilitate discriminating which polymorphic form is
-used for a particular complex type.
+As a result of this, **ethdebug/format/type/base** defines its own type wrapper
+schema.
 
-Type wrappers are any object of the form
-`{ "type": <type>, ...otherProperties }`, where `<type>` is either a complete
-type representation or a reference to another type by ID.
-
-<details>
-<summary>Example type wrapper with complete type representation</summary>
-
-```javascript
-// from a struct type (which defines member types)
-{
-  "member": "beneficiary",
-  "type": {
-    "kind": "address"
-  }
-}
-```
-</details>
-
-<details>
-<summary>Example type wrapper with reference by ID</summary>
-
-```javascript
-{
-  "type": {
-    "id": "<opaque-id>"
-  }
-}
-```
-
-</details>
-
-
-Note that **ethdebug/format/type/base** places no restriction on IDs other than
-that they must be either a number or a string. Other components of this format
-at-large may impose restrictions, however.
-
-#### Type reference schema
-
-A type reference is an object containing the single `"id"` field. This field
-must be a string or a number.
-
-<SchemaViewer
-  schema={{ id: "schema:ethdebug/format/type/base" }}
-  pointer="#/$defs/TypeReference" />
-
-#### Type wrapper schema
+#### Base type wrapper schema
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/type/base" }}
   pointer="#/$defs/TypeWrapper"
-  detect={
-  (item) =>
-    typeof item === "object" &&
-      !("$schema" in item) &&
-      item["$ref"] === "#/$defs/Type"}
-  transform={
-    ({ $ref, ...rest }, root) => ({
-      ...rest,
-      type: "object",
-      title: root.$defs.Type.title + " [RECURSIVE]",
-      description: "The root Type schema"
-    })
-  }
   />
-
-### ComplexType's `"contains"` field
-
-Complex types inherently compose at least one other type and may do so in one
-of three forms:
-- Complex types may compose exactly one other type
-- Complex types may compose an ordered list of other types
-- Complex types may compose an object mapping of specific other types by key
-As described [above](#type-wrappers-and-type-references), complex types compose
-other types. This composition occurs inside the `"contains"` field for all
-complex types.
-
-<details open>
-  <summary>Example complex types to show different forms</summary>
-  <Tabs>
-    <TabItem value="singleton" label="Single type">
-      This is an example array type, which composes exactly one other type.
-
-      ```json
-      {
-        "kind": "array",
-        "contains": {
-          "type": {
-            "kind": "uint",
-            "bits": 256
-          }
-        }
-      }
-      ```
-    </TabItem>
-    <TabItem value="list" label="Ordered list of types">
-      This is an example array type, which composes an ordered list of member
-      types.
-
-      ```json
-      {
-        "kind": "struct",
-        "contains": [{
-          "member": "balance",
-          "type": {
-            "kind": "uint",
-            "bits": 256
-          }
-        }, {
-          "member": "scoreSheet",
-          "type": {
-            "id": "<some opaque ID for some `ScoreSheet` type>"
-          }
-        }]
-      }
-      ```
-
-      In this example, please note how this struct type represents member names
-      with a `"member"` field alongside the `"type"` field, and note how the
-      value of `"type"` can be either a complete representation or a reference
-      object in the form of `{ id }`.
-    </TabItem>
-    <TabItem value="object" label="Object mapping of types by key">
-      This is an example mapping type, which composes an object mapping of types
-      by key.
-      ```json
-      {
-        "kind": "mapping",
-        "contains": {
-          "key": {
-            "type": {
-              "kind": "address"
-            }
-          },
-          "value": {
-            "type": {
-              "kind": "uint",
-              "bits": 256
-            }
-          }
-        }
-      }
-      ```
-    </TabItem>
-  </Tabs>
-</details>
 
 ## Full base schema
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/type/base" }}
-  detect={
-  (item) =>
-    typeof item === "object" &&
-      !("$schema" in item) &&
-      item["$ref"] === "schema:ethdebug/format/type/base"}
-  transform={
-    ({ $ref, ...rest }, root) => ({
-      ...rest,
-      type: "object",
-      title: root.title + " [RECURSIVE]",
-      description: "The root Type schema"
-    })
-  }
   />
 
 ## Example schema extensions for particular types
@@ -322,7 +159,7 @@ correspond to the canonical **ethdebug/format/type** schema._
             type: object
             properties:
               type:
-                $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                $ref: "schema:ethdebug/format/type/base"
             required:
               - type
         required:
@@ -359,14 +196,14 @@ correspond to the canonical **ethdebug/format/type** schema._
                 type: object
                 properties:
                   type:
-                    $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                    $ref: "schema:ethdebug/format/type/base"
                 required:
                   - type
               value:
                 type: object
                 properties:
                   type:
-                    $ref: "schema:ethdebug/format/type/base#/$defs/Type"
+                    $ref: "schema:ethdebug/format/type/base"
                 required:
                   - type
             required:

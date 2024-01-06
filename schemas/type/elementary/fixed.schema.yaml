@@ -1,0 +1,33 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/fixed"
+
+title: ethdebug/format/type/elementary/fixed
+description:
+  Schema describing the representation of a signed fixed decimal type
+
+type: object
+properties:
+  class:
+    const: elementary
+  kind:
+    const: fixed
+  bits:
+    type: number
+    multipleOf: 8
+    minimum: 8
+    maximum: 256
+  places:
+    type: number
+    description:
+      How many decimal places, implying that a raw value `v` of this type
+      should be interpreted as `v / (10**places)`
+    minimum: 1
+    maximum: 80
+required:
+  - kind
+  - bits
+  - places
+examples:
+  - kind: fixed
+    bits: 256
+    places: 10
