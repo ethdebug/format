@@ -3756,15 +3756,15 @@ dns-packet@^5.2.2:
   dependencies:
     "@leichtgewicht/ip-codec" "^2.0.1"
 
-docusaurus-json-schema-plugin@^1.9.0:
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.9.0.tgz#c217c88f14b034c182d98dc1344c55907068bb7b"
-  integrity sha512-MZiaNyI/VY8wj3hfAqn6WFCDcmBaLSURlzk+NWT43o+3dw6h0pwJW9GN3NFgqZED2eNSJzJ3c2Y/OBKKKampkA==
+docusaurus-json-schema-plugin@^1.10.0:
+  version "1.10.0"
+  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.10.0.tgz#33e042b5df9d0f5be9615f4f7e82c88d8c834ad3"
+  integrity sha512-RshMfUsxQQZojCw2GYjJM3q2Ri4nNrruFR1An0HHHybG5/PSKXdUPcDlM3BX5k4MZrPcS2smTRRnFyRV+WHVlA==
   dependencies:
     "@stoplight/json-ref-resolver" "^3.1.5"
-    monaco-editor "^0.39.0"
+    monaco-editor "^0.44.0"
     monaco-editor-webpack-plugin "^7.0.1"
-    react-monaco-editor "^0.54.0"
+    react-monaco-editor "^0.55.0"
 
 dom-converter@^0.2.0:
   version "0.2.0"
@@ -6208,10 +6208,10 @@ monaco-editor-webpack-plugin@^7.0.1:
   dependencies:
     loader-utils "^2.0.2"
 
-monaco-editor@^0.39.0:
-  version "0.39.0"
-  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.39.0.tgz#3cf8e3718d6aac347d374516a6837d1c13d967d2"
-  integrity sha512-zhbZ2Nx93tLR8aJmL2zI1mhJpsl87HMebNBM6R8z4pLfs8pj604pIVIVwyF1TivcfNtIPpMXL+nb3DsBmE/x6Q==
+monaco-editor@^0.44.0:
+  version "0.44.0"
+  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.44.0.tgz#3c0fe3655923bbf7dd647057302070b5095b6c59"
+  integrity sha512-5SmjNStN6bSuSE5WPT2ZV+iYn1/yI9sd4Igtk23ChvqB7kDk9lZbB9F5frsuvpB+2njdIeGGFf2G4gbE6rCC9Q==
 
 mrmime@^1.0.0:
   version "1.0.1"
@@ -7174,10 +7174,10 @@ react-markdown@^9.0.1:
     unist-util-visit "^5.0.0"
     vfile "^6.0.0"
 
-react-monaco-editor@^0.54.0:
-  version "0.54.0"
-  resolved "https://registry.yarnpkg.com/react-monaco-editor/-/react-monaco-editor-0.54.0.tgz#ec9293249a991b08264be723c1ec0ca3a6d480d8"
-  integrity sha512-9JwO69851mfpuhYLHlKbae7omQWJ/2ICE2lbL0VHyNyZR8rCOH7440u+zAtDgiOMpLwmYdY1sEZCdRefywX6GQ==
+react-monaco-editor@^0.55.0:
+  version "0.55.0"
+  resolved "https://registry.yarnpkg.com/react-monaco-editor/-/react-monaco-editor-0.55.0.tgz#8933e8acc28e177b8b2aaf23593716b8cebf27a8"
+  integrity sha512-GdEP0Q3Rn1dczfKEEyY08Nes5plWwIYU4sWRBQO0+jsQWQsKMHKCC6+hPRwR7G/4aA3V/iU9jSmWPzVJYMVFSQ==
   dependencies:
     prop-types "^15.8.1"
 

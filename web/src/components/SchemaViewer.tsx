@@ -4,108 +4,99 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import {
   type DescribeSchemaOptions,
-  describeSchema
+  describeSchema,
+  schemaIndex,
 } from "@site/src/schemas";
+import {
+  SchemaContext ,
+  type PointerSchemaIds,
+  internalIdKey,
+} from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
 import SchemaListing from "./SchemaListing";
 
 export interface SchemaViewerProps extends DescribeSchemaOptions {
-  detect?: (item: object) => boolean;
-  transform?: (item: object, root: object) => object;
-}
-
-export const transformObject = (
-  obj: object,
-  predicate: (item: object) => boolean,
-  transform: (item: object, root: object) => object
-): object => {
-  const process = (currentObj: object): object => {
-    if (predicate(currentObj)) {
-      return transform(currentObj, obj);
-    }
-
-    if (typeof currentObj !== 'object' || currentObj === null) {
-      return currentObj;
-    }
-
-    // Using Array.isArray to differentiate between array and object
-    if (Array.isArray(currentObj)) {
-      return currentObj.map(item => process(item));
-    } else {
-      return Object.keys(currentObj).reduce((acc, key) => {
-        acc[key] = process(currentObj[key]);
-        return acc;
-      }, {});
-    }
-  };
-
-  return process(obj);
 }
 
 export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
+  const rootSchemaInfo = describeSchema(props);
   const {
-    schema: rawSchema,
+    id,
+    rootSchema,
     yaml,
     pointer
-  } = describeSchema(props);
+  } = rootSchemaInfo;
 
-  const {
-    detect = () => false,
-    transform = (x) => x
-  } = props;
-
-  const transformedSchema = transformObject(
-    rawSchema,
-    detect,
-    transform
-  );
+  const transformedSchema = insertIds(rootSchema, `${id}#`);
 
   return (
     <Tabs>
       <TabItem value="viewer" label="Explore">
-        <JSONSchemaViewer
-          schema={transformedSchema}
-          resolverOptions={{
-            resolvers: {
-              schema: {
-                resolve: (uri) => {
-                  const { schema } = describeSchema({
-                    schema: {
-                      id: uri.toString()
-                    }
-                  });
-                  return schema;
+        <SchemaContext.Provider value={{
+          rootSchemaInfo,
+          schemaIndex,
+        }}>
+          <JSONSchemaViewer
+            schema={transformedSchema}
+            resolverOptions={{
+              jsonPointer: pointer,
+              resolvers: {
+                schema: {
+                  resolve: (uri) => {
+                    const id = uri.toString();
+                    const { schema } = describeSchema({
+                      schema: { id }
+                    });
+                    return insertIds(schema, `${id}#`);
+                  }
                 }
               }
-            }
-          }}
-          viewerOptions={{
-            showExamples: true,
-            ValueComponent: ({ value }) => {
-              // deal with simple types first
-              if ([
-                "string",
-                "number",
-                "bigint",
-                "boolean"
-              ].includes(typeof value)) {
-                return <code>{
-                  (value as string | number | bigint | boolean).toString()
-                }</code>;
-              }
+            }}
+            viewerOptions={{
+              showExamples: true,
+              ValueComponent: ({ value }) => {
+                // deal with simple types first
+                if ([
+                  "string",
+                  "number",
+                  "bigint",
+                  "boolean"
+                ].includes(typeof value)) {
+                  return <code>{
+                    (value as string | number | bigint | boolean).toString()
+                  }</code>;
+                }
 
-              // for complex types use a whole CodeBlock
-              return <CodeBlock language="json">{`${
-                JSON.stringify(value, undefined, 2)
-              }`}</CodeBlock>;
-            },
-            DescriptionComponent: ({description}) =>
-              <ReactMarkdown children={description} />
-          }} />
+                // for complex types use a whole CodeBlock
+                return <CodeBlock language="json">{`${
+                  JSON.stringify(value, undefined, 2)
+                }`}</CodeBlock>;
+              },
+              DescriptionComponent: ({description}) =>
+                <ReactMarkdown children={description} />
+            }} />
+          </SchemaContext.Provider>
       </TabItem>
       <TabItem value="listing" label="View source">
         <SchemaListing schema={props.schema} pointer={props.pointer} />
       </TabItem>
     </Tabs>
   );
+}
+
+function insertIds<T>(obj: T, rootId: string): T {
+  if (Array.isArray(obj)) {
+    return obj.map((item, index) => insertIds(item, `${rootId}/${index}`)) as T;
+  } else if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).reduce((newObj, key) => {
+      const value = obj[key];
+      newObj[key] = insertIds(value, `${rootId}/${key}`);
+      return newObj;
+    }, {
+      [internalIdKey]: rootId.endsWith("#")
+        ? rootId.slice(0, -1)
+        : rootId
+    } as T);
+  }
+  return obj;
 }
