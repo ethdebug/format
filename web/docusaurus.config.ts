@@ -124,7 +124,7 @@ const config: Config = {
         },
         {
           to: '/status',
-          label: "⚠️ DRAFT ⚠️",
+          label: "⚠️ INCOMPLETE DRAFT ⚠️",
           className: "draft-warning",
           position: "right"
         },
