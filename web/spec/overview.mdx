@@ -7,6 +7,9 @@ sidebar_position: 1
 The **ethdebug format** is currently in the design phase and specification is
 only just beginning.
 
+
+## Contents
+
 This specification currently contains the following primary schemas:
 
 
@@ -18,4 +21,35 @@ A schema for representing high-level data types such as arrays of integers,
 payable addresses, etc.
 </dd>
 
+<dt>(more coming soon)</dt>
+<dd>...</dd>
+
 </dl>
+
+These schemas are specified as [JSON Schema](https://json-schema.org)
+documents, draft 2020-12.
+
+For the full collection of raw schema listings (in YAML format), please see the
+[`schemas/` directory](https://github.com/ethdebug/format/tree/main/schemas)
+in this project's GitHub repository.
+
+## Conventions used by this format
+
+### Terminology
+
+This specification uses the term "this format" to refer to the entirety of
+this project's scope (all formal schemas and any additional
+informally-described constraints). Sections within this specification use the
+term "this schema" to refer to whatever schema is related to the section in
+question.
+
+This specification uses the terms "known" and "unknown" synomously to mean
+"within the scope of this format" and "outside the scope of this format",
+respectively.
+
+### RFC-2119
+
+The key words "**must**", "**must not**", "**required**", "**shall**",
+"**shall not**", "**should**", "**should not**", "**recommended**", "**may**",
+and "**optional**" in this specification are to be interpreted as described in
+[RFC-2119](https://www.ietf.org/rfc/rfc2119.txt).
