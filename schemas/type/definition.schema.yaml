@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/definition"
+
+title: ethdebug/format/type/definition
+description: |
+  Object containing name and location information for a type.
+
+  This schema does not require any particular field, but it **must** contain
+  at least one property.
+
+type: object
+properties:
+  name:
+    type: string
+
+  source:
+    type: object
+    properties:
+      id:
+        type:
+          - string
+          - number
+      range:
+        type: object
+        properties:
+          offset:
+            type: number
+          length:
+            type: number
+
+anyOf:
+  - title: Required `name`
+    required:
+    - name
+  - title: Required `source`
+    required:
+    - source
+
+examples:
+  - name: Ballot
+    source:
+      id: 5
+      range:
+        offset: 10
+        length: 56

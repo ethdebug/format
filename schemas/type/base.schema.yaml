@@ -57,6 +57,7 @@ $defs:
           - $ref: "#/$defs/TypeWrapper"
           - $ref: "#/$defs/TypeWrapperArray"
           - $ref: "#/$defs/TypeWrapperObject"
+
     required:
       - kind
       - contains

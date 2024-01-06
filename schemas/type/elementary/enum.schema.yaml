@@ -17,6 +17,8 @@ properties:
       values are allowed here.
     type: array
     items: true
+  definition:
+    $ref: "schema:ethdebug/format/type/definition"
 
 required:
   - kind
