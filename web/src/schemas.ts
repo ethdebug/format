@@ -8,6 +8,24 @@ export const schemaYamls = [
   [YAML.parse(schema).$id]: schema
 })).reduce((a, b) => ({ ...a, ...b }), {});
 
+export type SchemaIndex = {
+  [schemaId: `schema:${string}`]: {
+      href: string /* relative or external URL */;
+      title?: string;
+  };
+};
+
+export const schemaIndex: SchemaIndex = {
+  "schema:ethdebug/format/type/base": {
+    title: "ethdebug/format/type/base schema",
+    href: "/spec/type/base"
+  },
+  "schema:ethdebug/format/type/base#/$defs/TypeWrapper": {
+    title: "Base type wrapper schema",
+    href: "/spec/type/base#base-type-wrapper-schema",
+  },
+};
+
 export interface DescribeSchemaOptions<
   S extends SchemaReference = SchemaReference
 > {
@@ -15,17 +33,18 @@ export interface DescribeSchemaOptions<
   pointer?: SchemaPointer;
 };
 
-export interface DescribedSchema {
+export interface SchemaInfo {
   id?: string; // root ID only
   pointer: SchemaPointer; // normalized from root ID
-  schema: object;
   yaml: string;
+  schema: object;
+  rootSchema: object;
 }
 
 export function describeSchema({
   schema,
   pointer
-}: DescribeSchemaOptions): DescribedSchema {
+}: DescribeSchemaOptions): SchemaInfo {
   if (typeof pointer === "string" && !pointer.startsWith("#")) {
     throw new Error("`pointer` option must start with '#'");
   }
@@ -40,7 +59,7 @@ export function describeSchema({
 function describeSchemaById({
   schema: { id: referencedId },
   pointer: relativePointer
-}: DescribeSchemaOptions<SchemaById>): DescribedSchema {
+}: DescribeSchemaOptions<SchemaById>): SchemaInfo {
   // we need to handle the case where the schema is referenced by an ID
   // with a pointer specified, possibly with a separate `pointer` field too
   const [id, rawReferencedPointer] = referencedId.split("#");
@@ -57,22 +76,25 @@ function describeSchemaById({
   const yaml = pointToYaml(rootYaml, pointer);
 
   const schema = YAML.parse(yaml);
+  const rootSchema = YAML.parse(rootYaml);
 
   return {
     id,
     pointer,
     yaml,
-    schema
+    schema,
+    rootSchema
   }
 }
 
 function describeSchemaByYaml({
   schema: { yaml: referencedYaml },
   pointer
-}: DescribeSchemaOptions<SchemaByYaml>): DescribedSchema {
+}: DescribeSchemaOptions<SchemaByYaml>): SchemaInfo {
   const yaml = pointToYaml(referencedYaml, pointer);
 
   const schema = YAML.parse(yaml);
+  const rootSchema = YAML.parse(referencedYaml);
 
   const id = schema.$id;
 
@@ -81,22 +103,24 @@ function describeSchemaByYaml({
       id,
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   } else {
     return {
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   }
 }
 
 function describeSchemaByObject({
-  schema: referencedSchema,
+  schema: rootSchema,
   pointer
-}: DescribeSchemaOptions<object>): DescribedSchema {
-  const rootYaml = YAML.stringify(referencedSchema);
+}: DescribeSchemaOptions<object>): SchemaInfo {
+  const rootYaml = YAML.stringify(rootSchema);
 
   const yaml = pointToYaml(rootYaml, pointer);
 
@@ -109,13 +133,15 @@ function describeSchemaByObject({
       id,
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   } else {
     return {
       pointer,
       yaml,
-      schema
+      schema,
+      rootSchema
     }
   }
 }
