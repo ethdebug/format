@@ -20,13 +20,15 @@ properties:
     $ref: "schema:ethdebug/format/type/definition"
 
 oneOf:
-  - properties:
+  - title: Normal contract type
+    properties:
       library:
         const: false
       interface:
         const: false
 
-  - properties:
+  - title: Contract library type
+    properties:
       library:
         const: true
         description:
@@ -34,7 +36,8 @@ oneOf:
     required:
       - library
 
-  - properties:
+  - title: Contract interface type
+    properties:
       interface:
         const: true
         description:

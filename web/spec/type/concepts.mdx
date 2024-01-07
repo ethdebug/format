@@ -112,13 +112,13 @@ possibly includes other fields alongside `"type"`.
       {
         "kind": "struct",
         "contains": [{
-          "member": "balance",
+          "name": "balance",
           "type": {
             "kind": "uint",
             "bits": 256
           }
         }, {
-          "member": "scoreSheet",
+          "name": "scoreSheet",
           "type": {
             "id": "<some opaque ID for some `ScoreSheet` type>"
           }
@@ -127,7 +127,7 @@ possibly includes other fields alongside `"type"`.
       ```
 
       In this example, please note how this struct type represents member names
-      with a `"member"` field alongside the `"type"` field, and note how the
+      with a `"name"` field alongside the `"type"` field, and note how the
       value of `"type"` can be either a complete representation or a reference
       object in the form of `{ id }`.
     </TabItem>

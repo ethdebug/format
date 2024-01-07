@@ -15,6 +15,7 @@ properties:
     const: mapping
   contains:
     type: object
+    title: Mapping key/value types
     properties:
       key:
         $ref: "schema:ethdebug/format/type/wrapper"
