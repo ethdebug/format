@@ -4,7 +4,6 @@ import CreateNodes from '@theme-original/JSONSchemaViewer/components/CreateNodes
 import { useJSVOptionsContext, useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/contexts";
 import { useSchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import Link from "@docusaurus/Link";
-import jsonpointer from "jsonpointer";
 
 export default function CreateNodesWrapper(props) {
   const { level } = useSchemaHierarchyContext();

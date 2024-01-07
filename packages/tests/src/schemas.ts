@@ -1,62 +1,4 @@
-import * as fs from "fs";
-import * as path from "path";
-
-import * as YAML from "yaml";
-import type { JSONSchema as JSONSchemaTyped } from "json-schema-typed/draft-2020-12"
-
-export type JSONSchema = Exclude<JSONSchemaTyped, boolean>;
-
-const filename = import.meta.url.slice("file://".length);
-const repositoryRoot = path.resolve(filename, "../../../../");
-const schemasRoot = path.resolve(repositoryRoot, "./schemas");
-
-const readSchemas = (): {
-  [id: string]: JSONSchema
-} => {
-  const schemaPaths = [
-    "type/base.schema.yaml",
-    "type/wrapper.schema.yaml",
-    "type/reference.schema.yaml",
-    "type/definition.schema.yaml",
-    "type/elementary/uint.schema.yaml",
-    "type/elementary/int.schema.yaml",
-    "type/elementary/bool.schema.yaml",
-    "type/elementary/bytes.schema.yaml",
-    "type/elementary/string.schema.yaml",
-    "type/elementary/ufixed.schema.yaml",
-    "type/elementary/fixed.schema.yaml",
-    "type/elementary/address.schema.yaml",
-    "type/elementary/contract.schema.yaml",
-    "type/elementary/enum.schema.yaml",
-    "type/elementary.schema.yaml",
-    "type/complex/alias.schema.yaml",
-    "type/complex/tuple.schema.yaml",
-    "type/complex/array.schema.yaml",
-    "type/complex/mapping.schema.yaml",
-    "type/complex/struct.schema.yaml",
-    "type/complex/function.schema.yaml",
-    "type/complex.schema.yaml",
-    "type.schema.yaml",
-  ];
-
-  const schemas = schemaPaths
-    .map((schemaPath) => {
-      const contents = (
-        fs.readFileSync(path.join(schemasRoot, schemaPath))
-      ).toString();
-
-      const schema = YAML.parse(contents);
-
-      const { $id: id } = schema;
-
-      return {
-        [id]: schema
-      };
-    })
-    .reduce((a, b) => ({ ...a, ...b }), {});
-
-  return schemas;
-}
+import { schemas } from "@ethdebug/format";
 
 export const schemaExtensions: {
   [schemaId: string]: {
@@ -140,5 +82,4 @@ export const schemaExtensions: {
   },
 }
 
-const schemas = readSchemas();
 export default schemas;

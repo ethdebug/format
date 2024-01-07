@@ -1,0 +1,27 @@
+{
+  "name": "@ethdebug/format",
+  "version": "0.1.0-0",
+  "description": "ethdebug/format schemas distributed as NPM package",
+  "main": "dist/src/index.js",
+  "repository": "https://github.com/ethdebug/format",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepare:yamls": "node ./bin/generate-schema-yamls.js > yamls.ts",
+    "prepare": "yarn prepare:yamls && tsc",
+    "clean": "rm -rf dist && rm yamls.ts",
+    "watch:typescript": "tsc --watch",
+    "watch:schemas": "nodemon --watch ../../schemas -e 'yaml' --exec 'yarn prepare:yamls'",
+    "watch": "concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
+  },
+  "dependencies": {
+    "json-schema-typed": "^8.0.1",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
