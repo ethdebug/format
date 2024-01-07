@@ -4,12 +4,13 @@ import GenerateFriendlyName from '@theme-original/JSONSchemaViewer/utils/generat
 export default function GenerateFriendlyNameWrapper(props) {
   const { schema } = props;
 
-  // otherwise just use default rendering
   return (
     <>
       <GenerateFriendlyName {...props} />
       {
-        "const" in schema
+        // check for const value and show this value in this summary if exists
+        // also make sure we're not dealing with a true/false schema
+        typeof schema === "object" && "const" in schema
           ? <span>
               <> = </><code>{JSON.stringify(schema.const)}</code>
             </span>
