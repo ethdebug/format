@@ -20,6 +20,7 @@ import typeComplexArraySchemaYaml from "../../schemas/type/complex/array.schema.
 import typeComplexMappingSchemaYaml from "../../schemas/type/complex/mapping.schema.yaml";
 import typeComplexStructSchemaYaml from "../../schemas/type/complex/struct.schema.yaml";
 import typeComplexTupleSchemaYaml from "../../schemas/type/complex/tuple.schema.yaml";
+import typeComplexFunctionSchemaYaml from "../../schemas/type/complex/function.schema.yaml";
 import typeComplexSchemaYaml from "../../schemas/type/complex.schema.yaml";
 import typeSchemaYaml from "../../schemas/type.schema.yaml";
 
@@ -44,6 +45,7 @@ export const schemaYamls = [
   typeComplexMappingSchemaYaml,
   typeComplexStructSchemaYaml,
   typeComplexTupleSchemaYaml,
+  typeComplexFunctionSchemaYaml,
   typeComplexSchemaYaml,
   typeSchemaYaml,
 ].map(schema => ({
@@ -100,14 +102,19 @@ export const schemaIndex: SchemaIndex = {
   ),
   ...(
     [
-      "alias", "tuple", "array", "mapping", "struct"
+      "alias", "tuple", "array", "mapping", "struct", "function"
     ].map(kind => ({
       [`schema:ethdebug/format/type/complex/${kind}`]: {
         href: `/spec/type/complex/${kind}`
       }
     }))
     .reduce((a, b) => ({ ...a, ...b }), {})
-  )
+  ),
+
+  "schema:ethdebug/format/type/complex/function#/$defs/Parameters": {
+    title: "Parameters schema",
+    href: "/spec/type/complex/function#parameters-schema"
+  },
 
 
 

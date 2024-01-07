@@ -48,6 +48,13 @@ allOf:
     then:
       $ref: "schema:ethdebug/format/type/complex/struct"
 
+  - if:
+      properties:
+        kind:
+          const: function
+    then:
+      $ref: "schema:ethdebug/format/type/complex/function"
+
 $defs:
   Kind:
     title: Known complex kind
@@ -61,4 +68,4 @@ $defs:
       - array
       - mapping
       - struct
-
+      - function
