@@ -6,7 +6,9 @@ import type { JSONSchema as JSONSchemaTyped } from "json-schema-typed/draft-2020
 
 export type JSONSchema = Exclude<JSONSchemaTyped, boolean>;
 
-const schemasRoot = path.resolve("../schemas");
+const filename = import.meta.url.slice("file://".length);
+const repositoryRoot = path.resolve(filename, "../../../../");
+const schemasRoot = path.resolve(repositoryRoot, "./schemas");
 
 const readSchemas = (): {
   [id: string]: JSONSchema

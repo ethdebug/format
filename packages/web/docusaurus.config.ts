@@ -61,7 +61,7 @@ const config: Config = {
           return {
             resolve: {
               alias: {
-                react: path.resolve('./node_modules/react'),
+                react: path.resolve('../../node_modules/react'),
               },
               fallback: {
                 buffer: false
