@@ -3,7 +3,7 @@ on:
 - pull_request
 
 jobs:
-  run-schema-tests:
+  run-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -12,15 +12,13 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-          cache-dependency-path: ./tests/yarn.lock
+          cache-dependency-path: yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./tests
 
-      - name: Run schema tests
+      - name: Run tests
         run: yarn test
-        working-directory: ./tests
 
   build-web:
     runs-on: ubuntu-latest
@@ -31,12 +29,11 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-          cache-dependency-path: ./web/yarn.lock
+          cache-dependency-path: yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./web
 
       - name: Build website
         run: yarn build
-        working-directory: ./web
+        working-directory: ./packages/web

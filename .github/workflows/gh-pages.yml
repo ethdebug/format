@@ -13,22 +13,21 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-          cache-dependency-path: ./web/yarn.lock
+          cache-dependency-path: yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./web
 
       - name: Build website
         run: yarn build
-        working-directory: ./web
+        working-directory: ./packages/web
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-          publish_dir: ./web/build
+          publish_dir: ./packages/web/build
 
           # default deployer
           user_name: 'github-actions[bot]'
