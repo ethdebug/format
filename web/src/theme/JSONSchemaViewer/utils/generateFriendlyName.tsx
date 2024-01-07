@@ -9,7 +9,8 @@ export default function GenerateFriendlyNameWrapper(props) {
       <GenerateFriendlyName {...props} />
       {
         // check for const value and show this value in this summary if exists
-        "const" in schema
+        // also make sure we're not dealing with a true/false schema
+        typeof schema === "object" && "const" in schema
           ? <span>
               <> = </><code>{JSON.stringify(schema.const)}</code>
             </span>
