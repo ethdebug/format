@@ -32,6 +32,7 @@ const readSchemas = (): {
     "type/complex/array.schema.yaml",
     "type/complex/mapping.schema.yaml",
     "type/complex/struct.schema.yaml",
+    "type/complex/function.schema.yaml",
     "type/complex.schema.yaml",
     "type.schema.yaml",
   ];
@@ -130,6 +131,9 @@ export const schemaExtensions: {
     extends: new Set(["schema:ethdebug/format/type/complex"])
   },
   "schema:ethdebug/format/type/complex/struct": {
+    extends: new Set(["schema:ethdebug/format/type/complex"])
+  },
+  "schema:ethdebug/format/type/complex/function": {
     extends: new Set(["schema:ethdebug/format/type/complex"])
   },
 }

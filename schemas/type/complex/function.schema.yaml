@@ -1,0 +1,164 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/function"
+
+title: ethdebug/format/type/complex/function
+description: |
+  Schema for representing a function type.
+
+  Type representations must indicate whether they represent a function that is
+  called internally (within the semantics of the language) or a function that
+  is called externally (via EVM contract call semantics and the Solidity ABI).
+  Internal function types require the `"internal": true` field; external
+  function types require `"external": true`.
+
+  Note that external function types may include a representation of the
+  contract type that defines or provides this function as an external
+  interface.
+
+type: object
+properties:
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: function
+  contains:
+    type: object
+    title: Parameter and return types
+    description: |
+      Types this function type composes. Function types inherently compose
+      two groupings of types (an ordered list of parameter types and typically
+      either a return value or return parameters). Function types' `contains`
+      field is organized as a mapping of `parameters` types (a type wrapper for
+      a tuple type) and an optional `returns` type (either a generic type
+      wrapper or a type wrapper for a tuple type).
+
+      This definition applies for both cases (internal and external function
+      types). Each of those specific types may expand this `contains` field
+      schema with other semantic details (such as an external function type
+      indicating the contract type from which it is exposed).
+    properties:
+      parameters:
+        $ref: "#/$defs/Parameters"
+      returns:
+        type: object
+        title: Return type (or tuple of types)
+        description: |
+          To accommodate languages differing in whether functions return single
+          values or lists of values, this field may be either a generic type
+          wrapper or explicitly defined as a type wrapper around a tuple type.
+
+          Debuggers that implement this schema **should** be aware that
+          languages whose functions return sole values might return tuple
+          types. Resolving this ambiguity remains outside the scope of the
+          schema (but compilers **must** be consistent when representing
+          function types in this schema).
+        anyOf:
+          - $ref: "schema:ethdebug/format/type/wrapper"
+          - $ref: "#/$defs/Parameters"
+    required:
+      - parameters
+  definition:
+    $ref: "schema:ethdebug/format/type/definition"
+
+oneOf:
+  - type: object
+    title: External function type
+    properties:
+      internal:
+        const: false
+      external:
+        const: true
+      contains:
+        type: object
+        title: Additional contents
+        properties:
+          contract:
+            type: object
+            title: Contract type providing external function
+            description:
+              A wrapper around the contract type that composes this external
+              function type.
+            allOf:
+              - $ref: "schema:ethdebug/format/type/wrapper"
+              - type: object
+                title: Contract type wrapper
+                properties:
+                  type:
+                    $ref: "schema:ethdebug/format/type/elementary/contract"
+    required:
+      - external
+
+  - type: object
+    title: Internal function type
+    properties:
+      internal:
+        const: true
+      external:
+        const: false
+    required:
+      - internal
+
+examples:
+  - kind: function
+    internal: true
+    definition:
+      name: increment
+    contains:
+      parameters:
+        type:
+          kind: tuple
+          contains:
+            - name: value
+              type:
+                kind: uint
+                bits: 256
+      returns:
+        type:
+          kind: uint
+          bits: 256
+  - kind: function
+    external: true
+    definition:
+      name: withdraw
+    contains:
+      contract:
+        type:
+          kind: contract
+          payable: true
+          interface: true
+          definition:
+            name: Bank
+      parameters:
+        type:
+          kind: tuple
+          contains:
+            - name: beneficiary
+              type:
+                kind: address
+                payable: true
+            - name: amount
+              type:
+                kind: ufixed
+                bits: 128
+                places: 18
+      returns:
+        type:
+          kind: tuple
+          contains: []
+
+$defs:
+  Parameters:
+    type: object
+    title: Parameters
+    description:
+      A type wrapper around a tuple of types. This schema uses a tuple type to
+      represent an ordered list of types.
+    allOf:
+      - $ref: "schema:ethdebug/format/type/wrapper"
+      - title: Tuple type wrapper
+        type: object
+        properties:
+          type:
+            $ref: "schema:ethdebug/format/type/complex/tuple"
