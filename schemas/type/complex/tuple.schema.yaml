@@ -16,19 +16,7 @@ properties:
   contains:
     type: array
     items:
-      title: '{ name?, type }'
-      allOf:
-        - $ref: "schema:ethdebug/format/type/wrapper"
-        - properties:
-            name:
-              type: string
-              description:
-                For tuple types where positional element types are identified
-                by name, this field **should** include this information.
-
-                This schema makes no restriction on whether all-or-no elements
-                have names, and so this field may be sparse across elements of
-                the same tuple.
+      $ref: "#/$defs/Element"
 
 required:
   - kind
@@ -49,3 +37,25 @@ examples:
         type:
           kind: uint
           bits: 128
+
+$defs:
+  Element:
+    type: object
+    title: Element
+    description:
+      An optionally named element type within a tuple. This is an
+      **ethdebug/format/type/wrapper** with additional fields.
+    allOf:
+      - $ref: "schema:ethdebug/format/type/wrapper"
+      - title: Additional fields
+        type: object
+        properties:
+          name:
+            type: string
+            description:
+              For tuple types where positional element types are identified
+              by name, this field **should** include this information.
+
+              This schema makes no restriction on whether all-or-no elements
+              have names, and so this field may be sparse across elements of
+              the same tuple.

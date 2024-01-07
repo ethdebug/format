@@ -45,12 +45,12 @@ $defs:
       **ethdebug/format/type/wrapper** with additional fields.
     allOf:
       - $ref: "schema:ethdebug/format/type/wrapper"
-      - type: object
-        title: Additional fields
+      - title: Additional fields
         description:
           An object with optional `name` property for identifying named struct
           member fields. **Note** that this language does not specify that a
           struct must be consistent in its use of naming for all fields or none
+        type: object
         properties:
           name:
             type: string
