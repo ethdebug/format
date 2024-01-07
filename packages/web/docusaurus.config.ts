@@ -35,25 +35,6 @@ const config: Config = {
   themes: [["docusaurus-json-schema-plugin", {}]],
 
   plugins: [
-    // Used for rendering JSON Schemas
-    async function loadYaml(context, options) {
-      return {
-        name: 'load-yaml',
-        configureWebpack(config: Configuration) {
-          return {
-            module: {
-              rules: [
-                {
-                  test: /\.yaml$/,
-                  use: "raw-loader"
-                }
-              ]
-            }
-          };
-        },
-      };
-    },
-
     async function ignoreBuffer(context, options) {
       return {
         name: "ignore-buffer",

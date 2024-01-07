@@ -1,8 +1,7 @@
-import YAML from "yaml";
 import {
   type DescribeSchemaOptions,
   describeSchema
-} from "@site/src/schemas";
+} from "@ethdebug/format";
 import CodeBlock from "@theme/CodeBlock";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";

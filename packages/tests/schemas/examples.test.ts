@@ -1,8 +1,9 @@
 import { expect, describe, it } from "@jest/globals";
 import { validate } from "@hyperjump/json-schema/draft-2020-12";
 
+import type { JSONSchema } from "@ethdebug/format";
+
 import schemas, {
-  type JSONSchema,
   schemaExtensions
 } from "../src/schemas.js";
 import printErrors from "../src/printErrors.js";

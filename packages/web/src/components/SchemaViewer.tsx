@@ -5,6 +5,8 @@ import TabItem from "@theme/TabItem";
 import {
   type DescribeSchemaOptions,
   describeSchema,
+} from "@ethdebug/format";
+import {
   schemaIndex,
 } from "@site/src/schemas";
 import {
