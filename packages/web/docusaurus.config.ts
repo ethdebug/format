@@ -62,6 +62,8 @@ const config: Config = {
         path: 'spec',
         routeBasePath: 'spec',
         sidebarPath: './sidebars.ts',
+        editUrl:
+          'https://github.com/ethdebug/format/tree/main/packages/web'
         // ... other options
       },
     ],
@@ -74,7 +76,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/ethdebug/format/tree/main/web/docs',
+            'https://github.com/ethdebug/format/tree/main/packages/web',
         },
         theme: {
           customCss: './src/css/custom.css',
