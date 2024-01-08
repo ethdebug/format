@@ -5025,10 +5025,10 @@ dns-packet@^5.2.2:
   dependencies:
     "@leichtgewicht/ip-codec" "^2.0.1"
 
-docusaurus-json-schema-plugin@^1.10.0:
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.10.0.tgz#33e042b5df9d0f5be9615f4f7e82c88d8c834ad3"
-  integrity sha512-RshMfUsxQQZojCw2GYjJM3q2Ri4nNrruFR1An0HHHybG5/PSKXdUPcDlM3BX5k4MZrPcS2smTRRnFyRV+WHVlA==
+docusaurus-json-schema-plugin@^1.11.0:
+  version "1.11.0"
+  resolved "https://registry.yarnpkg.com/docusaurus-json-schema-plugin/-/docusaurus-json-schema-plugin-1.11.0.tgz#85bc1d8899163683e3207dbe7a5504079932791a"
+  integrity sha512-Nd2WCoO4+Ke0fDOltdlaLwGmseCRMBuDxZd+QsaPCwJbogvNggBIEqFwFpRxlW+rIOTqB7ayeZ0jS0SFHn27fA==
   dependencies:
     "@stoplight/json-ref-resolver" "^3.1.5"
     monaco-editor "^0.44.0"
