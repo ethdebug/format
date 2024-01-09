@@ -43,3 +43,35 @@ trust risks erosion.
 This repository serves as a home for the working group to design
 a standard debugging data format for smart contracts on
 Ethereum-compatible networks.
+
+## Contents
+
+This repository contains a
+[`schemas/`](https://github.com/ethdebug/format/tree/main/schemas) directory
+with the formal JSON Schemas defined by this project (in YAML format).
+
+This repository also contains a number of NPM packages (currently unpublished):
+- **@ethdebug/format**: A Node.js-compatible distribution of these schemas
+- **@ethdebug/format-tests**: Contains a test suite for validating schemas and
+  testing examples/other constraints.
+- **@ethdebug/format-web**: The docusaurus site source that powers this
+  project's homepage.
+
+## Developing locally
+
+To build and run the site locally, please ensure you have Node.js
+(LTS or better) and `yarn` installed globally.
+
+First, clone this repo and install the Node.js dependencies:
+```console
+git clone https://github.com/ethdebug/format.git
+cd format
+yarn
+```
+
+Then, run this command to start a watcher process which rebuilds and reloads
+on any changes. This will open your browser to `http://localhost:3000/format`:
+
+```console
+yarn start
+```
