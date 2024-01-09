@@ -5,7 +5,7 @@
   ],
   "scripts": {
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
-    "start": "concurrently --names=format,web,jest \"cd ./packages/format && yarn watch\" \"cd ./packages/web && yarn start\" \"yarn test --watch\"",
+    "start": "./bin/start",
     "postinstall": "lerna run prepare"
   },
   "devDependencies": {
