@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+# Check if the --no-open flag is provided
+if [[ " $* " == *" --no-open "* ]]; then
+  NO_OPEN_FLAG="--no-open"
+else
+  NO_OPEN_FLAG=""
+fi
+
+# Run the commands with concurrently
+concurrently --names=format,web,jest \
+  "cd ./packages/format && yarn watch" \
+  "cd ./packages/web && yarn start $NO_OPEN_FLAG" \
+  "yarn test --watch"
+
