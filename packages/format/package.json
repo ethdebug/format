@@ -23,5 +23,9 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "nodemon": "^3.0.2"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "a5f00cb643dd589c6d6fc7d4471adbfefbb99e86"
 }
