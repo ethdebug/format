@@ -11,5 +11,5 @@ fi
 concurrently --names=format,web,jest \
   "cd ./packages/format && yarn watch" \
   "cd ./packages/web && yarn start $NO_OPEN_FLAG" \
-  "yarn test --watch"
+  "yarn test --watchAll"
 
