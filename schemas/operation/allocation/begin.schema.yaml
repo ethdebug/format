@@ -1,0 +1,51 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/allocation/begin"
+
+title: ethdebug/format/operation/allocation/begin
+description:
+  Describes the starting point for which a particular value has been allocated
+
+type: object
+
+properties:
+  begin:
+    type: string
+    const: allocation
+
+  variable:
+    type: object
+    properties:
+      scope:
+        type: object
+        properties:
+          id:
+            $ref: "schema:ethdebug/format/source/id"
+        required: [id]
+
+      identifier:
+        type: string
+
+      type:
+        $ref: "schema:ethdebug/format/type"
+
+    required:
+      - identifier
+      - type
+
+  pointer:
+    $ref: "schema:ethdebug/format/pointer"
+
+required:
+  - begin
+  - pointer
+
+examples:
+  - begin: allocation
+    variable:
+      identifier: x
+      type:
+        kind: uint
+        bits: 256
+    pointer:
+      location: stack
+      slot: 0

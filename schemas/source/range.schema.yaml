@@ -1,0 +1,21 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/source/range"
+
+title: ethdebug/format/source/range
+description:
+  Object representing a range of bytes within a particular source
+type: object
+
+properties:
+  offset:
+    type: number
+  length:
+    type: number
+
+required:
+  - offset
+  - length
+
+examples:
+  - offset: 0
+    length: 20

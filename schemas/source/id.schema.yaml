@@ -1,0 +1,14 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/source/id"
+
+title: ethdebug/format/source/id
+description:
+  An identifier produced by the compiler to refer to some source material
+
+type:
+  - number
+  - string
+
+examples:
+  - 5
+  - "5"

@@ -1,0 +1,33 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/function-call/begin"
+
+title: ethdebug/format/operation/function-call/begin
+description:
+  Describes the start of a function call operation
+type: object
+
+properties:
+  begin:
+    type: string
+    const: function-call
+
+  definition:
+    type: object
+    properties:
+      name:
+        type: string
+    $ref: "schema:ethdebug/format/source"
+    required:
+      - name
+      - source
+      - range
+
+examples:
+  - begin: function-call
+    definition:
+      name: transfer
+      source:
+        id: 1
+      range:
+        offset: 111
+        length: 82

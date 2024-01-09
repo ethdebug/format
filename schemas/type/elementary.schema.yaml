@@ -100,3 +100,7 @@ $defs:
       - address
       - contract
       - enum
+
+examples:
+  - kind: uint
+    bits: 256

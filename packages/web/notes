@@ -1,0 +1,22 @@
+ethdebug/format/operation
+  /scope/begin
+  /scope/end
+  /scope/declare
+  /scope/assign
+  /scope/allocate
+  /scope/delete
+
+
+begin
+  **defines scope id (debugger action: push new stack frame for that scope ID)
+  may inherit from another scope id
+  may declare variables
+  may assign variables
+  may allocate variables
+
+
+scope: begin
+id: ...
+declare:
+  x:
+    type:

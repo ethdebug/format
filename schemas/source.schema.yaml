@@ -1,0 +1,36 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/source"
+
+title: ethdebug/format/source
+description:
+  Describes a reference to a source or range of characters within that source.
+type: object
+
+properties:
+  source:
+    type: object
+    properties:
+      id:
+        $ref: "schema:ethdebug/format/source/id"
+    required: [id]
+  range:
+    title: Source range
+    $ref: "schema:ethdebug/format/source/range"
+  ast:
+    title: AST node information
+    $ref: "schema:ethdebug/format/source/ast"
+
+required:
+  - source
+
+examples:
+  - source:
+      id: 1
+  - source:
+      id: 2
+    range:
+      offset: 10
+      length: 23
+    ast:
+      node:
+        id: 88

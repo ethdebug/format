@@ -1,0 +1,46 @@
+
+
+# instruction annotation
+operations:
+  - path: "uint"
+    operation:
+      scope: begin
+      id: 5
+      variables:
+        x:
+          declare:
+            kind: uint
+            bits: 256
+  - path: "bytes"
+    operation:
+      scope: begin
+      id: 4
+      variables:
+        x:
+          declare:
+            kind: bytes
+            bytes: 256
+
+
+action: scope
+begin:
+  id: 5
+  parent:
+    id: 4
+declare:
+  x:
+    type:
+      kind: uint
+      bits: 256
+allocate:
+  x:
+    location: stack
+    slot: 0
+assign:
+ - x
+
+action: scope
+scope:
+  id: 5
+assign:
+  - x
