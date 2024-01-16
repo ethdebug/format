@@ -1,12 +1,8 @@
 import { expect, describe, it } from "@jest/globals";
-import { validate } from "@hyperjump/json-schema/draft-2020-12";
 
 import type { JSONSchema } from "@ethdebug/format";
 
-import schemas, {
-  schemaExtensions
-} from "../src/schemas.js";
-import printErrors from "../src/printErrors.js";
+import schemas, { schemaExtensions } from "../src/schemas.js";
 
 // loads schemas into global hyperjump json schema validator
 import "../src/loadSchemas.js";
@@ -77,8 +73,7 @@ function testExamples(options: {
   for (const [index, example] of examples.entries()) {
     describe(`example #${index}`, () => {
       it(`is a valid ${schema.title || id}`, async () => {
-        const output = await validate(id, example);
-        expect(output.valid).toBe(true);
+        await expect(example).toValidate({ schema: { id } });
       })
 
       const testedParentSchemas = new Set<string>();
@@ -95,8 +90,9 @@ function testExamples(options: {
           }
 
           it(`is also a valid ${parentSchemaId}`, async () => {
-            const output = await validate(parentSchemaId, example);
-            expect(output.valid).toBe(true);
+            await expect(example).toValidate({
+              schema: { id: parentSchemaId }
+            });
           });
 
           // recurse to ancestors
