@@ -10,6 +10,10 @@ import ExclusiveRequiredPropertiesSchema, {
   detectExclusiveRequiredProperties
 } from "./ExclusiveRequiredPropertiesSchema";
 
+import GenericRealizationSchema, {
+  detectGenericRealization
+} from "./GenericRealizationSchema";
+
 export default function allOfSchemaWrapper(props: {
   schema: Exclude<JSONSchema, boolean> & { allOf: JSONSchema[]; }
 }) {
@@ -25,10 +29,14 @@ export default function allOfSchemaWrapper(props: {
     return <ExclusiveRequiredPropertiesSchema {...exclusions} />
   }
 
+  const genericRealization = detectGenericRealization(schema);
+  if (genericRealization) {
+    return <GenericRealizationSchema schema={schema} {...genericRealization} />;
+  }
+
   return (
     <>
       <AllOfSchema {...props} />
     </>
   );
 }
-
