@@ -40,7 +40,7 @@ const main = () => {
           ? schema.title
           : schemaReference;
 
-      const output = await validate(schemaReference, received, "VERBOSE");
+      const output = await validate(schemaReference, received, "DETAILED");
 
       const pass = output.valid;
 
@@ -65,7 +65,6 @@ const main = () => {
       };
     }
   });
-
 }
 
 main();
