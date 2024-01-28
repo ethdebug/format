@@ -1,11 +1,16 @@
 import React from 'react';
 import CreateTypes from "@theme-original/JSONSchemaViewer/components/CreateTypes";
 import CreateNodes from '@theme-original/JSONSchemaViewer/components/CreateNodes';
-import { useJSVOptionsContext, useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/contexts";
+import type { JSONSchema } from "json-schema-typed/draft-2020-12";
+import { useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/contexts";
 import { useSchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import Link from "@docusaurus/Link";
 
-export default function CreateNodesWrapper(props) {
+export default function CreateNodesWrapper(props: {
+  schema: Exclude<JSONSchema, boolean> & {
+    [internalIdKey]: string
+  }
+}) {
   const { level } = useSchemaHierarchyContext();
   const { schemaIndex } = useSchemaContext();
 
@@ -25,7 +30,7 @@ export default function CreateNodesWrapper(props) {
           ? id.slice("schema:".length)
           : id
       } schema`
-    } = schemaIndex[id];
+    } = schemaIndex[id as keyof typeof schemaIndex];
 
     return (
       <>
@@ -36,7 +41,7 @@ export default function CreateNodesWrapper(props) {
 
   return (
     <>
-      <CreateNodes schema={schema} {...otherProps} />
+      <CreateNodes schema={props.schema} {...otherProps} />
     </>
   );
 }

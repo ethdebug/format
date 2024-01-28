@@ -35,6 +35,7 @@
     "@docusaurus/module-type-aliases": "^3.0.1",
     "@docusaurus/tsconfig": "^3.0.1",
     "@docusaurus/types": "^3.0.1",
+    "json-schema-typed": "^8.0.1",
     "typescript": "~5.2.2"
   },
   "browserslist": {

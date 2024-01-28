@@ -1,5 +1,6 @@
 import { useContext, createContext } from "react";
-import type { SchemaInfo, SchemaIndex } from "@site/src/schemas";
+import type { SchemaInfo } from "@ethdebug/format";
+import type { SchemaIndex } from "@site/src/schemas";
 
 export interface SchemaContextValue {
   rootSchemaInfo?: SchemaInfo;
