@@ -1,3 +1,5 @@
+import React from "react";
+import type { URL } from "url";
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
 import CodeBlock from "@theme/CodeBlock";
 import Tabs from "@theme/Tabs";
@@ -44,7 +46,7 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
               jsonPointer: pointer,
               resolvers: {
                 schema: {
-                  resolve: (uri) => {
+                  resolve: (uri: URL) => {
                     const id = uri.toString();
                     const { schema } = describeSchema({
                       schema: { id }
@@ -56,7 +58,7 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
             }}
             viewerOptions={{
               showExamples: true,
-              ValueComponent: ({ value }) => {
+              ValueComponent: ({ value }: { value: unknown }) => {
                 // deal with simple types first
                 if ([
                   "string",
@@ -74,7 +76,7 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
                   JSON.stringify(value, undefined, 2)
                 }`}</CodeBlock>;
               },
-              DescriptionComponent: ({description}) =>
+              DescriptionComponent: ({description}: { description: string }) =>
                 <ReactMarkdown children={description} />
             }} />
           </SchemaContext.Provider>
@@ -90,8 +92,8 @@ function insertIds<T>(obj: T, rootId: string): T {
   if (Array.isArray(obj)) {
     return obj.map((item, index) => insertIds(item, `${rootId}/${index}`)) as T;
   } else if (obj !== null && typeof obj === 'object') {
-    return Object.keys(obj).reduce((newObj, key) => {
-      const value = obj[key];
+    return Object.entries(obj).reduce((newObj, [key, value]) => {
+      // @ts-ignore
       newObj[key] = insertIds(value, `${rootId}/${key}`);
       return newObj;
     }, {
