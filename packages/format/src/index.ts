@@ -1,2 +1,2 @@
 export * from "./describe";
-export { schemas, schemaIds } from "./schemas";
+export { schemas, schemaIds, type Schema } from "./schemas";
