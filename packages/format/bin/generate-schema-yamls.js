@@ -29,6 +29,9 @@ const readSchemaYamls = (directory) => {
 }
 
 const schemaYamls = readSchemaYamls(schemasRoot);
+const rawSchemas = Object.entries(schemaYamls)
+  .map(([id, yaml]) => ({ [id]: YAML.parse(yaml) }))
+  .reduce((a, b) => ({ ...a, ...b }), {});
 
 console.log(`export type SchemaYamlsById = {
   [id: string]: string;
@@ -37,4 +40,11 @@ console.log(`export type SchemaYamlsById = {
 export const schemaYamls: SchemaYamlsById = ${
   JSON.stringify(schemaYamls, undefined, 2)
 };
+
+const rawSchemas = ${
+  JSON.stringify(rawSchemas, undefined, 2)
+} as const;
+
+export type Schema<Id extends keyof typeof rawSchemas> =
+  (typeof rawSchemas)[Id];
 `);
