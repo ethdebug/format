@@ -1,0 +1,44 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/list"
+
+title: ethdebug/format/pointer/collection/list
+description: |
+  An ordered list of pointers, indexed starting at zero.
+type: object
+
+properties:
+  list:
+    type: object
+    properties:
+      count:
+        description: |
+          The size of the list that this collection represents.
+        $ref: "schema:ethdebug/format/pointer/expression"
+      each:
+        description: |
+          An identifier name whose value as an expression resolves to the index
+          in the list
+        $ref: "schema:ethdebug/format/pointer/identifier"
+      is:
+        description: |
+          The dynamically-generated pointer repeated as a list
+        $ref: "schema:ethdebug/format/pointer"
+    required:
+      - count
+      - each
+      - is
+
+required:
+  - list
+
+additionalProperties: false
+
+examples:
+  - list:
+      count: 5
+      each: "index"
+      is:
+        location: memory
+        offset:
+          $read: "index"
+        length: 1

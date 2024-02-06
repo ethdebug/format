@@ -1,0 +1,14 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/identifier"
+
+title: ethdebug/format/pointer/identifier
+description: |
+  An identifier for use within the context of a root pointer
+type: string
+pattern: "^[a-zA-Z_\\-]+[a-zA-Z0-9$_\\-]*$"
+
+examples:
+  - a
+  - a0
+  - -$
+  - __init__

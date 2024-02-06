@@ -61,4 +61,93 @@ export const schemaIndex: SchemaIndex = {
     title: "Parameters schema",
     href: "/spec/type/complex/function#parameters-schema"
   },
+
+  "schema:ethdebug/format/pointer": {
+    href: "/spec/pointer"
+  },
+
+  "schema:ethdebug/format/pointer/region": {
+    href: "/spec/pointer/region"
+  },
+
+  "schema:ethdebug/format/pointer/region/base": {
+    href: "/spec/pointer/region/base"
+  },
+
+  ...(
+    [
+      "stack", "memory", "storage", "calldata", "returndata", "transient",
+      "code"
+    ].map(location => ({
+      [`schema:ethdebug/format/pointer/region/${location}`]: {
+        href: `/spec/pointer/region/location/${location}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+
+  ...(
+    [
+      "slice", "segment"
+    ].map(scheme => ({
+      [`schema:ethdebug/format/pointer/scheme/${scheme}`]: {
+        href: `/spec/pointer/region/scheme/${scheme}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+
+  "schema:ethdebug/format/pointer/collection": {
+    href: "/spec/pointer/collection"
+  },
+
+  ...(
+    [
+      "group", "list", "conditional"
+    ].map(collection => ({
+      [`schema:ethdebug/format/pointer/collection/${collection}`]: {
+        href: `/spec/pointer/collection/${collection}`
+      }
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+
+  "schema:ethdebug/format/pointer/expression": {
+    href: "/spec/pointer/expression"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Literal": {
+    title: "Literal values schema",
+    href: "/spec/pointer/expression#literal-values"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Scalar": {
+    title: "Scalar variable expression schema",
+    href: "/spec/pointer/expression#scalar-variables"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Arithmetic": {
+    title: "Arithmetic operation expression schema",
+    href: "/spec/pointer/expression#arithmetic-operations"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Lookup": {
+    title: "Lookup expression schema",
+    href: "/spec/pointer/expression#lookup-region-definition"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Read": {
+    title: "Read expression schema",
+    href: "/spec/pointer/expression#reading-from-the-evm"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Keccak256": {
+    title: "Keccak256 hash expression schema",
+    href: "/spec/pointer/expression#keccak256-hashes"
+  },
+
+  "schema:ethdebug/format/pointer/expression#/$defs/Reference": {
+    title: "Region reference",
+    href: "/spec/pointer/expression#region-references"
+  },
 };

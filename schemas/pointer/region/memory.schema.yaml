@@ -1,0 +1,29 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/memory"
+
+title: ethdebug/format/pointer/region/memory
+description: |
+  A schema for representing a region of data in EVM memory. Pointer regions
+  within memory represent a single/atomic sequence of byte locations.
+
+  This schema is constructed by extending the base region schema
+  and the schema for the slice addressing scheme.
+type: object
+
+allOf:
+  - title: '{ "location": "memory" }' # note: whitespace chars are \255 (nbsp)
+    properties:
+      location:
+        const: memory
+
+    required:
+      - location
+  - $ref: "schema:ethdebug/format/pointer/region/base"
+  - $ref: "schema:ethdebug/format/pointer/scheme/slice"
+
+unevaluatedProperties: false
+
+examples:
+  - location: memory
+    offset: "0x04"
+    length: 32

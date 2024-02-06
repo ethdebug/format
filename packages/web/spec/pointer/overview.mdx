@@ -1,0 +1,48 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::tip
+
+**ethdebug/format/pointer** is a JSON schema for pointing to bytes in the EVM.
+
+Debuggers need to know where to find variables when looking at a running
+machine, which means that debuggers must be able to find the related regions
+of the stack, memory, storage, etc. where each of the variables in scope live
+at any point in time.
+
+This gets particularly complicated on the EVM because many common languages
+employ novel techniques for organizing data. (Some of these
+techniques serve to work around machine limitations; others serve to
+take advantage of the unique way the EVM is designed.) For a thorough
+description of how Solidity organizes memory, please see related work
+[Data Representation in Solidity](https://ethdebug.github.io/solidity-data-representation/).
+
+As a consequence of this complexity, this schema seeks to allow compilers the
+expressiveness required for describing these allocation techniques at
+compile-time. To readers continuing on,
+a [warning](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule) may apply.
+
+
+:::
+
+This format defines a schema for locating semantically-cohesive bytes ranges
+in a running EVM.
+
+JSON values in this schema describe primarily _where_ data is to be found to
+identify to debuggers reading a trace (or attached to a running EVM) which data
+must be read from which location(s). Values in this schema may address
+a single continuous region of bytes or an aggregation of non-continuous related
+regions.
+
+## Reading this schema
+
+The **ethdebug/format/pointer** schema is a root schema that composes other
+related schemas in the ethdebug/format/pointer/* namespace.
+
+These schemas (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.
+
+Please refer to one or more of the following resources in this section:

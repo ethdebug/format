@@ -1,0 +1,191 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer"
+
+title: ethdebug/format/pointer
+description: |
+  A schema for representing a pointer to a data position or a range of data
+  positions in the EVM.
+
+  An **ethdebug/format/pointer** is either a single region or a structured
+  collection of other pointers.
+
+type: object
+
+oneOf:
+  - $ref: "schema:ethdebug/format/pointer/region"
+  - $ref: "schema:ethdebug/format/pointer/collection"
+
+examples:
+  - # example: a single particular storage slot
+    location: storage
+    slot: 2
+
+  - # example `uint256[] memory` allocation pointer
+    # this pointer composes an ordered list of other pointers
+    group:
+      # declare the first sub-pointer to be the "array-start" region of data
+      # corresponding to the first item in the stack (at time of observation)
+      - name: "array-start"
+        location: stack
+        slot: 0
+
+      # declare the "array-count" region to be at the offset indicated by
+      # the value at "array-start"
+      - name: "array-count"
+        location: memory
+        offset:
+          $read: "array-start"
+        length: $wordsize
+
+      # thirdly, declare a sub-pointer that is a dynamic list whose size is
+      # indicated by the value at "array-count", where each "item-index"
+      # corresponds to a discrete "array-item" region
+      - list:
+          count:
+            $read: "array-count"
+          each: "item-index"
+          is:
+            name: "array-item"
+            location: "memory"
+            offset:
+              # array items are positioned so that the item with index 0
+              # immediately follows "array-count", and each subsequent item
+              # immediately follows the previous.
+              $sum:
+                - .offset: "array-count"
+                - .length: "array-count"
+                - $product:
+                    - "item-index"
+                    - .length: "array-item"
+            length: $wordsize
+
+  - # example `struct Record { uint128 x; uint128 y }` in memory
+    group:
+      - name: "struct-start"
+        location: stack
+        slot: 0
+
+      - name: "struct-member-0"
+        location: memory
+        # the first struct member begins at the offset indicated by the value
+        # at "struct-start"
+        offset:
+          $read: "struct-start"
+        length: $wordsize
+
+      - name: "struct-member-1"
+        location: memory
+        # the second struct member immediately follows the first
+        offset:
+          $sum:
+            - .offset: "struct-member-0"
+            - .length: "struct-member-0"
+        length: $wordsize
+
+  - # example `(struct Record { uint256 x; uint256 y; })[] memory`
+    group:
+      # declare the first sub-pointer to be the "array-start" region of data
+      # corresponding to the first item in the stack (at time of observation)
+      - name: "array-start"
+        location: stack
+        slot: 0
+
+      # declares the "array-count" region in memory at the offset indicated
+      # by "array-start" and of length equal to word size
+      - name: "array-count"
+        location: memory
+        offset:
+          $read: "array-start"
+        length: $wordsize
+
+      # declare this to include a list of pointers of size indicated by the
+      # value at "array-count", where each "item-index" corresponds to a
+      # group of pointers
+      - list:
+          count:
+            $read: "array-count"
+          each: "item-index"
+          is:
+            group:
+              # each element in the list includes a "struct-pointer" region
+              # in memory (laid out sequentially in a block as the raw
+              # array data)
+              - name: "struct-pointer"
+                location: memory
+                offset:
+                  $sum:
+                    - .offset: "array-count"
+                    - .length: "array-count"
+                    - $product:
+                      - "item-index"
+                      - .length: "struct-pointer"
+                length: $wordsize
+
+              # following that pointer leads to the region corresponding to
+              # the first member of the struct
+              - name: "struct-member-0"
+                location: memory
+                offset:
+                  $read: "struct-pointer"
+                length: $wordsize
+
+              # the second struct member immediately follows the first
+              - name: "struct-member-1"
+                location: memory
+                offset:
+                  $sum:
+                    - .offset: "struct-member-0"
+                    - .length: "struct-member-0"
+                length: $wordsize
+
+  - # example `string storage` allocation
+    group:
+      # for short strings, the length is stored as 2n in the last byte of slot
+      - name: "length-flag"
+        location: storage
+        slot: 0
+        offset:
+          $difference:
+            - $wordsize
+            - 1
+        length: 1
+
+      # long strings may use full word to describe length as 2n+1
+      - name: "long-length-data"
+        location: storage
+        slot:
+          .slot: "length-flag"
+        offset: 0
+        length: $wordsize
+
+      # define the region representing the string data itself conditionally
+      # based on odd or even length data
+      - if:
+          $remainder:
+            - $read: "length-flag"
+            - 2
+        then:
+          name: "string"
+          location: storage
+          slot:
+            $keccak256:
+              - .slot: "length-flag"
+          offset: 0
+          length:
+            # length n is encoded as 2n+1
+            $quotient:
+              - $difference:
+                  - $read: "long-length-data"
+                  - 1
+              - 2
+        else:
+          name: "string"
+          location: storage
+          slot:
+            .slot: "length-flag"
+          offset: 0
+          length:
+            # length n is encoded as 2n
+            $quotient:
+              - $read: "length-flag"
+              - 2

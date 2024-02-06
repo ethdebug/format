@@ -1,0 +1,33 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection"
+
+title: ethdebug/format/pointer/collection
+description: |
+  A representation of a collection of pointers to data in the EVM
+type: object
+
+allOf:
+  - oneOf:
+      - required:
+          - group
+      - required:
+          - list
+      - required:
+          - if
+  - if:
+      required:
+        - group
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/group"
+
+  - if:
+      required:
+        - list
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/list"
+
+  - if:
+      required:
+        - if
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/conditional"

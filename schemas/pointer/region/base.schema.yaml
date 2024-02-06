@@ -1,0 +1,21 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/base"
+
+title: ethdebug/format/pointer/region/base
+description: |
+  Common schema for all region schemas, regardless of `"location": ...`.
+
+type: object
+properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/identifier"
+
+  location:
+    type: string
+
+required:
+  - location
+
+examples:
+  - name: "array-item"
+    location: memory

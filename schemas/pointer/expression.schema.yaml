@@ -1,0 +1,203 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/expression"
+
+title: ethdebug/format/pointer/expression
+description: |
+  A schema for describing expressions that evaluate to values.
+
+oneOf:
+  - $ref: "#/$defs/Literal"
+  - $ref: "#/$defs/Variable"
+  - $ref: "#/$defs/Constant"
+  - $ref: "#/$defs/Arithmetic"
+  - $ref: "#/$defs/Lookup"
+  - $ref: "#/$defs/Read"
+  - $ref: "#/$defs/Keccak256"
+
+$defs:
+  Literal:
+    title: Literal value
+    description: |
+      An unsigned number or a `0x`-prefixed string of hexadecimal digits
+
+    oneOf:
+      - type: integer
+        description: A non-negative integer literal
+        min: 0
+
+      - type: string
+        description: |
+          A `0x`-prefixed hexadecimal string representing literal bytes
+        pattern: "^0x[0-9a-fA-F]{1,}$"
+
+    examples:
+      - 5
+      - "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+  Constant:
+    title: Constant value
+    type: string
+    enum:
+      - $wordsize
+
+  Variable:
+    title: Variable identifier
+    description: |
+      A string that matches an identifier used in an earlier declaration of
+      a scalar variable. This expression evaluates to the value of that
+      variable.
+    $ref: "schema:ethdebug/format/pointer/identifier"
+
+  Arithmetic:
+    title: Arithmetic operation
+    type: object
+    properties:
+      "$sum":
+        description: |
+          A list of expressions to be added together.
+        $ref: "#/$defs/Operands"
+      "$difference":
+        description: |
+          A tuple of two expressions where the second is to be subtracted from
+          the first.
+
+          (i.e., `{ "$difference": [a, b] }` equals `a` minus `b`.)
+        $ref: "#/$defs/Operands"
+        minItems: 2
+        maxItems: 2
+      "$product":
+        description: |
+          A list of expressions to be multipled.
+        $ref: "#/$defs/Operands"
+      "$quotient":
+        description: |
+          A tuple of two expressions where the first corresponds to the
+          dividend and the second corresponds to the divisor, for the purposes
+          of doing integer division.
+
+          (i.e., `{ "$quotient": [a, b] }` equals `a` divided by `b`.)
+        $ref: "#/$defs/Operands"
+        minItems: 2
+        maxItems: 2
+      "$remainder":
+        description: |
+          A tuple of two expressions where the first corresponds to the
+          dividend and the second corresponds to the divisor, for the purposes
+          of computing the modular-arithmetic remainder.
+
+          (i.e., `{ "$remainder": [a, b] }` equals `a` mod `b`.)
+        $ref: "#/$defs/Operands"
+        minItems: 2
+        maxItems: 2
+    additionalProperties: false
+    minProperties: 1
+    maxProperties: 1
+    examples:
+      - "$sum": [5, 3, 4]
+      - "$difference": [5, 3]
+      - "$product": [5, 3, 0]
+      - "$quotient": [5, 3]
+      - "$remainder":
+          - "$product":
+            - 2
+            - 2
+            - 2
+            - 2
+          - 3
+
+  Operands:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/pointer/expression"
+
+  Lookup:
+    title: Lookup region definition
+    description: |
+      An object of the form `{ ".<property-name>": "<region>" }`, to
+      denote that this expression is equivalent to the defined value for
+      the property named `<property-name>` inside the region referenced as
+      `<region>`.
+
+      `<property-name>` **must** be a valid and present property on the
+      corresponding region, or it **must** correspond to an optional property
+      whose schema specifies a default value for that property.
+    type: object
+    patternProperties:
+      "^\\.(offset|length|slot)$":
+        $ref: "#/$defs/Reference"
+    additionalProperties: false
+    minProperties: 1
+    maxProperties: 1
+
+    examples:
+      - .offset: "array-count"
+      - .length: "array-item"
+      - .offset: $this
+
+
+  Read:
+    title: Read region bytes
+    description: |
+      An object of the form `{ "$read": "<region>" }`. The value of this
+      expression equals the raw bytes present in the running machine state
+      in the referenced region.
+    type: object
+    properties:
+      $read:
+        $ref: "#/$defs/Reference"
+    required:
+      - $read
+    additionalProperties: false
+    examples:
+      - $read: "struct-start"
+
+  Reference:
+    title: Region reference
+    description: |
+      A string value that **must** either be the `"name"` of at least one
+      region declared with `{ "name": "<region>" }` previously in some root
+      pointer representation, or it **must** be the literal value `"$this"`,
+      which indicates a reference to the region containing this expression.
+
+      If more than one region is defined with the same name, resolution is
+      defined as firstly resolving to the latest earlier sibling that declares
+      the matching name, then secondly resolving to the parent if it matches,
+      then to parent's earlier siblings, and so on.
+    type: string
+
+    oneOf:
+      - $ref: "schema:ethdebug/format/pointer/identifier"
+      - const: "$this"
+        description: |
+          Indicates a reference to the region containing this expression.
+
+  Keccak256:
+    title: Keccak256 hash
+    description: |
+      An object of the form `{ "keccak256": [...values] }`, indicating that this
+      expression evaluates to the Solidity-style keccak256 hash of the
+      tightly-packed bytes encoded by `values`.
+    type: object
+    properties:
+      $keccak256:
+        title: Array of hashed values
+        type: array
+        items:
+          $ref: "schema:ethdebug/format/pointer/expression"
+    additionalProperties: false
+    required:
+      - $keccak256
+    examples:
+      - $keccak256:
+          - 0
+          - "0x00"
+
+examples:
+  - 0
+  - $sum:
+      - .offset: "array-start"
+      - .length: "array-start"
+      - 1
+  - $keccak256:
+      - 5
+      - .offset: "array-start"

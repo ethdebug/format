@@ -1,0 +1,28 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/code"
+
+title: ethdebug/format/pointer/region/code
+description: |
+  A schema for representing a region of data in EVM bytecode.
+
+  This schema is constructed by extending the base region schema
+  and the schema for the slice addressing scheme.
+type: object
+
+allOf:
+  - title: '{ "location": "code" }' # note: whitespace chars are \255 (nbsp)
+    properties:
+      location:
+        const: code
+
+    required:
+      - location
+  - $ref: "schema:ethdebug/format/pointer/region/base"
+  - $ref: "schema:ethdebug/format/pointer/scheme/slice"
+
+unevaluatedProperties: false
+
+examples:
+  - location: code
+    offset: "0x04"
+    length: 32

@@ -1,0 +1,62 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/scheme/segment"
+
+title: ethdebug/format/pointer/scheme/segment
+description: |
+  An addressing scheme for pointing to a range of bytes in a data location
+  arranged as individually-addressable word-sized slots.
+
+  **Note** that this addressing scheme permits addressing byte ranges that
+  extend beyond the last byte of a particular slot, or even covering the range
+  of multiple slots.
+
+  In such cases, this schema defines the range as the concatenation of bytes
+  across slots such that the address of the first byte after the end of slot
+  `p` (i.e., `{ "offset": "$wordsize" }`) is interpreted as the first byte of
+  slot `p + 1`.
+
+type: object
+
+properties:
+  slot:
+    $ref: "schema:ethdebug/format/pointer/expression"
+  offset:
+    description: |
+      The starting byte index within the slot.
+
+      This field is **optional**. If unspecified, it has the default value of
+      `0`, indicating that the segment begins at the start of the specified
+      slot.
+
+      This field's expression must resolve to a value _n_ such that
+      0&nbsp;≤&nbsp;_n_&nbsp;\<&nbsp;`$wordsize` (i.e., the offset **must**
+      begin inside the slot).
+    $ref: "schema:ethdebug/format/pointer/expression"
+    default: 0
+  length:
+    description: |
+      The length of the bytes range this segment represents.
+
+      This field is **optional**. If unspecified, its default value indicates
+      that the segment ends at the end of the slot.
+
+      If this field has value larger than the default value, i.e., if the
+      segment extends beyond the last byte in the slot, then this segment is
+      defined to be the concatenation of the sequentially-addressed slot(s)
+      following following the slot specified.
+    $ref: "schema:ethdebug/format/pointer/expression"
+    default:
+      $difference:
+        - $wordsize
+        - .offset: $this
+
+required:
+  - slot
+
+examples:
+  - slot: 0
+  - slot: 1
+    length:
+      $product:
+        - $wordsize
+        - 3
