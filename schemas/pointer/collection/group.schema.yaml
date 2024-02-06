@@ -1,0 +1,26 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/group"
+
+title: ethdebug/format/pointer/collection/group
+description: |
+  A composite collection of pointers
+type: object
+properties:
+  group:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/pointer"
+    minItems: 1
+required:
+  - group
+additionalProperties: false
+
+examples:
+  - group:
+      - name: "data-pointer"
+        location: stack
+        slot: 0
+      - location: memory
+        offset:
+          $read: "data-pointer"
+        length: 32

@@ -1,0 +1,33 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/conditional"
+
+title: ethdebug/format/pointer/collection/conditional
+description: |
+  A pointer defined conditionally based on the non-zero-ness of some expression
+
+type: object
+
+properties:
+  if:
+    $ref: "schema:ethdebug/format/pointer/expression"
+  then:
+    $ref: "schema:ethdebug/format/pointer"
+  else:
+    $ref: "schema:ethdebug/format/pointer"
+
+required:
+  - if
+  - then
+
+additionalProperties: false
+
+examples:
+  - if: 0
+    then:
+      location: memory
+      offset: 0
+      length: 1
+    else:
+      location: memory
+      offset: 1
+      length: 1

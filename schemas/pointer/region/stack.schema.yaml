@@ -1,0 +1,38 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/stack"
+
+title: ethdebug/format/pointer/region/stack
+description: |
+  A schema for representing a region of data in the EVM.
+
+  Describes stack slots as number of positions from the top (at time of
+  observation). Debuggers reading this information **should** immediately
+  convert these positions to absolute positions from the bottom.
+
+  This schema is constructed by extending the base region schema
+  and the schema for the segment addressing scheme.
+type: object
+
+allOf:
+  - title: '{ "location": "stack" }' # note: whitespace chars are \255 (nbsp)
+    properties:
+      location:
+        const: stack
+
+    required:
+      - location
+
+  - $ref: "schema:ethdebug/format/pointer/region/base"
+  - $ref: "schema:ethdebug/format/pointer/scheme/segment"
+
+unevaluatedProperties: false
+
+examples:
+  - location: stack
+    slot: 0
+  - location: stack
+    slot: 1
+    length:
+      $product:
+        - $wordsize
+        - 2

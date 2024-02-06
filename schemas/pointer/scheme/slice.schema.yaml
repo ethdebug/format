@@ -1,0 +1,29 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/scheme/slice"
+
+title: ethdebug/format/pointer/scheme/slice
+description: |
+  An addressing scheme for pointing to a range of sequential bytes inside
+  a data location whose structure is that of a regular bytes array
+  (i.e., where bytes are indexed by byte offset, with no concept of word).
+
+type: object
+
+properties:
+  offset:
+    description: |
+      The index of the byte (starting from zero) in the data location where
+      the slice begins.
+    $ref: "schema:ethdebug/format/pointer/expression"
+  length:
+    description: |
+      The length of the slice in number of bytes.
+    $ref: "schema:ethdebug/format/pointer/expression"
+
+required:
+  - offset
+  - length
+
+examples:
+  - offset: 0
+    length: 32

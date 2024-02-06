@@ -1,0 +1,111 @@
+---
+sidebar_position: 6
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Expression syntax
+
+Pointer expressions operate on the domain of bytes representing unsigned
+integers.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  />
+
+## Literal values
+
+An expression can be a literal value.
+
+Literal values **must** be represented either as JSON numbers or as
+`0x`-prefixed hexadecimal strings. Hexadecimal strings always represent a
+literal string of bytes.
+
+For convenience, this schema does not restrict hexadecimal string
+representations to those that specify an even-number of digits (i.e., those
+that specify complete byte pairs); odd numbers of hexadecimal digits are fine.
+
+Hexadecimal string representations **may** omit leading zeroes; values are
+assumed to be left-padded to the bytes width appropriate for the context.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Literal"
+  />
+
+## Scalar variables
+
+An expression can be a string value equal to the identifier for a known
+scalar variable introduced by some pointer representation.
+
+For an example where scalar variables may appear, see the
+[List collection schema](/spec/pointer/collection/list).
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Literal"
+  />
+
+## Arithmetic operations
+
+An expression can be an object of the form `{ <op>: [...] }`, where `<op>`
+denotes an arithmetic operation.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Arithmetic"
+  />
+
+## Lookup region definition
+
+An expression can reference properties defined for a particular region, such as
+another region's `"offset"` or `"length"`. Such expressions resolve to the
+same value as the expression specified for that corresponding property.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Lookup"
+  />
+
+## Reading from the EVM
+
+An expression can be an object of the form `{ "$read": "<region>" }`, where
+`<region>` references a particular region defined in some root pointer.
+
+The value of such an expression is the concatenation of bytes present in the
+running machine state that correspond to the bytes addressed by the referenced
+region.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Read"
+  />
+
+## Keccak256 hashes
+
+An expression can be an object of form `{ "$keccak256": [...] }`, indicating
+that the value of the expression is a Solidity-style, tightly-packed keccak256
+hash of the concatenation of bytes specified by the list.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Keccak256"
+  />
+
+## Region references
+
+Regions can be referenced either by name (which **must** be a defined region),
+or by use of the literal string value `"$this"` (which indicates that the
+referenced region is the region containing the expression itself).
+
+In cases where an expression is used outside the context of a particular
+region definition, the use of `"$this"` is **prohibited**.
+
+Individual properties **may not** be defined with any reference to themselves.
+Properties also **may not** be defined in terms of mutual reference to each
+other. <small>(Don't make this harder than it has to be.)</small>
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Reference"
+  />

@@ -1,0 +1,44 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/storage"
+
+title: ethdebug/format/pointer/region/storage
+description: |
+  A schema for representing a region of data in EVM storage.
+
+  This schema is constructed by extending the base region schema
+  and the schema for the segment addressing scheme.
+type: object
+
+allOf:
+  - title: '{ "location": "storage" }' # note: whitespace chars are \255 (nbsp)
+    properties:
+      location:
+        const: storage
+
+    required:
+      - location
+
+  - $ref: "schema:ethdebug/format/pointer/region/base"
+  - $ref: "schema:ethdebug/format/pointer/scheme/segment"
+
+unevaluatedProperties: false
+
+examples:
+  - location: storage
+    slot: "0x03"
+  - location: storage
+    slot: "0x06"
+    length:
+      $product:
+        - $wordsize
+        - 2
+  - location: storage
+    slot: "0x08"
+    offset:
+      $quotient:
+        - $wordsize
+        - 2
+    length:
+      $quotient:
+        - $wordsize
+        - 2
