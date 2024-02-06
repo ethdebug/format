@@ -6,6 +6,10 @@ import { useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/cont
 import { useSchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import Link from "@docusaurus/Link";
 
+import UnnecessaryCompositionSchema, {
+  detectUnnecessaryComposition
+} from "./UnnecessaryComposition";
+
 export default function CreateNodesWrapper(props: {
   schema: Exclude<JSONSchema, boolean> & {
     [internalIdKey]: string
@@ -15,12 +19,11 @@ export default function CreateNodesWrapper(props: {
   const { schemaIndex } = useSchemaContext();
 
   const {
-    schema: {
-      [internalIdKey]: id,
-      ...schema
-    },
+    schema,
     ...otherProps
   } = props;
+
+  const { [internalIdKey]: id } = schema;
 
   if (id && id in schemaIndex && level > 0) {
     const {
@@ -39,9 +42,14 @@ export default function CreateNodesWrapper(props: {
     );
   }
 
+  const unnecessaryComposition = detectUnnecessaryComposition(schema);
+  if (unnecessaryComposition) {
+    return <UnnecessaryCompositionSchema {...unnecessaryComposition} />;
+  }
+
   return (
     <>
-      <CreateNodes schema={props.schema} {...otherProps} />
+      <CreateNodes schema={schema} {...otherProps} />
     </>
   );
 }
