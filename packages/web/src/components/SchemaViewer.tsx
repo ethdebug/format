@@ -1,5 +1,6 @@
 import React from "react";
 import type { URL } from "url";
+import type { JSONSchema } from "json-schema-typed/draft-2020-12";
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
 import CodeBlock from "@theme/CodeBlock";
 import Tabs from "@theme/Tabs";
@@ -31,7 +32,7 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
     pointer
   } = rootSchemaInfo;
 
-  const transformedSchema = insertIds(rootSchema, `${id}#`);
+  const transformedSchema = transformSchema(rootSchema, id || "");
 
   return (
     <Tabs>
@@ -51,7 +52,7 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
                     const { schema } = describeSchema({
                       schema: { id }
                     });
-                    return insertIds(schema, `${id}#`);
+                    return transformSchema(schema, id);
                   }
                 }
               }
@@ -88,6 +89,10 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
   );
 }
 
+function transformSchema(schema: JSONSchema, id: string): JSONSchema {
+  return insertIds(ensureRefsLackSiblings(schema), `${id}#`)
+}
+
 function insertIds<T>(obj: T, rootId: string): T {
   if (Array.isArray(obj)) {
     return obj.map((item, index) => insertIds(item, `${rootId}/${index}`)) as T;
@@ -103,4 +108,69 @@ function insertIds<T>(obj: T, rootId: string): T {
     } as T);
   }
   return obj;
+}
+
+// recursively iterates over a schema and finds all instances where `$ref` is
+// defined alonside other fields.
+//
+// this function is a HACK to get around docusaurus-json-schema-plugin's use of
+// @stoplight/json-ref-resolver, whose behavior is to override all objects
+// containing `$ref` with the resolved reference itself (thus clobbering those
+// other fields).
+//
+// this integration preprocesses all such occurrences by moving any sibling
+// $ref field into an available `allOf`/`oneOf`/`anyOf` (or throwing an error
+// if all three are already used)
+//
+// NOTE that it would be fine to re-use an existing `allOf`, but the approach
+// that this integration takes is to handle those composition keywords
+// as a special-case when rendering a composition of size one
+// (i.e., when rendering, detect single-child compositions as the signal that
+// this processing step was used).
+function ensureRefsLackSiblings<T>(obj: T): T {
+  // base case
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  // array case
+  if (Array.isArray(obj)) {
+    return obj.map(ensureRefsLackSiblings) as T;
+  }
+
+  // check for just { $ref: ... }
+  if (Object.keys(obj).length === 1 && "$ref" in obj) {
+    return obj;
+  }
+
+  const {
+    $ref,
+    ...rest
+  } = obj as T & object & { $ref?: string };
+
+  const result = Object.entries(rest)
+    .reduce((newObj, [key, value]) => {
+      // @ts-ignore
+      newObj[key] = ensureRefsLackSiblings(value);
+      return newObj;
+    }, {} as T);
+
+  if (!$ref) {
+    return result;
+  }
+
+  // find an unused schema composition keyword and move the $ref there
+  const propertyName = ["allOf", "oneOf", "anyOf"]
+    .find((candidate) => !(candidate in obj));
+
+  if (!propertyName) {
+    throw new Error(
+      `Could not find available composition keyword in ${JSON.stringify(obj)}`
+    );
+  }
+
+  // @ts-ignore
+  result[propertyName] = [{ $ref: $ref }];
+
+  return result;
 }
