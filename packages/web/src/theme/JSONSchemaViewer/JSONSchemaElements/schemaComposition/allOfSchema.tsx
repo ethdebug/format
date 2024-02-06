@@ -6,6 +6,10 @@ import DiscriminatorSchema, {
   detectDiscriminator
 } from "./DiscriminatorSchema";
 
+import ExclusiveRequiredPropertiesSchema, {
+  detectExclusiveRequiredProperties
+} from "./ExclusiveRequiredPropertiesSchema";
+
 export default function allOfSchemaWrapper(props: {
   schema: Exclude<JSONSchema, boolean> & { allOf: JSONSchema[]; }
 }) {
@@ -14,6 +18,11 @@ export default function allOfSchemaWrapper(props: {
   const discriminator = detectDiscriminator(schema);
   if (discriminator) {
     return <DiscriminatorSchema {...discriminator} />
+  }
+
+  const exclusions = detectExclusiveRequiredProperties(schema);
+  if (exclusions) {
+    return <ExclusiveRequiredPropertiesSchema {...exclusions} />
   }
 
   return (
