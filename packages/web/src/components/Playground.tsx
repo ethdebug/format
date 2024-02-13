@@ -3,7 +3,6 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { useColorMode } from "@docusaurus/theme-common";
-import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // To use Ajv with the support of all JSON Schema draft-2019-09/2020-12
@@ -160,9 +159,7 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
    * Displays an error message in the console
    * @param {string} error - The error message
    */
-  function showError(error: string) {
-    toast.error(error);
-  }
+  function showError(error: string) {}
 
   /**
    * Handles editor value change event
@@ -182,19 +179,6 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
         defaultValue={JSON.stringify(exampleSchema, undefined, 2)}
         onChange={handleEditorChange}
         onMount={handleEditorDidMount}
-      />
-      <ToastContainer
-        position="top-center"
-        autoClose={2000}
-        hideProgressBar
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={colorMode}
-        transition={Slide}
       />
     </section>
   );
