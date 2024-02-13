@@ -51,13 +51,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
   // Compile all schemas to Ajv instance
   const ajv = new Ajv({
     schemas: Object.values(schemas),
-    strict: false,
     allErrors: true,
-    verbose: true,
-    messages: true,
-    code: {
-      source: true,
-    },
+    strict: false,
   });
 
   // State to hold editor input
@@ -84,7 +79,7 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     const validate = ajv.getSchema(props.schema.id);
     if (!validate) return showError("Unable to validate schema");
     const sourceMap = getParsedEditorInput();
-    const isValid = validate(sourceMap.data);
+    validate(sourceMap.data);
 
     showValidationErrors(validate.errors, sourceMap);
   }
@@ -172,6 +167,11 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
         defaultValue={JSON.stringify(exampleSchema, undefined, TAB_WIDTH)}
         onChange={handleEditorChange}
         onMount={handleEditorDidMount}
+        options={{
+          contextmenu: false,
+          autoIndent: "advanced",
+          tabSize: TAB_WIDTH,
+        }}
       />
     </section>
   );
