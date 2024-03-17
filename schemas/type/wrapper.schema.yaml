@@ -9,10 +9,14 @@ description:
 type: object
 properties:
   type:
-    oneOf:
-      - $ref: "schema:ethdebug/format/type"
-      - $ref: "schema:ethdebug/format/type/reference"
-
+    # Discriminate between reference and type based on presence of `id`
+    if:
+      required:
+        - id
+    then:
+      $ref: "schema:ethdebug/format/type/reference"
+    else:
+      $ref: "schema:ethdebug/format/type"
 required:
   - type
 
@@ -34,8 +38,7 @@ $defs:
 
   Object:
     title: '{ "key": { "type": ... }, ... }'
-    description:
-      A key-value mapping of wrapped types, where the wrapper may add fields
+    description: A key-value mapping of wrapped types, where the wrapper may add fields
     type: object
     additionalProperties:
       $ref: "schema:ethdebug/format/type/wrapper"

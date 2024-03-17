@@ -4,6 +4,7 @@ import { editor } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { useColorMode } from "@docusaurus/theme-common";
 import JSONSourceMap from "@mischnic/json-sourcemap";
+import { betterAjvErrors, ValidationError } from "@apideck/better-ajv-errors";
 
 // To use Ajv with the support of all JSON Schema draft-2019-09/2020-12
 // features you need to use a different export:
@@ -81,16 +82,25 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     const sourceMap = getParsedEditorInput();
     validate(sourceMap.data);
 
-    showValidationErrors(validate.errors, sourceMap);
+    const errors = betterAjvErrors({
+      // @ts-ignore
+      schema: schemas[props.schema.id],
+      data: sourceMap.data,
+      errors: validate.errors,
+    });
+
+    //console.log(betterErrors, validate.errors, sourceMap);
+
+    showValidationErrors(errors, sourceMap);
   }
 
   /**
    * Shows validation error in the Monaco editor
-   * @param {ErrorObject[] | null | undefined} errors - Validation errors if any
+   * @param {ValidationError[]} errors - Validation errors
    * @param {string} sourceMap - The source map of the editor input
    */
   function showValidationErrors(
-    errors: ErrorObject[] | null | undefined,
+    errors: ValidationError[],
     sourceMap: SourceMap
   ) {
     const model = editorRef.current?.getModel();
@@ -98,7 +108,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     let markers = [];
     if (errors) {
       for (const [_, error] of Object.entries(errors)) {
-        let node = sourceMap.pointers[error.instancePath];
+        const path = error.path.replace("{base}", "").replace(/\./g, "/");
+        let node = sourceMap.pointers[path];
         const message = error.message;
 
         if (!node || !message) continue;
@@ -106,8 +117,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
         markers.push({
           startLineNumber: node.value.line + 1,
           startColumn: node.value.column + 1,
-          endColumn: node.valueEnd.line + 1,
-          endLineNumber: node.valueEnd.column + 1,
+          endLineNumber: node.valueEnd.line + 1,
+          endColumn: node.valueEnd.column + 1,
           message,
           severity: monaco.MarkerSeverity.Error,
         });
@@ -116,8 +127,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
           markers.push({
             startLineNumber: node.key.line + 1,
             startColumn: node.key.column + 1,
-            endColumn: node.keyEnd.line + 1,
-            endLineNumber: node.keyEnd.column + 1,
+            endLineNumber: node.keyEnd.line + 1,
+            endColumn: node.keyEnd.column + 1,
             message,
             severity: monaco.MarkerSeverity.Error,
           });
