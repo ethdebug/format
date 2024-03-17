@@ -19,6 +19,7 @@ import {
 } from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
 import SchemaListing from "./SchemaListing";
+import Playground from "./Playground";
 
 export interface SchemaViewerProps extends DescribeSchemaOptions {
 }
@@ -84,6 +85,9 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
       </TabItem>
       <TabItem value="listing" label="View source">
         <SchemaListing schema={props.schema} pointer={props.pointer} />
+      </TabItem>
+      <TabItem value="playground" label="Playground">
+        <Playground schema={props.schema} pointer={props.pointer} />
       </TabItem>
     </Tabs>
   );
