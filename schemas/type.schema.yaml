@@ -22,9 +22,19 @@ then:
   title: KnownType
   description:
     Then the object must adhere to exactly one known kind of type
-  oneOf:
-    - $ref: "schema:ethdebug/format/type/elementary"
-    - $ref: "schema:ethdebug/format/type/complex"
+  allOf:
+    - if:
+        properties:
+          kind:
+            $ref: "schema:ethdebug/format/type/elementary#/$defs/Kind"
+      then:
+        $ref: "schema:ethdebug/format/type/elementary"
+    - if:
+        properties:
+          kind:
+            $ref: "schema:ethdebug/format/type/complex#/$defs/Kind"
+      then:
+        $ref: "schema:ethdebug/format/type/complex"
 
 else:
   type: object
