@@ -1,0 +1,24 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope/reference"
+
+title: ethdebug/format/operation/scope/reference
+description: |
+  An object with an ID property used to reference a particular scope
+
+type: object
+
+properties:
+  id:
+    title: Scope identifier
+    description:
+      The scope ID (defined by compiler)
+    type:
+      - number
+      - string
+
+required:
+  - id
+
+examples:
+  - id: 5
+  - id: __C_transferFrom__internal__2

@@ -1,0 +1,146 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope/actions"
+
+title: ethdebug/format/operation/scope/actions
+description: |
+  Actions schema for a particular variable
+
+type: object
+
+allOf:
+  - title: Declaration actions
+    description: |
+      This object may specify `{ "declare": ... }` to indicate a type
+      to which this variable belongs following this operation, or
+      `{ "undeclare": true }` to specify that this variable's declaration no
+      longer exists as of this operation.
+    type: object
+    allOf:
+      - $ref: "#/$defs/Declare"
+      - $ref: "#/$defs/Undeclare"
+      - title: Not both declared and undeclared
+        not:
+          required: [declare, undeclare]
+          properties:
+            undeclare:
+              const: true
+
+  - title: Allocation actions
+    description: |
+      This object may specify either `{ "allocate": ... }` to indicate a
+      pointer where this variable has been allocated as part of this operation,
+      or `{ "deallocate": true }` to indicate that this variable's allocation
+      is no longer available following this operation.
+    type: object
+    allOf:
+      - $ref: "#/$defs/Allocate"
+      - $ref: "#/$defs/Deallocate"
+      - title: Not both allocated and deallocated
+        not:
+          required: [allocate, deallocate]
+          properties:
+            deallocate:
+              const: true
+
+  - title: Assignment action
+    description: |
+      This object may specify an `"assign"` field, where a value of `true`
+      indicates that the corresponding variable has been assigned as part of
+      the overall parent operation.
+    type: object
+    $ref: "#/$defs/Assign"
+
+  - title: Non-emptiness constraint
+    description: This object must define at least one positive property.
+    type: object
+    anyOf:
+      - title: required `declare`
+        required: [declare]
+      - title: required `undeclare`
+        required: [undeclare]
+        properties:
+          undeclare:
+            const: true
+      - title: required `allocate`
+        required: [allocate]
+      - title: required `deallocate`
+        required: [deallocate]
+        properties:
+          deallocate:
+            const: true
+      - title: required `assign`
+        required: [assign]
+        properties:
+          assign:
+            const: true
+
+
+examples:
+  - declare:
+      type:
+        kind: bool
+    allocate:
+      pointer:
+        location: storage
+        slot: 0x0
+        offset: 0
+        length: 1
+    assign: true
+  - undeclare: true
+    deallocate: true
+
+
+$defs:
+  Declare:
+    title: '{ "declare": ... }'
+    description: |
+      Indicates this operation results in this variable existing in scope with
+      the specified type.
+    type: object
+    properties:
+      declare:
+        $ref: "schema:ethdebug/format/type/wrapper"
+
+  Undeclare:
+    title: '{ "undeclare": ... }'
+    description: |
+      Indicates that this operation results in this variable is no longer
+      available in this scope.
+    type: object
+    properties:
+      undeclare:
+        type: boolean
+
+  Allocate:
+    title: '{ "allocate": ... }'
+    description: |
+      Indicates that this operation results in space being reserved for this
+      variable at the specified pointer.
+    type: object
+    properties:
+      allocate:
+        type: object
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required: [pointer]
+
+  Deallocate:
+    title: '{ "deallocate": ... }'
+    description: |
+      Indicates that this operation results in space no longer being reserved
+      for this variable at any known pointer.
+    type: object
+    properties:
+      deallocate:
+        type: boolean
+
+  Assign:
+    title: '{ "assign": ... }'
+    description: |
+      Indicates that this operation includes a new value being saved for this
+      variable.
+    type: object
+    properties:
+      assign:
+        type: boolean

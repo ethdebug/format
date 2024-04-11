@@ -1,0 +1,38 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope/modify"
+
+title: ethdebug/format/operation/scope/modify
+description: |
+  Describes a change to the variables in a particular scope
+
+type: object
+
+properties:
+  domain:
+    const: scope
+
+  scope:
+    $ref: "schema:ethdebug/format/operation/scope/reference"
+
+  variables:
+    title: Variable declarations/allocations/etc.
+    description: |
+      Mapping of variable actions by identifier. Indicates that this operation
+      includes specified changes to particular variables.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/operation/scope/actions"
+    minProperties: 1
+
+required:
+  - domain
+  - scope
+  - variables
+
+examples:
+  - domain: scope
+    scope:
+      id: 5
+    variables:
+      x:
+        assign: true

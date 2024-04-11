@@ -1,0 +1,76 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation"
+
+title: ethdebug/format/operation
+description:
+  Represents an operation that corresponds to behavior provided by the
+  semantics of a high-level language (such as a variable allocation or a
+  function call)
+
+type: object
+properties:
+  domain:
+    type: string
+
+required: [domain]
+
+if:
+  type: object
+  title: Known domain
+  description:
+    If `domain` adheres to the set of known domains defined by this schema
+  properties:
+    domain:
+      $ref: "#/$defs/Domain"
+
+then:
+  type: object
+  title: Known operation
+  description:
+    Then the object must adhere to the corresponding operation schema for that
+    domain.
+
+  allOf:
+    - if:
+        properties:
+          domain:
+            const: scope
+      then:
+        $ref: "schema:ethdebug/format/operation/scope"
+
+    - if:
+        properties:
+          domain:
+            const: nil
+      then:
+        title: Nil operation
+        description:
+          Indicates that no operation happened
+        unevaluatedProperties: false
+
+else: true
+
+examples:
+  - domain: scope
+    begin:
+      id: __contract__Guestbook__
+    variables:
+      visitors:
+        declare:
+          type:
+            kind: mapping
+            contains:
+              key:
+                type:
+                  kind: address
+                  payable: false
+              value:
+                type:
+                  kind: bool
+
+$defs:
+  Domain:
+    type: string
+    enum:
+      - scope
+      - nil
