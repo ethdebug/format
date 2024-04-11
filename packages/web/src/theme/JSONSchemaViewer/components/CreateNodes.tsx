@@ -1,9 +1,12 @@
 import React from 'react';
 import CreateTypes from "@theme-original/JSONSchemaViewer/components/CreateTypes";
 import CreateNodes from '@theme-original/JSONSchemaViewer/components/CreateNodes';
-import type { JSONSchema } from "json-schema-typed/draft-2020-12";
 import { useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/contexts";
-import { useSchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
+import {
+  useSchemaContext,
+  internalIdKey,
+  type JSONSchemaWithInternalIdKeys as JSONSchema
+} from "@site/src/contexts/SchemaContext";
 import Link from "@docusaurus/Link";
 
 import UnnecessaryCompositionSchema, {
@@ -11,9 +14,7 @@ import UnnecessaryCompositionSchema, {
 } from "./UnnecessaryComposition";
 
 export default function CreateNodesWrapper(props: {
-  schema: Exclude<JSONSchema, boolean> & {
-    [internalIdKey]: string
-  }
+  schema: Exclude<JSONSchema, boolean>
 }) {
   const { level } = useSchemaHierarchyContext();
   const { schemaIndex } = useSchemaContext();

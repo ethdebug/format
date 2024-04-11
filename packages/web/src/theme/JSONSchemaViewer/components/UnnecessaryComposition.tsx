@@ -1,22 +1,27 @@
 import React from "react";
-import type { JSONSchema } from "json-schema-typed/draft-2020-12";
+import Link from "@docusaurus/Link";
 import CreateNodes from "@theme/JSONSchemaViewer/components/CreateNodes";
 import CreateEdge from "@theme-original/JSONSchemaViewer/components/CreateEdge";
 import { SchemaHierarchyComponent } from "@theme-original/JSONSchemaViewer/contexts"
 import { Collapsible } from "@theme/JSONSchemaViewer/components";
 import { GenerateFriendlyName, QualifierMessages } from "@theme/JSONSchemaViewer/utils";
-import { internalIdKey } from "@site/src/contexts/SchemaContext";
+import {
+  useSchemaContext,
+  internalIdKey,
+  type JSONSchemaWithInternalIdKeys
+} from "@site/src/contexts/SchemaContext";
+import type { JSONSchema } from "json-schema-typed/draft-2020-12";
 import { CreateDescription } from "@theme/JSONSchemaViewer/JSONSchemaElements";
 import { useJSVOptionsContext } from "@theme/JSONSchemaViewer/contexts"
 
 export interface UnnecessaryComposition {
-  schemaWithoutUnnecessaryComposition: Exclude<JSONSchema, boolean>;
+  schemaWithoutUnnecessaryComposition: Exclude<JSONSchemaWithInternalIdKeys, boolean>;
   unnecessaryCompositionKeyword: "allOf" | "oneOf" | "anyOf";
-  unnecessarilyComposedSchema: JSONSchema;
+  unnecessarilyComposedSchema: JSONSchemaWithInternalIdKeys;
 }
 
 export function detectUnnecessaryComposition(
-  schema: JSONSchema
+  schema: JSONSchemaWithInternalIdKeys
 ): UnnecessaryComposition | undefined {
   if (typeof schema === "boolean") {
     return;
@@ -37,7 +42,7 @@ export function detectUnnecessaryComposition(
   } = schema;
 
   const [unnecessarilyComposedSchema] =
-    composition as [JSONSchema] /* (we know this from filter above) */;
+    composition as [JSONSchemaWithInternalIdKeys] /* (we know this from filter above) */;
 
   return {
     unnecessarilyComposedSchema,
@@ -55,6 +60,7 @@ export default function UnnecessaryCompositionSchema({
   unnecessarilyComposedSchema
 }: UnnecessaryCompositionSchemaProps): JSX.Element {
   const jsvOptions = useJSVOptionsContext();
+  const { schemaIndex } = useSchemaContext();
 
   // treat the unnecessary composition to represent the extension of a base
   // schema, where the unnecessarily composed schema is the base
@@ -65,7 +71,31 @@ export default function UnnecessaryCompositionSchema({
     semantics
   } = separateDocumentationFromSemantics(extensionSchema);
 
-  if (Object.keys(semantics).length === 0) {
+  // due to a limitation of docusaurus-json-schema-plugin, use of the `type`
+  // field is necessary in order for the plugin to display schema descriptions.
+  //
+  // for a given extension schema, check whether the use of the `type` field
+  // is actually a semantic difference vs. the base schema
+  const onlyExtendsDocumentation = Object.keys(semantics).length === 0 || (
+    Object.keys(semantics).length === 1 &&
+    "type" in semantics &&
+    typeof baseSchema === "object" &&
+    "type" in baseSchema &&
+    ((
+      typeof semantics.type === "string" &&
+      semantics.type === baseSchema.type
+    ) || (
+      semantics.type instanceof Array &&
+      baseSchema.type instanceof Array &&
+      semantics.type.length === baseSchema.type.length &&
+      (semantics.type as string[]).every(
+        type_ =>
+          (baseSchema.type as string[]).includes(type_)
+      )
+    ))
+  );
+
+  if (onlyExtendsDocumentation) {
     const { description } = documentation;
 
     return <>
@@ -79,6 +109,29 @@ export default function UnnecessaryCompositionSchema({
         <CreateNodes schema={unnecessarilyComposedSchema} />
       </SchemaHierarchyComponent>
     </>;
+  }
+
+  const { [internalIdKey]: id } = baseSchema;
+
+  if (id && id in schemaIndex) {
+    const {
+      href,
+      title = `${
+        id.startsWith("schema:")
+          ? id.slice("schema:".length)
+          : id
+      } schema`
+    } = schemaIndex[id as keyof typeof schemaIndex];
+
+    return (
+      <>
+        <span className="badge badge--info">extensions</span>&nbsp;
+        This schema extends the <Link to={href}>{title}</Link>.
+        <p>
+        <CreateNodes schema={extensionSchema} />
+        </p>
+      </>
+    );
   }
 
   return (
@@ -113,7 +166,7 @@ export default function UnnecessaryCompositionSchema({
 
 function separateDocumentationFromSemantics(schema: JSONSchema): {
   documentation: Exclude<JSONSchema, boolean>,
-  semantics: JSONSchema
+  semantics: Exclude<JSONSchema, boolean>
 } {
   if (typeof schema === "boolean") {
     return {
