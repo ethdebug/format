@@ -11,9 +11,12 @@ description: |
 
 type: object
 
-oneOf:
-  - $ref: "schema:ethdebug/format/pointer/region"
-  - $ref: "schema:ethdebug/format/pointer/collection"
+if:
+  required: [location]
+then:
+  $ref: "schema:ethdebug/format/pointer/region"
+else:
+  $ref: "schema:ethdebug/format/pointer/collection"
 
 examples:
   - # example: a single particular storage slot
