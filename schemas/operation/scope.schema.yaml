@@ -1,0 +1,69 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope"
+
+title: ethdebug/format/operation/scope
+description: |
+  An operation that either begins, modifies, or ends a scope.
+
+type: object
+
+properties:
+  domain:
+    const: scope
+
+required: [domain]
+
+unevaluatedProperties: false
+
+allOf:
+  - oneOf:
+      - required: [begin]
+      - required: [scope]
+      - required: [end]
+  - if:
+      required: [begin]
+    then:
+      $ref: "schema:ethdebug/format/operation/scope/begin"
+
+  - if:
+      required: [scope]
+    then:
+      $ref: "schema:ethdebug/format/operation/scope/modify"
+
+  - if:
+      required: [end]
+    then:
+      $ref: "schema:ethdebug/format/operation/scope/end"
+
+
+examples:
+  - domain: scope
+    begin:
+      id: 1
+      parent:
+        id: 0
+    variables:
+      x:
+        declare:
+          type:
+            kind: uint
+            bits: 256
+        allocate:
+          pointer:
+            location: stack
+            slot: 0
+  - domain: scope
+    scope:
+      id: 1
+    variables:
+      x:
+        assign: true
+  - domain: scope
+    scope:
+      id: 1
+    variables:
+      x:
+        deallocate: true
+  - domain: scope
+    end:
+      id: 1

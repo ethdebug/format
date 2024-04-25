@@ -150,4 +150,30 @@ export const schemaIndex: SchemaIndex = {
     title: "Region reference",
     href: "/spec/pointer/expression#region-references"
   },
+
+  "schema:ethdebug/format/operation/scope": {
+    href: "/spec/operation/scope"
+  },
+
+  ...(
+    ["begin", "modify", "end"].map(action => ({
+      [`schema:ethdebug/format/operation/scope/${action}`]: {
+        href: "/spec/operation/scope/begin"
+      },
+    })).reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+
+  "schema:ethdebug/format/operation/scope/actions": {
+    href: "/spec/operation/scope/actions",
+    title: "Variable actions"
+  },
+
+  ...(
+    ["Declare", "Undeclare", "Allocate", "Deallocate", "Assign"].map(def => ({
+      [`schema:ethdebug/format/operation/scope/actions#/$defs/${def}`]: {
+        title: `${def} variable schema`,
+        href: `/spec/operation/scope/actions#${def.toLowerCase()}`
+      }
+    })).reduce((a, b) => ({ ...a, ...b }), {})
+  ),
 };

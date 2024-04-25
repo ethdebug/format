@@ -1,0 +1,24 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope/end"
+
+title: ethdebug/format/operation/scope/end
+description: |
+  Describes the end of a variables scope.
+
+type: object
+
+properties:
+  domain:
+    const: scope
+
+  end:
+    $ref: "schema:ethdebug/format/operation/scope/reference"
+
+required:
+  - domain
+  - end
+
+examples:
+  - domain: scope
+    end:
+      id: 5

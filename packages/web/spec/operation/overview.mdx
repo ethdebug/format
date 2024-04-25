@@ -1,0 +1,50 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::warning
+
+This schema is **very incomplete** and is missing subschemas for
+several essential kinds of operations.
+
+:::
+
+:::tip
+
+**ethdebug/format/operation** is a JSON schema for describing things that
+happen in high-level languages, such as the beginning of a function call or
+a variable's declaration as some type.
+
+Debuggers observe machine execution at the low-level and present a view of
+the changing machine state using the semantics of the high-level language.
+Doing this requires debuggers to keep track of the state of the machine in
+high-level terms and identify when machine instructions modify this state.
+
+This schema provides a means for compilers to represent high-level language
+operations as part of the annotation for individual machine instructions.
+Because of this, this schema inherently lacks a certain runtime completeness
+that might be desirable: e.g., compilers cannot indicate "this instruction
+is where we recurse into this function the first time", because that
+instruction might be used for the first recursion, the second recursion, and
+all the recursions.
+
+:::
+
+
+This format defines a schema for representing state transitions in high-level
+language models of computation.
+
+JSON values in this schema represent the point at which some high-level state
+change has definitely occurred. Values in this schema are designed for
+compilers to include as part of the broader schemas for annotating a specific
+machine instruction.
+
+## Reading this schema
+
+The **ethdebug/format/operation** schema is a root schema that composes
+other related schemas in the ethdebug/format/operation/* namespace.
+
+These schemas (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.

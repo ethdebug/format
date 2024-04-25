@@ -1,0 +1,77 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/operation/scope/begin"
+
+title: ethdebug/format/operation/scope/begin
+description: |
+  Describes the start of a new variables scope. May also specify variable
+  declarations, allocations, and assignments.
+
+
+type: object
+
+properties:
+  domain:
+    const: scope
+
+  begin:
+    type: object
+    title: Details about new scope
+    description:
+      An operation that begins a new scope **may** specify a parent scope
+      from which to inherit identifiers. This object **must** be a valid
+      "scope reference", i.e., it must define an `"id"`.
+
+    $ref: "schema:ethdebug/format/operation/scope/reference"
+
+    properties:
+      parent:
+        type: object
+        description:
+          Optional reference to the parent scope, from which to inherit variables.
+        $ref: "schema:ethdebug/format/operation/scope/reference"
+
+  variables:
+    title: Variable declarations/allocations/etc.
+    description: |
+      Optional mapping of variable actions by identifier. Indicates that this
+      operation includes declarations/allocations/etc. for particular variables
+      starting from the beginning of this new scope.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/operation/scope/actions"
+    minProperties: 1
+
+required:
+  - domain
+  - begin
+
+examples:
+  - domain: scope
+    begin:
+      id: __contract_C__
+    variables:
+      counter:
+        declare:
+          type:
+            kind: uint
+            bits: 256
+        allocate:
+          pointer:
+            location: storage
+            slot: "0x0"
+  - domain: scope
+    begin:
+      id: __contract_C__function_external_incrementBy__
+      parent:
+        id: __contract_C__
+    variables:
+      amount:
+        declare:
+          type:
+            kind: uint
+            bits: 256
+        allocate:
+          pointer:
+            location: calldata
+            offset: 4
+            length: $wordsize
