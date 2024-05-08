@@ -15,6 +15,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@apideck/better-ajv-errors": "^0.3.6",
     "@docusaurus/core": "^3.0.1",
     "@docusaurus/preset-classic": "^3.0.1",
     "@ethdebug/format": "^0.1.0-0",
