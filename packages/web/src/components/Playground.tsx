@@ -4,6 +4,7 @@ import { editor } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { useColorMode } from "@docusaurus/theme-common";
 import JSONSourceMap from "@mischnic/json-sourcemap";
+import { betterAjvErrors } from "@apideck/better-ajv-errors";
 
 // To use Ajv with the support of all JSON Schema draft-2019-09/2020-12
 // features you need to use a different export:
@@ -28,6 +29,16 @@ type Position = {
   line: number;
   column: number;
   pos: number;
+};
+
+type ValidationError = {
+  message: string;
+  suggestion?: string;
+  path: string;
+  context: {
+    errorType: string;
+    allowedValue?: string;
+  };
 };
 
 /* The EthDebug Playground: An interactive component for developers */
@@ -80,17 +91,23 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     if (!validate) return showError("Unable to validate schema");
     const sourceMap = getParsedEditorInput();
     validate(sourceMap.data);
-
-    showValidationErrors(validate.errors, sourceMap);
+    const betterErrors = betterAjvErrors({
+      //@ts-ignore
+      schema: schemas[props.schema.id],
+      data: sourceMap.data,
+      errors: validate.errors,
+    });
+    console.log(betterErrors, validate.errors);
+    showValidationErrors(betterErrors, sourceMap);
   }
 
   /**
    * Shows validation error in the Monaco editor
-   * @param {ErrorObject[] | null | undefined} errors - Validation errors if any
+   * @param {ValidationError[]} errors - Validation errors if any
    * @param {string} sourceMap - The source map of the editor input
    */
   function showValidationErrors(
-    errors: ErrorObject[] | null | undefined,
+    errors: ValidationError[],
     sourceMap: SourceMap
   ) {
     const model = editorRef.current?.getModel();
@@ -98,8 +115,12 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     let markers = [];
     if (errors) {
       for (const [_, error] of Object.entries(errors)) {
-        let node = sourceMap.pointers[error.instancePath];
-        const message = error.message;
+        let instancePath = error.path.replace("{base}", "").replace(/\./g, "/");
+        let node = sourceMap.pointers[instancePath];
+        let message = error.message.replace("{base}", "").replace(/\./g, "/");
+        if (error.context.errorType == "const") {
+          message = `Expecting a constant value of "${error.context.allowedValue}"`;
+        }
 
         if (!node || !message) continue;
 
