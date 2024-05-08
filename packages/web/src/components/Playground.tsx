@@ -106,8 +106,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
         markers.push({
           startLineNumber: node.value.line + 1,
           startColumn: node.value.column + 1,
-          endColumn: node.valueEnd.line + 1,
-          endLineNumber: node.valueEnd.column + 1,
+          endColumn: node.valueEnd.column + 1,
+          endLineNumber: node.valueEnd.line + 1,
           message,
           severity: monaco.MarkerSeverity.Error,
         });
@@ -116,8 +116,8 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
           markers.push({
             startLineNumber: node.key.line + 1,
             startColumn: node.key.column + 1,
-            endColumn: node.keyEnd.line + 1,
-            endLineNumber: node.keyEnd.column + 1,
+            endColumn: node.keyEnd.column + 1,
+            endLineNumber: node.keyEnd.line + 1,
             message,
             severity: monaco.MarkerSeverity.Error,
           });
