@@ -1,0 +1,37 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::tip
+
+**ethdebug/format/materials** is a namespace for schemas about external
+resources, including schemas for representing full compiler invocation details,
+schemas for individual sources, particular source ranges, and so on.
+
+Schemas in this namespace exist so that the rest of **ethdebug/format** has
+a consistent way of representing these external resources. These schemas also
+serve to define something of a data model: one aggregation aggregates multiple
+sources, e.g.
+
+:::
+
+This format defines a namespace of schemas for representing external resources
+relevant to smart contract debugging.
+
+## Reading these schemas
+
+The **ethdebug/format/materials** namespace is not a schema itself, but rather
+a collection of closely-related schemas.
+
+These schemas (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.
+
+Please refer to the following resources in this section, or see the navigation
+bar for complete contents.
+
+- [Identifiers and references](/spec/materials/id)
+- [Compilation schema](/spec/materials/compilation)
+- [Source schema](/spec/materials/source)
+- [Source range schema](/spec/materials/source-range)

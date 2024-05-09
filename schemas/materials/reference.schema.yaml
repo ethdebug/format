@@ -1,0 +1,22 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/materials/reference"
+
+title: ethdebug/format/materials/reference
+description: A reference to an external resource by ID
+
+type: object
+properties:
+  id:
+    $ref: "schema:ethdebug/format/materials/id"
+
+  type:
+    enum:
+      - compilation
+      - source
+
+required: [id]
+
+unevaluatedProperties: false
+
+examples:
+  - id: 1

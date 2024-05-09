@@ -1,0 +1,86 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/materials/compilation"
+
+title: ethdebug/format/materials/compilation
+description: |
+  An object representing a single invocation of a compiler.
+
+type: object
+properties:
+  id:
+    description: |
+      Compilation ID. Optional, but **should** be specified.
+
+      This value **should** be globally-unique and generated only from the
+      compiler inputs (settings, sources, etc.); the same compiler inputs/
+      settings **should** produce the same identifier.
+
+    $ref: "schema:ethdebug/format/materials/id"
+
+  compiler:
+    type: object
+    title: Compiler name and version
+    properties:
+      name:
+        type: string
+        description: Compiler name
+
+      version:
+        type: string
+        description: |
+          Compiler version.
+
+          This value **should** be specified using the most detailed version
+          representation available, i.e., including source control hash and
+          compiler build information whenever possible.
+
+    required:
+      - name
+      - version
+
+    examples:
+      - name: lllc
+        version: 0.4.12-develop.2017.6.27+commit.b83f77e0.Linux.g++
+
+  settings:
+    description: |
+      Compiler settings in a format native to the compiler.
+
+      For compilers whose settings includes full source representations, this
+      field **should** be specified in such a way that avoids large data
+      redundancies (e.g. if compiler settings contain full source
+      representations, then this field would significantly duplicate the
+      information represented by the `sources` field in this object).
+
+      In situations where settings information duplicates information
+      represented elsewhere in **ethdebug/format**, compilers **may** adopt
+      any reasonable strategy, e.g.:
+        - omit duplications partially (leaving the rest of the settings
+          intact)
+        - omit this field entirely
+        - specify this field as a hash of the full settings
+          representation (with the expectation that users of this format will
+          have access to the full representation by some other means)
+
+    allOf:
+      - true
+
+  sources:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/materials/source"
+
+required:
+  - compiler
+  - sources
+
+examples:
+  - compiler:
+      name: lllc
+      version: 0.4.12-develop.2017.6.27+commit.b83f77e0.Linux.g++
+    sources:
+      - id: 0
+        path: stdin
+        contents: |
+          (add 1 (mul 2 (add 3 4)))
+        language: LLL

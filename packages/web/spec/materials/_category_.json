@@ -1,0 +1,8 @@
+{
+  "label": "ethdebug/format/materials",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Work-in-progress formal schema for ethdebug format"
+  }
+}

@@ -13,33 +13,20 @@ properties:
   name:
     type: string
 
-  source:
-    type: object
-    properties:
-      id:
-        type:
-          - string
-          - number
-      range:
-        type: object
-        properties:
-          offset:
-            type: number
-          length:
-            type: number
+  location:
+    $ref: "schema:ethdebug/format/materials/source-range"
 
 anyOf:
   - title: Required `name`
-    required:
-    - name
-  - title: Required `source`
-    required:
-    - source
+    required: [name]
+  - title: Required `location`
+    required: [location]
 
 examples:
   - name: Ballot
-    source:
-      id: 5
+    location:
+      source:
+        id: 5
       range:
         offset: 10
         length: 56
