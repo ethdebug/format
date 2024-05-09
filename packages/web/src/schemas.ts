@@ -150,4 +150,24 @@ export const schemaIndex: SchemaIndex = {
     title: "Region reference",
     href: "/spec/pointer/expression#region-references"
   },
+
+  "schema:ethdebug/format/materials/id": {
+    title: "Identifier schema",
+    href: "/spec/materials/id#identifier-schema"
+  },
+
+  "schema:ethdebug/format/materials/reference": {
+    title: "Identifier schema",
+    href: "/spec/materials/id#reference-schema"
+  },
+
+  "schema:ethdebug/format/materials/compilation": {
+    title: "Compilation schema",
+    href: "/spec/materials/compilation"
+  },
+
+  "schema:ethdebug/format/materials/source": {
+    title: "Source schema",
+    href: "/spec/materials/source"
+  },
 };

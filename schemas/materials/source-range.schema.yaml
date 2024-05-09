@@ -1,0 +1,56 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/materials/source-range"
+
+title: ethdebug/format/materials/source-range
+description: |
+  A range of bytes in a particular source.
+
+  Note that this refers to the bytes range in the original character encoding
+  for the source, not the character encoding used for strings in this JSON
+  format (UTF-8). For compilers that support input sources in encodings other
+  than this format's transmission encoding, compilers **must** address source
+  ranges in this original encoding, and debuggers **must** re-encode source
+  contents obtained from this format _before_ performing any range addressing.
+
+  (Compilers that only accept UTF-8 or ASCII are naturally exempt from this
+  concern.)
+
+type: object
+properties:
+  compilation:
+    title: Compilation reference by ID
+    $ref: "schema:ethdebug/format/materials/reference"
+
+  source:
+    title: Source reference by ID
+    $ref: "schema:ethdebug/format/materials/reference"
+
+  range:
+    type: object
+    properties:
+      offset:
+        description: Byte offset at beginning of range
+        type: number
+
+      length:
+        description: Number of bytes contained in range
+        type: number
+
+    unevaluatedProperties: false
+
+    required:
+      - offset
+      - length
+
+unevaluatedProperties: false
+
+required:
+  - source
+  - range
+
+examples:
+  - source:
+      id: 5
+    range:
+      offset: 20
+      length: 100
