@@ -19,6 +19,7 @@
     "@docusaurus/core": "^3.0.1",
     "@docusaurus/preset-classic": "^3.0.1",
     "@ethdebug/format": "^0.1.0-0",
+    "@ethdebug/format-bundles": "^0.1.0-0",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-brands-svg-icons": "^6.5.1",
     "@fortawesome/free-solid-svg-icons": "^6.5.1",

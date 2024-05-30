@@ -1,0 +1,32 @@
+{
+  "name": "@ethdebug/format-bundles",
+  "version": "0.1.0-0",
+  "description": "ethdebug/format bundled schemas distributed as NPM package",
+  "main": "dist/src/index.js",
+  "repository": "https://github.com/ethdebug/format",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepare": "yarn prepare:bundles && tsc",
+    "prepare:bundles": "node ./bin/bundle-schemas.js > bundles.ts",
+    "clean": "rm -rf dist && rm bundles.ts",
+    "watch:typescript": "tsc --watch",
+    "watch:schemas": "nodemon --watch ../format --exec 'yarn prepare:bundles'",
+    "watch": "concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
+  },
+  "dependencies": {
+    "@ethdebug/format": "^0.1.0-0",
+    "json-schema-typed": "^8.0.1"
+  },
+  "devDependencies": {
+    "@hyperjump/json-schema": "1.6.7",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "a5f00cb643dd589c6d6fc7d4471adbfefbb99e86"
+}
