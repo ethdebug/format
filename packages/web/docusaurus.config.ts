@@ -32,7 +32,10 @@ const config: Config = {
     locales: ['en'],
   },
 
-  themes: [["docusaurus-json-schema-plugin", {}]],
+  themes: [
+    ["docusaurus-json-schema-plugin", {}],
+    "@saucelabs/theme-github-codeblock"
+  ],
 
   plugins: [
     async function ignoreBuffer(context, options) {
@@ -51,7 +54,6 @@ const config: Config = {
           };
         }
       }
-
     },
 
     // Used to maintain separate spec/ directory, outside the core docs/
