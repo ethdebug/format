@@ -1,88 +1,209 @@
 import { Pointer } from "./pointer.js";
 import { Machine } from "./machine.js";
+import type { Cursor } from "./dereference.js";
+import { Data } from "./data.js";
+import { keccak256 } from "ethereum-cryptography/keccak";
+import { toHex } from "ethereum-cryptography/utils";
 
 export interface EvaluateOptions {
-  expression: Pointer.Expression;
   machine: Machine;
   variables: {
-    [identifier: string]: Machine.Data
+    [identifier: string]: Data;
   };
+  regions: {
+    [identifier: string]: Pointer.Region;
+  }
 }
 
-export const evaluate = ({
-  expression,
-  machine,
-  variables = {}
-}: EvaluateOptions): Machine.Data => {
+export async function evaluate(
+  expression: Pointer.Expression,
+  options: EvaluateOptions
+): Promise<Data> {
   if (Pointer.Expression.isLiteral(expression)) {
-    const literal = expression;
-    switch (typeof literal) {
-      case "string":
-        return Machine.Data.fromHex(literal);
-      case "number":
-        return Machine.Data.fromNumber(literal);
-    }
+    return evaluateLiteral(expression);
   }
 
   if (Pointer.Expression.isConstant(expression)) {
-    const constant = expression;
-    switch (constant) {
-      case "$wordsize":
-        return Machine.Data.fromHex("0x20");
-    }
+    return evaluateConstant(expression);
   }
 
   if (Pointer.Expression.isVariable(expression)) {
-    const identifier = expression;
-
-    return variables[identifier] || Machine.Word.zero();
+    return evaluateVariable(expression, options);
   }
 
   if (Pointer.Expression.isArithmetic(expression)) {
     if (Pointer.Expression.Arithmetic.isSum(expression)) {
-      const operands = expression.$sum.map(
-        expression => evaluate({ expression, machine, variables }).asUint()
-      );
-
-      return Machine.Data.fromUint(
-        operands.reduce((sum, data) => sum + data, 0n)
-      );
+      return evaluateArithmeticSum(expression, options);
     }
 
     if (Pointer.Expression.Arithmetic.isDifference(expression)) {
-      const [a, b] = expression.$difference.map(
-        expression => evaluate({ expression, machine, variables }).asUint()
-      );
-
-      return Machine.Data.fromUint(a - b);
+      return evaluateArithmeticDifference(expression, options);
     }
 
     if (Pointer.Expression.Arithmetic.isProduct(expression)) {
-      const operands = expression.$product.map(
-        expression => evaluate({ expression, machine, variables }).asUint()
-      );
-
-      return Machine.Data.fromUint(
-        operands.reduce((product, data) => product * data, 1n)
-      );
+      return evaluateArithmeticProduct(expression, options);
     }
 
     if (Pointer.Expression.Arithmetic.isQuotient(expression)) {
-      const [a, b] = expression.$quotient.map(
-        expression => evaluate({ expression, machine, variables }).asUint()
-      );
-
-      return Machine.Data.fromUint(a / b);
+      return evaluateArithmeticQuotient(expression, options);
     }
 
     if (Pointer.Expression.Arithmetic.isRemainder(expression)) {
-      const [a, b] = expression.$remainder.map(
-        expression => evaluate({ expression, machine, variables }).asUint()
-      );
-
-      return Machine.Data.fromUint(a % b);
+      return evaluateArithmeticRemainder(expression, options);
     }
   }
 
+  if (Pointer.Expression.isKeccak256(expression)) {
+    return evaluateKeccak256(expression, options);
+  }
+
+  if (Pointer.Expression.isLookup(expression)) {
+    if (Pointer.Expression.Lookup.isOffset(expression)) {
+      return evaluateLookup(".offset", expression, options);
+    }
+
+    if (Pointer.Expression.Lookup.isLength(expression)) {
+      return evaluateLookup(".length", expression, options);
+    }
+
+    if (Pointer.Expression.Lookup.isSlot(expression)) {
+      return evaluateLookup(".slot", expression, options);
+    }
+  }
+
+  if (Pointer.Expression.isRead(expression)) {
+    // ...
+  }
+
   throw new Error("not implemented");
+}
+
+async function evaluateLiteral(
+  literal: Pointer.Expression.Literal
+): Promise<Data> {
+  switch (typeof literal) {
+    case "string":
+      return Data.fromHex(literal);
+    case "number":
+      return Data.fromNumber(literal);
+  }
+}
+
+async function evaluateConstant(
+  constant: Pointer.Expression.Constant
+): Promise<Data> {
+  switch (constant) {
+    case "$wordsize":
+      return Data.fromHex("0x20");
+  }
+}
+
+async function evaluateVariable(
+  identifier: Pointer.Expression.Variable,
+  {
+    variables
+  }: EvaluateOptions
+): Promise<Data> {
+  return variables[identifier] || Data.Word.zero();
+}
+
+async function evaluateArithmeticSum(
+  expression: Pointer.Expression.Arithmetic.Sum,
+  options: EvaluateOptions
+): Promise<Data> {
+  const operands = await Promise.all(expression.$sum.map(
+    async expression => (await evaluate(expression, options)).asUint()
+  ));
+
+  return Data.fromUint(
+    operands.reduce((sum, data) => sum + data, 0n)
+  );
+}
+
+async function evaluateArithmeticDifference(
+  expression: Pointer.Expression.Arithmetic.Difference,
+  options: EvaluateOptions
+): Promise<Data> {
+  const [a, b] = await Promise.all(expression.$difference.map(
+    async expression => (await evaluate(expression, options)).asUint()
+  ));
+
+  return Data.fromUint(a - b);
+}
+
+async function evaluateArithmeticProduct(
+  expression: Pointer.Expression.Arithmetic.Product,
+  options: EvaluateOptions
+): Promise<Data> {
+  const operands = await Promise.all(expression.$product.map(
+    async expression => (await evaluate(expression, options)).asUint()
+  ));
+
+  return Data.fromUint(
+    operands.reduce((product, data) => product * data, 1n)
+  );
+}
+
+async function evaluateArithmeticQuotient(
+  expression: Pointer.Expression.Arithmetic.Quotient,
+  options: EvaluateOptions
+): Promise<Data> {
+  const [a, b] = await Promise.all(expression.$quotient.map(
+    async expression => (await evaluate(expression, options)).asUint()
+  ));
+
+  return Data.fromUint(a / b);
+}
+
+async function evaluateArithmeticRemainder(
+  expression: Pointer.Expression.Arithmetic.Remainder,
+  options: EvaluateOptions
+): Promise<Data> {
+  const [a, b] = await Promise.all(expression.$remainder.map(
+    async expression => (await evaluate(expression, options)).asUint()
+  ));
+
+  return Data.fromUint(a % b);
+}
+
+async function evaluateKeccak256(
+  expression: Pointer.Expression.Keccak256,
+  options: EvaluateOptions
+): Promise<Data> {
+  const operands = await Promise.all(expression.$keccak256.map(
+    async expression => await evaluate(expression, options)
+  ));
+
+  const concatenatedData = operands.reduce(
+    (data, operand) => `${data}${toHex(operand).slice(2)}`,
+    ""
+  );
+
+  const hash = keccak256(Buffer.from(concatenatedData, "hex"));
+
+  return Data.fromBytes(hash);
+}
+
+async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
+  operation: O,
+  lookup: Pointer.Expression.Lookup.ForOperation<O>,
+  options: EvaluateOptions
+): Promise<Data> {
+  const { regions } = options;
+
+  const identifier = lookup[operation];
+  const region = regions[identifier];
+  if (!region) {
+    throw new Error(`Region not found: ${identifier}`);
+  }
+
+  const property = Pointer.Expression.Lookup.propertyFrom(operation);
+  const expression = region[property];
+  if (typeof expression === "undefined") {
+    throw new Error(
+      `Region named ${identifier} does not have ${property} needed by lookup`
+    );
+  }
+
+  return await evaluate(expression, options);
 }

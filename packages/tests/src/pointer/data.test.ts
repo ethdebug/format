@@ -1,11 +1,11 @@
 import { expect, describe, it } from "@jest/globals";
 
-import { Machine } from "./machine.js";
+import { Data } from "./data.js";
 
 describe("Data", () => {
   describe(".prototype.asUint()", () => {
     it("correctly converts to integers (big endian)", () => {
-      const data = new Machine.Data([0x01, 0x00]);
+      const data = new Data([0x01, 0x00]);
 
       expect(`${data.asUint()}`).toBe("256");
     });
@@ -13,50 +13,50 @@ describe("Data", () => {
 
   describe(".fromUint()", () => {
     it("correctly creates Data instances from bigints", () => {
-      const data1 = Machine.Data.fromUint(0n);
-      expect(data1).toEqual(new Machine.Data([]));
+      const data1 = Data.fromUint(0n);
+      expect(data1).toEqual(new Data([]));
 
-      const data2 = Machine.Data.fromUint(255n);
-      expect(data2).toEqual(new Machine.Data([0xff]));
+      const data2 = Data.fromUint(255n);
+      expect(data2).toEqual(new Data([0xff]));
 
-      const data3 = Machine.Data.fromUint(256n);
-      expect(data3).toEqual(new Machine.Data([0x01, 0x00]));
+      const data3 = Data.fromUint(256n);
+      expect(data3).toEqual(new Data([0x01, 0x00]));
 
-      const data4 = Machine.Data.fromUint(1234567890n);
-      expect(data4).toEqual(new Machine.Data([0x49, 0x96, 0x02, 0xd2]));
+      const data4 = Data.fromUint(1234567890n);
+      expect(data4).toEqual(new Data([0x49, 0x96, 0x02, 0xd2]));
     });
   });
 
   describe(".fromNumber()", () => {
     it("correctly creates Data instances from numbers", () => {
-      const data1 = Machine.Data.fromNumber(0);
-      expect(data1).toEqual(Machine.Data.zero());
+      const data1 = Data.fromNumber(0);
+      expect(data1).toEqual(Data.zero());
 
-      const data2 = Machine.Data.fromNumber(255);
-      expect(data2).toEqual(new Machine.Data([0xff]));
+      const data2 = Data.fromNumber(255);
+      expect(data2).toEqual(new Data([0xff]));
 
-      const data3 = Machine.Data.fromNumber(256);
-      expect(data3).toEqual(new Machine.Data([0x01, 0x00]));
+      const data3 = Data.fromNumber(256);
+      expect(data3).toEqual(new Data([0x01, 0x00]));
     });
   });
 
   describe(".fromHex()", () => {
     it("correctly creates Data instances from hex strings", () => {
-      const data1 = Machine.Data.fromHex("0x00");
-      expect(data1).toEqual(new Machine.Data([0x00]));
+      const data1 = Data.fromHex("0x00");
+      expect(data1).toEqual(new Data([0x00]));
 
-      const data2 = Machine.Data.fromHex("0xff");
-      expect(data2).toEqual(new Machine.Data([0xff]));
+      const data2 = Data.fromHex("0xff");
+      expect(data2).toEqual(new Data([0xff]));
 
-      const data3 = Machine.Data.fromHex("0x0100");
-      expect(data3).toEqual(new Machine.Data([0x01, 0x00]));
+      const data3 = Data.fromHex("0x0100");
+      expect(data3).toEqual(new Data([0x01, 0x00]));
 
-      const data4 = Machine.Data.fromHex("0x499602d2");
-      expect(data4).toEqual(new Machine.Data([0x49, 0x96, 0x02, 0xd2]));
+      const data4 = Data.fromHex("0x499602d2");
+      expect(data4).toEqual(new Data([0x49, 0x96, 0x02, 0xd2]));
     });
 
     it("throws an error for invalid hex string format", () => {
-      expect(() => Machine.Data.fromHex("ff")).toThrow("Invalid hex string format. Expected \"0x\" prefix.");
+      expect(() => Data.fromHex("ff")).toThrow("Invalid hex string format. Expected \"0x\" prefix.");
     });
   });
 });
@@ -64,7 +64,7 @@ describe("Data", () => {
 describe("Word", () => {
   describe(".prototype.asUint", () => {
     it("correctly converts to integers (big endian)", () => {
-      const word = new Machine.Word([
+      const word = new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -77,27 +77,27 @@ describe("Word", () => {
 
   describe(".fromUint()", () => {
     it("correctly creates Word instances from BigInt values", () => {
-      const word1 = Machine.Word.fromUint(0n);
-      expect(word1).toEqual(Machine.Word.zero());
+      const word1 = Data.Word.fromUint(0n);
+      expect(word1).toEqual(Data.Word.zero());
 
-      const word2 = Machine.Word.fromUint(255n);
-      expect(word2).toEqual(new Machine.Word([
+      const word2 = Data.Word.fromUint(255n);
+      expect(word2).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
       ]));
 
-      const word3 = Machine.Word.fromUint(256n);
-      expect(word3).toEqual(new Machine.Word([
+      const word3 = Data.Word.fromUint(256n);
+      expect(word3).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
       ]));
 
-      const word4 = Machine.Word.fromUint(1234567890n);
-      expect(word4).toEqual(new Machine.Word([
+      const word4 = Data.Word.fromUint(1234567890n);
+      expect(word4).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -108,19 +108,19 @@ describe("Word", () => {
 
   describe(".fromNumber()", () => {
     it("correctly creates Word instances from unsigned integers", () => {
-      const word1 = Machine.Word.fromNumber(0);
-      expect(word1).toEqual(Machine.Word.zero());
+      const word1 = Data.Word.fromNumber(0);
+      expect(word1).toEqual(Data.Word.zero());
 
-      const word2 = Machine.Word.fromNumber(255);
-      expect(word2).toEqual(new Machine.Word([
+      const word2 = Data.Word.fromNumber(255);
+      expect(word2).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
       ]));
 
-      const word3 = Machine.Word.fromNumber(256);
-      expect(word3).toEqual(new Machine.Word([
+      const word3 = Data.Word.fromNumber(256);
+      expect(word3).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -132,23 +132,23 @@ describe("Word", () => {
 
   describe(".fromHex()", () => {
     it("correctly creates Word instances from hex strings", () => {
-      const word1 = Machine.Word.fromHex(
+      const word1 = Data.Word.fromHex(
         "0x0000000000000000000000000000000000000000000000000000000000000000"
       );
-      expect(word1).toEqual(Machine.Word.zero());
+      expect(word1).toEqual(Data.Word.zero());
 
-      const word2 = Machine.Word.fromHex(
+      const word2 = Data.Word.fromHex(
         "0x00000000000000000000000000000000000000000000000000000000000000ff"
       );
-      expect(word2).toEqual(new Machine.Word([
+      expect(word2).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
       ]));
 
-      const word3 = Machine.Word.fromHex("0x0000000000000000000000000000000000000000000000000000000000000100");
-      expect(word3).toEqual(new Machine.Word([
+      const word3 = Data.Word.fromHex("0x0000000000000000000000000000000000000000000000000000000000000100");
+      expect(word3).toEqual(new Data.Word([
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

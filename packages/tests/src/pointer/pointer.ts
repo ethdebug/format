@@ -85,7 +85,7 @@ export namespace Pointer {
     export type Transient =
       & Base
       & Scheme.Segment
-      & { location: "storage" };
+      & { location: "transient" };
     export const isTransient = (value: unknown): value is Transient =>
       isBase(value) && Scheme.isSegment(value) && value.location === "transient";
 
@@ -317,6 +317,21 @@ export namespace Pointer {
       ].some(guard => guard(value));
 
     export namespace Lookup {
+      export type Operation =
+        | keyof Offset
+        | keyof Length
+        | keyof Slot;
+
+      export type ForOperation<O extends Operation> =
+        & Lookup
+        & { [K in O]: any };
+
+      export const propertyFrom = <O extends Operation>(
+        operation: O
+      ): keyof Pointer.Region => {
+        return operation.slice(1) as keyof Pointer.Region;
+      }
+
       export interface Offset {
         ".offset": Reference;
       }
