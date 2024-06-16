@@ -14,6 +14,8 @@ allOf:
           - list
       - required:
           - if
+      - required:
+          - define
   - if:
       required:
         - group
@@ -31,3 +33,9 @@ allOf:
         - if
     then:
       $ref: "schema:ethdebug/format/pointer/collection/conditional"
+
+  - if:
+      required:
+        - define
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/scope"

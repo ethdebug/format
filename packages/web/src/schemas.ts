@@ -103,7 +103,7 @@ export const schemaIndex: SchemaIndex = {
 
   ...(
     [
-      "group", "list", "conditional"
+      "group", "list", "conditional", "scope"
     ].map(collection => ({
       [`schema:ethdebug/format/pointer/collection/${collection}`]: {
         href: `/spec/pointer/collection/${collection}`
