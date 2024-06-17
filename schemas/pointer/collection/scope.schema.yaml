@@ -1,0 +1,42 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/scope"
+
+title: ethdebug/format/pointer/collection/scope
+description: |
+  A pointer defined with the aid of additional variables with values specified
+  as expressions.
+
+  Variables are specified by the `define` field as an object mapping of
+  expression by identifier. Variables are specified **in order**, so that
+  later appearing variables may reference earlier ones in the same object.
+
+type: object
+
+properties:
+  define:
+    title: Mapping of variables to expression value
+    type: object
+    patternProperties:
+      "^[a-zA-Z_\\-]+[a-zA-Z0-9$_\\-]*$":
+        $ref: "schema:ethdebug/format/pointer/expression"
+    additionalProperties: false
+  in:
+    $ref: "schema:ethdebug/format/pointer"
+
+required:
+  - define
+  - in
+
+additionalProperties: false
+
+examples:
+  - define:
+      example-offset:
+        $sum: [1, 2]
+      example-length:
+        $product: [2, $wordsize]
+    in:
+      name: example
+      location: memory
+      offset: example-offset
+      length: example-length
