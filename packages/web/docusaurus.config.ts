@@ -56,6 +56,18 @@ const config: Config = {
       }
     },
 
+    [
+      "./plugins/project-code-plugin.ts",
+      {
+        packages: {
+          "@ethdebug/pointers": {
+            tsConfigFilePath:
+              path.resolve(__dirname, "../pointers/tsconfig.json")
+          }
+        }
+      }
+    ],
+
     // Used to maintain separate spec/ directory, outside the core docs/
     [
       '@docusaurus/plugin-content-docs',
