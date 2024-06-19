@@ -2,7 +2,6 @@ import { Pointer } from "./pointer.js";
 import { Machine } from "./machine.js";
 import { Data } from "./data.js";
 import type { Cursor } from "./cursor.js";
-import { evaluate, type EvaluateOptions } from "./evaluate.js";
 
 export interface ReadOptions {
   state: Machine.State;
@@ -135,4 +134,3 @@ function withPropertiesAsUints<
 
   return result as PickDataPropertiesAsUints<R, U>;
 }
-

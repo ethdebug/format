@@ -43,12 +43,11 @@ describe("dereference (integration)", () => {
         contractAddress
       } = await deployContract(bytecode, provider);
 
-      const machine = machineForProvider(provider);
-      const trace = machine.trace(transactionHash);
+      const machine = machineForProvider(provider, { transactionHash });
 
       let cursor = await dereference(pointer);
       let lastObservedStringValue;
-      for await (const state of trace) {
+      for await (const state of machine.trace()) {
         const { regions, read } = await cursor.view(state);
         const stringData = Data.fromHex(
           await regions.named("string")

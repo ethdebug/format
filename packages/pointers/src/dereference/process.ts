@@ -7,89 +7,27 @@ import { evaluate } from "../evaluate.js";
 import { Memo } from "./memo.js";
 import { adjustStackLength, evaluateRegion } from "./region.js";
 
-export interface GenerateRegionsOptions {
-  state: Machine.State;
-  initialStackLength: bigint;
-}
 
 /**
- * Generator function that yields Cursor.Regions for a given Pointer.
- *
- * This function maintains an internal stack of memos to evaluate,
- * initially populating this stack with a single entry for evaluating the
- * given pointer.
+ * Contextual information for use within a pointer dereference process
  */
-export async function* generateRegions(
-  pointer: Pointer,
-  generateRegionsOptions: GenerateRegionsOptions
-): AsyncIterable<Cursor.Region> {
-  const options = await initializeProcessOptions(generateRegionsOptions);
-
-  // extract records for mutation
-  const {
-    regions,
-    variables
-  } = options;
-
-  const stack: Memo[] = [Memo.evaluatePointer(pointer)];
-  while (stack.length > 0) {
-    const memo: Memo = stack.pop() as Memo;
-
-    let memos: Memo[] = [];
-    switch (memo.kind) {
-      case "evaluate-pointer": {
-        memos = yield* processPointer(memo.pointer, options);
-        break;
-      }
-      case "save-regions": {
-        Object.assign(regions, memo.regions);
-        break;
-      }
-      case "save-variables": {
-        Object.assign(variables, memo.variables);
-        break;
-      }
-    }
-
-    // add new memos to the stack in reverse order
-    for (let index = memos.length - 1; index >= 0; index--) {
-      stack.push(memos[index]);
-    }
-  }
-}
-
-interface ProcessOptions {
+export interface ProcessOptions {
   state: Machine.State;
   stackLengthChange: bigint;
   regions: Record<string, Cursor.Region>;
   variables: Record<string, Data>;
 }
 
-async function initializeProcessOptions({
-  state,
-  initialStackLength
-}: GenerateRegionsOptions): Promise<ProcessOptions> {
-  const currentStackLength = await state.stack.length;
-  const stackLengthChange = currentStackLength - initialStackLength;
-
-  const regions: Record<string, Cursor.Region> = {};
-  const variables: Record<string, Data> = {};
-
-  return {
-    state,
-    stackLengthChange,
-    regions,
-    variables
-  };
-}
-
 /**
  * an generator that yields Cursor regions and returns a list of new memos
  * to add to the stack
  */
-type Process = AsyncGenerator<Cursor.Region, Memo[]>;
+export type Process = AsyncGenerator<Cursor.Region, Memo[]>;
 
-
+/**
+ * Process a pointer into a yielded list of concrete, evaluated Cursor.Regions
+ * and return a list of new memos to add to the stack for processing next
+ */
 export async function* processPointer(
   pointer: Pointer,
   options: ProcessOptions
@@ -150,7 +88,7 @@ async function* processGroup(
   options: ProcessOptions
 ): Process {
   const { group } = collection;
-  return group.map(Memo.evaluatePointer);
+  return group.map(Memo.dereferencePointer);
 }
 
 async function* processList(
@@ -168,7 +106,7 @@ async function* processList(
       [each]: Data.fromUint(index)
     }));
 
-    memos.push(Memo.evaluatePointer(is));
+    memos.push(Memo.dereferencePointer(is));
   }
 
   return memos;
@@ -183,12 +121,12 @@ async function* processConditional(
   const if_ = (await evaluate(ifExpression, options)).asUint();
 
   if (if_) {
-    return [Memo.evaluatePointer(then_)];
+    return [Memo.dereferencePointer(then_)];
   }
 
   // otherwise, return the else clause if it exists (it is optional)
   return else_
-    ? [Memo.evaluatePointer(else_)]
+    ? [Memo.dereferencePointer(else_)]
     : [];
 }
 
@@ -214,6 +152,6 @@ async function* processScope(
 
   return [
     Memo.saveVariables(newVariables),
-    Memo.evaluatePointer(in_)
+    Memo.dereferencePointer(in_)
   ];
 }

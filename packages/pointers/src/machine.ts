@@ -1,7 +1,7 @@
 import type { Data } from "./data.js";
 
 export interface Machine {
-  trace(transactionHash: Data): AsyncIterable<Machine.State>;
+  trace(): AsyncIterable<Machine.State>;
 }
 
 export namespace Machine {
@@ -43,7 +43,7 @@ export namespace Machine {
     }
 
     export interface Words {
-      read(options: { slot: Data.Word; slice?: Slice }): Promise<Data.Word>;
+      read(options: { slot: Data; slice?: Slice }): Promise<Data>;
     }
   }
 }

@@ -2,7 +2,7 @@ import type { Pointer } from "../pointer.js";
 import type { Machine } from "../machine.js";
 import type { Cursor } from "../cursor.js";
 
-import { generateRegions, type GenerateRegionsOptions } from "./process.js";
+import { generateRegions, type GenerateRegionsOptions } from "./generate.js";
 import { createCursor } from "./cursor.js";
 
 export interface DereferenceOptions {
@@ -38,6 +38,10 @@ export async function dereference(
   return createCursor(simpleCursor);
 }
 
+/**
+ * Convert DereferenceOptions into the specific pieces of information that
+ * `generateRegions()` will potentially need.
+ */
 async function initializeGenerateRegionsOptions({
   state: initialState
 }: DereferenceOptions): Promise<Omit<GenerateRegionsOptions, "state">> {

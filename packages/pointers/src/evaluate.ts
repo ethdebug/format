@@ -76,7 +76,7 @@ export async function evaluate(
     return evaluateRead(expression, options);
   }
 
-  throw new Error("not implemented");
+  throw new Error("Unexpected runtime failure to recognize kind of expression");
 }
 
 async function evaluateLiteral(

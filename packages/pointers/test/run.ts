@@ -66,9 +66,9 @@ export async function run() {
   } = await deployContract(bytecode, provider);
   console.log("- deployed contract.");
 
-  const machine = machineForProvider(provider);
+  const machine = machineForProvider(provider, { transactionHash });
 
-  const trace = machine.trace(transactionHash);
+  const trace = machine.trace();
   console.log("- requested trace.");
 
   console.groupEnd();

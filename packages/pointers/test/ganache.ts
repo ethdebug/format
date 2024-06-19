@@ -23,9 +23,16 @@ export async function loadGanache() {
   return Ganache;
 }
 
-export function machineForProvider(provider: EthereumProvider): Machine {
+export interface MachineForProviderOptions {
+  transactionHash: Data;
+}
+
+export function machineForProvider(
+  provider: EthereumProvider,
+  { transactionHash }: MachineForProviderOptions
+): Machine {
   return {
-    trace(transactionHash: Data): AsyncIterable<Machine.State> {
+    trace(): AsyncIterable<Machine.State> {
       return {
         async *[Symbol.asyncIterator]() {
           const structLogs = await requestStructLogs(
@@ -42,9 +49,6 @@ export function machineForProvider(provider: EthereumProvider): Machine {
 
             yield state;
 
-            if (previousOp === "SSTORE") {
-              debugger;
-            }
             previousOp = step.op;
           }
         }
@@ -106,7 +110,7 @@ function toMachineState(
         } = {}
       }) {
         const entry = stack.at(-Number(depth));
-        const data = Data.Word.fromHex(`0x${entry || ""}`);
+        const data = Data.fromHex(`0x${entry || ""}`);
 
         const sliced = new Uint8Array(data).slice(
           Number(offset),

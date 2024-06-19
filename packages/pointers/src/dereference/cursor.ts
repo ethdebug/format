@@ -57,7 +57,9 @@ export function createCursor(
           ...propertyFlags
         },
         lookup: {
-          value: (name: string) => current[name],
+          value: {
+            ...current
+          },
           ...propertyFlags
         }
       });

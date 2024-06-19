@@ -81,7 +81,7 @@ describe("dereference", () => {
     const { regions } = await cursor.view(state);
 
     expect(regions).toHaveLength(2);
-    expect(regions["a"]).toEqual({
+    expect(regions.lookup["a"]).toEqual({
       name: "a",
       location: "memory",
       offset: Data.fromNumber(0x60),
