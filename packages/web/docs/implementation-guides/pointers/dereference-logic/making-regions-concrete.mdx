@@ -1,0 +1,74 @@
+---
+sidebar_position: 3
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Making regions concrete
+
+There are two main aspects involved when converting from a `Pointer.Region`,
+which is full of properties whose values are the dynamic `Pointer.Expression`
+objects, into a `Cursor.Region`, whose expression properties have been replaced
+with actual bytes `Data`:
+
+## Fixing stack-located regions' `slot` offset
+
+Since stack pointers are expected to be declared at one time yet evaluated
+later, the relative offset that stack pointers use must be adjusted based on
+the initial stack length vs. the current stack length.
+
+This behavior is encapsulated by the `adjustStackLength` function:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/region.ts"
+  extract={sourceFile => sourceFile.getFunction("adjustStackLength")}
+  />
+
+## Evaluating region property expressions
+
+The more substantial aspect of making a region concrete, however, is the
+process by which this implementation evaluates each of the `Pointer.Region`'s
+expression properties and converts them into their `Data` values.
+
+This process would be very straightforward, except that pointer expressions
+may reference the region in which they are specified by use of the special
+region identifier `"$this"`.
+
+Fortunately, the schema does not allow any kind of circular reference, so a
+more robust implementation could pre-process a region's properties to detect
+cycles and determine the evaluation order for each property based on which
+property references which other property. That is, a robust implementation
+might take this pointer:
+
+```json
+{
+  "location": "memory",
+  "offset": {
+    "$sum": [
+      0x60,
+      { ".length": "$this" }
+    ]
+  },
+  "length": "$wordsize"
+}
+```
+
+... and detect that it must evaluate `length` before evaluating `offset`.
+
+The **@ethdebug/pointers** reference implementation **does not do any such
+smart thing**. Instead, it pushes each of the three possible expression
+properties (`"slot"`, `"offset"`, and `"length"`) into a queue, and then
+proceeds to evaluate properties from the queue one at a time.
+
+When evaluating a particular property, if `evaluate()` fails, it adds this
+property to the end of the queue to try again later, counting the number of
+times this attempt has been made for this property. Because the number of
+properties is at most 3, if the number of attempts ever reaches 3, the
+implementation can infer that there must be a circular reference.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/region.ts"
+  extract={sourceFile => sourceFile.getFunction("evaluateRegion")}
+  />

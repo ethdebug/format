@@ -1,0 +1,26 @@
+---
+sidebar_position: 3
+---
+
+import CodeBlock from "@theme/CodeBlock";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Reading from pointer regions
+
+Being able to read a particular pointer region's data from a machine state
+becomes straightforward by restricting the `read()` logic to accept only
+concrete
+[`Cursor.Region`](/docs/implementation-guides/pointers/types/cursors#cursor-views-and-regions)
+objects (rather than attempting to evaluate pointer expressions at the same
+time).
+
+Besides just a `switch()` statement for all the different locations of regions,
+this implementation uses a small helper function to convert relevant property
+values from raw bytes into unsigned integer `bigint`s.
+
+## Code listing
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/read.ts"
+  />

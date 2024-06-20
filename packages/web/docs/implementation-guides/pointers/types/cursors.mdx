@@ -1,0 +1,56 @@
+---
+sidebar_position: 4
+---
+
+import { Project, SyntaxKind } from "ts-morph";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Cursor objects
+
+The core functionality that **@ethdebug/pointers** provides is the
+`dereference(pointer: Pointer)` function. This function returns a `Cursor`
+object.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/cursor.ts"
+  extract={
+    sourceFile => sourceFile.getExportedDeclarations()
+      .get("Cursor")
+      .find(declaration =>
+        declaration.getKind() === SyntaxKind.InterfaceDeclaration)
+  }
+  />
+
+A `Cursor` represents the closure around some pointer, generating concrete
+information about data locations and bytes _only in consideration of_
+a particular machine state.
+
+## Cursor views and regions
+
+Viewing a `Cursor` with a machine state yields two key results:
+- A collection of `Cursor.Region` objects representing the pointer in
+  terms of fully-evaluated slots, offsets, conditionals, etc.
+
+- A `read(region: Cursor.Region): Promise<Data>` method for reading
+    bytes from the machine
+
+**Importantly**, a `Cursor.Region` is a fully-evaluated
+`Pointer.Region`. While the schema allows pointer regions to
+define their slots, offsets, lengths, etc. using complex expressions that
+can reference internal variables and other regions, a `Cursor.Region`
+represents the runtime result of evaluating all these expressions: a
+specific range of bytes in a specific data location.
+
+The full listing of `namespace Cursor` follows:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/cursor.ts"
+  extract={
+    sourceFile => sourceFile.getExportedDeclarations()
+      .get("Cursor")
+      .find(declaration =>
+        declaration.getKind() === SyntaxKind.ModuleDeclaration)
+  }
+  />

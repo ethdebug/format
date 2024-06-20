@@ -1,0 +1,22 @@
+---
+sidebar_position: 2
+---
+
+# Essential type definitions
+
+This reference implementation uses a few fundamental types/interfaces for
+cross-cutting concerns. This section describes upfront what these are, since
+the rest of the implementation makes heavy use of them:
+
+- [Pointer types](/docs/implementation-guides/pointers/types/pointer-types)
+  model the **ethdebug/format/pointer** JSON Schema as TypeScript types
+  (including corresponding type guards)
+
+- The [Data and machines](/docs/implementation-guides/pointers/types/data-and-machines) page
+  covers low-level concerns of handling raw bytes and interfacing with
+  running EVMs.
+
+- [Cursors](/docs/implementation-guides/pointers/types/cursors) are the
+  result of dereferencing a pointer; they accept a machine state and produce
+  a list of concrete data address ranges corresponding to runtime pointer
+  regions.

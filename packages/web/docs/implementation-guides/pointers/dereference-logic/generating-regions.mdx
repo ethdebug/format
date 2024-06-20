@@ -1,0 +1,238 @@
+---
+sidebar_position: 2
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Generating regions on the fly
+
+The `dereference()` function internally creates an
+[AsyncIterator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncIterator)
+to produce an asynchronous list of regions.
+
+The process to produce this list uses a stack of processing requests (which
+it calls "memos"), consuming one memo at a time from the top of the stack
+and handling it based on what kind of memo it is.
+
+This is defined by the `generateRegions()` function (defined in conjunction
+with `GenerateRegionsOptions`):
+
+<details>
+<summary>`generateRegions()` and `GenerateRegionsOptions`</summary>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/generate.ts"
+  extract={sourceFile => sourceFile.getInterface("GenerateRegionsOptions")}
+  />
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/generate.ts"
+  extract={sourceFile => sourceFile.getFunction("generateRegions")}
+  />
+</details>
+
+Notice how this function initializes two mutable records collections: one for
+all the current named regions, and one for all the current variables. As
+this function's `while()` loop operates on the stack, memos for saving new
+named regions or updating variable values may appear and then get handled
+appropriately.
+
+For reference, see the `memo.ts` module for type definitions for each of the
+three types of memo and their corresponding helper constructor functions.
+
+<details>
+<summary>See the `memo.ts` module</summary>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/memo.ts"
+  />
+</details>
+
+The real bulk of what `generateRegions()` does, however, is hidden inside the
+call `yield* processPointer()`.
+
+## Processing a pointer
+
+To handle a `DereferencePointer` memo from the stack inside
+`generateRegions()`, it defers to the `processPointer()` generator function.
+
+The signature of this function and associated types are as follows:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={
+    (sourceFile, project) => {
+      const definition = sourceFile.getFunction("processPointer");
+      const tempSourceFile = project.createSourceFile(
+        "dereference-process.ts",
+        "",
+        { overwrite: true }
+      );
+
+      for (const importDeclaration of sourceFile.getImportDeclarations()) {
+        tempSourceFile.addImportDeclaration(importDeclaration.getStructure());
+      }
+
+      const typeAliases = sourceFile.getTypeAliases();
+      for (const typeAlias of typeAliases) {
+        tempSourceFile.addTypeAlias(typeAlias.getStructure());
+      }
+
+      const commentText = definition.getLeadingCommentRanges()
+        .map(range =>
+          sourceFile.getFullText()
+            .substring(range.getPos(), range.getEnd()))
+        .join("\n");
+
+      const declaration = tempSourceFile.addFunction({
+        name: definition.getName(),
+        parameters: definition.getParameters()
+          .map((param, index, array) => ({
+            name: param.getName(),
+            type: param.getType().getText(param),
+            hasQuestionToken: param.hasQuestionToken() || param.hasInitializer(),
+            leadingTrivia: "\n",
+            trailingTrivia: index < array.length - 1 ? undefined : "\n"
+          })),
+        returnType: "Process", // HACK hardcoded
+        hasDeclareKeyword: true,
+        isAsync: true,
+        leadingTrivia: `${commentText}\n`
+      });
+
+      return tempSourceFile.getFunction("processPointer");
+    }
+  } />
+
+The `ProcessOptions` interface captures the runtime data at a particular
+point in the region generation process:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getInterface("ProcessOptions")}
+  />
+
+The `Process` type alias provides a short type alias for functions like
+`processPointer` to use:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getTypeAlias("Process")}
+  />
+
+Effectively, by returning a `Process`, the `processPointer()` has two
+different mechanisms of data return:
+- By being a JavaScript `AsyncGenerator`, it produces `Cursor.Region` objects
+  one at a time, emitted as a side effect of execution (via JavaScript `yield`)
+- Upon completion of exection, the return value is a list of memos to be
+  added to the stack.
+
+**Note** that the expected behavior for this implementation is that the
+returned list of memos should be pushed onto the stack in reverse order,
+so that earlier memos in the list will be processed before later ones.
+
+<details>
+<summary>See the full definition of `processPointer()`</summary>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processPointer")}
+  />
+</details>
+
+### Processing a region
+
+The simplest kind of pointer is just a single region. (Remember that pointers
+are either regions or collections of other pointers.)
+
+There is complexity hidden by function calls here, but nonetheless first
+consider the implementation of the `processRegion()` function as a base case:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processRegion")}
+  />
+
+Effectively, this function converts a `Pointer.Region` into a
+fully-evaluated, concrete `Cursor.Region`, emits this concrete region as the
+next `yield`ed value in the asynchronous list of regions, and possibly issues
+a request to save this region to process state by its name.
+
+This pointer evaluation process will be described later.
+
+### Processing collections
+
+The recursive cases are fairly straightforward following this architecture.
+
+
+#### Groups
+
+The simplest collection, a group of other pointers, yields no regions of its
+own, but instead pushes each of its child pointers for evaluation later:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processGroup")}
+  />
+
+It's essential that each of the child pointers get evaluated in the order
+they appear in the list, since later pointers may reference regions named
+earlier, etc.
+
+#### Lists
+
+List collections are more complex because they dynamically generate a number
+of composed pointers based on a runtime count value and introducing a
+variable identifier for use inside the dynamic composed pointer evaluation.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processList")}
+  />
+
+Note how, because each dynamic child pointer is evaluated based on the
+next incremented index value, the memos for updating this variable and
+evaluation the child pointer must be interspersed.
+
+#### Conditionals
+
+Conditional pointers evaluate to a child pointer given that some runtime
+condition evaluates to a nonzero value, optionally evaluating to a different
+pointer when that conditional fails.
+
+Evaluating a conditional thus becomes a simple matter of evaluating the
+`"if"` clause and issuing a memo for dereferencing the `"then"` pointer or
+the `"else"` pointer if it is specified:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processConditional")}
+  />
+
+#### Scopes
+
+Finally, the last kind of collection defined by this schema is for defining
+a scope of variables by identifier by specifying the expression values for
+each of those variables.
+
+Since this schema takes advantage of how JSON objects are ordered lists of
+key/value pairs, variables specified later may reference variables specified
+earlier. The only trickiness in implementing `processScope` is ensuring that
+variable values are available immediately.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/process.ts"
+  extract={sourceFile => sourceFile.getFunction("processScope")}
+  />
