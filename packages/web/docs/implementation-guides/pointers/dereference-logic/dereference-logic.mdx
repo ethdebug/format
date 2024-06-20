@@ -1,0 +1,20 @@
+---
+sidebar_position: 5
+---
+
+# The dereference function
+
+These next few pages cover how the components described thus far are combined
+to create the final `dereference(pointer: Pointer)` function.
+
+- The [Summary](/docs/implementation-guides/pointers/dereference-logic/summary)
+  page broadly describes the control flow structure behind this function
+  implementation.
+
+- [Generating regions on the fly](/docs/implementation-guides/pointers/dereference-logic/generating-regions)
+  describes the process of recursively processing a pointer and reducing it to
+  a concrete list of fully-evaluated `Cursor.Region` objects.
+
+- [Making regions concrete](/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete)
+  describes the process for converting a single `Pointer.Region` object into
+  its fully-evaluated `Cursor.Region` equivalent at runtime.

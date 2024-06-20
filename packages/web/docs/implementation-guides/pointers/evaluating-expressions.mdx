@@ -1,0 +1,234 @@
+---
+sidebar_position: 4
+---
+
+import CodeBlock from "@theme/CodeBlock";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Evaluating pointer expressions
+
+Expression evaluation is a bit more interesting than reading raw region data,
+but, still, performing this evaluation becomes relatively straightforward
+if variable and region references are pre-evaluated:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getExportedDeclarations()
+      .get("EvaluateOptions")
+      [0]
+  } />
+
+The main `evaluate()` function uses type guards to dispatch to the appropriate
+specific logic based on the kind of expression:
+
+<details>
+<summary>Source code of `evaluate(expression: Pointer.Expression, options: EvaluateOptions)`</summary>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getExportedDeclarations()
+      .get("evaluate")
+      [0]
+  } />
+
+</details>
+
+## Evaluating constants, literals, and variables
+
+Evaluating constant expressions is quite straightforward:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateConstant")
+  } />
+
+Evaluating literals involves detecting hex string vs. number and converting
+appropriate to bytes:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateLiteral")
+  } />
+
+Variable lookups, of course, require consulting the `variables` map passed
+in `EvaluateOptions`:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateVariable")
+  } />
+
+## Evaluating arithmetic operations
+
+Doing arithmetic operations follows the logic one might expect: recurse on
+the operands of the expression and join the results appropriately. Note the
+slight differences in implementation for operations that accept any number
+of operands (sums, products), vs. operations that only accept two operands
+(differences, quotients, remainders).
+
+Evaluating sums:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateArithmeticSum")
+  } />
+
+Evaluating products:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateArithmeticProduct")
+  } />
+
+Evaluating differences:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateArithmeticDifference")
+  } />
+
+**Note** how this function operates on unsigned values only by bounding the
+result below at 0.
+
+Evaluating quotients:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateArithmeticQuotient")
+  } />
+
+(Quotients of course use integer division only.)
+
+Evaluating remainders:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateArithmeticRemainder")
+  } />
+
+## Evaluating keccak256 hashes
+
+Many data types in storage are addressed by way of keccak256 hashing. This
+process is somewhat non-trivial because the bytes width of the inputs and the
+process for concatenating them must match compiler behavior exactly.
+
+See Solidity's
+[Layout of State Variables in Storage](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html)
+documentation for an example of how one high-level EVM language makes heavy
+use of hashing to allocate persistent data.
+
+:::warning
+This area of the schema is likely incomplete and could still use additional
+specification. Be warned that, while this implementation may match the schema
+itself, it may not be fully sufficient for expressing all kinds of data
+allocations.
+
+Please stay tuned as this work continues being refined.
+:::
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateKeccak256")
+  } />
+
+## Evaluating property lookups
+
+Pointer expressions can compose values taken from the properties of other,
+named regions. This not only provides a convenient way to avoid duplication
+when writing pointer expressions, but also it is necessary for types with
+particularly complex data allocations.
+
+Currently, the specification defines lookup operations for three properties:
+`offset`, `length`, and `slot`. Runtime checks are required to prevent
+accessing properties that aren't available on the target region (e.g.
+memory regions do not contain a `slot` property).
+
+Since all of these lookups function in the same way, this reference
+implementation needs only a single
+`evaluateLookup<O extends "slot" | "offset" | "length">` function:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateLookup")
+  } />
+
+(The use of generic types here serves mostly to appease the type-checker; the
+minimal type safety it affords is insignificant compared to runtime data
+consistency concerns, which hopefully the implementation makes clear via its
+use of runtime definedness checks.)
+
+## Evaluating machine state reads
+
+Finally, the last kind of expression defined by this specification is for
+reading raw data from the machine state. A `Pointer.Expression.Read` should
+evaluate to the raw bytes stored at runtime in the region identified by a
+particular name.
+
+Thanks to `evaluate()`'s requirement that its input regions-by-name map
+contains only concrete
+[`Cursor.Region`](/docs/implementation-guides/pointers/types/cursors)
+objects, and by leveraging the existing
+[`read()` functionality](/docs/implementation-guides/pointers/reading-from-regions),
+this function presents no surprises:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateRead")
+  } />
+
+## Note on `"$this"` region lookups
+
+Astute readers might notice that these docs contain no mention until now
+about how to implement support for expressions that reference the region in
+which they are defined, a mechanism the schema permits via the special region
+name identifier `"$this"`.
+
+Performing _read_ operations against `"$this"` region is meaningless since
+this schema does not afford any mechanism for defining regions recursively
+down to a base case (or similar composition). Thus, the only syntactic
+construct for self-referential reads resembles, e.g., defining a storage region
+whose `slot` is `{ $read: "$this" }`. Evaluating this `slot` would require
+knowing the slot before knowing where to read, and knowing the slow requires
+knowing the machine value, ad nauseum.
+
+_Property lookup expressions_, on the other hand, are completely
+acceptable&mdash;provided they do not include circular references of any cycle
+length.
+
+Since the `evaluate<.*>()` functions here are written to accept only one
+expression at a time, this reference implementation relegates this concern to a
+higher-level module; proper use of `evaluate()` here requires its
+`options.regions` map to include a pre-evaluated (albeit partial)
+`"$this"` region.
+
+The logic for creating `"$this"` regions and calling `evaluate()` correctly
+is described in the section pertaining to that area of the code. Be
+forewarned that this reference implementation takes a naïve trial-and-error
+approach for determining property evaluation order; implementations requiring
+a more robust strategy will need to do some amount of pre-processing.

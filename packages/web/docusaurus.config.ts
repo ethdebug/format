@@ -32,7 +32,10 @@ const config: Config = {
     locales: ['en'],
   },
 
-  themes: [["docusaurus-json-schema-plugin", {}]],
+  themes: [
+    ["docusaurus-json-schema-plugin", {}],
+    "@saucelabs/theme-github-codeblock"
+  ],
 
   plugins: [
     async function ignoreBuffer(context, options) {
@@ -51,8 +54,19 @@ const config: Config = {
           };
         }
       }
-
     },
+
+    [
+      "./plugins/project-code-plugin.ts",
+      {
+        packages: {
+          "@ethdebug/pointers": {
+            tsConfigFilePath:
+              path.resolve(__dirname, "../pointers/tsconfig.json")
+          }
+        }
+      }
+    ],
 
     // Used to maintain separate spec/ directory, outside the core docs/
     [

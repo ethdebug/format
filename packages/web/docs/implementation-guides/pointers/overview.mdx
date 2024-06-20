@@ -1,0 +1,46 @@
+---
+sidebar_position: 1
+---
+
+import CodeBlock from "@theme/CodeBlock";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Overview
+
+Debuggers looking to support **ethdebug/format** must be prepared to
+dereference the data allocations used by compilers for all kinds of variables.
+Compilers for EVM languages tend to use novel techniques for allocating data,
+and, as a result, compile-time descriptions of these allocations require an
+expressive syntax.
+
+This format's [**ethdebug/format/pointer** schema](/spec/pointer/overview)
+provides such suitable expressiveness, but implementing the logic to read and
+evaluate data in this schema requires some careful consideration.
+
+This documentation section describes a reference implementation written in
+TypeScript and available as the **@ethdebug/pointers** NPM package.
+
+:::tip
+If you're reading this page without first having familiarized yourself with the
+concepts/terminology defined by the **ethdebug/format/pointer** schema,
+it is recommended that you start by reading the
+[Key concepts](/spec/pointer/concepts) page and then study the handful of
+example pointers provided by [the schema itself](/spec/pointer).
+
+A fully-detailed understanding of the schema is not necessary for the purposes
+of understanding these docs, although if certain concepts are unclear, please
+raise the concern in a [GitHub
+issue](https://github.com/ethdebug/format/issues).
+:::
+
+## How this guide is organized
+
+These docs seek to provide a guide for implementing **ethdebug/format/pointer**
+logic by way of outlining and listing the code for an example implementation.
+These pages are ordered so that more primitive components are introduced
+and described before the more complex components built upon them.
+
+**A suggestion to
+readers who like to skip ahead**: you might want to read or skim the
+[Essential type definitions](/docs/implementation-guides/pointers/types) pages
+to familiarize yourself with the nouns that this implementation employs.
