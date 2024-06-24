@@ -177,7 +177,7 @@ $defs:
   Keccak256:
     title: Keccak256 hash
     description: |
-      An object of the form `{ "keccak256": [...values] }`, indicating that this
+      An object of the form `{ "$keccak256": [...values] }`, indicating that this
       expression evaluates to the Solidity-style keccak256 hash of the
       tightly-packed bytes encoded by `values`.
     type: object
