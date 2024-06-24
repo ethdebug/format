@@ -141,6 +141,10 @@ export const schemaIndex: SchemaIndex = {
       title: "Keccak256 hash expression schema",
       anchor: "#keccak256-hashes"
     },
+    Resize: {
+      title: "Resize operation schema",
+      anchor: "#resize-operations"
+    },
     Reference: {
       title: "Region reference",
       anchor: "#region-references"
