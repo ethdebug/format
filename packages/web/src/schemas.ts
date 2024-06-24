@@ -121,9 +121,9 @@ export const schemaIndex: SchemaIndex = {
     href: "/spec/pointer/expression#literal-values"
   },
 
-  "schema:ethdebug/format/pointer/expression#/$defs/Scalar": {
-    title: "Scalar variable expression schema",
-    href: "/spec/pointer/expression#scalar-variables"
+  "schema:ethdebug/format/pointer/expression#/$defs/Variable": {
+    title: "Variable expression schema",
+    href: "/spec/pointer/expression#variables"
   },
 
   "schema:ethdebug/format/pointer/expression#/$defs/Arithmetic": {
