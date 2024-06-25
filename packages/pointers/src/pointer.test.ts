@@ -106,6 +106,11 @@ describe("type guards", () => {
       guard: Pointer.Expression.isKeccak256
     },
     {
+      schema: expressionSchema,
+      pointer: "#/$defs/Resize",
+      guard: Pointer.Expression.isResize
+    },
+    {
       schema: {
         id: "schema:ethdebug/format/pointer/region"
       },

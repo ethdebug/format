@@ -211,7 +211,8 @@ export namespace Pointer {
     | Expression.Arithmetic
     | Expression.Lookup
     | Expression.Read
-    | Expression.Keccak256;
+    | Expression.Keccak256
+    | Expression.Resize;
 
   export const isExpression = (value: unknown): value is Expression =>
     [
@@ -221,7 +222,8 @@ export namespace Pointer {
       Expression.isArithmetic,
       Expression.isLookup,
       Expression.isRead,
-      Expression.isKeccak256
+      Expression.isKeccak256,
+      Expression.isResize
     ].some(guard => guard(value));
 
   export namespace Expression {
@@ -378,5 +380,23 @@ export namespace Pointer {
     }
     export const isKeccak256 =
       makeIsOperation<"$keccak256", Keccak256>("$keccak256", isOperands);
+
+    export type Resize<N extends number = number> = {
+      [K in `$sized${N}`]: Expression;
+    }
+    export const isResize = <N extends number>(
+      value: unknown
+    ): value is Resize<N> => {
+      if (
+        !value ||
+          typeof value !== "object" ||
+          Object.keys(value).length !== 1
+      ) {
+        return false;
+      }
+      const [key] = Object.keys(value);
+
+      return typeof key === "string" && /^\$sized([1-9]+[0-9]*)$/.test(key);
+    }
   }
 }
