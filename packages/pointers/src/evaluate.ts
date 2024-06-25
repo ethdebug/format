@@ -58,6 +58,10 @@ export async function evaluate(
     return evaluateKeccak256(expression, options);
   }
 
+  if (Pointer.Expression.isResize(expression)) {
+    return evaluateResize(expression, options);
+  }
+
   if (Pointer.Expression.isLookup(expression)) {
     if (Pointer.Expression.Lookup.isOffset(expression)) {
       return evaluateLookup(".offset", expression, options);
@@ -116,12 +120,17 @@ async function evaluateArithmeticSum(
   options: EvaluateOptions
 ): Promise<Data> {
   const operands = await Promise.all(expression.$sum.map(
-    async expression => (await evaluate(expression, options)).asUint()
+    async expression => await evaluate(expression, options)
   ));
 
-  return Data.fromUint(
-    operands.reduce((sum, data) => sum + data, 0n)
-  );
+  const maxLength = operands
+    .reduce((max, { length }) => length > max ? length : max, 0);
+
+  const data = Data
+    .fromUint(operands.reduce((sum, data) => sum + data.asUint(), 0n))
+    .padUntilAtLeast(maxLength);
+
+  return data;
 }
 
 async function evaluateArithmeticDifference(
@@ -129,14 +138,17 @@ async function evaluateArithmeticDifference(
   options: EvaluateOptions
 ): Promise<Data> {
   const [a, b] = await Promise.all(expression.$difference.map(
-    async expression => (await evaluate(expression, options)).asUint()
+    async expression => await evaluate(expression, options)
   ));
 
-  if (b > a) {
-    return Data.fromNumber(0);
-  }
+  const maxLength = a.length > b.length ? a.length : b.length;
 
-  return Data.fromUint(a - b);
+  const unpadded = a.asUint() > b.asUint()
+    ? Data.fromUint(a.asUint() - b.asUint())
+    : Data.fromNumber(0);
+
+  const data = unpadded.padUntilAtLeast(maxLength);
+  return data;
 }
 
 async function evaluateArithmeticProduct(
@@ -144,12 +156,15 @@ async function evaluateArithmeticProduct(
   options: EvaluateOptions
 ): Promise<Data> {
   const operands = await Promise.all(expression.$product.map(
-    async expression => (await evaluate(expression, options)).asUint()
+    async expression => await evaluate(expression, options)
   ));
 
-  return Data.fromUint(
-    operands.reduce((product, data) => product * data, 1n)
-  );
+  const maxLength = operands
+    .reduce((max, { length }) => length > max ? length : max, 0);
+
+  return Data
+    .fromUint(operands.reduce((product, data) => product * data.asUint(), 1n))
+    .padUntilAtLeast(maxLength);
 }
 
 async function evaluateArithmeticQuotient(
@@ -157,10 +172,16 @@ async function evaluateArithmeticQuotient(
   options: EvaluateOptions
 ): Promise<Data> {
   const [a, b] = await Promise.all(expression.$quotient.map(
-    async expression => (await evaluate(expression, options)).asUint()
+    async expression => (await evaluate(expression, options))
   ));
 
-  return Data.fromUint(a / b);
+  const maxLength = a.length > b.length ? a.length : b.length;
+
+  const data = Data
+    .fromUint(a.asUint() / b.asUint())
+    .padUntilAtLeast(maxLength);
+
+  return data;
 }
 
 async function evaluateArithmeticRemainder(
@@ -168,10 +189,16 @@ async function evaluateArithmeticRemainder(
   options: EvaluateOptions
 ): Promise<Data> {
   const [a, b] = await Promise.all(expression.$remainder.map(
-    async expression => (await evaluate(expression, options)).asUint()
+    async expression => await evaluate(expression, options)
   ));
 
-  return Data.fromUint(a % b);
+  const maxLength = a.length > b.length ? a.length : b.length;
+
+  const data = Data
+    .fromUint(a.asUint() % b.asUint())
+    .padUntilAtLeast(maxLength);
+
+  return data;
 }
 
 async function evaluateKeccak256(
@@ -192,6 +219,17 @@ async function evaluateKeccak256(
   const hash = keccak256(buffer);
 
   return Data.fromBytes(hash);
+}
+
+async function evaluateResize(
+  expression: Pointer.Expression.Resize,
+  options: EvaluateOptions
+): Promise<Data> {
+  const [[operation, subexpression]] = Object.entries(expression);
+
+  const newLength = Number(operation.match(/^\$sized([1-9]+[0-9]*)$/)![1]);
+
+  return (await evaluate(subexpression, options)).resizeTo(newLength);
 }
 
 async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
