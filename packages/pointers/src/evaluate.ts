@@ -179,13 +179,7 @@ async function evaluateKeccak256(
   options: EvaluateOptions
 ): Promise<Data> {
   const operands = await Promise.all(expression.$keccak256.map(
-    async expression => {
-      const unpaddedData = await evaluate(expression, options);
-      const data = new Data(32);
-      data.set(unpaddedData, 32 - unpaddedData.length);
-
-      return data;
-    }
+    async expression => await evaluate(expression, options)
   ));
 
   // HACK concatenate via string representation
