@@ -381,22 +381,48 @@ export namespace Pointer {
     export const isKeccak256 =
       makeIsOperation<"$keccak256", Keccak256>("$keccak256", isOperands);
 
-    export type Resize<N extends number = number> = {
-      [K in `$sized${N}`]: Expression;
-    }
+    export type Resize<N extends number = number> =
+      | Resize.ToNumber<N>
+      | Resize.ToWordsize;
     export const isResize = <N extends number>(
       value: unknown
-    ): value is Resize<N> => {
-      if (
-        !value ||
-          typeof value !== "object" ||
-          Object.keys(value).length !== 1
-      ) {
-        return false;
-      }
-      const [key] = Object.keys(value);
+    ): value is Resize<N> =>
+      [
+        Resize.isToWordsize,
+        Resize.isToNumber,
+      ].some(guard => guard(value));
 
-      return typeof key === "string" && /^\$sized([1-9]+[0-9]*)$/.test(key);
+    export namespace Resize {
+      export type ToNumber<N extends number> = {
+        [K in `$sized${N}`]: Expression;
+      };
+      export const isToNumber = <N extends number>(
+        value: unknown
+      ): value is ToNumber<N> => {
+        if (
+          !value ||
+            typeof value !== "object" ||
+            Object.keys(value).length !== 1
+        ) {
+          return false;
+        }
+        const [key] = Object.keys(value);
+
+        return typeof key === "string" && /^\$sized([1-9]+[0-9]*)$/.test(key);
+      };
+
+      export type ToWordsize = {
+        $wordsized: Expression;
+      }
+      export const isToWordsize = (value: unknown): value is ToWordsize =>
+        !!value &&
+          typeof value === "object" &&
+          Object.keys(value).length === 1 &&
+          "$wordsized" in value &&
+          typeof value.$wordsized !== "undefined" &&
+          isExpression(value.$wordsized);
+
+
     }
   }
 }
