@@ -193,4 +193,38 @@ describe("evaluate", () => {
     expect(await evaluate(expression, options))
       .toEqual(Data.fromNumber(42));
   });
+
+  describe("resulting bytes widths", () => {
+    it("uses the fewest bytes necessary for a literal", async () => {
+      expect(await evaluate(0, options)).toHaveLength(0);
+      expect(await evaluate("0x00", options)).toHaveLength(1);
+      expect(await evaluate("0x0000", options)).toHaveLength(2);
+      expect(await evaluate(0xffff, options)).toHaveLength(2);
+    });
+
+    it("uses at least the largest bytes width amongst arithmetic operands", async () => {
+      expect(await evaluate({ $sum: [0, 0] }, options)).toHaveLength(0);
+
+      expect(await evaluate({ $difference: ["0x00", "0x00"] }, options))
+        .toHaveLength(1);
+
+      expect(await evaluate({ $remainder: ["0x0001", "0x01"] }, options))
+        .toHaveLength(2);
+    });
+
+    it("uses exactly as many bytes necessary to avoid arithmetic overflow", async () => {
+      expect(await evaluate({ $product: ["0xffff", "0xff"] }, options))
+        .toHaveLength(3);
+    });
+  });
+
+  it("evaluates resize expressions", async () => {
+    expect(await evaluate({ $sized1: 0 }, options)).toHaveLength(1);
+
+    {
+      const data = await evaluate({ $sized1: "0xabcd" }, options);
+      expect(data).toHaveLength(1);
+      expect(data).toEqual(Data.fromNumber(0xcd));
+    }
+  });
 });

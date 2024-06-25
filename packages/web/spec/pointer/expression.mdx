@@ -33,7 +33,7 @@ assumed to be left-padded to the bytes width appropriate for the context.
   pointer="#/$defs/Literal"
   />
 
-## Scalar variables
+## Variables
 
 An expression can be a string value equal to the identifier for a known
 scalar variable introduced by some pointer representation.
@@ -43,7 +43,7 @@ For an example where scalar variables may appear, see the
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
-  pointer="#/$defs/Literal"
+  pointer="#/$defs/Variable"
   />
 
 ## Arithmetic operations
@@ -90,6 +90,18 @@ hash of the concatenation of bytes specified by the list.
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
   pointer="#/$defs/Keccak256"
+  />
+
+## Resize operations
+
+In certain situations, e.g. keccak256 hashes, it's crucially important to be
+able to express the bytes width of particular expression values. This schema
+provides primitives to allow specifying an explicit bytes width for a
+particular sub-expression.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Resize"
   />
 
 ## Region references

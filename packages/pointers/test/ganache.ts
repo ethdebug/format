@@ -144,16 +144,15 @@ function toMachineState(
   ): Machine.State.Words => {
     return {
       async read({
-        slot: unpaddedSlot,
+        slot,
         slice: {
           offset = 0n,
           length = 32n
         } = {}
       }) {
-        const slot = new Data(32);
-        slot.set(unpaddedSlot, 32 - unpaddedSlot.length);
-
-        const rawHex = slots[slot.toHex().slice(2) as keyof typeof slots];
+        const rawHex = slots[
+          slot.resizeTo(32).toHex().slice(2) as keyof typeof slots
+        ];
 
         const data = Data.fromHex(`0x${rawHex}`);
 

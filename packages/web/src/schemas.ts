@@ -116,40 +116,46 @@ export const schemaIndex: SchemaIndex = {
     href: "/spec/pointer/expression"
   },
 
-  "schema:ethdebug/format/pointer/expression#/$defs/Literal": {
-    title: "Literal values schema",
-    href: "/spec/pointer/expression#literal-values"
-  },
+  ...Object.entries({
+    Literal: {
+      title: "Literal values schema",
+      anchor: "#literal-values"
+    },
+    Variable: {
+      title: "Variable expression schema",
+      anchor: "#variables"
+    },
+    Arithmetic: {
+      title: "Arithmetic operation expression schema",
+      anchor: "#arithmetic-operations"
+    },
+    Lookup: {
+      title: "Lookup expression schema",
+      anchor: "#lookup-region-definition"
+    },
+    Read: {
+      title: "Read expression schema",
+      anchor: "#reading-from-the-evm"
+    },
+    Keccak256: {
+      title: "Keccak256 hash expression schema",
+      anchor: "#keccak256-hashes"
+    },
+    Resize: {
+      title: "Resize operation schema",
+      anchor: "#resize-operations"
+    },
+    Reference: {
+      title: "Region reference",
+      anchor: "#region-references"
+    },
+  }).map(([def, { title, anchor }]) => ({
+    [`schema:ethdebug/format/pointer/expression#/$defs/${def}`]: {
+      title,
+      href: `/spec/pointer/expression${anchor}`
+    }
+  })).reduce((a, b) => ({ ...a, ...b }), {}),
 
-  "schema:ethdebug/format/pointer/expression#/$defs/Scalar": {
-    title: "Scalar variable expression schema",
-    href: "/spec/pointer/expression#scalar-variables"
-  },
-
-  "schema:ethdebug/format/pointer/expression#/$defs/Arithmetic": {
-    title: "Arithmetic operation expression schema",
-    href: "/spec/pointer/expression#arithmetic-operations"
-  },
-
-  "schema:ethdebug/format/pointer/expression#/$defs/Lookup": {
-    title: "Lookup expression schema",
-    href: "/spec/pointer/expression#lookup-region-definition"
-  },
-
-  "schema:ethdebug/format/pointer/expression#/$defs/Read": {
-    title: "Read expression schema",
-    href: "/spec/pointer/expression#reading-from-the-evm"
-  },
-
-  "schema:ethdebug/format/pointer/expression#/$defs/Keccak256": {
-    title: "Keccak256 hash expression schema",
-    href: "/spec/pointer/expression#keccak256-hashes"
-  },
-
-  "schema:ethdebug/format/pointer/expression#/$defs/Reference": {
-    title: "Region reference",
-    href: "/spec/pointer/expression#region-references"
-  },
 
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",

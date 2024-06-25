@@ -193,7 +193,8 @@ examples:
                   - 2
 
               "start-slot":
-                $keccak256: ["contract-variable-slot"]
+                $keccak256:
+                  - $sized32: "contract-variable-slot"
 
               "total-slots":
                 # account for both zero and nonzero slot remainders by adding

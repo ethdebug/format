@@ -123,7 +123,7 @@ describe("dereference", () => {
         location: "memory",
         offset: Data.fromUint(
           Data.fromNumber(index).asUint() * 32n
-        ),
+        ).padUntilAtLeast(1),
         length: Data.fromNumber(32),
       })
     }

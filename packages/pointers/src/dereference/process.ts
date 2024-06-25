@@ -32,11 +32,6 @@ export async function* processPointer(
   pointer: Pointer,
   options: ProcessOptions
 ): Process {
-  const {
-    regions: oldRegions,
-    variables: oldVariables,
-  } = options;
-
   if (Pointer.isRegion(pointer)) {
     const region = pointer;
 

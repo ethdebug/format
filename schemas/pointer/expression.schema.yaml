@@ -13,6 +13,7 @@ oneOf:
   - $ref: "#/$defs/Lookup"
   - $ref: "#/$defs/Read"
   - $ref: "#/$defs/Keccak256"
+  - $ref: "#/$defs/Resize"
 
 $defs:
   Literal:
@@ -177,7 +178,7 @@ $defs:
   Keccak256:
     title: Keccak256 hash
     description: |
-      An object of the form `{ "keccak256": [...values] }`, indicating that this
+      An object of the form `{ "$keccak256": [...values] }`, indicating that this
       expression evaluates to the Solidity-style keccak256 hash of the
       tightly-packed bytes encoded by `values`.
     type: object
@@ -194,6 +195,38 @@ $defs:
       - $keccak256:
           - 0
           - "0x00"
+
+  Resize:
+    title: Resize data
+    description: |
+      An object of the form `{ "$sized<N>": <expression> }`, where `<N>` is the
+      smallest decimal representation of an unsigned integer and where
+      `<expression>` is another expression.
+
+      This object's value is evaluated as follows, based on the number
+      represented by `<N>` and the bytes width of `<expression>`:
+      - If the width equals `<N>`, this object evalutes to the same value as
+        `<expression>` (equivalent to the identity function or no-op).
+      - If the width is less than `<N>`, this object evalutes to the same value
+        as `<expression>` but with additional zero-bytes (`0x00`) prepended on
+        the left (most significant) side, such that the resulting bytes width
+        equals `<N>`.
+      - If the width exceeds `<N>`, this object evalutes to the same value
+        as `<expression>` but with a number of bytes removed from the left
+        (most significant) side until the bytes width equals `<N>`.
+
+      (These cases match the behavior that Solidity uses for resizing its
+      `bytesN`/`uintN` types.)
+    type: object
+    additionalProperties: false
+    patternProperties:
+      "^\\$sized([1-9]+[0-9]*)$":
+        $ref: "schema:ethdebug/format/pointer/expression"
+    minProperties: 1
+    maxProperties: 1
+    examples:
+      - $sized2: "0x00" # 0x0000
+      - $sized2: "0xffffff" # 0xffff
 
 examples:
   - 0

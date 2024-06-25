@@ -58,4 +58,30 @@ export class Data extends Uint8Array {
   toHex(): string {
     return `0x${toHex(this)}`;
   }
+
+  padUntilAtLeast(length: number): Data {
+    if (this.length >= length) {
+      return this;
+    }
+
+    const padded = new Uint8Array(length);
+    padded.set(this, length - this.length);
+    return Data.fromBytes(padded);
+  }
+
+  resizeTo(length: number): Data {
+    if (this.length === length) {
+      return this;
+    }
+
+    const resized = new Uint8Array(length);
+
+    if (this.length < length) {
+      resized.set(this, length - this.length);
+    } else {
+      resized.set(this.slice(this.length - length));
+    }
+
+    return Data.fromBytes(resized);
+  }
 }

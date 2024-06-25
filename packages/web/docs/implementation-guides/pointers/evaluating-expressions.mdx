@@ -126,6 +126,20 @@ Evaluating remainders:
     sourceFile => sourceFile.getFunction("evaluateArithmeticRemainder")
   } />
 
+## Evaluating resize expressions
+
+This schema provides the `{ "$sized<N>": <expression> }` construct to allow
+explicitly resizing a subexpression. This implementation uses the
+[`Data.prototype.resizeTo()`](/docs/implementation-guides/pointers/types/data-and-machines)
+method to perform this operation.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateResize")
+  } />
+
 ## Evaluating keccak256 hashes
 
 Many data types in storage are addressed by way of keccak256 hashing. This
@@ -136,15 +150,6 @@ See Solidity's
 [Layout of State Variables in Storage](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html)
 documentation for an example of how one high-level EVM language makes heavy
 use of hashing to allocate persistent data.
-
-:::warning
-This area of the schema is likely incomplete and could still use additional
-specification. Be warned that, while this implementation may match the schema
-itself, it may not be fully sufficient for expressing all kinds of data
-allocations.
-
-Please stay tuned as this work continues being refined.
-:::
 
 <CodeListing
   packageName="@ethdebug/pointers"
