@@ -226,5 +226,11 @@ describe("evaluate", () => {
       expect(data).toHaveLength(1);
       expect(data).toEqual(Data.fromNumber(0xcd));
     }
+
+    {
+      const data = await evaluate({ $wordsized: "0xabcd" }, options);
+      expect(data).toHaveLength(32);
+      expect(data).toEqual(Data.fromNumber(0xabcd).resizeTo(32));
+    }
   });
 });

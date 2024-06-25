@@ -227,7 +227,9 @@ async function evaluateResize(
 ): Promise<Data> {
   const [[operation, subexpression]] = Object.entries(expression);
 
-  const newLength = Number(operation.match(/^\$sized([1-9]+[0-9]*)$/)![1]);
+  const newLength = Pointer.Expression.Resize.isToNumber(expression)
+    ? Number(operation.match(/^\$sized([1-9]+[0-9]*)$/)![1])
+    : 32;
 
   return (await evaluate(subexpression, options)).resizeTo(newLength);
 }

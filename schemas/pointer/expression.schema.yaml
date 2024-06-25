@@ -199,12 +199,15 @@ $defs:
   Resize:
     title: Resize data
     description: |
-      An object of the form `{ "$sized<N>": <expression> }`, where `<N>` is the
-      smallest decimal representation of an unsigned integer and where
-      `<expression>` is another expression.
+      A resize operation expression is either an object of the form
+      `{ "$sized<N>": <expression> }` or an object of the form
+      `{ "$wordsized": <expression> }`, where `<expression>` is an expression
+      whose value is to be resized, and, if applicable, where `<N>` is the
+      smallest decimal representation of an unsigned integer.
 
-      This object's value is evaluated as follows, based on the number
-      represented by `<N>` and the bytes width of `<expression>`:
+      This object's value is evaluated as follows, based on the bytes width of
+      the value `<expression>` evaluates to and based on `<N>` (using the
+      value of `"$wordsize"` for `<N>` in the case of the latter form above):
       - If the width equals `<N>`, this object evalutes to the same value as
         `<expression>` (equivalent to the identity function or no-op).
       - If the width is less than `<N>`, this object evalutes to the same value
@@ -218,15 +221,25 @@ $defs:
       (These cases match the behavior that Solidity uses for resizing its
       `bytesN`/`uintN` types.)
     type: object
-    additionalProperties: false
-    patternProperties:
-      "^\\$sized([1-9]+[0-9]*)$":
-        $ref: "schema:ethdebug/format/pointer/expression"
+    oneOf:
+      - title: Resize to literal number of bytes
+        type: object
+        patternProperties:
+          "^\\$sized([1-9]+[0-9]*)$":
+            $ref: "schema:ethdebug/format/pointer/expression"
+        additionalProperties: false
+      - title: Resize to word-size
+        type: object
+        patternProperties:
+          "^\\$wordsized$":
+            $ref: "schema:ethdebug/format/pointer/expression"
+        additionalProperties: false
     minProperties: 1
     maxProperties: 1
     examples:
       - $sized2: "0x00" # 0x0000
       - $sized2: "0xffffff" # 0xffff
+      - $wordsized: "0x00" # 0x0000000000000000000000000000000000000000000000000000000000000000
 
 examples:
   - 0
