@@ -1,71 +1,94 @@
 import { jest, expect, describe, it, beforeEach } from "@jest/globals";
-
-import { describeSchema } from "@ethdebug/format";
-
 import {
-  loadGanache,
-  machineForProvider,
-  compileCreateBytecode,
-  deployContract,
-  examples
+  prepareCompileOptions,
+  findExamplePointer,
+  observeTrace,
+  type ObserveTraceOptions
 } from "../../test/index.js";
+import { type Cursor, Data } from "../index.js";
 
-import { Machine, Data, type Pointer, dereference } from "../index.js";
+export interface ObserveTraceTest<V> extends ObserveTraceOptions<V> {
+  expectedValues: V[];
+}
 
-const { schema: { examples: examplePointers } } = describeSchema({
-  schema: { id: "schema:ethdebug/format/pointer" }
-}) as { schema: { examples: Pointer[] } };
+export type ObserveTraceTests<M extends { [name: string]: any }> = {
+  [K in keyof M]: ObserveTraceTest<M[K]>;
+}
 
-describe("dereference (integration)", () => {
-  describe("solidity string storage", () => {
-    it("allows dereferencing solidity string storage pointers", async () => {
-      const expectedStringValues = [
-        "",
-        "hello world",
-        "solidity storage is a fun lesson in endianness"
-      ];
-      const observedStringValues = [];
+/**
+ * collection of descriptions of tests that compile+deploy Solidity code,
+ * then step through the machine trace of that code's execution, watching
+ * and recording a pointer's value over the course of that trace.
+ *
+ * tests are described in terms of an expected sequence of values which the
+ * list of observed values should contain by the end of the trace, allowing
+ * for additional unexpected values in between and around the expected values.
+ */
+export const observeTraceTests: ObserveTraceTests<{
+  "storage string": string;
+}> = {
+  "storage string": {
+    pointer: findExamplePointer("string-storage-contract-variable-slot"),
 
-      const pointer: Pointer = examplePointers.find(
-        example => JSON.stringify(example).includes("long-string-length-data")
-      )!;
+    compileOptions: prepareCompileOptions({
+      path: "StringStorage.sol",
+      contractName: "StringStorage",
+      content: `contract StringStorage {
+        string storedString;
+        bool done;
 
-      // initialize local development blockchain
-      const provider = (await loadGanache()).provider({
-        logging: {
-          quiet: true
-        }
-      });
+        event Done();
 
-      const bytecode = await compileCreateBytecode(examples.stringStorage);
-      const {
-        transactionHash,
-        contractAddress
-      } = await deployContract(bytecode, provider);
+        constructor() {
+          storedString = "hello world";
+          storedString = "solidity storage is a fun lesson in endianness";
 
-      const machine = machineForProvider(provider, { transactionHash });
-
-      let cursor = await dereference(pointer);
-      let lastObservedStringValue;
-      for await (const state of machine.trace()) {
-        const { regions, read } = await cursor.view(state);
-        const strings = await regions.named("string");
-        const stringData: Data = Data.zero().concat(
-          ...await Promise.all(strings.map(read))
-        );
-
-        const storedString = new TextDecoder().decode(stringData);
-
-        if (storedString !== lastObservedStringValue) {
-          observedStringValues.push(storedString);
-          lastObservedStringValue = storedString;
+          done = true;
         }
       }
+      `
+    }),
 
-      expect(observedStringValues).toEqual(
-        expect.arrayContaining(expectedStringValues)
+    expectedValues: [
+      "",
+      "hello world",
+      "solidity storage is a fun lesson in endianness"
+    ],
+
+    async observe({ regions, read }: Cursor.View): Promise<string> {
+      const strings = await regions.named("string");
+      const stringData: Data = Data.zero().concat(
+        ...await Promise.all(strings.map(read))
       );
 
-    });
+      return new TextDecoder().decode(stringData);
+    },
+  }
+};
+
+describe("dereference (integration)", () => {
+  describe("changing pointer values over the course of a trace", () => {
+    for (const [name, test] of Object.entries(observeTraceTests)) {
+      const {
+        pointer,
+        compileOptions,
+        observe,
+        expectedValues
+      } = test;
+
+      describe(`example pointer: ${name}`, () => {
+        it("resolves to values containing the expected sequence", async () => {
+          const observedValues = await observeTrace({
+            pointer,
+            compileOptions,
+            observe
+          });
+
+          expect(observedValues).toEqual(
+            expect.arrayContaining(expectedValues)
+          );
+        });
+      });
+    }
   });
 });
