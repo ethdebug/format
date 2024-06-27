@@ -80,14 +80,9 @@ export async function run() {
   let currentStoredString;
   for await (const state of trace) {
     const { regions, read } = await cursor.view(state);
-    const stringData = Data.fromHex(
-      await regions.named("string")
-        .map(read)
-        // HACK concatenate via string representation
-        .map(async data => (await data).toHex().slice(2))
-        .reduce(async (accumulator, data) => {
-          return `${await accumulator}${await data}`;
-        }, Promise.resolve("0x"))
+    const strings = await regions.named("string");
+    const stringData: Data = Data.zero().concat(
+      ...await Promise.all(strings.map(read))
     );
 
     const storedString = new TextDecoder().decode(stringData);

@@ -84,4 +84,13 @@ export class Data extends Uint8Array {
 
     return Data.fromBytes(resized);
   }
+
+  concat(...others: Data[]): Data {
+    // HACK concatenate via string representation
+    const concatenatedHex = [this, ...others]
+      .map(data => data.toHex().slice(2))
+      .reduce((accumulator, hex) => `${accumulator}${hex}`, "0x");
+
+    return Data.fromHex(concatenatedHex);
+  }
 }

@@ -209,16 +209,10 @@ async function evaluateKeccak256(
     async expression => await evaluate(expression, options)
   ));
 
-  // HACK concatenate via string representation
-  const concatenatedData = operands.reduce(
-    (data, operand) => `${data}${operand.toHex().slice(2)}`,
-    ""
-  );
+  const preimage = Data.zero().concat(...operands);
+  const hash = Data.fromBytes(keccak256(preimage));
 
-  const buffer = Buffer.from(concatenatedData, "hex");
-  const hash = keccak256(buffer);
-
-  return Data.fromBytes(hash);
+  return hash;
 }
 
 async function evaluateResize(
