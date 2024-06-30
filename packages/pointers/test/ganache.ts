@@ -92,7 +92,7 @@ function toMachineState(
   const { index } = options;
 
   const constantUint = (value: number): Promise<bigint> =>
-    Promise.resolve(Data.fromNumber(index).asUint());
+    Promise.resolve(Data.fromNumber(value).asUint());
 
   const makeStack = (
     stack: StructLog["stack"]
@@ -125,7 +125,7 @@ function toMachineState(
   const makeBytes = (
     words: StructLog["memory" /* | theoretically others */]
   ): Machine.State.Bytes => {
-    const data = Data.fromHex(`0x${words.map(word => word.slice(2)).join("")}`);
+    const data = Data.fromHex(`0x${words.join("")}`);
 
     return {
       length: constantUint(data.length),
