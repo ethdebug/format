@@ -24,43 +24,46 @@ examples:
     slot: 2
 
   - # example `uint256[] memory` allocation pointer
-    # this pointer composes an ordered list of other pointers
-    group:
-      # declare the first sub-pointer to be the "array-start" region of data
-      # corresponding to the first item in the stack (at time of observation)
-      - name: "array-start"
-        location: stack
-        slot: 0
+    define:
+      "uint256-array-memory-pointer-slot": 0
+    in:
+      # this pointer composes an ordered list of other pointers
+      group:
+        # declare the first sub-pointer to be the "array-start" region of data
+        # corresponding to the first item in the stack (at time of observation)
+        - name: "array-start"
+          location: stack
+          slot: "uint256-array-memory-pointer-slot"
 
-      # declare the "array-count" region to be at the offset indicated by
-      # the value at "array-start"
-      - name: "array-count"
-        location: memory
-        offset:
-          $read: "array-start"
-        length: $wordsize
+        # declare the "array-count" region to be at the offset indicated by
+        # the value at "array-start"
+        - name: "array-count"
+          location: memory
+          offset:
+            $read: "array-start"
+          length: $wordsize
 
-      # thirdly, declare a sub-pointer that is a dynamic list whose size is
-      # indicated by the value at "array-count", where each "item-index"
-      # corresponds to a discrete "array-item" region
-      - list:
-          count:
-            $read: "array-count"
-          each: "item-index"
-          is:
-            name: "array-item"
-            location: "memory"
-            offset:
-              # array items are positioned so that the item with index 0
-              # immediately follows "array-count", and each subsequent item
-              # immediately follows the previous.
-              $sum:
-                - .offset: "array-count"
-                - .length: "array-count"
-                - $product:
-                    - "item-index"
-                    - .length: "array-item"
-            length: $wordsize
+        # thirdly, declare a sub-pointer that is a dynamic list whose size is
+        # indicated by the value at "array-count", where each "item-index"
+        # corresponds to a discrete "array-item" region
+        - list:
+            count:
+              $read: "array-count"
+            each: "item-index"
+            is:
+              name: "array-item"
+              location: "memory"
+              offset:
+                # array items are positioned so that the item with index 0
+                # immediately follows "array-count", and each subsequent item
+                # immediately follows the previous.
+                $sum:
+                  - .offset: "array-count"
+                  - .length: "array-count"
+                  - $product:
+                      - "item-index"
+                      - .length: $this
+              length: $wordsize
 
   - # example `struct Record { uint128 x; uint128 y }` in memory
     group:
