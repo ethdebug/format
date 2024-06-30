@@ -1,5 +1,12 @@
 import { toHex } from "ethereum-cryptography/utils";
 
+import type * as Util from "util";
+
+let util: typeof Util | undefined;
+try {
+  util = await import("util");
+} catch {}
+
 export class Data extends Uint8Array {
   static zero(): Data {
     return new Data([]);
@@ -93,4 +100,25 @@ export class Data extends Uint8Array {
 
     return Data.fromHex(concatenatedHex);
   }
+
+  inspect(
+    depth: number,
+    options: Util.InspectOptionsStylized,
+    inspect: typeof Util.inspect
+  ): string {
+    return `Data[${options.stylize(this.toHex(), "number")}]`;
+  }
+
+  [
+    util
+      ? util.inspect.custom
+      : "_inspect"
+  ](
+    depth: number,
+    options: Util.InspectOptionsStylized,
+    inspect: typeof Util.inspect
+  ): string {
+    return this.inspect(depth, options, inspect);
+  }
+
 }
