@@ -40,7 +40,7 @@ export class Data extends Uint8Array {
     if (!hex.startsWith('0x')) {
       throw new Error('Invalid hex string format. Expected "0x" prefix.');
     }
-    const bytes = new Uint8Array(hex.length / 2 - 1);
+    const bytes = new Uint8Array((hex.length - 2) / 2 + 0.5);
     for (let i = 2; i < hex.length; i += 2) {
       bytes[i / 2 - 1] = parseInt(hex.slice(i, i + 2), 16);
     }
