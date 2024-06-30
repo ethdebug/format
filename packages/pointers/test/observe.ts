@@ -1,4 +1,4 @@
-import { type Pointer, type Cursor, dereference } from "../src/index.js";
+import { type Machine, type Pointer, type Cursor, dereference } from "../src/index.js";
 
 import { loadGanache, machineForProvider } from "./ganache.js";
 import { compileCreateBytecode, type CompileOptions } from "./solc.js";
@@ -7,7 +7,9 @@ import { deployContract } from "./deploy.js";
 export interface ObserveTraceOptions<V> {
   pointer: Pointer;
   compileOptions: CompileOptions;
-  observe({ regions, read }: Cursor.View): Promise<V>;
+  observe({ regions, read }: Cursor.View, state: Machine.State): Promise<V>;
+  equals?(a: V, b: V): boolean;
+  shouldObserve?(state: Machine.State): Promise<boolean>;
 }
 
 /**
@@ -20,14 +22,16 @@ export interface ObserveTraceOptions<V> {
  *
  * Upon reaching the end of the trace for this code execution, this function
  * then returns an ordered list of all the observed values, removing sequential
- * duplicates (via `===`).
+ * duplicates (using the defined `equals` function if it exists or just `===`).
  */
 export async function observeTrace<V>({
   pointer,
   compileOptions,
-  observe
+  observe,
+  equals = (a, b) => a === b,
+  shouldObserve = () => Promise.resolve(true)
 }: ObserveTraceOptions<V>): Promise<V[]> {
-  const observedValues = [];
+  const observedValues: V[] = [];
 
   // initialize local development blockchain
   const provider = (await loadGanache()).provider({
@@ -48,14 +52,21 @@ export async function observeTrace<V>({
   let cursor; // delay initialization until first state of trace
   let lastObservedValue;
   for await (const state of machine.trace()) {
+    if (!await shouldObserve(state)) {
+      continue;
+    }
+
     if (!cursor) {
       cursor = await dereference(pointer, { state });
     }
 
     const { regions, read } = await cursor.view(state);
-    const observedValue = await observe({ regions, read });
+    const observedValue = await observe({ regions, read }, state);
 
-    if (observedValue !== lastObservedValue) {
+    if (
+      typeof lastObservedValue === "undefined" ||
+      !equals(observedValue, lastObservedValue)
+    ) {
       observedValues.push(observedValue);
       lastObservedValue = observedValue;
     }

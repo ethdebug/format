@@ -69,24 +69,15 @@ export const observeTraceTests: ObserveTraceTests<{
 describe("dereference (integration)", () => {
   describe("changing pointer values over the course of a trace", () => {
     for (const [name, test] of Object.entries(observeTraceTests)) {
-      const {
-        pointer,
-        compileOptions,
-        observe,
-        expectedValues
-      } = test;
+      const { expectedValues, ...options } = test;
 
       describe(`example pointer: ${name}`, () => {
         it("resolves to values containing the expected sequence", async () => {
-          const observedValues = await observeTrace({
-            pointer,
-            compileOptions,
-            observe
-          });
+          const observedValues =
+            await observeTrace(options as Parameters<typeof observeTrace>[0]);
 
-          expect(observedValues).toEqual(
-            expect.arrayContaining(expectedValues)
-          );
+          expect(observedValues)
+            .toEqual(expect.arrayContaining(expectedValues));
         });
       });
     }
