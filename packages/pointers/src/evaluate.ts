@@ -80,7 +80,11 @@ export async function evaluate(
     return evaluateRead(expression, options);
   }
 
-  throw new Error("Unexpected runtime failure to recognize kind of expression");
+  throw new Error(
+    `Unexpected runtime failure to recognize kind of expression: ${
+      JSON.stringify(expression)
+    }`
+  );
 }
 
 async function evaluateLiteral(
