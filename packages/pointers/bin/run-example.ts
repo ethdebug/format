@@ -7,44 +7,17 @@ import {
   Data
 } from "../src/index.js";
 
-import {
-  prepareCompileOptions,
-  findExamplePointer,
-  observeTrace,
-  type ObserveTraceOptions
-} from "../test/index.js";
+import { observeTrace } from "../test/index.js";
 
-const pointer = findExamplePointer("string-storage-contract-variable-slot");
-
-const compileOptions = prepareCompileOptions({
-  path: "StringStorage.sol",
-  contractName: "StringStorage",
-  content: `contract StringStorage {
-    string storedString;
-    bool done;
-
-    event Done();
-
-    constructor() {
-      storedString = "hello world";
-      storedString = "solidity storage is a fun lesson in endianness";
-
-      done = true;
-    }
-  }
-  `
-});
-
-const observe = async ({ regions, read }: Cursor.View): Promise<string> => {
-  const strings = await regions.named("string");
-  const stringData: Data = Data.zero().concat(
-    ...await Promise.all(strings.map(read))
-  );
-
-  return new TextDecoder().decode(stringData);
-};
+import { observeTraceTests } from "../src/test-cases.js";
 
 export async function run() {
+  const {
+    pointer,
+    compileOptions,
+    observe
+  } = observeTraceTests["string storage"];
+
   console.log(
     chalk.bold(chalk.cyan(
       "demo: run compiled solidity and watch a changing ethdebug/format pointer\n"
