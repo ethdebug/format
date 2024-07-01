@@ -110,7 +110,7 @@ export class Data extends Uint8Array {
   }
 
   [
-    util
+    util && "inspect" in util && typeof util.inspect === "object"
       ? util.inspect.custom
       : "_inspect"
   ](
