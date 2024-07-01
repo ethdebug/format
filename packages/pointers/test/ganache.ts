@@ -23,13 +23,9 @@ export async function loadGanache() {
   return Ganache;
 }
 
-export interface MachineForProviderOptions {
-  transactionHash: Data;
-}
-
 export function machineForProvider(
   provider: EthereumProvider,
-  { transactionHash }: MachineForProviderOptions
+  transactionHash: Data
 ): Machine {
   return {
     trace(): AsyncIterable<Machine.State> {
@@ -40,16 +36,8 @@ export function machineForProvider(
             provider
           );
 
-          let previousOp;
-          for (const [index, step] of structLogs.entries()) {
-            const { state } = toMachineState(
-              step,
-              { index }
-            );
-
-            yield state;
-
-            previousOp = step.op;
+          for (const [index, structLog] of structLogs.entries()) {
+            yield toMachineState(structLog, index);
           }
         }
       };
@@ -71,118 +59,93 @@ async function requestStructLogs(
 
 type StructLogs = Depromise<ReturnType<typeof requestStructLogs>>;
 type StructLog = Dearray<StructLogs>;
-
-// helpers instead of digging through ganache's types
 type Depromise<P> = P extends Promise<infer T> ? T : P;
 type Dearray<A> = A extends Array<infer T> ? T : A;
 
-interface ToMachineStateOptions {
-  index: number;
+function toMachineState(step: StructLog, index: number): Machine.State {
+  return {
+    traceIndex: constantUint(index),
+    programCounter: constantUint(step.pc),
+    opcode: Promise.resolve(step.op),
+
+    stack: makeStack(step.stack),
+
+    memory: makeBytes(step.memory),
+
+    storage: makeWords(step.storage),
+
+    calldata: undefined as unknown as Machine.State.Bytes,
+    returndata: undefined as unknown as Machine.State.Bytes,
+    code: undefined as unknown as Machine.State.Bytes,
+
+    transient: undefined as unknown as Machine.State.Words,
+  };
 }
 
-function toMachineState(
-  step: StructLog,
-  options: ToMachineStateOptions
-): {
-  state: Machine.State;
-  storage: {
-    [slot: string]: Data
-  };
-} {
-  const { index } = options;
+function constantUint(value: number): Promise<bigint> {
+  return Promise.resolve(Data.fromNumber(value).asUint());
+}
 
-  const constantUint = (value: number): Promise<bigint> =>
-    Promise.resolve(Data.fromNumber(value).asUint());
-
-  const makeStack = (
-    stack: StructLog["stack"]
-  ): Machine.State.Stack => {
-    const length = stack.length;
-
-    return {
-      length: constantUint(length),
-
-      async peek({
-        depth,
-        slice: {
-          offset = 0n,
-          length = 32n
-        } = {}
-      }) {
-        const entry = stack.at(-Number(depth));
-        const data = Data.fromHex(`0x${entry || ""}`);
-
-        const sliced = new Uint8Array(data).slice(
-          Number(offset),
-          Number(offset + length)
-        );
-
-        return new Data(sliced);
-      }
-    };
-  };
-
-  const makeBytes = (
-    words: StructLog["memory" /* | theoretically others */]
-  ): Machine.State.Bytes => {
-    const data = Data.fromHex(`0x${words.join("")}`);
-
-    return {
-      length: constantUint(data.length),
-
-      async read({ slice: { offset, length } }) {
-        return new Data(data.slice(
-          Number(offset),
-          Number(offset + length)
-        ));
-      }
-    }
-  };
-
-  const makeWords = (
-    slots: StructLog["storage" /* | theoretically others */]
-  ): Machine.State.Words => {
-    return {
-      async read({
-        slot,
-        slice: {
-          offset = 0n,
-          length = 32n
-        } = {}
-      }) {
-        const rawHex = slots[
-          slot.resizeTo(32).toHex().slice(2) as keyof typeof slots
-        ];
-
-        const data = Data.fromHex(`0x${rawHex}`);
-
-        return new Data(data.slice(
-          Number(offset),
-          Number(offset + length)
-        ));
-      }
-    };
-  };
+function makeStack(stack: StructLog["stack"]): Machine.State.Stack {
+  const length = stack.length;
 
   return {
-    state: {
-      traceIndex: constantUint(index),
-      programCounter: constantUint(step.pc),
-      opcode: Promise.resolve(step.op),
+    length: constantUint(length),
 
-      stack: makeStack(step.stack),
+    async peek({
+      depth,
+      slice: {
+        offset = 0n,
+        length = 32n
+      } = {}
+    }) {
+      const entry = stack.at(-Number(depth));
+      const data = Data.fromHex(`0x${entry || ""}`);
 
-      memory: makeBytes(step.memory),
+      const sliced = new Uint8Array(data).slice(
+        Number(offset),
+        Number(offset + length)
+      );
 
-      storage: makeWords(step.storage),
+      return new Data(sliced);
+    }
+  };
+}
 
-      calldata: undefined as unknown as Machine.State.Bytes,
-      returndata: undefined as unknown as Machine.State.Bytes,
-      code: undefined as unknown as Machine.State.Bytes,
+function makeBytes(words: StructLog["memory"]): Machine.State.Bytes {
+  const data = Data.fromHex(`0x${words.join("")}`);
 
-      transient: undefined as unknown as Machine.State.Words,
-    },
+  return {
+    length: constantUint(data.length),
 
-    storage: {}
+    async read({ slice: { offset, length } }) {
+      return new Data(data.slice(
+        Number(offset),
+        Number(offset + length)
+      ));
+    }
+  }
+}
+
+function makeWords(slots: StructLog["storage"]): Machine.State.Words {
+  return {
+    async read({
+      slot,
+      slice: {
+        offset = 0n,
+        length = 32n
+      } = {}
+    }) {
+      const rawHex = slots[
+        slot.resizeTo(32).toHex().slice(2) as keyof typeof slots
+      ];
+
+      const data = Data.fromHex(`0x${rawHex}`);
+
+      return new Data(data.slice(
+        Number(offset),
+        Number(offset + length)
+      ));
+    }
   };
 }
