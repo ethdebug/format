@@ -48,8 +48,16 @@ const config: Config = {
                 react: path.resolve('../../node_modules/react'),
               },
               fallback: {
-                buffer: false
-              }
+                assert: false,
+                buffer: false,
+                fs: false,
+                http: false,
+                https: false,
+                path: false,
+                stream: false,
+                url: false,
+                util: false,
+              },
             }
           };
         }
