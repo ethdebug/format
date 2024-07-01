@@ -1,0 +1,33 @@
+---
+sidebar_position: 2
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Finding example pointers
+
+These integration tests seek to minimize the use of bespoke data whose
+representations exist solely within the testing-associated code modules.
+
+Instead of containing custom pointer objects defined inline, the integration
+tests for this reference implementation use the official pointer examples
+that are distributed as part of the **ethdebug/format/pointer** schema itself.
+
+Since JSON Schema does not offer a means by which examples can be named (it
+only defines a way to represent an ordered list of unlabeled example values),
+these tests rely on searching for particular examples by their use of uniquely
+indicative string values (e.g., the "string storage" example pointer is the
+only example to contain the string `"string-storage-contract-variable-slot"`).
+
+The logic for doing this search is captured by the `findExamplePointer()`
+function:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/examples.ts"
+  extract={
+    sourceFile => sourceFile.getVariableStatement("findExamplePointer")
+  } />
+
+(This function is written as an immediately-invoked inline function so as to
+avoid unnecessary redundant calls to `describeSchema()`.)

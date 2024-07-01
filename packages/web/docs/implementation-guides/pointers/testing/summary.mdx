@@ -1,0 +1,80 @@
+---
+sidebar_position: 1
+---
+
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Summary
+
+In addition to unit tests for each of the various modules, the
+**@ethdebug/pointers** reference implementation includes automated integration
+tests that watch the changes to a `dereference()`d pointer over the course of
+the execution of some Solidity code, ensuring that all expected values appear in
+their expected sequence.
+
+These tests are defined to use a developer-friendly programmatic EVM and
+Ethereum JSON-RPC simulator that models an Ethereum blockchain for purposes of
+transactions and state inspection.
+
+:::warning
+
+These tests are implemented using
+[Ganache](https://github.com/trufflesuite/ganache), which has been unmaintained
+since the end of 2023.
+
+See more details [below](#ganache-warning).
+
+:::
+
+## Test code
+
+The following code listing shows the top-level test implementation. These tests
+are written to use the [Jest](https://jestjs.io/) testing framework.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/integration.test.ts"
+  extract={
+    sourceFile => {
+      const [describe] = sourceFile.getStatements()
+        .filter(statement => {
+          const callExpressions = statement.getChildrenOfKind(SyntaxKind.CallExpression);
+
+          if (callExpressions.length === 0) {
+            return false;
+          }
+
+          const functionName = callExpressions[0].getChildren()[0].getText();
+
+          return functionName === "describe";
+        });
+
+      return describe;
+    }
+
+} />
+
+In this code listing, please see how tests are generated programmatically based
+on data definitions of each test case. (Notice how the `observeTraceTests`
+variable is used.)
+
+## Unmaintained dependencies warning {#ganache-warning}
+
+The testing implementation described in this section uses the unmaintained
+[Ganache](https://github.com/trufflesuite/ganache), thus resulting in
+**@ethdebug/pointers** having a developer dependency on this package. This
+dependency poses **no concern** for **@ethdebug/pointers** _distributions_, but
+may impact future developers who are looking to build/test this reference
+implementatino locally.
+
+At the time of implementation, Ganache was selected for use in these tests
+because it was uniquely suitable for use programmatically inside TypeScript.
+Sadly, other options such as Hardhat's `npx hardhat node` and Foundry's Anvil
+would have required additional setup in the form of operating system process
+management and complex adapter setup.
+
+Due to Ganache's end-of-life timing, these tests are limited in that they cannot
+test pointers to transient storage. Features from EVM versions before the Cancun
+hardfork should continue to work so long as there are no breaking changes
+introduced by Node.js.

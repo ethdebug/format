@@ -1,0 +1,63 @@
+---
+sidebar_position: 6
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Observing the machine
+
+These integration tests leverage the `observeTrace<V>()` helper function to
+consolidate the logic to setup and execute the testing of a particular example
+pointer. This function is designed to simulate an EVM and repeatedly observe the
+result of dererencing this pointer across each step in the machine trace.
+
+This function accepts a test case description in the form of an `options`
+argument of type `ObserveTraceOptions`. In its simplest form, this object must
+contain the following information:
+
+- The pointer to be dereferenced and viewed repeatedly
+- Solidity code for a contract whose constructor manages a variable to which the
+  pointer corresponds
+- An `observe({ regions, read }: Cursor.View): Promise<V>` function that
+  converts a cursor view into a native JavaScript value of type `V`
+
+With this information, the `observeTrace<V>()` function initializes an in-memory
+EVM, compiles and deploys the Solidity contract, then steps through the code
+execution of that contract's deployment. Over the course of this stepping, this
+function first dereferences the given `pointer` and then repeatedly calls
+`observe()` with each new machine state. It aggregates all the changing values
+of type `V` it observes and finally returns the full `V[]` list of these values.
+
+This enables the integration tests to evaluate how a pointer gets dereferenced
+in native JavaScript terms, rather than just in the terms of a particular
+resolved collection of regions. For instance, this allows tests to specify that
+observing a Solidity `string storage` pointer should yield a list of JavaScript
+`string` values.
+
+Beyond the "simplest form" described above, `ObserveTraceOptions` defines a
+number of optional properties for customizing observation behavior, including to
+allow observing pointers to complex types (e.g. arrays) and to allow skipping
+observation at times where it may be unsafe. See [below](#interface-definition)
+for the full documented code listing for this type.
+
+## Function implementation
+
+The full implementation for `observeTrace` follows:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/observe.ts"
+  extract={(sourceFile) => sourceFile.getFunction("observeTrace")}
+/>
+
+## `interface ObserveTraceOptions<V>` {#interface-definition}
+
+This interface is generic to some type `V`:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/observe.ts"
+  extract={(sourceFile) =>
+    sourceFile.getExportedDeclarations().get("ObserveTraceOptions")[0]
+  }
+/>

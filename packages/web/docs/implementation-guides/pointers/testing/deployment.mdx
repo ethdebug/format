@@ -1,0 +1,17 @@
+---
+sidebar_position: 5
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Deploying contracts
+
+Deploying a contract with some EVM bytecode is straightforward with
+[EIP-1193](https://eips.ethereum.org/EIPS/eip-1193) JavaScript provider objects,
+although it does require making a few RPC requests:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/deploy.ts"
+  extract={(sourceFile) => sourceFile.getFunction("deployContract")}
+/>
