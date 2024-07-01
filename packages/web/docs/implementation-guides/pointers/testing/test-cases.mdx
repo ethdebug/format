@@ -7,6 +7,21 @@ import TestedPointer from "./TestedPointer";
 
 # Test cases
 
+This reference implementation currently defines the following integration test
+cases.
+
+Test cases are aggregated into the `observeTraceTests` variable:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("observeTraceTests")}
+  />
+
+See the [Test code](/docs/implementation-guides/pointers/testing/summary#test-code)
+heading on this section's summary page for how this variable is used by the
+[Jest](https://jestjs.io) testing framework.
+
 ## Storage strings
 
 Representing a Solidity `string storage` using an **ethdebug/format/pointer**
