@@ -24,43 +24,46 @@ examples:
     slot: 2
 
   - # example `uint256[] memory` allocation pointer
-    # this pointer composes an ordered list of other pointers
-    group:
-      # declare the first sub-pointer to be the "array-start" region of data
-      # corresponding to the first item in the stack (at time of observation)
-      - name: "array-start"
-        location: stack
-        slot: 0
+    define:
+      "uint256-array-memory-pointer-slot": 0
+    in:
+      # this pointer composes an ordered list of other pointers
+      group:
+        # declare the first sub-pointer to be the "array-start" region of data
+        # corresponding to the first item in the stack (at time of observation)
+        - name: "array-start"
+          location: stack
+          slot: "uint256-array-memory-pointer-slot"
 
-      # declare the "array-count" region to be at the offset indicated by
-      # the value at "array-start"
-      - name: "array-count"
-        location: memory
-        offset:
-          $read: "array-start"
-        length: $wordsize
+        # declare the "array-count" region to be at the offset indicated by
+        # the value at "array-start"
+        - name: "array-count"
+          location: memory
+          offset:
+            $read: "array-start"
+          length: $wordsize
 
-      # thirdly, declare a sub-pointer that is a dynamic list whose size is
-      # indicated by the value at "array-count", where each "item-index"
-      # corresponds to a discrete "array-item" region
-      - list:
-          count:
-            $read: "array-count"
-          each: "item-index"
-          is:
-            name: "array-item"
-            location: "memory"
-            offset:
-              # array items are positioned so that the item with index 0
-              # immediately follows "array-count", and each subsequent item
-              # immediately follows the previous.
-              $sum:
-                - .offset: "array-count"
-                - .length: "array-count"
-                - $product:
-                    - "item-index"
-                    - .length: "array-item"
-            length: $wordsize
+        # thirdly, declare a sub-pointer that is a dynamic list whose size is
+        # indicated by the value at "array-count", where each "item-index"
+        # corresponds to a discrete "array-item" region
+        - list:
+            count:
+              $read: "array-count"
+            each: "item-index"
+            is:
+              name: "array-item"
+              location: "memory"
+              offset:
+                # array items are positioned so that the item with index 0
+                # immediately follows "array-count", and each subsequent item
+                # immediately follows the previous.
+                $sum:
+                  - .offset: "array-count"
+                  - .length: "array-count"
+                  - $product:
+                      - "item-index"
+                      - .length: $this
+              length: $wordsize
 
   - # example `struct Record { uint128 x; uint128 y }` in memory
     group:
@@ -143,23 +146,16 @@ examples:
 
   - # example `string storage` allocation
     define:
-      "contract-variable-slot": 0
+      "string-storage-contract-variable-slot": 0
     in:
       group:
         # for short strings, the length is stored as 2n in the last byte of slot
         - name: "length-flag"
           location: storage
-          slot: contract-variable-slot
+          slot: "string-storage-contract-variable-slot"
           offset:
             $difference: [$wordsize, 1]
           length: 1
-
-        # long strings may use full word to describe length as 2n+1
-        - name: "long-string-length-data"
-          location: storage
-          slot: contract-variable-slot
-          offset: 0
-          length: $wordsize
 
         # define the region representing the string data itself conditionally
         # based on odd or even length data
@@ -178,58 +174,66 @@ examples:
             in:
               name: "string"
               location: storage
-              slot: "contract-variable-slot"
+              slot: "string-storage-contract-variable-slot"
               offset: 0
               length: "string-length"
 
           # long string case (flag is odd)
           else:
-            define:
-              "string-length":
-                $quotient:
-                  - $difference:
-                    - $read: "long-string-length-data"
-                    - 1
-                  - 2
+            group:
+              # long strings may use full word to describe length as 2n+1
+              - name: "long-string-length-data"
+                location: storage
+                slot: "string-storage-contract-variable-slot"
+                offset: 0
+                length: $wordsize
 
-              "start-slot":
-                $keccak256:
-                  - $wordsized: "contract-variable-slot"
+              - define:
+                  "string-length":
+                    $quotient:
+                      - $difference:
+                        - $read: "long-string-length-data"
+                        - 1
+                      - 2
 
-              "total-slots":
-                # account for both zero and nonzero slot remainders by adding
-                # $wordsize-1 to the length before dividing
-                $quotient:
-                  - $sum: ["string-length", { $difference: [$wordsize, 1] }]
-                  - $wordsize
-            in:
-              list:
-                count: "total-slots"
-                each: "i"
-                is:
-                  define:
-                    "current-slot":
-                      $sum: ["start-slot", "i"]
-                    "previous-length":
-                      $product: ["i", $wordsize]
-                  in:
-                    # conditional based on whether this is the last slot:
-                    # is the string length longer than the previous length
-                    # plus this whole slot?
-                    if:
-                      $difference:
-                        - "string-length"
-                        - $sum: ["previous-length", "$wordsize"]
-                    then:
-                      # include the whole slot
-                      name: "string"
-                      location: storage
-                      slot: "current-slot"
-                    else:
-                      # include only what's left in the string
-                      name: "string"
-                      location: storage
-                      slot: "current-slot"
-                      offset: 0
-                      length:
-                        $difference: ["string-length", "previous-length"]
+                  "start-slot":
+                    $keccak256:
+                      - $wordsized: "string-storage-contract-variable-slot"
+
+                  "total-slots":
+                    # account for both zero and nonzero slot remainders by adding
+                    # $wordsize-1 to the length before dividing
+                    $quotient:
+                      - $sum: ["string-length", { $difference: [$wordsize, 1] }]
+                      - $wordsize
+                in:
+                  list:
+                    count: "total-slots"
+                    each: "i"
+                    is:
+                      define:
+                        "current-slot":
+                          $sum: ["start-slot", "i"]
+                        "previous-length":
+                          $product: ["i", $wordsize]
+                      in:
+                        # conditional based on whether this is the last slot:
+                        # is the string length longer than the previous length
+                        # plus this whole slot?
+                        if:
+                          $difference:
+                            - "string-length"
+                            - $sum: ["previous-length", "$wordsize"]
+                        then:
+                          # include the whole slot
+                          name: "string"
+                          location: storage
+                          slot: "current-slot"
+                        else:
+                          # include only what's left in the string
+                          name: "string"
+                          location: storage
+                          slot: "current-slot"
+                          offset: 0
+                          length:
+                            $difference: ["string-length", "previous-length"]

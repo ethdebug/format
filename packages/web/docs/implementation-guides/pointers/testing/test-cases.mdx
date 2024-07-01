@@ -1,0 +1,65 @@
+---
+sidebar_position: 7
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+import TestedPointer from "./TestedPointer";
+
+# Test cases
+
+This reference implementation currently defines the following integration test
+cases.
+
+Test cases are aggregated into the `observeTraceTests` variable:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("observeTraceTests")}
+  />
+
+See the [Test code](/docs/implementation-guides/pointers/testing/summary#test-code)
+heading on this section's summary page for how this variable is used by the
+[Jest](https://jestjs.io) testing framework.
+
+## Storage strings
+
+Representing a Solidity `string storage` using an **ethdebug/format/pointer**
+requires the use of conditional logic to identify the one or more regions that
+correspond to raw UTF-8 Solidity string data. The `dereference()` function
+should behave as expected for such a pointer and observe the changing string
+value.
+
+### Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("stringStorageTest")}
+  />
+
+### Tested pointer
+
+<TestedPointer
+  pointerQuery="string-storage-contract-variable-slot"
+  />
+
+## Memory arrays of word-sized items
+
+Memory arrays are primarily referenced using stack-located memory offset values,
+and so this test case ensures that stack slot indexes are properly adjusted over
+the course of the transaction.
+
+### Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("uint256ArrayMemoryTest")}
+  />
+
+### Tested pointer
+
+<TestedPointer
+  pointerQuery="uint256-array-memory-pointer-slot"
+  />

@@ -6,6 +6,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "run-example": "node ./dist/bin/run-example.js",
     "prepare": "tsc",
     "watch": "yarn prepare --watch",
     "test": "node --experimental-vm-modules $(yarn bin jest)"

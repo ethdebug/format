@@ -1,0 +1,174 @@
+---
+sidebar_position: 4
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Simulating a blockchain
+
+:::warning
+
+In case you missed the
+[note on the Summary page](/docs/implementation-guides/pointers/testing/summary#ganache-warning),
+the functionality described in this page uses the unmaintained
+[Ganache](https://github.com/trufflesuite/ganache) software library for
+simulating the EVM. See note for rationale and risk expectations.
+
+:::
+
+This reference implemention relies heavily on the
+[`Machine`](/docs/implementation-guides/pointers/types/data-and-machines#machine)
+interface it defines for reading the state of a running EVM; this page describes
+how this implementation's integration tests adapt an
+[EIP-1193](https://eips.ethereum.org/EIPS/eip-1193) JavaScript provider object
+to this interface.
+
+Since the primary purpose of `Machine` is to represent a series of code
+execution steps, the adapter described here simplifies the concept of an
+execution trace by restricting it to mean that which happens within the course
+of an Ethereum transaction. The tests thus define a `machineForProvider`
+function to adapt a provider object for a particular transaction hash.
+
+As a result, this code only functions in the context of a provider to a
+blockchain whose JSON-RPC exposes the original
+[go-ethereum](https://github.com/ethereum/go-ethereum)'s
+`"debug_traceTransaction"` method, which exposes the state of the EVM at each
+step of code execution for a particular transaction. Other kinds of traces (such
+as tracing the execution of an `"eth_call"` request) are left to remain
+intentionally out-of-scope for the purposes of testing this implementation.
+Other implementations of the `Machine` interface need not make this restriction.
+
+## Implementing `machineForProvider()`
+
+The `machineForProvider()` function takes two arguments and returns an object
+adhering to the `Machine` interface. See the code listing for this function:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("machineForProvider")}
+/>
+
+This function is written to return an object whose `trace()` method matches that
+which is defined by `Machine`: a method to asynchronously produce an iterable
+list of `Machine.State`s. This function leverages two other helper functions as
+part of the behavior of this method: `requestStructLogs()` and
+`toMachineState()`.
+
+### Requesting "struct logs"
+
+The Geth-style `"debug_traceTransaction"` method returns a list of execution
+steps and machine states inside the `"structLogs"` field of the response's
+result object.
+
+The asynchronous `requestStructLogs` function is implemented as follows:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("requestStructLogs")}
+/>
+
+Since Ganache does not have a publicly-documented or easily-accessible exported
+collection of types, but since it **does** use string literal types to infer the
+specific type of provider request being made, this code can use TypeScript's
+type interference to ensure type safety in the adapter:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getTypeAlias("StructLogs")}
+/>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getTypeAlias("StructLog")}
+/>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getTypeAlias("Depromise")}
+/>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getTypeAlias("Dearray")}
+/>
+
+These types are not exported by this module because they are internal to
+`machineForProvider()` concerns.
+
+### Converting to `Machine.State`
+
+The `toMachineState()` function is implemented by leveraging the use of the
+[addressing schemes](/spec/pointer/concepts#a-region-is-specified-in-terms-of-an-addressing-scheme)
+defined by the **ethdebug/format/pointer** schema. Notice the use of the various
+helper functions, listed below.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("toMachineState")}
+/>
+
+#### Helper function: `constantUint()`
+
+Since the interface defined by `Machine.State` is more asynchronous than likely
+necessary (certainly it is more asynchronous than necessary for these testing
+purposes), many properties defined within `Machine.State` must be converted from
+a readily-available constant value into a `Promise` that resolves to that value:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("constantUint")}
+/>
+
+#### Helper function: `makeStack()`
+
+Although the specification defines the `"stack"` data location to use a regular
+segment-based addressing scheme, this reference implementation distinguishes the
+stack from the other segment-based locations because of the use of numeric,
+unstable slot values.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("makeStack")}
+/>
+
+#### Helper function: `makeWords()`
+
+For other segment-based locations, the `makeWords()` function is used:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("makeWords")}
+/>
+
+#### Helper function: `makeBytes()`
+
+The `makeBytes()` function is used for plain bytes-based data locations, such as
+`"memory"`:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("makeBytes")}
+/>
+
+## Note on loading Ganache
+
+To prevent Ganache's warnings from appearing in test console output, a custom
+`loadGanache()` function is defined to suppress known warnings while importing
+the module:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/ganache.ts"
+  extract={(sourceFile) => sourceFile.getFunction("loadGanache")}
+/>

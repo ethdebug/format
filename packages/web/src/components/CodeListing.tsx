@@ -8,10 +8,10 @@ export interface CodeListingProps
 {
   packageName: string;
   sourcePath: string;
-  extract?: <N extends ts.Node>(
+  extract?: (
     sourceFile: SourceFile,
     project: Project
-  ) => N;
+  ) => Pick<ts.Node, "getFullText">;
 }
 
 export default function CodeListing({

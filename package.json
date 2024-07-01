@@ -5,6 +5,7 @@
   ],
   "scripts": {
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
+    "test:debug": "open -a \"Brave Browser\" brave://inspect && node --experimental-vm-modules --nolazy --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --colors --verbose",
     "start": "./bin/start",
     "postinstall": "lerna run prepare"
   },

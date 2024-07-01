@@ -1,5 +1,12 @@
 import { toHex } from "ethereum-cryptography/utils";
 
+import type * as Util from "util";
+
+let util: typeof Util | undefined;
+try {
+  util = await import("util");
+} catch {}
+
 export class Data extends Uint8Array {
   static zero(): Data {
     return new Data([]);
@@ -33,7 +40,7 @@ export class Data extends Uint8Array {
     if (!hex.startsWith('0x')) {
       throw new Error('Invalid hex string format. Expected "0x" prefix.');
     }
-    const bytes = new Uint8Array(hex.length / 2 - 1);
+    const bytes = new Uint8Array((hex.length - 2) / 2 + 0.5);
     for (let i = 2; i < hex.length; i += 2) {
       bytes[i / 2 - 1] = parseInt(hex.slice(i, i + 2), 16);
     }
@@ -84,4 +91,34 @@ export class Data extends Uint8Array {
 
     return Data.fromBytes(resized);
   }
+
+  concat(...others: Data[]): Data {
+    // HACK concatenate via string representation
+    const concatenatedHex = [this, ...others]
+      .map(data => data.toHex().slice(2))
+      .reduce((accumulator, hex) => `${accumulator}${hex}`, "0x");
+
+    return Data.fromHex(concatenatedHex);
+  }
+
+  inspect(
+    depth: number,
+    options: Util.InspectOptionsStylized,
+    inspect: typeof Util.inspect
+  ): string {
+    return `Data[${options.stylize(this.toHex(), "number")}]`;
+  }
+
+  [
+    util && "inspect" in util && typeof util.inspect === "object"
+      ? util.inspect.custom
+      : "_inspect"
+  ](
+    depth: number,
+    options: Util.InspectOptionsStylized,
+    inspect: typeof Util.inspect
+  ): string {
+    return this.inspect(depth, options, inspect);
+  }
+
 }

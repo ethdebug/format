@@ -1,0 +1,54 @@
+---
+sidebar_position: 3
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+
+# Invoking the compiler
+
+In being able to test a pointer dereference implementation, it is necessary to
+pair each tested pointer with associated EVM code that makes the pointer
+meaningful. To avoid solutions such as pre-compiling Solidity or handwriting EVM
+bytecode, the **@ethdebug/pointers** reference implementation's integration
+tests are written so that each test case is described in terms of Solidity code
+that the testing infrastructure compiles when executing the test.
+
+The strategy taken by these tests is to use Solidity's `constructor` mechanism
+for allowing tests to specify variable assignment and mutation logic without
+needing to manage deployed contract instances. All these integration test cases
+thus observe pointers only via the trace of a contract creation transaction.
+
+## Integration logic
+
+This testing infrastructure includes the `compileCreateBytecode()` function,
+which accepts input resembling Solidity's compiler input data as argument (i.e.,
+the collection of source contents by path and additional contract target
+information) and asynchronously returns `Data` with the create (deployment)
+bytecode for the target contract.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/solc.ts"
+  extract={(sourceFile) => sourceFile.getFunction("compileCreateBytecode")}
+/>
+
+## The `CompileOptions` interface
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/solc.ts"
+  extract={(sourceFile) => sourceFile.getInterface("CompileOptions")}
+/>
+
+## "Syntactic sugar"-like helper function
+
+To avoid test cases' needing to describe their associated code samples in terms
+of source content by path, test cases that require only a single source file can
+use the `singleSourceCompilation()` helper function that provides a more
+succinct method for generating `CompileOptions` objects:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/solc.ts"
+  extract={(sourceFile) => sourceFile.getFunction("singleSourceCompilation")}
+/>

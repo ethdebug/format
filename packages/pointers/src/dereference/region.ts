@@ -100,8 +100,8 @@ export function adjustStackLength<R extends Pointer.Region>(
     const slot: Pointer.Expression = stackLengthChange === 0n
       ? region.slot
       : stackLengthChange > 0n
-        ? { $sum: [region.slot, `"0x${stackLengthChange.toString(16)}"`] }
-        : { $difference: [region.slot, `"0x${-stackLengthChange.toString(16)}"`] };
+        ? { $sum: [region.slot, `0x${stackLengthChange.toString(16)}`] }
+        : { $difference: [region.slot, `0x${-stackLengthChange.toString(16)}`] };
 
     return {
       ...region,
