@@ -2,6 +2,7 @@ import CodeBlock, { type Props as CodeBlockProps } from "@theme/CodeBlock";
 import { Project, type SourceFile, type ts } from "ts-morph";
 
 import useProjectCode from "@site/src/hooks/useProjectCode";
+import LinkedCodeBlock from "./LinkedCodeBlock";
 
 export interface CodeListingProps
   extends Omit<CodeBlockProps, "language" | "children">
@@ -12,34 +13,54 @@ export interface CodeListingProps
     sourceFile: SourceFile,
     project: Project
   ) => Pick<ts.Node, "getFullText">;
+  links?: { [key: string]: string; };
 }
 
 export default function CodeListing({
   packageName,
   sourcePath,
   extract,
-  ...props
+  links = {},
+  ...codeBlockProps
 }: CodeListingProps): JSX.Element {
   const project = useProjectCode(packageName);
 
   const sourceFile = project.getSourceFileOrThrow(sourcePath);
 
-  if (!extract) {
-    return <CodeBlock
-      title={sourcePath}
-      language="typescript"
-      showLineNumbers
-    >{
-      sourceFile.getFullText()
-    }</CodeBlock>;
+  const node = !extract
+    ? sourceFile
+    : extract(sourceFile, project);
+
+  const code = node.getFullText().trim();
+
+  // bit of a HACK
+  const listingFullSource = !extract;
+
+
+  if (Object.keys(links).length > 0) {
+    return (
+      <LinkedCodeBlock
+        code={code}
+        links={links}
+        language="typescript"
+        {...codeBlockProps}
+      />
+    );
   }
 
-  const node = extract(sourceFile, project);
-
-  return <CodeBlock
-    language="typescript"
-    {...props}
-  >{
-    node.getFullText().trim()
-  }</CodeBlock>;
+  return (
+    <CodeBlock
+      language="typescript"
+      {...{
+        ...(
+          listingFullSource
+            ? { title: sourcePath, showLineNumbers: true }
+            : { showLineNumbers: false }
+        ),
+        ...codeBlockProps
+      }}
+    >{
+      node.getFullText().trim()
+    }</CodeBlock>
+  );
 }
