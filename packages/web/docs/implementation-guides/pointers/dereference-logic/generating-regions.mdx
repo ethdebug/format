@@ -147,7 +147,7 @@ so that earlier memos in the list will be processed before later ones.
   />
 </details>
 
-### Processing a region
+## Processing a region
 
 The simplest kind of pointer is just a single region. (Remember that pointers
 are either regions or collections of other pointers.)
@@ -168,12 +168,12 @@ a request to save this region to process state by its name.
 
 This pointer evaluation process will be described later.
 
-### Processing collections
+## Processing collections
 
 The recursive cases are fairly straightforward following this architecture.
 
 
-#### Groups
+### Groups
 
 The simplest collection, a group of other pointers, yields no regions of its
 own, but instead pushes each of its child pointers for evaluation later:
@@ -188,7 +188,7 @@ It's essential that each of the child pointers get evaluated in the order
 they appear in the list, since later pointers may reference regions named
 earlier, etc.
 
-#### Lists
+### Lists
 
 List collections are more complex because they dynamically generate a number
 of composed pointers based on a runtime count value and introducing a
@@ -204,7 +204,7 @@ Note how, because each dynamic child pointer is evaluated based on the
 next incremented index value, the memos for updating this variable and
 evaluation the child pointer must be interspersed.
 
-#### Conditionals
+### Conditionals
 
 Conditional pointers evaluate to a child pointer given that some runtime
 condition evaluates to a nonzero value, optionally evaluating to a different
@@ -220,7 +220,7 @@ the `"else"` pointer if it is specified:
   extract={sourceFile => sourceFile.getFunction("processConditional")}
   />
 
-#### Scopes
+### Scopes
 
 Finally, the last kind of collection defined by this schema is for defining
 a scope of variables by identifier by specifying the expression values for

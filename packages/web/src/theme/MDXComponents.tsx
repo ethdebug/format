@@ -13,13 +13,13 @@ library.add(fab, fas); // Add all icons to the library so you can use them witho
 
 // custom link component that appends external link svg inside Markdown files
 function A({ children, href, ...props }: LinkProps): JSX.Element {
-  return <MDXA href={href} {...props}>
-    {children}
-    {href && !isInternalUrl(href) && (
-      <IconExternalLink />
-    )}
-  </MDXA>
+  return <MDXA href={href} {...props}>{
+    children
+  }{href && !isInternalUrl(href) && (
+    <>&#xfeff;<IconExternalLink /></>
+  ) }</MDXA>;
 }
+
 export default {
   // Re-use the default mapping
   ...MDXComponents,

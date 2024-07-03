@@ -1,11 +1,10 @@
 ---
-sidebar_position: 1
+sidebar_position: 6
 ---
 
-import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import CodeListing from "@site/src/components/CodeListing";
+# End-to-end testing
 
-# Summary
+## Summary
 
 In addition to unit tests for each of the various modules, the
 **@ethdebug/pointers** reference implementation includes automated integration
@@ -26,38 +25,6 @@ since the end of 2023.
 See more details [below](#ganache-warning).
 
 :::
-
-## Test code
-
-The following code listing shows the top-level test implementation. These tests
-are written to use the [Jest](https://jestjs.io/) testing framework.
-
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/integration.test.ts"
-  extract={
-    sourceFile => {
-      const [describe] = sourceFile.getStatements()
-        .filter(statement => {
-          const callExpressions = statement.getChildrenOfKind(SyntaxKind.CallExpression);
-
-          if (callExpressions.length === 0) {
-            return false;
-          }
-
-          const functionName = callExpressions[0].getChildren()[0].getText();
-
-          return functionName === "describe";
-        });
-
-      return describe;
-    }
-
-} />
-
-In this code listing, please see how tests are generated programmatically based
-on data definitions of each test case. (Notice how the `observeTraceTests`
-variable is used.)
 
 ## Unmaintained dependencies warning {#ganache-warning}
 

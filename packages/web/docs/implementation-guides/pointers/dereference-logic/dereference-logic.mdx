@@ -1,20 +1,116 @@
 ---
 sidebar_position: 5
+sidebar_label: The dereference function
 ---
 
-# The dereference function
+import CodeListing from "@site/src/components/CodeListing";
 
-These next few pages cover how the components described thus far are combined
-to create the final `dereference(pointer: Pointer)` function.
+# The `dereference()` function
 
-- The [Summary](/docs/implementation-guides/pointers/dereference-logic/summary)
-  page broadly describes the control flow structure behind this function
-  implementation.
+## Summary
 
-- [Generating regions on the fly](/docs/implementation-guides/pointers/dereference-logic/generating-regions)
-  describes the process of recursively processing a pointer and reducing it to
-  a concrete list of fully-evaluated `Cursor.Region` objects.
+The pages in this section cover the internals of the `dereference()` function
+in the **@ethdebug/pointers** reference implementation.
 
-- [Making regions concrete](/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete)
-  describes the process for converting a single `Pointer.Region` object into
-  its fully-evaluated `Cursor.Region` equivalent at runtime.
+The full signature of this function is as follows:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/index.ts"
+  extract={
+    (sourceFile, project) => {
+      const definition = sourceFile.getFunction("dereference");
+      const tempSourceFile = project.createSourceFile(
+        "dereference-summary.ts",
+        "",
+        { overwrite: true }
+      );
+
+      for (const importDeclaration of sourceFile.getImportDeclarations()) {
+        tempSourceFile.addImportDeclaration(importDeclaration.getStructure());
+      }
+
+      const commentText = definition.getLeadingCommentRanges()
+        .map(range =>
+          sourceFile.getFullText()
+            .substring(range.getPos(), range.getEnd()))
+        .join("\n");
+
+      const declaration = tempSourceFile.addFunction({
+        name: definition.getName(),
+        parameters: definition.getParameters()
+          .map((param, index, array) => ({
+            name: param.getName(),
+            type: param.getType().getText(param),
+            hasQuestionToken: param.hasQuestionToken() || param.hasInitializer(),
+            leadingTrivia: "\n",
+            trailingTrivia: index < array.length - 1 ? undefined : "\n"
+          })),
+        returnType: definition.getReturnType().getText(definition),
+        hasDeclareKeyword: true,
+        isAsync: true,
+        leadingTrivia: `${commentText}\n`
+      });
+
+
+      return tempSourceFile.getFunction("dereference");
+    }
+  } />
+
+:::tip
+
+Remember from the
+[Cursors](/docs/implementation-guides/pointers/types/cursors) section that a `Cursor`
+provides a `view(state: Machine.State)` method, which returns an ordered
+collection of concrete `Cursor.Region` objects.
+
+:::
+
+### `DereferenceOptions`
+
+Note the optional `options: DereferenceOptions` argument. This argument
+allows for specifying additional information upfront that is necessary for
+viewing the cursor later. Currently, this is needed only for pointers that
+compose stack-located regions.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/index.ts"
+  extract={sourceFile => sourceFile.getInterface("DereferenceOptions")}
+  />
+
+## Control flow architecture
+
+The `dereference()` function itself performs two tasks:
+1. Create a "simple cursor": a function that takes a machine state and
+   produces an asynchronous list of `Cursor.Region`s.
+2. Adapt this simple cursor to conform to the full `Cursor` interface
+
+Within the process of creating this simple cursor it gets more interesting:
+by leveraging JavaScript's
+[AsyncIterator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncIterator)s,
+the implementation can compute regions on the fly by recursively breaking down
+pointers into their nested child pointers.
+
+Since the desired end-result of `dereference()` is an object that can turn
+a pointer into its composite ordered list of concrete regions at a particular
+machine state, this implementation separates the concerns of generating this
+list from converting this list into the promised return interface.
+
+To generate this list asynchronously on the fly, the implementation uses a
+_stack of processing requests_ (which it calls "memos"), initially populated
+with a request to dereference the root pointer. Each memo represents a state
+or context change in some form: either a request to dereference a pointer or
+sub-pointer, a request to save a set of regions by their names, or a request
+to save the computed values of a set of variables by their identifiers.
+
+The other pages in this section proceed to go into more detail.
+
+<details>
+<summary>See the full `src/dereference/index.ts` module</summary>
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/index.ts"
+  />
+</details>

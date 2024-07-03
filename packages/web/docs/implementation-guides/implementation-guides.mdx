@@ -1,0 +1,57 @@
+---
+sidebar_position: 4
+pagination_prev: null
+pagination_next: null
+---
+
+# Implementation guides
+
+This section of these docs serves to provide resources that guide readers who
+are looking to implement one or more components of **ethdebug/format**.
+Because of the distinct concerns involved in implementing this format on the
+compilation side vs. the concerns involved on the debugging side, this page
+lists and categorizes the available guides into the appropriate heading.
+
+
+## For debuggers
+
+<dl>
+<dt>**Guide: [Dereferencing pointers](/docs/implementation-guides/pointers)**</dt>
+<dd>
+This guide provides readers with a tour of the **@ethdebug/pointers**
+TypeScript reference implementation, showing example concrete logic for how a
+debugger might process **ethdebug/format** pointers.
+
+For an introduction to **ethdebug/format** pointers, please see
+the Pointer specification's [Overview](/spec/pointer/overview) and
+[Key&nbsp;concepts](/spec/pointer/concepts) pages.
+</dd>
+
+<dt>**Other guides**</dt>
+<dd>
+_Guides for other aspects of debugger-side **ethdebug/format** implementation
+are planned and still need to be written._
+</dd>
+
+</dl>
+
+## For compilers
+
+<dl>
+<dt>**No availble guides yet**</dt>
+<dd>
+_Guides for implementing **ethdebug/format** support inside a compiler are
+planned and still need to be written._
+</dd>
+</dl>
+
+:::tip[Work in progress]
+
+Sadly, things are looking a little scarce right now. Please stay tuned as work
+on this effort progresses.
+
+**Interested in helping out?** If you'd like to help with writing initial
+reference implementations for one or more schemas, please reach out in our
+[Matrix.chat](https://matrix.to/#/#ethdebug:matrix.org).
+
+:::

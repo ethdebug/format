@@ -1,11 +1,21 @@
 ---
 sidebar_position: 1
+sidebar_label: Dereferencing pointers
 ---
 
 import CodeBlock from "@theme/CodeBlock";
 import CodeListing from "@site/src/components/CodeListing";
 
-# Overview
+# Dereferencing pointers
+
+_An implementation guide for resolving **ethdebug/format/pointer**s
+into concrete regions and values in a running EVM._
+
+## Introduction
+
+This implementation guide describes the **@ethdebug/pointers** reference
+implementation, written in TypeScript and intended for distribution as an
+NPM package.
 
 Debuggers looking to support **ethdebug/format** must be prepared to
 dereference the data allocations used by compilers for all kinds of variables.
@@ -17,8 +27,6 @@ This format's [**ethdebug/format/pointer** schema](/spec/pointer/overview)
 provides such suitable expressiveness, but implementing the logic to read and
 evaluate data in this schema requires some careful consideration.
 
-This documentation section describes a reference implementation written in
-TypeScript and available as the **@ethdebug/pointers** NPM package.
 
 :::tip
 If you're reading this page without first having familiarized yourself with the

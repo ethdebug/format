@@ -1,8 +1,0 @@
-{
-  "label": "Dereferencing pointers",
-  "position": 2,
-  "link": {
-    "type": "generated-index",
-    "description": "Debugger-side reference implementation of ethdebug/format/pointer"
-  }
-}
