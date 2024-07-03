@@ -49,3 +49,13 @@
 [data-theme="dark"] .playground-container {
   background: rgb(25, 60, 71);
 }
+
+.linked-code-block-link {
+  color: inherit !important;
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  text-decoration: underline !important;
+  background-color: inherit !important;
+}
