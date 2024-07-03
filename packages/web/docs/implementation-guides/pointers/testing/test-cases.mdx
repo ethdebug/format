@@ -22,6 +22,26 @@ This variable will be used to generate automated tests dynamically, as will
 be described on the
 [next page](/docs/implementation-guides/pointers/testing/jest).
 
+## Structs in storage
+
+Solidity tightly packs struct storage words starting from the right-hand side.
+This test ensures that relative offsets are computed properly for a struct that
+defines a few small fields (`struct Record { uint8 x; uint8 y; bytes4 salt; }`).
+
+### Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("structStorageTest")}
+  />
+
+### Tested pointer
+
+<TestedPointer
+  pointerQuery="struct-storage-contract-variable-slot"
+  />
+
 ## Storage strings
 
 Representing a Solidity `string storage` using an **ethdebug/format/pointer**
