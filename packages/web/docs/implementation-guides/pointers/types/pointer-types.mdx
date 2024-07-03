@@ -21,7 +21,7 @@ different kind of region and collection.
 A [full source listing](#code-listing) follows below, but see example usage to
 get a sense for how these types are organized:
 
-```typescript
+```typescript title="Usage example"
 import { Pointer, isPointer } from "@ethdebug/pointers";
 
 const region: Pointer.Region = { location: "stack", slot: 0 };
@@ -42,7 +42,7 @@ nested, also roughly to correspond to the root JSON-Schema.
 
 See these quick examples to get a sense for this part of the type hierarchy:
 
-```typescript
+```typescript title="Usage example"
 import { Pointer } from "@ethdebug/pointers";
 
 const expression: Pointer.Expression = {

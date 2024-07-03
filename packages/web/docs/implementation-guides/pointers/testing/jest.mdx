@@ -1,0 +1,39 @@
+---
+sidebar_position: 8
+---
+
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
+import CodeListing from "@site/src/components/CodeListing";
+
+# Hooking up Jest
+
+Putting all the pieces together, the following code listing shows the top-level
+test implementation. These tests are written to use the
+[Jest](https://jestjs.io/) testing framework.
+
+Notice the use of the `observeTraceTests` variable (from the previous
+[Test cases](/docs/implementation-guides/pointers/testing/test-cases) page)
+enables executing each test case without changing the core logic.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/integration.test.ts"
+  extract={
+    sourceFile => {
+      const [describe] = sourceFile.getStatements()
+        .filter(statement => {
+          const callExpressions = statement.getChildrenOfKind(SyntaxKind.CallExpression);
+
+          if (callExpressions.length === 0) {
+            return false;
+          }
+
+          const functionName = callExpressions[0].getChildren()[0].getText();
+
+          return functionName === "describe";
+        });
+
+      return describe;
+    }
+
+} />
