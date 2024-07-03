@@ -9,6 +9,76 @@ export interface ObserveTraceTest<V> extends ObserveTraceOptions<V> {
   expectedValues: V[];
 }
 
+const structStorageTest: ObserveTraceTest<{
+  x: number;
+  y: number;
+  salt: string;
+}> = {
+  pointer: findExamplePointer("struct-storage-contract-variable-slot"),
+  compileOptions: singleSourceCompilation({
+    path: "StructStorage.sol",
+    contractName: "StructStorage",
+    content: `contract StructStorage {
+      Record record;
+
+      uint8 step;
+
+      constructor() {
+        record = Record({
+          x: 5,
+          y: 8,
+          salt: 0xdeadbeef
+        });
+
+        // trick the optimizer maybe (otherwise the first record assignment
+        // will get optimized out)
+        //
+        // compiler might be smarter in the future and cause this test to fail
+        step = 1;
+
+        record = Record({
+          x: 1,
+          y: 2,
+          salt: 0xfeedface
+        });
+
+        step = 2;
+      }
+    }
+
+    struct Record {
+      uint8 x;
+      uint8 y;
+      bytes4 salt;
+    }
+    `
+  }),
+
+  expectedValues: [
+    { x: 0, y: 0, salt: "0x" },
+    { x: 5, y: 8, salt: "0xdeadbeef" },
+    { x: 1, y: 2, salt: "0xfeedface" },
+  ],
+
+  async observe({ regions, read }) {
+    const x = Number(
+      (await read(regions.lookup["x"])).asUint()
+    );
+
+    const y = Number(
+      (await read(regions.lookup["y"])).asUint()
+    );
+
+    const salt = (await read(regions.lookup["salt"])).toHex();
+
+    return { x, y, salt };
+  },
+
+  equals(a, b) {
+    return a.x === b.x && a.y === b.y && a.salt === b.salt;
+  }
+};
+
 const stringStorageTest: ObserveTraceTest<string> = {
   pointer: findExamplePointer("string-storage-contract-variable-slot"),
 
@@ -39,7 +109,7 @@ const stringStorageTest: ObserveTraceTest<string> = {
 
   async observe({ regions, read }: Cursor.View): Promise<string> {
     // collect all the regions corresponding to string contents
-    const strings = await regions.named("string");
+    const strings = regions.named("string");
 
     // read each region and concatenate all the bytes
     const stringData: Data = Data.zero()
@@ -154,6 +224,7 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
  * for additional unexpected values in between and around the expected values.
  */
 export const observeTraceTests = {
+  "struct storage": structStorageTest,
   "string storage": stringStorageTest,
   "uint256[] memory": uint256ArrayMemoryTest,
 };
