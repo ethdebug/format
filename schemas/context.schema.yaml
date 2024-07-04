@@ -1,0 +1,46 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/context"
+
+title: ethdebug/format/context
+description: |
+  A schema for representing the information known at compile-time about the
+  high-level language concerns at a particular point in code execution.
+
+type: object
+
+properties:
+  variables:
+    type: array
+    items:
+      type: object
+      properties:
+        identifier:
+          type: string
+        declaration:
+          $ref: "schema:ethdebug/format/materials/source-range"
+        type:
+          $ref: "schema:ethdebug/format/type"
+        pointer:
+          $ref: "schema:ethdebug/format/pointer"
+      required:
+        - identifier
+        - declaration
+        - type
+
+minProperties: 1
+additionalProperties: false
+
+examples:
+  - variables:
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56
+        type:
+          kind: string
+        pointer:
+          location: storage
+          slot: 0
