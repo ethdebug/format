@@ -1,0 +1,29 @@
+---
+sidebar_position: 2
+sidebar_label: string storage
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+import TestedPointer from "./TestedPointer";
+
+# Test case: `string storage`
+
+Representing a Solidity `string storage` using an **ethdebug/format/pointer**
+requires the use of conditional logic to identify the one or more regions that
+correspond to raw UTF-8 Solidity string data. The `dereference()` function
+should behave as expected for such a pointer and observe the changing string
+value.
+
+## Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("stringStorageTest")}
+  />
+
+## Tested pointer
+
+<TestedPointer
+  pointerQuery="string-storage-contract-variable-slot"
+  />
