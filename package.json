@@ -8,7 +8,6 @@
     "test:debug": "open -a \"Brave Browser\" brave://inspect && node --experimental-vm-modules --nolazy --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --colors --verbose",
     "start": "./bin/start",
     "lerna": "lerna",
-    "publish": "lerna publish from-package",
     "postinstall": "lerna run prepare"
   },
   "devDependencies": {
