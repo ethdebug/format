@@ -25,5 +25,8 @@
   },
   "dependencies": {
     "ethereum-cryptography": "^2.1.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
