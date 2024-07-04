@@ -1,0 +1,27 @@
+---
+sidebar_position: 3
+sidebar_label: uint256[] memory
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+import TestedPointer from "./TestedPointer";
+
+# Test case: `uint256[] memory`
+
+Memory arrays are primarily referenced using stack-located memory offset values,
+and so this test case ensures that stack slot indexes are properly adjusted over
+the course of the transaction.
+
+## Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("uint256ArrayMemoryTest")}
+  />
+
+## Tested pointer
+
+<TestedPointer
+  pointerQuery="uint256-array-memory-pointer-slot"
+  />

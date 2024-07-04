@@ -1,0 +1,27 @@
+---
+sidebar_position: 1
+sidebar_label: <struct> storage
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+import TestedPointer from "./TestedPointer";
+
+# Test case: `<struct> storage`
+
+Solidity tightly packs struct storage words starting from the right-hand side.
+This test ensures that relative offsets are computed properly for a struct
+with a few small fields (`struct Record { uint8 x; uint8 y; bytes4 salt; }`).
+
+## Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/test-cases.ts"
+  extract={sourceFile => sourceFile.getVariableStatement("structStorageTest")}
+  />
+
+## Tested pointer
+
+<TestedPointer
+  pointerQuery="struct-storage-contract-variable-slot"
+  />
