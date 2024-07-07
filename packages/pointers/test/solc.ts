@@ -1,10 +1,6 @@
-import { Data } from "../src/data.js";
-import type * as Solc from "solc";
+import { fetchSolc } from "web-solc";
 
-let solc: typeof Solc | undefined;
-try {
-  solc = (await import("solc")).default;
-} catch {}
+import { Data } from "../src/data.js";
 
 /**
  * Organizes the sources being compiled by their path identifier, as well
@@ -31,10 +27,6 @@ export async function compileCreateBytecode({
   sources,
   target
 }: CompileOptions): Promise<Data> {
-  if (!solc) {
-    throw new Error("Unable to load solc");
-  }
-
   const input = {
     language: "Solidity",
     sources,
@@ -52,11 +44,9 @@ export async function compileCreateBytecode({
     }
   };
 
-  const output = JSON.parse(
-    solc.compile(
-      JSON.stringify(input),
-    )
-  );
+  const { compile, stopWorker } = await fetchSolc("^0.8.25");
+  const output = await compile(input);
+  stopWorker();
 
   const { errors = [] } = output;
   if (errors.length > 0) {

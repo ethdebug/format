@@ -12432,6 +12432,11 @@ semver@^7.0.0, semver@^7.1.1, semver@^7.3.2, semver@^7.3.4, semver@^7.3.5, semve
   dependencies:
     lru-cache "^6.0.0"
 
+semver@^7.6.2:
+  version "7.6.2"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.2.tgz#1e3b34759f896e8f14d6134732ce798aeb0c6e13"
+  integrity sha512-FNAIBWCx9qcRhoHcgcJ0gvU7SN1lYU2ZXuSfl04bSC5OpvDHFyJCjdNHomPXxjQlCBU67YW64PzY7/VIEH7F2w==
+
 send@0.18.0:
   version "0.18.0"
   resolved "https://registry.npmjs.org/send/-/send-0.18.0.tgz"
@@ -13772,6 +13777,13 @@ web-namespaces@^2.0.0:
   version "2.0.1"
   resolved "https://registry.npmjs.org/web-namespaces/-/web-namespaces-2.0.1.tgz"
   integrity sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==
+
+web-solc@^0.3.4:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/web-solc/-/web-solc-0.3.4.tgz#c4e5520a406342545a3332029eeddff874cebd8d"
+  integrity sha512-7rnqQPKrujahVErGe+tp89XwXTt2IekDdRKg4iquGwa4oUyc+s85wAgjXBr6TQFYaj0eU5Yq7yfamoc1ewYkSg==
+  dependencies:
+    semver "^7.6.2"
 
 webidl-conversions@^3.0.0:
   version "3.0.1"
