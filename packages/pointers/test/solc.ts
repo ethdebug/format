@@ -2,6 +2,9 @@ import { fetchSolc } from "web-solc";
 
 import { Data } from "../src/data.js";
 
+const solc = fetchSolc("^0.8.25");
+const compile = async (input: any) => await (await solc).compile(input);
+
 /**
  * Organizes the sources being compiled by their path identifier, as well
  * as includes information about which contract's bytecode is desired
@@ -44,9 +47,7 @@ export async function compileCreateBytecode({
     }
   };
 
-  const { compile, stopWorker } = await fetchSolc("^0.8.25");
   const output = await compile(input);
-  stopWorker();
 
   const { errors = [] } = output;
   if (errors.length > 0) {

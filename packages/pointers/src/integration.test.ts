@@ -1,4 +1,4 @@
-import { jest, expect, describe, it, beforeEach } from "@jest/globals";
+import { jest, expect, describe, it } from "@jest/globals";
 
 import { observeTrace } from "../test/index.js";
 import { observeTraceTests } from "./test-cases.js";
