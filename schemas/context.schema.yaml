@@ -9,23 +9,26 @@ description: |
 type: object
 
 properties:
+  identifier:
+    type: string
+
   variables:
     type: array
+    description: |
+      Information about known variables at this context's point in code
+      execution, specified as an array whose items each correspond to a unique
+      variable.
+
+      Items in this array **should not** have duplicate non-empty `identifier`
+      values except where high-level language semantics require it. Where
+      possible, use other mechanisms provided by this format to indicate that
+      an identifier's corresponding variable is ambiguous.
     items:
-      type: object
-      properties:
-        identifier:
-          type: string
-        declaration:
-          $ref: "schema:ethdebug/format/materials/source-range"
-        type:
-          $ref: "schema:ethdebug/format/type"
-        pointer:
-          $ref: "schema:ethdebug/format/pointer"
-      required:
-        - identifier
-        - declaration
-        - type
+      $ref: "schema:ethdebug/format/context/variable"
+    additionalItems: false
+
+  code:
+    $ref: "schema:ethdebug/format/materials/source-range"
 
 minProperties: 1
 additionalProperties: false
@@ -44,3 +47,9 @@ examples:
         pointer:
           location: storage
           slot: 0
+    code:
+      source:
+        id: 5
+      range:
+        offset: 68
+        length: 16
