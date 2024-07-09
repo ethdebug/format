@@ -156,6 +156,15 @@ export const schemaIndex: SchemaIndex = {
     }
   })).reduce((a, b) => ({ ...a, ...b }), {}),
 
+  "schema:ethdebug/format/context": {
+    title: "ethdebug/format/context schema",
+    href: "/spec/context"
+  },
+
+  "schema:ethdebug/format/context/variable": {
+    title: "Variable context schema",
+    href: "/spec/context/variable"
+  },
 
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",
@@ -175,5 +184,10 @@ export const schemaIndex: SchemaIndex = {
   "schema:ethdebug/format/materials/source": {
     title: "Source schema",
     href: "/spec/materials/source"
+  },
+
+  "schema:ethdebug/format/materials/source-range": {
+    title: "Source range schema",
+    href: "/spec/materials/source-range"
   },
 };
