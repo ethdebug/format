@@ -17,19 +17,7 @@ properties:
     type: string
 
   variables:
-    type: array
-    description: |
-      Information about known variables at this context's point in code
-      execution, specified as an array whose items each correspond to a unique
-      variable.
-
-      Items in this array **should not** have duplicate non-empty `identifier`
-      values except where high-level language semantics require it. Where
-      possible, use other mechanisms provided by this format to indicate that
-      an identifier's corresponding variable is ambiguous.
-    items:
-      $ref: "schema:ethdebug/format/context/variable"
-    additionalItems: false
+    $ref: "schema:ethdebug/format/context/variables"
 
   code:
     $ref: "schema:ethdebug/format/materials/source-range"
