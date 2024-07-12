@@ -4,6 +4,7 @@
     "packages/*"
   ],
   "scripts": {
+    "bundle": "tsx ./bin/bundle-schema.ts",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "test:debug": "open -a \"Brave Browser\" brave://inspect && node --experimental-vm-modules --nolazy --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --colors --verbose",
     "start": "./bin/start",
@@ -11,10 +12,12 @@
     "postinstall": "lerna run prepare"
   },
   "devDependencies": {
+    "@hyperjump/json-schema": "1.6.7",
     "concurrently": "^8.2.2",
     "jest": "^29.7.0",
     "lerna": "^8.0.2",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "tsx": "^4.16.2"
   },
   "dependencies": {
     "@apideck/better-ajv-errors": "^0.3.6"
