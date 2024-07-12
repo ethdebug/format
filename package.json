@@ -3,7 +3,6 @@
   "workspaces": [
     "packages/*"
   ],
-  "type": "module",
   "scripts": {
     "bundle": "tsx ./bin/bundle-schema.ts",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
