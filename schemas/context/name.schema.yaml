@@ -1,0 +1,18 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/context/name"
+
+title: ethdebug/format/context/name
+description: |
+  The name of the context, for use in disambiguating future instruction
+  annotations that specify one of several possible contexts based on
+  information only available at runtime.
+
+type: object
+properties:
+  name:
+    type: string
+required:
+  - name
+
+examples:
+  - name: "Array<T=bytes32>"

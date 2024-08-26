@@ -12,24 +12,31 @@ description: |
   possible, use other mechanisms provided by this format to indicate that
   an identifier's corresponding variable is ambiguous.
 
-type: array
-items:
-  $ref: "#/$defs/Variable"
-additionalItems: false
+type: object
+properties:
+  variables:
+    type: array
+    items:
+      $ref: "#/$defs/Variable"
+    minItems: 1
+    additionalItems: false
+required:
+  - variables
 
 $examples:
-  - identifier: x
-    declaration:
-      source:
-        id: 5
-      range:
-        offset: 10
-        length: 56
-    type:
-      kind: string
-    pointer:
-      location: storage
-      slot: 0
+  - variables:
+      identifier: x
+      declaration:
+        source:
+          id: 5
+        range:
+          offset: 10
+          length: 56
+      type:
+        kind: string
+      pointer:
+        location: storage
+        slot: 0
 
 $defs:
   Variable:
