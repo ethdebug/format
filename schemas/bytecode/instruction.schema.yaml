@@ -30,6 +30,8 @@ properties:
       - mnemonic
 
   context:
+    description: |
+      The context known to exist following the execution of this instruction.
     $ref: "schema:ethdebug/format/context"
 
 required:
