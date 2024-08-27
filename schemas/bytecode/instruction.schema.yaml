@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/bytecode/instruction"
+
+title: ethdebug/format/bytecode/instruction
+description: |
+  A schema for representing the information pertaining to a particular instruction
+  in machine code.
+
+type: object
+
+properties:
+  operation:
+    title: Machine operation information
+    type: object
+    properties:
+      mnemonic:
+        description: The mnemonic operation code (PUSH1, e.g.)
+        type: string
+
+      arguments:
+        description: The immediate arguments to the operation, if relevant.
+        type: array
+        minItems: 1
+        items:
+          description: |
+            An immediate value, specified as a `0x`-prefixed hexadecimal string.
+          type: string
+          pattern: "^0x[0-9a-fA-F]{1,}$"
+    required:
+      - mnemonic
+
+  context:
+    $ref: "schema:ethdebug/format/context"
+
+required:
+  - context
+
+examples:
+  - context:
+      code:
+        source:
+          id: 5
+        range:
+          offset: 10
+          length: 30

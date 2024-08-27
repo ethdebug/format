@@ -1,0 +1,56 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/bytecode"
+
+title: ethdebug/format/bytecode
+description: |
+  A schema for representing the information pertaining to a particular bytecode
+  for a contract.
+
+type: object
+
+properties:
+  instructions:
+    type: object
+    description: |
+      A mapping from instruction byte offset to instruction annotation.
+
+      For legacy contract bytecode (non-EOF), keys in this mapping are
+      equivalent to the instruction's program counter. For EOF bytecode, keys
+      in this mapping are byte offsets relative to _the start of the
+      container_ (since program counters within EOF are relative to the start of
+      individual code sections within the container).
+
+      Keys in this mapping **must** be specified as `0x`-prefixed hexadecimal
+      strings. Keys **may** vary in bytes length and avoid left-padding with
+      zeroes, except that keys **must** represent at least one byte (`0x` is
+      not allowed).
+
+    patternProperties:
+      "^0x[0-9a-fA-F]{1,}$":
+        $ref: "schema:ethdebug/format/bytecode/instruction"
+
+    additionalProperties: false
+
+required:
+  - instructions
+
+examples:
+  - instructions:
+      "0x00":
+        operation:
+          mnemonic: PUSH1
+          arguments: ["0x60"]
+        context:
+          variables:
+            - identifier: paused
+              declaration:
+                source:
+                  id: 5
+                range:
+                  offset: 10
+                  length: 30
+              type:
+                kind: bool
+              pointer:
+                location: storage
+                slot: 0

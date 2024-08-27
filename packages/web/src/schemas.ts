@@ -173,15 +173,27 @@ export const schemaIndex: SchemaIndex = {
     href: "/spec/context"
   },
 
-  "schema:ethdebug/format/context/code": {
-    title: "Code context schema",
-    href: "/spec/context/code"
+  ...([
+    "code",
+    "variables"
+  ].map(name => ({
+    [`schema:ethdebug/format/context/${name}`]: {
+      href: `/spec/context/${name}`
+    },
+  })).reduce((a, b) => ({ ...a, ...b }), {})),
+
+  "schema:ethdebug/format/bytecode": {
+    title: "ethdebug/format/bytecode schema",
+    href: "/spec/bytecode"
   },
 
-  "schema:ethdebug/format/context/variables": {
-    title: "Variables context schema",
-    href: "/spec/context/variables"
-  },
+  ...([
+    "instruction"
+  ].map(name => ({
+    [`schema:ethdebug/format/bytecode/${name}`]: {
+      href: `/spec/bytecode/${name}`
+    },
+  })).reduce((a, b) => ({ ...a, ...b }), {})),
 
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",
