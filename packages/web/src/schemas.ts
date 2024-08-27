@@ -173,6 +173,16 @@ export const schemaIndex: SchemaIndex = {
     href: "/spec/context"
   },
 
+  "schema:ethdebug/format/context/code": {
+    title: "Code context schema",
+    href: "/spec/context/code"
+  },
+
+  "schema:ethdebug/format/context/variables": {
+    title: "Variables context schema",
+    href: "/spec/context/variables"
+  },
+
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",
     href: "/spec/materials/id#identifier-schema"

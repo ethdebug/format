@@ -10,7 +10,6 @@ type: object
 
 anyOf:
   - $ref: "schema:ethdebug/format/context/code"
-  - $ref: "schema:ethdebug/format/context/name"
   - $ref: "schema:ethdebug/format/context/variables"
 
 minProperties: 1
