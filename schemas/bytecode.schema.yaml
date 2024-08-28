@@ -48,7 +48,10 @@ required:
   - instructions
 
 examples:
-  - instructions:
+  - types:
+      "my-bool":
+        kind: bool
+    instructions:
       "0x00":
         operation:
           mnemonic: PUSH1
@@ -63,7 +66,7 @@ examples:
                   offset: 10
                   length: 30
               type:
-                kind: bool
+                id: "my-bool"
               pointer:
                 location: storage
                 slot: 0

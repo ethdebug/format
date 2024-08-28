@@ -23,20 +23,20 @@ properties:
 required:
   - variables
 
-$examples:
+examples:
   - variables:
-      identifier: x
-      declaration:
-        source:
-          id: 5
-        range:
-          offset: 10
-          length: 56
-      type:
-        kind: string
-      pointer:
-        location: storage
-        slot: 0
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56
+        type:
+          kind: string
+        pointer:
+          location: storage
+          slot: 0
 
 $defs:
   Variable:
@@ -58,8 +58,12 @@ $defs:
 
       type:
         description: |
-          The variable's static type, if it exists.
-        $ref: "schema:ethdebug/format/type"
+          The variable's static type, if it exists. This **must** be specified
+          either as a full **ethdebug/format/type** representation, or an
+          `{ "id": "..." }` type reference object.
+        oneOf:
+          - $ref: "schema:ethdebug/format/type"
+          - $ref: "schema:ethdebug/format/type/reference"
 
       pointer:
         description: |
