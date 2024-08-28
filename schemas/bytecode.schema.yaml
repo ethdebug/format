@@ -30,12 +30,19 @@ properties:
       strings. Keys **may** vary in bytes length and avoid left-padding with
       zeroes, except that keys **must** represent at least one byte (`0x` is
       not allowed).
-
     patternProperties:
       "^0x[0-9a-fA-F]{1,}$":
         $ref: "schema:ethdebug/format/bytecode/instruction"
-
     additionalProperties: false
+
+  types:
+    type: object
+    description: |
+      A collection of types by name identifier. This field is optional and
+      **may** be used by compilers that wish to minimize the size of output
+      debugging data by de-duplicating type representations.
+    additionalProperties:
+      $ref: "schema:ethdebug/format/type"
 
 required:
   - instructions
