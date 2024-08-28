@@ -1,0 +1,21 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/reference"
+
+title: ethdebug/format/pointer/collection/reference
+description: |
+  A pointer by named reference to a pointer template (defined elsewhere).
+
+type: object
+
+properties:
+  template:
+    title: Template identifier
+    $ref: "schema:ethdebug/format/pointer/identifier"
+
+required:
+  - template
+
+additionalProperties: false
+
+examples:
+  - template: "string-storage-pointer"

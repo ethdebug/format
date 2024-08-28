@@ -8,34 +8,33 @@ type: object
 
 allOf:
   - oneOf:
-      - required:
-          - group
-      - required:
-          - list
-      - required:
-          - if
-      - required:
-          - define
+      - required: [group]
+      - required: [list]
+      - required: [if]
+      - required: [define]
+      - required: [template]
+
   - if:
-      required:
-        - group
+      required: [group]
     then:
       $ref: "schema:ethdebug/format/pointer/collection/group"
 
   - if:
-      required:
-        - list
+      required: [list]
     then:
       $ref: "schema:ethdebug/format/pointer/collection/list"
 
   - if:
-      required:
-        - if
+      required: [if]
     then:
       $ref: "schema:ethdebug/format/pointer/collection/conditional"
 
   - if:
-      required:
-        - define
+      required: [define]
     then:
       $ref: "schema:ethdebug/format/pointer/collection/scope"
+
+  - if:
+      required: [template]
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/reference"
