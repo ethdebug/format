@@ -16,24 +16,12 @@ properties:
     $ref: "schema:ethdebug/format/context"
 
   instructions:
-    type: object
+    type: array
     description: |
-      A mapping from instruction byte offset to instruction annotation.
-
-      For legacy contract bytecode (non-EOF), keys in this mapping are
-      equivalent to the instruction's program counter. For EOF bytecode, keys
-      in this mapping are byte offsets relative to _the start of the
-      container_ (since program counters within EOF are relative to the start of
-      individual code sections within the container).
-
-      Keys in this mapping **must** be specified as `0x`-prefixed hexadecimal
-      strings. Keys **may** vary in bytes length and avoid left-padding with
-      zeroes, except that keys **must** represent at least one byte (`0x` is
-      not allowed).
-    patternProperties:
-      "^0x[0-9a-fA-F]{1,}$":
-        $ref: "schema:ethdebug/format/bytecode/instruction"
-    additionalProperties: false
+      The full array of instructions for the bytecode.
+    items:
+      $ref: "schema:ethdebug/format/bytecode/instruction"
+    additionalItems: false
 
   types:
     type: object
@@ -52,7 +40,7 @@ examples:
       "my-bool":
         kind: bool
     instructions:
-      "0x00":
+      - offset: 0
         operation:
           mnemonic: PUSH1
           arguments: ["0x60"]

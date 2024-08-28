@@ -3,12 +3,27 @@ $id: "schema:ethdebug/format/bytecode/instruction"
 
 title: ethdebug/format/bytecode/instruction
 description: |
-  A schema for representing the information pertaining to a particular instruction
-  in machine code.
+  A schema for representing the information pertaining to a particular
+  instruction in machine code.
 
 type: object
 
 properties:
+  offset:
+    title: Instruction byte offset
+    description: |
+      The byte offset where the instruction begins within the bytecode.
+
+      For legacy contract bytecode (non-EOF), this value is equivalent to the
+      instruction's program counter. For EOF bytecode, this value **must** be
+      the offset from the start of the container, not the start of a particular
+      code section within that container.
+    oneOf:
+      - type: number
+        minimum: 0
+      - type: string
+        pattern: "^0x[0-9a-fA-F]{1,}$"
+
   operation:
     title: Machine operation information
     type: object
@@ -35,10 +50,15 @@ properties:
     $ref: "schema:ethdebug/format/context"
 
 required:
+  - offset
   - context
 
 examples:
-  - context:
+  - offset: 0
+    operation:
+      mnemonic: "PUSH1"
+      arguments: ["0x60"]
+    context:
       code:
         source:
           id: 5
