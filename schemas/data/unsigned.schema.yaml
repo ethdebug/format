@@ -1,0 +1,13 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/data/unsigned"
+
+title: ethdebug/format/data/unsigned
+description: |
+  A non-negative integer encoded as a JSON number.
+
+type: integer
+minimum: 0
+
+examples:
+  - 0
+  - 100

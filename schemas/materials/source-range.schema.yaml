@@ -30,11 +30,11 @@ properties:
     properties:
       offset:
         description: Byte offset at beginning of range
-        type: number
+        $ref: "schema:ethdebug/format/data/unsigned"
 
       length:
         description: Number of bytes contained in range
-        type: number
+        $ref: "schema:ethdebug/format/data/unsigned"
 
     unevaluatedProperties: false
 

@@ -22,14 +22,12 @@ $defs:
       An unsigned number or a `0x`-prefixed string of hexadecimal digits
 
     oneOf:
-      - type: integer
-        description: A non-negative integer literal
-        min: 0
+      - description: A non-negative integer literal
+        $ref: "schema:ethdebug/format/data/unsigned"
 
-      - type: string
-        description: |
+      - description: |
           A `0x`-prefixed hexadecimal string representing literal bytes
-        pattern: "^0x[0-9a-fA-F]{1,}$"
+        $ref: "schema:ethdebug/format/data/hex"
 
     examples:
       - 5

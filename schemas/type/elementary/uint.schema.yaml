@@ -12,7 +12,7 @@ properties:
   kind:
     const: uint
   bits:
-    type: number
+    type: integer
     multipleOf: 8
     minimum: 8
     maximum: 256
