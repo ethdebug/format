@@ -116,6 +116,10 @@ export const schemaIndex: SchemaIndex = {
     href: "/spec/pointer/expression"
   },
 
+  "schema:ethdebug/format/pointer/template": {
+    href: "/spec/pointer/template"
+  },
+
   ...Object.entries({
     Literal: {
       title: "Literal values schema",
