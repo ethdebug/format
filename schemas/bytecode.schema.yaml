@@ -32,6 +32,9 @@ properties:
     additionalProperties:
       $ref: "schema:ethdebug/format/type"
 
+  pointers:
+    $ref: "schema:ethdebug/format/pointer/templates"
+
 required:
   - instructions
 
