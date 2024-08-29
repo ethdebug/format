@@ -42,6 +42,12 @@ examples:
   - types:
       "my-bool":
         kind: bool
+    pointers:
+      "my-storage-bool":
+        expect: ["my-slot"]
+        for:
+          location: storage
+          slot: "my-slot"
     instructions:
       - offset: 0
         operation:
@@ -59,5 +65,7 @@ examples:
               type:
                 id: "my-bool"
               pointer:
-                location: storage
-                slot: 0
+                define:
+                  "my-slot": 0
+                in:
+                  template: "my-storage-bool"
