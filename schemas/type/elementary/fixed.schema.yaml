@@ -12,12 +12,12 @@ properties:
   kind:
     const: fixed
   bits:
-    type: number
+    type: integer
     multipleOf: 8
     minimum: 8
     maximum: 256
   places:
-    type: number
+    type: integer
     description:
       How many decimal places, implying that a raw value `v` of this type
       should be interpreted as `v / (10**places)`

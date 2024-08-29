@@ -156,6 +156,13 @@ export const schemaIndex: SchemaIndex = {
     }
   })).reduce((a, b) => ({ ...a, ...b }), {}),
 
+  ...(
+    ["hex", "unsigned"].map(name => ({
+      [`schema:ethdebug/format/data/${name}`]: {
+        href: `/spec/data/${name}`
+      }
+    })).reduce((a, b) => ({ ...a, ...b }), {})
+  ),
 
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",

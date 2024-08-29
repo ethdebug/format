@@ -13,11 +13,10 @@ properties:
   kind:
     const: bytes
   size:
-    type: number
     description:
       The number of bytes in the bytes string. If this field is omitted, this
       type is the dynamic bytes string type.
-    minimum: 1
+    $ref: "schema:ethdebug/format/data/unsigned"
 required:
   - kind
 examples:
