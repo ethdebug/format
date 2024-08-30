@@ -24,16 +24,24 @@ properties:
     additionalItems: false
 
   types:
-    type: object
+    title: Types by name
     description: |
       A collection of types by name identifier. This field is optional and
       **may** be used by compilers that wish to minimize the size of output
       debugging data by de-duplicating type representations.
+    type: object
     additionalProperties:
       $ref: "schema:ethdebug/format/type"
 
   pointers:
-    $ref: "schema:ethdebug/format/pointer/templates"
+    title: Pointers by name
+    description: |
+      A collection of pointer templates by name identifier. This field is
+      optional and **may** be used by compilers that wish to minimize the size
+      of output debugging data by de-duplicating type representations.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/template"
 
 required:
   - instructions
