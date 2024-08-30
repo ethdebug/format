@@ -29,6 +29,10 @@ properties:
       A collection of types by name identifier. This field is optional and
       **may** be used by compilers that wish to minimize the size of output
       debugging data by de-duplicating type representations.
+
+      **Note** that this field may duplicate types used by other bytecode
+      resources. To match the data model more closely in the future, this field
+      may be moved to another schema in this format.
     type: object
     additionalProperties:
       $ref: "schema:ethdebug/format/type"
@@ -39,6 +43,10 @@ properties:
       A collection of pointer templates by name identifier. This field is
       optional and **may** be used by compilers that wish to minimize the size
       of output debugging data by de-duplicating type representations.
+
+      **Note** that this field may duplicate pointers used by other bytecode
+      resources. To match the data model more closely in the future, this field
+      may be moved to another schema in this format.
     type: object
     additionalProperties:
       $ref: "schema:ethdebug/format/pointer/template"
