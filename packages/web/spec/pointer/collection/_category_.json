@@ -1,8 +1,5 @@
 {
   "label": "Collections",
   "position": 5,
-  "link": {
-    "type": "generated-index",
-    "description": "Work-in-progress formal schema for ethdebug format"
-  }
+  "link": null
 }
