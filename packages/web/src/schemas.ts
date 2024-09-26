@@ -168,8 +168,8 @@ export const schemaIndex: SchemaIndex = {
     })).reduce((a, b) => ({ ...a, ...b }), {})
   ),
 
-  "schema:ethdebug/format/context": {
-    title: "ethdebug/format/context schema",
+  "schema:ethdebug/format/program/context": {
+    title: "ethdebug/format/program/context schema",
     href: "/spec/context"
   },
 
@@ -177,21 +177,21 @@ export const schemaIndex: SchemaIndex = {
     "code",
     "variables"
   ].map(name => ({
-    [`schema:ethdebug/format/context/${name}`]: {
+    [`schema:ethdebug/format/program/context/${name}`]: {
       href: `/spec/context/${name}`
     },
   })).reduce((a, b) => ({ ...a, ...b }), {})),
 
-  "schema:ethdebug/format/bytecode": {
-    title: "ethdebug/format/bytecode schema",
-    href: "/spec/bytecode"
+  "schema:ethdebug/format/program": {
+    title: "ethdebug/format/program schema",
+    href: "/spec/program"
   },
 
   ...([
     "instruction"
   ].map(name => ({
-    [`schema:ethdebug/format/bytecode/${name}`]: {
-      href: `/spec/bytecode/${name}`
+    [`schema:ethdebug/format/program/${name}`]: {
+      href: `/spec/program/${name}`
     },
   })).reduce((a, b) => ({ ...a, ...b }), {})),
 

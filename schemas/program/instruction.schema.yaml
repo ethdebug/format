@@ -1,7 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/bytecode/instruction"
+$id: "schema:ethdebug/format/program/instruction"
 
-title: ethdebug/format/bytecode/instruction
+title: ethdebug/format/program/instruction
 description: |
   A schema for representing the information pertaining to a particular
   instruction in machine code.
@@ -45,7 +45,7 @@ properties:
   context:
     description: |
       The context known to exist following the execution of this instruction.
-    $ref: "schema:ethdebug/format/context"
+    $ref: "schema:ethdebug/format/program/context"
 
 required:
   - offset

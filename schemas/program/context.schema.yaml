@@ -1,7 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/context"
+$id: "schema:ethdebug/format/program/context"
 
-title: ethdebug/format/context
+title: ethdebug/format/program/context
 description: |
   A schema for representing the information known at compile-time about the
   high-level language concerns at a particular point in code execution.
@@ -9,8 +9,8 @@ description: |
 type: object
 
 anyOf:
-  - $ref: "schema:ethdebug/format/context/code"
-  - $ref: "schema:ethdebug/format/context/variables"
+  - $ref: "schema:ethdebug/format/program/context/code"
+  - $ref: "schema:ethdebug/format/program/context/variables"
 
 minProperties: 1
 unevaluatedProperties: false

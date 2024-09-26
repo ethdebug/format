@@ -1,7 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/context/code"
+$id: "schema:ethdebug/format/program/context/code"
 
-title: ethdebug/format/context/code
+title: ethdebug/format/program/context/code
 description: |
   Information about the source code range corresponding to this point in
   machine execution.

@@ -59,3 +59,22 @@
   text-decoration: underline !important;
   background-color: inherit !important;
 }
+
+.theme-doc-sidebar-item-category.root-schema > * > a::after {
+  margin-left: 0.5em;
+  content: "Root schema";
+  width: min-content;
+  font-size: 66%;
+  font-weight: var(--ifm-font-weight-bold);
+  line-height: 1;
+  text-transform: uppercase;
+  background-color: var(--ifm-badge-background-color);
+  border: var(--ifm-badge-border-width) solid var(--ifm-badge-border-color);
+  border-radius: var(--ifm-badge-border-radius);
+  color: var(--ifm-color-primary-darkest);
+  padding: var(--ifm-badge-padding-vertical) var(--ifrm-badge-padding-horizontal);
+  transform: none;
+
+
+
+}
