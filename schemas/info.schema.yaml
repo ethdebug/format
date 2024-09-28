@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/info"
+
+title: ethdebug/format/info
+description: |
+  Objects in this schema organize debugging data relating to a particular
+  compilation, including **ethdebug/format/type** and
+  **ethdebug/format/pointer** records by name identifiers.
+
+  Objects in this schema **may** contain debugging information about individual
+  sources, contracts, and compiled bytecodes, to accommodate use cases that
+  benefit from debugging data being collected together in a single JSON object.
+type: object
+properties:
+  types:
+    title: Types by name
+    description: |
+      A collection of types by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/type"
+
+  pointers:
+    title: Pointer templates by name
+    description: |
+      A collection of pointer templates by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/template"
+
+  compilation:
+    $ref: "schema:ethdebug/format/materials/compilation"
+
+  programs:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/program"
+
+required:
+  - types
+  - pointers
+
+examples:
+  - types: {}
+    pointers: {}

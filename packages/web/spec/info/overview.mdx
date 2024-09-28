@@ -1,0 +1,52 @@
+---
+sidebar_position: 1
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Overview
+
+:::tip[Summary]
+
+Objects in the **ethdebug/format/info** schema organize debugging data
+associated with a particular compilation. This includes lookup tables of
+types and pointers by their unique name identifiers, as well as optionally may
+include additional information such as complete program listings and compiled
+source contents.
+
+:::
+
+This schema serves as a root schema, in that it (a) aggregates
+all other schemas in this format (either directly or indirectly), and (b) in
+that no other schema aggregates it.
+
+This schema serves as a suitable target for
+[JSON Schema bundling](https://json-schema.org/understanding-json-schema/structuring#bundling),
+e.g., for implementations that want to reduce complexity around validating
+**ethdebug/format** records and don't want to handle reference resolution
+across schema YAML files.
+
+:::warning
+
+**Note**, however, that "root schema" does not imply "objects in the schema
+always contain all relevant debugging data". Due to widespread practice among
+EVM language compilers to produce their own structured JSON output, objects in
+this schema are not necessarily complete records of debug information.
+
+Compilers may choose to divide **distinct portions of debugging data** into
+**distinct sections of compiler JSON output**. For instance, it likely makes
+sense for a compiler to produce debugging data about a particular contract's
+bytecode alongside that contract bytecode's other output information.
+
+At least until tooling accommodates this concern, debugging implementers
+**must** be aware that they will likely need to aggregate debugging data from
+multiple sections of each supported compiler's own output format.
+
+:::
+
+**However**, this schema _is suitable_ for representing a complete and
+standalone debugging data record for a particular compilation, but
+note the optionality of fields such as `compilation` and `programs`.
+Implementations looking to produce such self-contained debugging data objects
+should study the structure of these (and any other optional fields) and ensure
+that such fields are fully populated.

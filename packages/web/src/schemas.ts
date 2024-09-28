@@ -168,6 +168,33 @@ export const schemaIndex: SchemaIndex = {
     })).reduce((a, b) => ({ ...a, ...b }), {})
   ),
 
+  "schema:ethdebug/format/program/context": {
+    title: "ethdebug/format/program/context schema",
+    href: "/spec/context"
+  },
+
+  ...([
+    "code",
+    "variables"
+  ].map(name => ({
+    [`schema:ethdebug/format/program/context/${name}`]: {
+      href: `/spec/context/${name}`
+    },
+  })).reduce((a, b) => ({ ...a, ...b }), {})),
+
+  "schema:ethdebug/format/program": {
+    title: "ethdebug/format/program schema",
+    href: "/spec/program"
+  },
+
+  ...([
+    "instruction"
+  ].map(name => ({
+    [`schema:ethdebug/format/program/${name}`]: {
+      href: `/spec/program/${name}`
+    },
+  })).reduce((a, b) => ({ ...a, ...b }), {})),
+
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",
     href: "/spec/materials/id#identifier-schema"
@@ -186,5 +213,10 @@ export const schemaIndex: SchemaIndex = {
   "schema:ethdebug/format/materials/source": {
     title: "Source schema",
     href: "/spec/materials/source"
+  },
+
+  "schema:ethdebug/format/materials/source-range": {
+    title: "Source range schema",
+    href: "/spec/materials/source-range"
   },
 };
