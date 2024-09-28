@@ -12,6 +12,7 @@ import { adjustStackLength, evaluateRegion } from "./region.js";
  * Contextual information for use within a pointer dereference process
  */
 export interface ProcessOptions {
+  templates: Pointer.Templates;
   state: Machine.State;
   stackLengthChange: bigint;
   regions: Record<string, Cursor.Region>;
@@ -54,6 +55,10 @@ export async function* processPointer(
 
   if (Pointer.Collection.isScope(collection)) {
     return yield* processScope(collection, options);
+  }
+
+  if (Pointer.Collection.isReference(collection)) {
+    return yield* processReference(collection, options);
   }
 
   console.error("%s", JSON.stringify(pointer, undefined, 2));
@@ -148,5 +153,43 @@ async function* processScope(
   return [
     Memo.saveVariables(newVariables),
     Memo.dereferencePointer(in_)
+  ];
+}
+
+async function* processReference(
+  collection: Pointer.Collection.Reference,
+  options: ProcessOptions
+): Process {
+  const { template: templateName } = collection;
+
+  const { templates, variables } = options;
+
+  const template = templates[templateName];
+
+  if (!template) {
+    throw new Error(
+      `Unknown pointer template named ${templateName}`
+    );
+  }
+
+  const {
+    expect: expectedVariables,
+    for: pointer
+  } = template;
+
+  const definedVariables = new Set(Object.keys(variables));
+  const missingVariables = expectedVariables
+    .filter(identifier => !definedVariables.has(identifier));
+
+  if (missingVariables.length > 0) {
+    throw new Error([
+      `Invalid reference to template named ${templateName}; missing expected `,
+      `variables with identifiers: ${missingVariables.join(", ")}. `,
+      `Please ensure these variables are defined prior to this reference.`
+    ].join(""));
+  }
+
+  return [
+    Memo.dereferencePointer(pointer)
   ];
 }

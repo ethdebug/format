@@ -250,4 +250,35 @@ describe("dereference", () => {
     expect(regions[0].offset).toEqual(Data.fromNumber(0));
     expect(regions[0].length).toEqual(Data.fromNumber(32));
   });
+
+  it("works for templates", async () => {
+    const templates: Pointer.Templates = {
+      "memory-range": {
+        expect: ["offset", "length"],
+        for: {
+          location: "memory",
+          offset: "offset",
+          length: "length"
+        }
+      }
+    };
+
+    const pointer: Pointer = {
+      define: {
+        "offset": 0,
+        "length": 32
+      },
+      in: {
+        template: "memory-range"
+      }
+    };
+
+    const cursor = await dereference(pointer, { templates });
+
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].offset).toEqual(Data.fromNumber(0));
+    expect(regions[0].length).toEqual(Data.fromNumber(32));
+  });
 });

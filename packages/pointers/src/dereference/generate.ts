@@ -11,6 +11,7 @@ import { processPointer, type ProcessOptions } from "./process.js";
  * for a particular pointer at runtime.
  */
 export interface GenerateRegionsOptions {
+  templates: Pointer.Templates;
   state: Machine.State;
   initialStackLength: bigint;
 }
@@ -62,6 +63,7 @@ export async function* generateRegions(
 }
 
 async function initializeProcessOptions({
+  templates,
   state,
   initialStackLength
 }: GenerateRegionsOptions): Promise<ProcessOptions> {
@@ -72,6 +74,7 @@ async function initializeProcessOptions({
   const variables: Record<string, Data> = {};
 
   return {
+    templates,
     state,
     stackLengthChange,
     regions,

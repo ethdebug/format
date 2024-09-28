@@ -176,6 +176,12 @@ describe("type guards", () => {
       },
       guard: isPointer
     },
+    {
+      schema: {
+        id: "schema:ethdebug/format/pointer/template"
+      },
+      guard: Pointer.isTemplate
+    },
   ] as const;
 
   it.each(schemaGuards)("matches its examples", ({
