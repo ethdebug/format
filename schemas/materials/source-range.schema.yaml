@@ -26,10 +26,15 @@ properties:
     $ref: "schema:ethdebug/format/materials/reference"
 
   range:
+    title: Bytes range within source contents
+    description: |
+      Ranges that span the entire source contents **may** omit this field
+      as a shorthand. This field is otherwise **required**.
     type: object
     properties:
       offset:
-        description: Byte offset at beginning of range
+        description: |
+          Byte offset at beginning of range.
         $ref: "schema:ethdebug/format/data/unsigned"
 
       length:
@@ -46,7 +51,6 @@ unevaluatedProperties: false
 
 required:
   - source
-  - range
 
 examples:
   - source:
