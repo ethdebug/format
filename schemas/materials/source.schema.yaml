@@ -95,5 +95,4 @@ examples:
           }
       }
 
-    language:
-      Solidity
+    language: Solidity
