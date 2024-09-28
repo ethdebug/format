@@ -1,0 +1,22 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/code"
+
+title: ethdebug/format/program/context/code
+description: |
+  Information about the source code range corresponding to this point in
+  machine execution.
+
+type: object
+properties:
+  code:
+    $ref: "schema:ethdebug/format/materials/source-range"
+required:
+  - code
+
+examples:
+  - code:
+      source:
+        id: 5
+      range:
+        offset: 68
+        length: 16
