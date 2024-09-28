@@ -129,13 +129,16 @@ export namespace Pointer {
     | Collection.Group
     | Collection.List
     | Collection.Conditional
-    | Collection.Scope;
+    | Collection.Scope
+    | Collection.Reference;
+
   export const isCollection = (value: unknown): value is Collection =>
     [
       Collection.isGroup,
       Collection.isList,
       Collection.isConditional,
-      Collection.isScope
+      Collection.isScope,
+      Collection.isReference
     ].some(guard => guard(value));
 
   export namespace Collection {
@@ -202,6 +205,16 @@ export namespace Pointer {
         Object.keys(value.define).every(key => isIdentifier(key)) &&
         "in" in value &&
         isPointer(value.in);
+
+    export interface Reference {
+      template: string;
+    }
+
+    export const isReference = (value: unknown): value is Reference =>
+      !!value &&
+        typeof value === "object" &&
+        "template" in value &&
+        typeof value.template === "string" && !!value.template
   }
 
   export type Expression =
@@ -421,8 +434,32 @@ export namespace Pointer {
           "$wordsized" in value &&
           typeof value.$wordsized !== "undefined" &&
           isExpression(value.$wordsized);
-
-
     }
   }
+
+  export interface Templates {
+    [identifier: string]: Pointer.Template;
+  }
+
+  export const isTemplates = (value: unknown): value is Templates =>
+    !!value &&
+      typeof value === "object" &&
+      Object.keys(value).every(isIdentifier) &&
+      Object.values(value).every(isTemplate);
+
+  export interface Template {
+    expect: string[];
+    for: Pointer;
+  }
+
+  export const isTemplate = (value: unknown): value is Template =>
+    !!value &&
+      typeof value === "object" &&
+      Object.keys(value).length === 2 &&
+      "expect" in value &&
+      value.expect instanceof Array &&
+      value.expect.every(isIdentifier) &&
+      "for" in value &&
+      isPointer(value.for);
+
 }

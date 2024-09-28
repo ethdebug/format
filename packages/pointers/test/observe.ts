@@ -12,6 +12,11 @@ export interface ObserveTraceOptions<V> {
   pointer: Pointer;
 
   /**
+   * Pointer templates that may be referenced by the given pointer
+   */
+  templates?: Pointer.Templates;
+
+  /**
    * The necessary metadata and the Solidity source code for a contract whose
    * `constructor()` manages the lifecycle of the variable that the specified
    * `pointer` corresponds to
@@ -58,6 +63,7 @@ export interface ObserveTraceOptions<V> {
  */
 export async function observeTrace<V>({
   pointer,
+  templates = {},
   compileOptions,
   observe,
   equals = (a, b) => a === b,
@@ -89,7 +95,7 @@ export async function observeTrace<V>({
     }
 
     if (!cursor) {
-      cursor = await dereference(pointer, { state });
+      cursor = await dereference(pointer, { state, templates });
     }
 
     const { regions, read } = await cursor.view(state);

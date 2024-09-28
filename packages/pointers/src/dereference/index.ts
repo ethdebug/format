@@ -11,6 +11,7 @@ export interface DereferenceOptions {
    * Required for any pointers that reference the stack.
    */
   state?: Machine.State;
+  templates?: Pointer.Templates
 }
 
 /**
@@ -43,11 +44,15 @@ export async function dereference(
  * `generateRegions()` will potentially need.
  */
 async function initializeGenerateRegionsOptions({
+  templates = {},
   state: initialState
 }: DereferenceOptions): Promise<Omit<GenerateRegionsOptions, "state">> {
   const initialStackLength = initialState
     ? await initialState.stack.length
     : 0n;
 
-  return { initialStackLength };
+  return {
+    templates,
+    initialStackLength
+  };
 }
