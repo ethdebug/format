@@ -1,0 +1,198 @@
+---
+sidebar_position: 3
+---
+
+import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents, Opcodes } from "@site/src/components/ProgramExample";
+
+# Example program
+
+<ProgramExampleContextProvider
+  sourcePath="PaidIncrementer.fnoo"
+  sourceContents={`name PaidIncrementer;
+
+storage {
+  [0] storedValue: uint256;
+}
+
+code {
+  if (msg.callvalue < 3 finney) {
+    return;
+  }
+
+  let localValue = storedValue;
+  localValue = localValue + 1;
+  storedValue = localValue;
+}
+`}
+  instructions={[
+    {
+      operation: {
+        mnemonic: "PUSH6",
+        arguments: ["0x02ba7def3000"],
+        comment: "3 finney"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("3 finney")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "CALLVALUE"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("msg.callvalue")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "LT"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("msg.callvalue < 3 finney")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH1",
+        arguments: ["0x13"]
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("if (msg.callvalue < 3 finney) {\n    return;\n  }")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "JUMPI"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("if (msg.callvalue < 3 finney) {\n    return;\n  }")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH0",
+        comment: "begin paid incrementing"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("storedValue")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "SLOAD"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("storedValue")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH1",
+        arguments: ["0x01"]
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("1")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "ADD"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("localValue = localValue + 1;")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH0"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("storedValue = localValue;")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "SSTORE"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("storedValue = localValue;")
+        }
+      })
+    },
+    {
+      operation: {
+        mnemonic: "JUMPDEST",
+        comment: "skip to here if not enough paid"
+      },
+      context: ({ source, rangeFor }) => ({
+        code: {
+          source,
+          range: rangeFor("return;")
+        }
+      })
+    }
+  ]}
+>
+
+
+This page helps illustrate this program schema's
+[key concepts](/spec/program/concepts) by offering a fictional
+pseudo-code example and its hypothetical compiled program.
+
+
+## Source code
+
+Assume this fictional high-level language expects exactly one contract per
+source file. The following code might be used to define a contract that
+increments a state variable if the caller pays at least 1 finney (0.001
+ETH).
+
+<SourceContents />
+
+This contract's storage layout has exactly one record: a `uint256` value
+named `storedValue` at slot `0`.
+
+## Compiled opcodes
+
+Because fictional optimizers have no theoretical limits, assume the source
+contract above produced bytecode equivalent to the following brief sequence of
+operations, listed by their offsets:
+
+<Opcodes />
+
+
+## Program example
+
+</ProgramExampleContextProvider>
