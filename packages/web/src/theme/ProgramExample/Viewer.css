@@ -1,0 +1,15 @@
+
+.viewer-row {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: stretch;
+
+  width: 100%;
+  gap: 5px;
+
+}
+
+.viewer-row > * {
+  flex-grow:1;
+}

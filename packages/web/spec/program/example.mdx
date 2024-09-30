@@ -1,0 +1,309 @@
+---
+sidebar_position: 3
+---
+
+import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents, Opcodes, Viewer } from "@theme/ProgramExample";
+
+# Example program
+
+<ProgramExampleContextProvider
+  sources={[{
+    id: 0,
+    path: "PaidIncrementer.eg",
+    language: "examplelang",
+    contents: `name PaidIncrementer;
+
+// define storage layout to include variable
+// at slot 0
+storage {
+  [0] storedValue: uint256;
+}
+
+// runtime logic
+code {
+  // require fee for incrementing
+  if (msg.callvalue < 3 finney) {
+    return;
+  }
+
+  let localValue = storedValue + 1;
+  storedValue = localValue;
+}
+`}]}
+  instructions={[
+    {
+      operation: {
+        mnemonic: "PUSH6",
+        arguments: ["0x02ba7def3000"],
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("3 finney"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+        remark: "hexadecimal for 3 finney"
+      })
+    },
+    {
+      operation: {
+        mnemonic: "CALLVALUE"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "LT"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue < 3 finney"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH1",
+        arguments: ["0x13"]
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "JUMPI"
+      },
+
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+        remark: "jump to end unless sufficient fee"
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH0"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue", { after: "localValue =" }),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+        remark: "push stack slot of state variable"
+      })
+    },
+    {
+      operation: {
+        mnemonic: "SLOAD"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue", { after: "let localValue" }),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH1",
+        arguments: ["0x01"]
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("1"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "ADD"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("let localValue = storedValue + 1;"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }, {
+          identifier: "localValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "stack",
+            slot: 0
+          },
+          declaration: findSourceRange("let localValue")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH0"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue ="),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }, {
+          identifier: "localValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "stack",
+            slot: 1
+          },
+          declaration: findSourceRange("let localValue")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "SSTORE"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue = localValue;"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "JUMPDEST"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("return;"),
+        remark: "skip to here if not enough paid"
+      })
+    }
+  ]}
+>
+
+
+This page helps illustrate the program schema's
+[key concepts](/spec/program/concepts) by offering a fictional
+pseudo-code example and its hypothetical compiled program.
+
+Assume this fictional [somewhat] high-level language expects one contract per
+source file, where each contract defines its storage layout, high-level logic,
+and other metadata as top-level statements or blocks.
+
+The following source code might be used to define a contract that
+increments a state variable if the caller pays at least 1 finney (0.001 ETH).
+
+<Viewer />
+
+</ProgramExampleContextProvider>
