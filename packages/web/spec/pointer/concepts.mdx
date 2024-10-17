@@ -9,7 +9,7 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 ## A **pointer** is a region or a collection of other pointers
 
 High-level languages allow programmers to describe and manipulate conceptual
-ideas as succinct, individual building blocks of machine execution.
+ideas as succinct, individual building blocks for machine execution.
 Nowadays, thanks to decades of compiler research, resulting low-level machine
 states are often reliably indecipherable, bearing no resemblance at all to
 even basic data abstractions.
@@ -18,15 +18,15 @@ The **ethdebug/format/pointer** schema provides a tree-based syntax for
 representing complete (and often minutely detailed) address information for
 finding a particular high-level data object. (For instance: a compiler may need
 to inform a debugger about where to find a particular array in memory.)
-As such, this schema is specified recursively: a pointer is either a single,
-continuous sequence of bytes addresses (a **region**), or it aggregates other
+As such, this schema is specified recursively: a pointer is either a reference 
+to a cluster of contiguous bytes (a **region**), or is an aggregation of other
 pointers (a **collection**).
 
-## A **region** is a single continuous range of byte addresses
+## A **region** addresses a cluster of contiguous bytes in machine state
 
 For simple allocations (like those that fit into a single word), the
 **ethdebug/format/pointer** representation is also quite simple: just a single,
-optionally named, continuous chunk of bytes in the machine state.
+optionally named, cluster of contiguous bytes in the machine state.
 
 <details>
 <summary>
@@ -45,7 +45,7 @@ optionally named, continuous chunk of bytes in the machine state.
 </details>
 
 This schema defines the concept of a **region** to be the representation
-of the addressing details for a particular block of continuous bytes. Different
+of the addressing details for a cluster. Different
 data locations use different, location-specific schemas for regions
 (since, e.g., stack regions are very different than storage regions). The
 **ethdebug/format/pointer/region** schema aggregates these using the
@@ -53,8 +53,8 @@ data locations use different, location-specific schemas for regions
 
 ## A **collection** aggregates other pointers
 
-Other allocations are not so cleanly represented by a single continuous block
-of bytes anywhere. In these situations, the **ethdebug/format/pointer**
+Other allocations are not so cleanly represented by a single cluster of contiguous 
+bytes anywhere. In these situations, the **ethdebug/format/pointer**
 representation can describe the aggregation of other composed pointers.
 
 <details>
@@ -271,7 +271,7 @@ for a particular addressing scheme.
 This format currently defines two such addressing schemes:
 **ethdebug/format/pointer/scheme/slice** and
 **ethdebug/format/pointer/scheme/segment**, for addressing ranges within a
-single continuous byte array and addressing a slot or collection of slots
+single region of contiguous byte array and addressing a slot or collection of slots
 in a word-arranged locaton (respectively).
 
 <details>
