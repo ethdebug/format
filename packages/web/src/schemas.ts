@@ -174,7 +174,7 @@ export const schemaIndex: SchemaIndex = {
   },
 
   "schema:ethdebug/format/materials/reference": {
-    title: "Identifier schema",
+    title: "Reference schema",
     href: "/spec/materials/id#reference-schema"
   },
 
@@ -186,5 +186,10 @@ export const schemaIndex: SchemaIndex = {
   "schema:ethdebug/format/materials/source": {
     title: "Source schema",
     href: "/spec/materials/source"
+  },
+
+  "schema:ethdebug/format/materials/source-range": {
+    title: "Source range schema",
+    href: "/spec/materials/source-range"
   },
 };
