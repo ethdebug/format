@@ -19,7 +19,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build website
-        run: yarn build
+        run: BASE_URL='/format/' yarn build
         working-directory: ./packages/web
 
       - name: Deploy to GitHub Pages
