@@ -96,6 +96,19 @@ export default function UnnecessaryCompositionSchema({
   );
 
   if (onlyExtendsDocumentation) {
+    const onlyChangesTitle = Object.keys(documentation).length === 1 &&
+      "title" in documentation;
+
+    if (onlyChangesTitle) {
+      return <>
+        <SchemaHierarchyComponent
+          innerJsonPointer={`/${unnecessaryCompositionKeyword}/0`}
+        >
+          <CreateNodes schema={unnecessarilyComposedSchema} />
+        </SchemaHierarchyComponent>
+      </>;
+    }
+
     const { description } = documentation;
 
     return <>
@@ -166,7 +179,7 @@ export default function UnnecessaryCompositionSchema({
 
 function separateDocumentationFromSemantics(schema: JSONSchema): {
   documentation: Exclude<JSONSchema, boolean>,
-  semantics: Exclude<JSONSchema, boolean>
+  semantics: JSONSchema
 } {
   if (typeof schema === "boolean") {
     return {
@@ -185,13 +198,19 @@ function separateDocumentationFromSemantics(schema: JSONSchema): {
     ...semantics
   } = schema;
 
+  const documentation = Object.entries({
+    title,
+    description,
+    examples,
+    default: default_
+  }).filter((
+    pair: [string, string | object | undefined]
+  ): pair is [string, string | object] => pair[1] !== undefined).map(
+    ([key, value]) => ({ [key]: value })
+  ).reduce((a, b) => ({ ...a, ...b }), {}) as Partial<Pick<typeof schema, "title" | "description" | "examples" | "default">>;
+
   return {
-    documentation: {
-      title,
-      description,
-      examples,
-      default: default_
-    },
+    documentation,
     semantics
   };
 }
