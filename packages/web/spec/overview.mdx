@@ -12,7 +12,6 @@ only just beginning.
 
 This specification currently contains the following primary schemas:
 
-
 <dl>
 
 <dt>[**ethdebug/format/type**](/spec/type/overview)</dt>
@@ -27,8 +26,32 @@ A schema for representing dynamic data address ranges in the EVM, particularly
 to indicate where high-level variables are allocated in the machine state.
 </dd>
 
-<dt>(more coming soon)</dt>
-<dd>...</dd>
+<dt>[**ethdebug/format/program**](/spec/program/overview)</dt>
+<dd>
+A schema for representing high-level semantics from the perspective of an
+annotated compiled bytecode.
+</dd>
+
+</dl>
+
+
+In addition, this format defines namespaces containing schemas for common
+concerns:
+
+<dl>
+
+<dt>[**ethdebug/format/data**](/spec/data/overview)</dt>
+<dd>
+A namespace of schemas containing definitions of commonly used data
+representations, such as how to represent raw byte strings and unsigned
+integers.
+</dd>
+
+<dt>[**ethdebug/format/materials**](/spec/materials/overview)</dt>
+<dd>
+A namespace of schemas for representing "external" resources, such as
+compiler source inputs.
+</dd>
 
 </dl>
 
