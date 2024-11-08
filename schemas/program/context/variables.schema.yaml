@@ -1,0 +1,80 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/variables"
+
+title: ethdebug/format/program/context/variables
+description: |
+  Information about known variables at this context's point in code
+  execution, specified as an array whose items each correspond to a unique
+  variable.
+
+  Items in this array **should not** have duplicate non-empty `identifier`
+  values except where high-level language semantics require it. Where
+  possible, use other mechanisms provided by this format to indicate that
+  an identifier's corresponding variable is ambiguous.
+
+type: object
+properties:
+  variables:
+    type: array
+    items:
+      $ref: "#/$defs/Variable"
+    minItems: 1
+    additionalItems: false
+required:
+  - variables
+
+examples:
+  - variables:
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56
+        type:
+          kind: string
+        pointer:
+          location: storage
+          slot: 0
+
+$defs:
+  Variable:
+    title: Variable
+    description: |
+      The information known about a variable at a particular point in the code
+      execution.
+
+    type: object
+    properties:
+      identifier:
+        type: string
+        minLength: 1
+
+      declaration:
+        description: |
+          Source range corresponding to where the variable was declared.
+        $ref: "schema:ethdebug/format/materials/source-range"
+
+      type:
+        description: |
+          The variable's static type, if it exists. This **must** be specified
+          either as a full **ethdebug/format/type** representation, or an
+          `{ "id": "..." }` type reference object.
+        oneOf:
+          - $ref: "schema:ethdebug/format/type"
+          - $ref: "schema:ethdebug/format/type/reference"
+
+      pointer:
+        description: |
+          Allocation information for the variable, if it exists.
+        $ref: "schema:ethdebug/format/pointer"
+
+    examples:
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56

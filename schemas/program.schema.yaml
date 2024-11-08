@@ -1,0 +1,145 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program"
+
+title: ethdebug/format/program
+description: |
+  Debugging information about a particular bytecode in a compilation.
+
+type: object
+
+properties:
+  compilation:
+    title: Compilation reference by ID
+    description: |
+      A reference to the compilation as an `{ "id": ... }` object.
+    $ref: "schema:ethdebug/format/materials/reference"
+
+  contract:
+    type: object
+    properties:
+      name:
+        type: string
+
+      definition:
+        $ref: "schema:ethdebug/format/materials/source-range"
+    required:
+      - definition
+
+  environment:
+    title: Bytecode execution environment
+    description: |
+      Whether this bytecode is for contract creation or runtime calls.
+    type: string
+    enum:
+      - call
+      - create
+
+  context:
+    description: |
+      The context known to exist prior to the execution of the first
+      instruction in the bytecode.
+    $ref: "schema:ethdebug/format/program/context"
+
+  instructions:
+    type: array
+    description: |
+      The full array of instructions for the bytecode.
+    items:
+      $ref: "schema:ethdebug/format/program/instruction"
+    additionalItems: false
+
+required:
+  - contract
+  - environment
+  - instructions
+
+examples:
+  - # Incrementing a storage counter
+    #
+    # This example represents the call bytecode for the following pseudo-code:
+    # ```
+    # contract Incrementer;
+    #
+    # storage {
+    #   [0] storedValue: uint256;
+    # };
+    #
+    # code {
+    #   let localValue = storedValue;
+    #   storedValue += 1;
+    #   value = tmp;
+    # };
+    # ```
+    contract:
+      name: "Incrementer"
+      definition:
+        source:
+          id: 0
+    environment: call
+    context:
+      variables:
+        - &stored-value
+          identifier: storedValue
+          type:
+            kind: uint
+            bits: 256
+          pointer:
+            location: storage
+            slot: 0
+    instructions:
+      - offset: 0
+        operation:
+          mnemonic: PUSH0
+        context:
+          variables:
+            - *stored-value
+      - offset: 1
+        operation:
+          mnemonic: SLOAD
+        context:
+          variables:
+            - *stored-value
+            - &local-value
+              identifier: localValue
+              type:
+                kind: uint
+                bits: 256
+              pointer:
+                location: stack
+                slot: 0
+      - offset: 2
+        operation:
+          mnemonic: PUSH1
+          arguments: ["0x01"]
+        context:
+          variables:
+            - *stored-value
+            - <<: *local-value
+              pointer:
+                location: stack
+                slot: 1
+
+      - offset: 4
+        operation:
+          mnemonic: ADD
+        context:
+          variables:
+            - *stored-value
+            - *local-value
+      - offset: 5
+        operation:
+          mnemonic: PUSH0
+        context:
+          variables:
+            - *stored-value
+            - <<: *local-value
+              pointer:
+                location: stack
+                slot: 1
+
+      - offset: 6
+        operation:
+          mnemonic: SSTORE
+        context:
+          variables:
+            - *stored-value

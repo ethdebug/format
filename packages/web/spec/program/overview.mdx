@@ -1,0 +1,80 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::warning
+
+This schema and its subschemas remain largely incomplete. Please stay tuned as
+work continues here.
+
+:::
+
+:::tip[Summary]
+
+**ethdebug/format/program** is a JSON schema for describing compile-time
+information about EVM bytecode, organized from the perspective of individual
+machine instructions.
+
+In **ethdebug/format**, a program record (or "program") represents one block of
+executable EVM machine code that a compiler generated for a specific contract.
+This could be either the contract's runtime call bytecode or the bytecode
+to create the contract.
+
+A program is structured as a sequence of instruction records ("instructions"),
+where each corresponds to a single EVM instruction in the machine code. Each
+instruction contains information about the high-level language context at that
+point in the bytecode. This allows debuggers to map low-level machine state
+back to high-level language concepts at any point during execution.
+
+Key information that programs contain for a particular instruction might
+include:
+- the source range or source ranges that are "associated" with the
+    instruction
+- the collection of known high-level variables at that point in time,
+    including their types and where to find the bytes with those variables'
+    values
+- signals to indicate that the instruction is part of some control flow
+    operation, such as calling some function from another.
+
+These program records provide debuggers with a powerful reference resource
+to be consulted while observing a running EVM. At each step of EVM machine
+execution, debuggers can find the matching **ethdebug/format** program
+instruction and use its information to maintain a coherent model of the
+high-level world, step-by-step.
+
+:::
+
+This format defines the primary **ethdebug/format/program** schema as well as
+various sub-schemas in the ethdebug/format/program/* namespace.
+
+JSON values adhering to this schema contain comprehensive information about a
+particular EVM bytecode object. This includes contract metadata (e.g., reference to the source range where the contract is defined) and, importantly, an
+ordered list of **ethdebug/format/program/instruction** objects.
+
+Each instruction object contains essential details for translating low-level
+machine state at the time of the instruction back into high-level language
+concepts. This allows debuggers to provide a meaningful representation of
+program state at any point during execution.
+
+## Reading this schema
+
+The **ethdebug/format/program** schema is a root schema that composes other
+related schemas in the ethdebug/format/program/* namespace.
+
+These schemas (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.
+
+Please refer to one or more of the following resources in this section, or
+see the navigation bar for complete contents:
+
+- [Key concepts](/spec/program/concepts)
+
+- [Schema](/spec/program) (**ethdebug/format/program** schema listing)
+
+- [Instruction schema](/spec/program/instruction)
+  (**ethdebug/format/program/instruction** schema listing)
+
+- [Context schema](/spec/program/context)
+  (**ethdebug/format/program/context** schema listing)
