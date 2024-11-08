@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.4.0">
 <title data-rh="true">Specification overview | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/spec/overview"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Specification overview | ethdebug format"><meta data-rh="true" name="description" content="The ethdebug format is currently in the design phase and specification is"><meta data-rh="true" property="og:description" content="The ethdebug format is currently in the design phase and specification is"><link data-rh="true" rel="icon" href="/format/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/spec/overview"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/overview" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/overview" hreflang="x-default"><link rel="stylesheet" href="/format/assets/css/styles.5de36de1.css">
-<script src="/format/assets/js/runtime~main.b117e0c9.js" defer="defer"></script>
+<script src="/format/assets/js/runtime~main.366c355d.js" defer="defer"></script>
 <script src="/format/assets/js/main.e6f17e41.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -15,7 +15,14 @@ only just beginning.</p>
 <p>This specification currently contains the following primary schemas:</p>
 <dl><dt><a href="/format/spec/type/overview"><strong>ethdebug/format/type</strong></a></dt><dd><p>A schema for representing high-level data types such as arrays of integers,
 payable addresses, etc.</p></dd><dt><a href="/format/spec/pointer/overview"><strong>ethdebug/format/pointer</strong></a></dt><dd><p>A schema for representing dynamic data address ranges in the EVM, particularly
-to indicate where high-level variables are allocated in the machine state.</p></dd><dt>(more coming soon)</dt><dd>...</dd></dl>
+to indicate where high-level variables are allocated in the machine state.</p></dd><dt><a href="/format/spec/program/overview"><strong>ethdebug/format/program</strong></a></dt><dd><p>A schema for representing high-level semantics from the perspective of an
+annotated compiled bytecode.</p></dd></dl>
+<p>In addition, this format defines namespaces containing schemas for common
+concerns:</p>
+<dl><dt><a href="/format/spec/data/overview"><strong>ethdebug/format/data</strong></a></dt><dd><p>A namespace of schemas containing definitions of commonly used data
+representations, such as how to represent raw byte strings and unsigned
+integers.</p></dd><dt><a href="/format/spec/materials/overview"><strong>ethdebug/format/materials</strong></a></dt><dd><p>A namespace of schemas for representing &quot;external&quot; resources, such as
+compiler source inputs.</p></dd></dl>
 <p>These schemas are specified as <a href="https://json-schema.org" target="_blank" rel="noopener noreferrer">JSON Schema<!-- -->﻿<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_awgD"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a>
 documents, draft 2020-12.</p>
 <p>For the full collection of raw schema listings (in YAML format), please see the
