@@ -40,6 +40,8 @@ const config: Config = {
   ],
 
   plugins: [
+    require.resolve('docusaurus-lunr-search'),
+
     async function customResolvers(context, options) {
       return {
         name: "custom-resolve",
