@@ -40,6 +40,8 @@ const config: Config = {
   ],
 
   plugins: [
+    require.resolve('docusaurus-lunr-search'),
+
     async function ignoreBuffer(context, options) {
       return {
         name: "ignore-buffer",
