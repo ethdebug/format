@@ -1,0 +1,46 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/info"
+
+title: ethdebug/format/info
+description: |
+  Debugging information about a single compilation
+
+type: object
+
+properties:
+  types:
+    title: Types by name
+    description: |
+      A collection of types by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/type"
+
+  pointers:
+    title: Pointer templates by name
+    description: |
+      A collection of pointer templates by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/template"
+
+  compilation:
+    title: Compilation reference by ID
+    description: |
+      A reference to the compilation as an `{ "id": ... }` object.
+    $ref: "schema:ethdebug/format/materials/reference"
+
+  programs:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/program"
+    additionalItems:
+      false
+
+required:
+  - types
+  - pointers
+
+examples:
+  - types: {}
+    pointers: {}
