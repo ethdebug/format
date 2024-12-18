@@ -196,9 +196,33 @@ const materialsSchemaIndex: SchemaIndex = {
   },
 };
 
+const programSchemaIndex: SchemaIndex = {
+  "schema:ethdebug/format/program": {
+    href: "/spec/program"
+  },
+
+  "schema:ethdebug/format/program/instruction": {
+    href: "/spec/program/instruction"
+  },
+
+  "schema:ethdebug/format/program/context": {
+    href: "/spec/program/context"
+  },
+
+  ...(
+    ["code", "variables"].map(name => ({
+      [`schema:ethdebug/format/program/context/${name}`]: {
+        href: `/spec/program/context/${name}`
+      }
+    })).reduce((a, b) => ({ ...a, ...b }), {})
+  ),
+
+};
+
 export const schemaIndex: SchemaIndex = {
   ...typeSchemaIndex,
   ...pointerSchemaIndex,
   ...dataSchemaIndex,
   ...materialsSchemaIndex,
+  ...programSchemaIndex,
 };
