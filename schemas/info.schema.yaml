@@ -1,0 +1,184 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/info"
+
+title: ethdebug/format/info
+description: |
+  Debugging information about a single compilation
+
+type: object
+
+$ref: "schema:ethdebug/format/info/resources"
+
+properties:
+  programs:
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/program"
+    additionalItems:
+      false
+
+  compilation:
+    $ref: "schema:ethdebug/format/materials/compilation"
+
+
+required:
+  - compilation
+  - programs
+
+examples:
+  - compilation:
+      id: __301f3b6d85831638
+      compiler:
+        name: egc
+        version: 0.2.3+commit.8b37fa7a
+      settings:
+        turbo: true
+      sources:
+        - id: 1
+          path: "Escrow.eg"
+          language: examplelang
+          contents: |
+            import { Asset } from std::asset::fungible;
+
+            type State = !slots[
+              ready: bool,
+              complete: bool,
+
+              beneficiary: address,
+
+              asset: Asset,
+              amount: uint256,
+
+              canRemit: () -> bool,
+            ]
+
+            @create
+            func setup(
+              beneficiary: address,
+              asset: Asset,
+              canRemit: () -> bool,
+            ) -> State:
+              return {
+                ready = False,
+                complete = False,
+                beneficiary,
+                asset,
+                amount = 0,
+                canRemit,
+              }
+
+            @abi
+            @state(self: State)
+            @account(self)
+            func deposit(depositor: address, amount: uint256):
+              require(!self.ready)
+              require(!self.complete)
+
+              # expects an existing allowance (also known as "approval")
+              self.asset.transferFrom(depositor, self, amount)
+
+              self.amount = amount
+              self.ready = True
+
+            @abi
+            @state(self: State)
+            func remit():
+              require(self.ready)
+              require(!self.complete)
+
+              require(self.canRemit())
+
+              asset.transfer(self.beneficiary, self.amount)
+
+              self.complete = True
+
+    types:
+      # Define the State type structure
+      State:
+        kind: "struct"
+        contains:
+          - name: "ready"
+            type:
+              kind: "bool"
+          - name: "complete"
+            type:
+              kind: "bool"
+          - name: "beneficiary"
+            type:
+              kind: "address"
+          - name: "asset"
+            type:
+              kind: "struct"
+              contains:
+                - name: "address"
+                  type:
+                    kind: "address"
+          - name: "amount"
+            type:
+              kind: "uint"
+              bits: 256
+          - name: "canRemit"
+            type:
+              kind: "function"
+              internal: true
+              contains:
+                parameters:
+                  type:
+                    kind: "tuple"
+                    contains: []
+                returns:
+                  type:
+                    kind: "bool"
+
+    pointers:
+      # Define storage layout for the State struct
+      State_storage:
+        expect: ["slot"]
+        for:
+          group:
+            - name: "ready"
+              location: "storage"
+              slot: "slot"
+              offset: 0
+              length: 1
+            - name: "complete"
+              location: "storage"
+              slot: "slot"
+              offset: 1
+              length: 1
+            - name: "beneficiary"
+              location: "storage"
+              slot: { "$sum": ["slot", 1] }
+            - name: "asset"
+              location: "storage"
+              slot: { "$sum": ["slot", 2] }
+            - name: "amount"
+              location: "storage"
+              slot: { "$sum": ["slot", 3] }
+            - name: "canRemit"
+              location: "storage"
+              slot: { "$sum": ["slot", 4] }
+
+    programs:
+      - contract:
+          name: "Escrow"
+          definition:
+            source:
+              id: 1
+            range:
+              offset: 0
+              length: 891
+        environment: "create"
+        instructions:
+          - offset: 0
+            operation:
+              mnemonic: "PUSH1"
+              arguments: ["0x80"]
+            context:
+              code:
+                source:
+                  id: 1
+                range:
+                  offset: 891
+                  length: 20
+

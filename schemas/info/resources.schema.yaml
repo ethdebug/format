@@ -1,0 +1,75 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/info/resources"
+
+title: ethdebug/format/info/resources
+description: |
+  An object containing lookup tables for finding debugging resources by name.
+
+type: object
+
+properties:
+  types:
+    title: Types by name
+    description: |
+      A collection of types by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/type"
+
+  pointers:
+    title: Pointer templates by name
+    description: |
+      A collection of pointer templates by name identifier.
+    type: object
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/template"
+
+  compilation:
+    $ref: "schema:ethdebug/format/materials/compilation"
+
+
+required:
+  - types
+  - pointers
+
+examples:
+  - types:
+      "struct__Coordinate":
+        kind: struct
+        contains:
+          - name: x
+            type:
+              kind: uint
+              bits: 128
+          - name: y
+            type:
+              kind: uint
+              bits: 128
+        definition:
+          name: Coordinate
+          location:
+            source:
+              id: 5
+            range:
+              offset: 18
+              length: 55
+
+    pointers:
+      "struct__Coordinate__storage":
+        expect:
+          - contract_variable_slot__struct__Coordinate__storage
+        for:
+          group:
+            - name: member__x__struct__Coordinate__storage
+              location: storage
+              slot: contract_variable_slot__struct__Coordinate__storage
+              offset: 0
+              length: 128
+            - name: member__y__struct__Coordinate__storage
+              location: storage
+              slot: contract_variable_slot__struct__Coordinate__storage
+              offset:
+                $sum:
+                  - .offset: member__x__struct__Coordinate__storage
+                  - .length: member__x__struct__Coordinate__storage
+              length: 128

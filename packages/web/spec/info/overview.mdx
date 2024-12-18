@@ -1,0 +1,55 @@
+---
+sidebar_position: 1
+---
+
+# Overview
+
+:::tip[Summary]
+
+**ethdebug/format/info** is a JSON Schema and namespace containing the
+**ethdebug/format/info/resources** JSON Schema. These schemas provide a means
+for representing the debugging data pertaining to a particular compilation.
+
+These two schemas serve to address two distinct purposes:
+1. **ethdebug/format/info** provides a means for representing a complete,
+   standalone, and language-agnostic representation of all necessary debugging
+   data. Objects in this schema contain all information specified by
+   **ethdebug/format/info/resources** plus additional metadata.
+2. **ethdebug/format/info/resources** provides a means for compilers to specify
+   compilation-related debug information without also specifying compilation
+   metadata that may already be found elsewhere in compiler output.
+
+Due to the common practice that EVM language compilers already provide their
+own structured JSON output formats, it is expected that compilers will
+primarily produce objects in the **ethdebug/format/info/resources** schema, and
+that language-specific tooling will serve to convert these objects plus other
+compiler JSON output into the more standalone **ethdebug/format/info**.
+
+This format recommends that compilers **should** ensure there
+exists tooling support for the creation of **ethdebug/format/info** objects,
+either via custom compilation modes or through the distribution of first- or
+third-party tools.
+
+:::
+
+This format defines the primary **ethdebug/format/info** schema.
+
+JSON values adhering to this schema contain debugging information about a
+single invocation of a compiler.
+
+
+## Reading this schema
+
+The **ethdebug/format/info** schema is a standalone schema and does not define
+a corresponding namespace.
+
+This schema (like all schemas in this format) are specified as
+[JSON Schema](https://json-schema.org), draft 2020-12.
+
+Please refer to one or more of the following resources in this section, or
+see the navigation bar for complete contents:
+
+- [Schema](/spec/info) (**ethdebug/format/info** schema listing)
+
+- [Resources schema](/spec/info/resources)
+  (**ethdebug/format/info/resources** schema listing)
