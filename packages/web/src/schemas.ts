@@ -5,7 +5,7 @@ export type SchemaIndex = {
   };
 };
 
-export const schemaIndex: SchemaIndex = {
+const typeSchemaIndex: SchemaIndex = {
   "schema:ethdebug/format/type/base": {
     title: "ethdebug/format/type/base schema",
     href: "/spec/type/base"
@@ -61,7 +61,9 @@ export const schemaIndex: SchemaIndex = {
     title: "Parameters schema",
     href: "/spec/type/complex/function#parameters-schema"
   },
+};
 
+const pointerSchemaIndex: SchemaIndex = {
   "schema:ethdebug/format/pointer": {
     href: "/spec/pointer"
   },
@@ -159,15 +161,15 @@ export const schemaIndex: SchemaIndex = {
       href: `/spec/pointer/expression${anchor}`
     }
   })).reduce((a, b) => ({ ...a, ...b }), {}),
+};
 
-  ...(
-    ["hex", "unsigned"].map(name => ({
-      [`schema:ethdebug/format/data/${name}`]: {
-        href: `/spec/data/${name}`
-      }
-    })).reduce((a, b) => ({ ...a, ...b }), {})
-  ),
+const dataSchemaIndex: SchemaIndex = ["hex", "unsigned"].map(name => ({
+  [`schema:ethdebug/format/data/${name}`]: {
+    href: `/spec/data/${name}`
+  }
+})).reduce((a, b) => ({ ...a, ...b }), {});
 
+const materialsSchemaIndex: SchemaIndex = {
   "schema:ethdebug/format/materials/id": {
     title: "Identifier schema",
     href: "/spec/materials/id#identifier-schema"
@@ -192,4 +194,11 @@ export const schemaIndex: SchemaIndex = {
     title: "Source range schema",
     href: "/spec/materials/source-range"
   },
+};
+
+export const schemaIndex: SchemaIndex = {
+  ...typeSchemaIndex,
+  ...pointerSchemaIndex,
+  ...dataSchemaIndex,
+  ...materialsSchemaIndex,
 };
