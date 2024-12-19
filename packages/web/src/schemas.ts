@@ -194,6 +194,11 @@ const materialsSchemaIndex: SchemaIndex = {
     title: "Source range schema",
     href: "/spec/materials/source-range"
   },
+
+  "schema:ethdebug/format/info": {
+    title: "ethdebug/format/info",
+    href: "/spec/info"
+  },
 };
 
 const programSchemaIndex: SchemaIndex = {
@@ -216,7 +221,15 @@ const programSchemaIndex: SchemaIndex = {
       }
     })).reduce((a, b) => ({ ...a, ...b }), {})
   ),
+};
 
+const infoSchemaIndex: SchemaIndex = {
+  "schema:ethdebug/format/info": {
+    href: "/spec/info"
+  },
+  "schema:ethdebug/format/info/resources": {
+    href: "/spec/info/resources"
+  },
 };
 
 export const schemaIndex: SchemaIndex = {
@@ -225,4 +238,5 @@ export const schemaIndex: SchemaIndex = {
   ...dataSchemaIndex,
   ...materialsSchemaIndex,
   ...programSchemaIndex,
+  ...infoSchemaIndex,
 };

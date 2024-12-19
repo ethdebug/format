@@ -11,7 +11,7 @@ properties:
     description: |
       Compilation ID. Optional, but **should** be specified.
 
-      This value **should** be globally-unique and generated only from the
+      This value **must** be globally-unique and generated only from the
       compiler inputs (settings, sources, etc.); the same compiler inputs/
       settings **should** produce the same identifier.
 
