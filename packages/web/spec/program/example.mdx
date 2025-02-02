@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents, Opcodes } from "@site/src/components/ProgramExample";
+import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents, Opcodes, Viewer } from "@theme/ProgramExample";
 
 # Example program
 
@@ -10,11 +10,15 @@ import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents
   sourcePath="PaidIncrementer.fnoo"
   sourceContents={`name PaidIncrementer;
 
+// define storage layout to include variable
+// at slot 0
 storage {
   [0] storedValue: uint256;
 }
 
+// runtime logic
 code {
+  // require fee for incrementing
   if (msg.callvalue < 3 finney) {
     return;
   }
@@ -63,7 +67,8 @@ code {
     {
       operation: {
         mnemonic: "PUSH1",
-        arguments: ["0x13"]
+        arguments: ["0x13"],
+        comment: "jumpdest offset"
       },
       context: ({ source, rangeFor }) => ({
         code: {
@@ -167,32 +172,27 @@ code {
 >
 
 
-This page helps illustrate this program schema's
+This page helps illustrate the program schema's
 [key concepts](/spec/program/concepts) by offering a fictional
 pseudo-code example and its hypothetical compiled program.
 
+Assume this fictional [somewhat] high-level language expects one contract per
+source file, where each contract defines its storage layout, high-level logic,
+and other metadata as top-level statements or blocks.
 
-## Source code
+The following source code might be used to define a contract that
+increments a state variable if the caller pays at least 1 finney (0.001 ETH).
 
-Assume this fictional high-level language expects exactly one contract per
-source file. The following code might be used to define a contract that
-increments a state variable if the caller pays at least 1 finney (0.001
-ETH).
+See interactive example below.
 
-<SourceContents />
+:::tip
 
-This contract's storage layout has exactly one record: a `uint256` value
-named `storedValue` at slot `0`.
+Hover or click on opcode offsets to highlight that instruction's
+[Code context](/spec/program/context/code) (if it's defined for that
+instruction)
 
-## Compiled opcodes
+:::
 
-Because fictional optimizers have no theoretical limits, assume the source
-contract above produced bytecode equivalent to the following brief sequence of
-operations, listed by their offsets:
-
-<Opcodes />
-
-
-## Program example
+<Viewer />
 
 </ProgramExampleContextProvider>
