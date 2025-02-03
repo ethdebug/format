@@ -91,7 +91,7 @@ code {
         mnemonic: "SLOAD"
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("storedValue", { after: "localValue =" })
+        code: findSourceRange("let localValue = storedValue;")
       })
     },
     {
@@ -100,8 +100,7 @@ code {
         arguments: ["0x01"]
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("1"),
-        remark: "push stack slot of state variable"
+        code: findSourceRange("1")
       })
     },
     {
