@@ -1,26 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-import {
-  type Instruction,
-  type Context,
-  type ContextThunk,
-  computeOffsets,
-} from "./types";
+import type { Instruction, Source } from "./types";
+import { computeOffsets } from "./offsets";
+import { type DynamicInstruction, resolveDynamicInstruction } from "./dynamic";
 
-interface ProgramExampleContextValue {
+
+export interface ProgramExampleState {
   // props
-  sourcePath: string;
-  sourceContents: string;
-  instructions: (Instruction & { offset: number })[];
+  sources: Source[];
+  instructions: Instruction[];
 
   // stateful stuff
-  context: Context | undefined;
   highlightedOffset: number | undefined;
+  highlightedInstruction: Instruction | undefined;
   highlightInstruction(offset: number | undefined): void;
 }
 
 const ProgramExampleContext =
-  createContext<ProgramExampleContextValue | undefined>(undefined);
+  createContext<ProgramExampleState | undefined>(undefined);
 
 export function useProgramExampleContext() {
   const context = useContext(ProgramExampleContext);
@@ -32,9 +29,8 @@ export function useProgramExampleContext() {
 }
 
 export interface ProgramExampleProps {
-  sourcePath: string;
-  sourceContents: string;
-  instructions: Instruction[];
+  sources: Source[];
+  instructions: Omit<DynamicInstruction, "offset">[];
 }
 
 export function ProgramExampleContextProvider({
@@ -44,23 +40,31 @@ export function ProgramExampleContextProvider({
   children: React.ReactNode;
 }): JSX.Element {
   const {
-    sourcePath,
-    sourceContents,
-    instructions: instructionsWithoutOffsets
+    sources,
+    instructions: dynamicInstructionsWithoutOffsets
   } = props;
 
-  const instructions = computeOffsets(instructionsWithoutOffsets);
+  const dynamicInstructions = computeOffsets(
+    dynamicInstructionsWithoutOffsets
+  );
+
+  const instructions = dynamicInstructions.map(
+    (dynamicInstruction) =>
+      resolveDynamicInstruction(dynamicInstruction, { sources })
+  );
 
   const [
     highlightedOffset,
     highlightInstruction
   ] = useState<number | undefined>();
-
-  const [context, setContext] = useState<Context | undefined>();
+  const [
+    highlightedInstruction,
+    setHighlightedInstruction
+  ] = useState<Instruction | undefined>();
 
   useEffect(() => {
     if (typeof highlightedOffset === "undefined") {
-      setContext(undefined);
+      setHighlightedInstruction(undefined);
       return;
     }
 
@@ -71,50 +75,16 @@ export function ProgramExampleContextProvider({
       throw new Error(`Unexpected could not find instruction with offset ${highlightedOffset}`);
     }
 
-    const context = resolveContext(instruction.context, props);
-
-    setContext(context);
-  }, [highlightedOffset, setContext]);
+    setHighlightedInstruction(instruction);
+  }, [highlightedOffset, setHighlightedInstruction]);
 
   return <ProgramExampleContext.Provider value={{
-    sourcePath,
-    sourceContents,
-    context,
+    sources,
     instructions,
     highlightedOffset,
+    highlightedInstruction,
     highlightInstruction
   }}>
     {children}
   </ProgramExampleContext.Provider>
-}
-
-function resolveContext(
-  context: Context | ContextThunk,
-  props: ProgramExampleProps
-): Context {
-  if (typeof context !== "function") {
-    return context;
-  }
-
-  const { sourcePath, sourceContents } = props;
-
-  const source = {
-    id: sourcePath
-  };
-
-  const rangeFor = (query: string) => {
-    const offset = sourceContents.indexOf(query);
-    if (offset === -1) {
-      throw new Error(`Unexpected could not find string ${query}`);
-    }
-
-    const length = query.length;
-
-    return {
-      offset,
-      length
-    };
-  };
-
-  return context({ source, rangeFor });
 }

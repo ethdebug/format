@@ -7,8 +7,11 @@ import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents
 # Example program
 
 <ProgramExampleContextProvider
-  sourcePath="PaidIncrementer.fnoo"
-  sourceContents={`name PaidIncrementer;
+  sources={[{
+    id: 0,
+    path: "PaidIncrementer.eg",
+    language: "examplelang",
+    contents: `name PaidIncrementer;
 
 // define storage layout to include variable
 // at slot 0
@@ -27,88 +30,68 @@ code {
   localValue = localValue + 1;
   storedValue = localValue;
 }
-`}
+`}]}
   instructions={[
     {
       operation: {
         mnemonic: "PUSH6",
         arguments: ["0x02ba7def3000"],
-        comment: "3 finney"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("3 finney")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("3 finney"),
+        remark: "hexadecimal for 3 finney"
       })
     },
     {
       operation: {
         mnemonic: "CALLVALUE"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("msg.callvalue")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue")
       })
     },
     {
       operation: {
         mnemonic: "LT"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("msg.callvalue < 3 finney")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue < 3 finney")
       })
     },
     {
       operation: {
         mnemonic: "PUSH1",
-        arguments: ["0x13"],
-        comment: "jumpdest offset"
+        arguments: ["0x13"]
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("if (msg.callvalue < 3 finney) {\n    return;\n  }")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }")
       })
     },
     {
       operation: {
         mnemonic: "JUMPI"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("if (msg.callvalue < 3 finney) {\n    return;\n  }")
-        }
+
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }"),
+        remark: "jump to end unless sufficient fee"
       })
     },
     {
       operation: {
-        mnemonic: "PUSH0",
-        comment: "begin paid incrementing"
+        mnemonic: "PUSH0"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("storedValue")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue"),
+        remark: "push stack slot of state variable"
       })
     },
     {
       operation: {
         mnemonic: "SLOAD"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("storedValue")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue")
       })
     },
     {
@@ -116,56 +99,42 @@ code {
         mnemonic: "PUSH1",
         arguments: ["0x01"]
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("1")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("1"),
+        remark: "push stack slot of state variable"
       })
     },
     {
       operation: {
         mnemonic: "ADD"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("localValue = localValue + 1;")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("localValue = localValue + 1;")
       })
     },
     {
       operation: {
         mnemonic: "PUSH0"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("storedValue = localValue;")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue = localValue;")
       })
     },
     {
       operation: {
         mnemonic: "SSTORE"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("storedValue = localValue;")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("storedValue = localValue;")
       })
     },
     {
       operation: {
-        mnemonic: "JUMPDEST",
-        comment: "skip to here if not enough paid"
+        mnemonic: "JUMPDEST"
       },
-      context: ({ source, rangeFor }) => ({
-        code: {
-          source,
-          range: rangeFor("return;")
-        }
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("return;"),
+        remark: "skip to here if not enough paid"
       })
     }
   ]}
@@ -183,15 +152,7 @@ and other metadata as top-level statements or blocks.
 The following source code might be used to define a contract that
 increments a state variable if the caller pays at least 1 finney (0.001 ETH).
 
-See interactive example below.
-
-:::tip
-
-Hover or click on opcode offsets to highlight that instruction's
-[Code context](/spec/program/context/code) (if it's defined for that
-instruction)
-
-:::
+See interactive example:
 
 <Viewer />
 

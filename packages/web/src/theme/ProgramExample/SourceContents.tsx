@@ -11,13 +11,17 @@ export function SourceContents(
   props: Omit<ShikiCodeBlockProps, "code" | "decorations">
 ): JSX.Element {
   const {
-    sourceContents,
-    context
+    sources,
+    highlightedInstruction
   } = useProgramExampleContext();
 
-  useEffect(() => {
-    console.log("context %o", context);
-  }, [context]);
+  if (sources.length !== 1) {
+    throw new Error("Multiple sources per example not currently supported");
+  }
+
+  const source = sources[0];
+
+  const context = highlightedInstruction?.context;
 
   const decorations = (
     context !== undefined &&
@@ -34,7 +38,7 @@ export function SourceContents(
     : [];
 
   return <ShikiCodeBlock
-    code={sourceContents}
+    code={source.contents}
     language="javascript"
     decorations={decorations}
     {...props}

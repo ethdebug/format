@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useProgramExampleContext } from "./ProgramExampleContext";
 
-import { type Operation } from "./types";
+import { type Instruction } from "./types";
 
 import "./Opcodes.css";
 
@@ -48,16 +48,15 @@ export function Opcodes(): JSX.Element {
   const paddingLength = instructions.at(-1)!.offset.toString(16).length;
 
   return <dl className="opcodes">{
-    instructions.map(({ offset, operation }) =>
+    instructions.map((instruction) =>
       <Opcode
-        key={offset}
-        offset={offset}
-        active={activeOffset === offset}
+        key={instruction.offset}
+        instruction={instruction}
+        active={activeOffset === instruction.offset}
         paddingLength={paddingLength}
-        operation={operation}
-        onClick={() => handleClick(offset)}
-        onMouseEnter={() => handleMouseEnter(offset)}
-        onMouseLeave={() => handleMouseLeave(offset)}
+        onClick={() => handleClick(instruction.offset)}
+        onMouseEnter={() => handleMouseEnter(instruction.offset)}
+        onMouseLeave={() => handleMouseLeave(instruction.offset)}
       />
     )
   }</dl>
@@ -65,33 +64,37 @@ export function Opcodes(): JSX.Element {
 
 
 function Opcode(props: {
-  offset: number;
-  paddingLength: number;
+  instruction: Instruction;
   active: boolean;
-  operation: Operation;
+  paddingLength: number;
   onClick: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }): JSX.Element {
   const {
-    offset,
-    paddingLength,
+    instruction,
     active,
-    operation,
+    paddingLength,
     onClick,
     onMouseEnter,
     onMouseLeave
   } = props;
 
+  const { offset, operation, context } = instruction;
+
   const offsetLabel = <>
     0x{offset.toString(16).padStart(paddingLength, "0")}
   </>;
+
+  const commentLabel = context && "remark" in context
+    ? <>  ({context.remark})</>
+    : <></>
 
   const operationLabel = <>
     <code>{
       [operation.mnemonic, ...operation.arguments || []].join(" ")
     }</code>
-    {operation.comment ? ` (${operation.comment})` : ""}
+    {commentLabel}
   </>;
 
   return <>
