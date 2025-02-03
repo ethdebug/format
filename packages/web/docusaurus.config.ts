@@ -40,9 +40,9 @@ const config: Config = {
   ],
 
   plugins: [
-    async function ignoreBuffer(context, options) {
+    async function customResolvers(context, options) {
       return {
-        name: "ignore-buffer",
+        name: "custom-resolve",
         configureWebpack(config: Configuration) {
           return {
             resolve: {
@@ -50,7 +50,8 @@ const config: Config = {
                 react: path.resolve('../../node_modules/react'),
               },
               fallback: {
-                buffer: false
+                buffer: false,
+                util: false
               }
             }
           };
