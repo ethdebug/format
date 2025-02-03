@@ -25,6 +25,7 @@ export interface FindSourceRangeOptions {
   source?: {
     id: Id;
   };
+  after?: string;
 }
 
 export interface ResolverOptions {
@@ -68,7 +69,19 @@ function resolveDynamicContext(
       return;
     }
 
-    const offset = source.contents.indexOf(query);
+    const afterQuery = options.after || "";
+
+    const afterQueryOffset = source.contents.indexOf(afterQuery);
+    if (afterQueryOffset === -1) {
+      throw new Error(
+        `Unexpected could not find string ${options.after} as prior occurrence to ${query}`
+      );
+    }
+
+
+    const startOffset = afterQueryOffset + afterQuery.length;
+
+    const offset = source.contents.indexOf(query, startOffset);
     if (offset === -1) {
       throw new Error(`Unexpected could not find string ${query}`);
     }

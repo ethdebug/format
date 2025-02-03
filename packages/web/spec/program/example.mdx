@@ -82,7 +82,7 @@ code {
         mnemonic: "PUSH0"
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("storedValue"),
+        code: findSourceRange("storedValue", { after: "localValue =" }),
         remark: "push stack slot of state variable"
       })
     },
@@ -91,7 +91,7 @@ code {
         mnemonic: "SLOAD"
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("storedValue")
+        code: findSourceRange("storedValue", { after: "localValue =" })
       })
     },
     {
@@ -117,7 +117,7 @@ code {
         mnemonic: "PUSH0"
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("storedValue = localValue;")
+        code: findSourceRange("storedValue =")
       })
     },
     {
