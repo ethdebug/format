@@ -18,9 +18,7 @@ properties:
       instruction's program counter. For EOF bytecode, this value **must** be
       the offset from the start of the container, not the start of a particular
       code section within that container.
-    oneOf:
-      - $ref: "schema:ethdebug/format/data/unsigned"
-      - $ref: "schema:ethdebug/format/data/hex"
+    $ref: "schema:ethdebug/format/data/value"
 
   operation:
     title: Machine operation information
@@ -36,9 +34,9 @@ properties:
         minItems: 1
         items:
           description: |
-            An immediate value, specified as a `0x`-prefixed hexadecimal string.
-          type: string
-          pattern: "^0x[0-9a-fA-F]{1,}$"
+            An immediate value specified as argument to the opcode
+          $ref: "schema:ethdebug/format/data/value"
+
     required:
       - mnemonic
 

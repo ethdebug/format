@@ -35,11 +35,11 @@ properties:
       offset:
         description: |
           Byte offset at beginning of range.
-        $ref: "schema:ethdebug/format/data/unsigned"
+        $ref: "schema:ethdebug/format/data/value"
 
       length:
         description: Number of bytes contained in range
-        $ref: "schema:ethdebug/format/data/unsigned"
+        $ref: "schema:ethdebug/format/data/value"
 
     unevaluatedProperties: false
 
