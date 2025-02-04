@@ -1,0 +1,19 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/remark"
+
+title: ethdebug/format/program/context/remark
+description: |
+  Human-readable information about the instruction. This field is intended
+  primarily not for compilers to use directly, but rather for humans
+  (directly or indirectly) to use as an annotation field.
+
+type: object
+properties:
+  remark:
+    type: string
+
+required:
+  - remark
+
+examples:
+  - remark: "jump to end if zero"
