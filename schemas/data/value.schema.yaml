@@ -1,0 +1,20 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/data/value"
+
+title: ethdebug/format/data/value
+description: |
+  A non-negative integer value, expressed either as a native JSON number or as
+  a `0x`-prefixed hexadecimal string.
+
+oneOf:
+  - description: A non-negative integer literal
+    $ref: "schema:ethdebug/format/data/unsigned"
+
+  - description: |
+      A `0x`-prefixed hexadecimal string representing literal bytes or a number
+      commonly displayed in base 16 (e.g. bytecode instruction offsets).
+    $ref: "schema:ethdebug/format/data/hex"
+
+examples:
+  - "0x0000"
+  - 2

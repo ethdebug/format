@@ -163,7 +163,7 @@ const pointerSchemaIndex: SchemaIndex = {
   })).reduce((a, b) => ({ ...a, ...b }), {}),
 };
 
-const dataSchemaIndex: SchemaIndex = ["hex", "unsigned"].map(name => ({
+const dataSchemaIndex: SchemaIndex = ["value", "hex", "unsigned"].map(name => ({
   [`schema:ethdebug/format/data/${name}`]: {
     href: `/spec/data/${name}`
   }

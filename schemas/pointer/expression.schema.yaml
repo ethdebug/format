@@ -21,13 +21,7 @@ $defs:
     description: |
       An unsigned number or a `0x`-prefixed string of hexadecimal digits
 
-    oneOf:
-      - description: A non-negative integer literal
-        $ref: "schema:ethdebug/format/data/unsigned"
-
-      - description: |
-          A `0x`-prefixed hexadecimal string representing literal bytes
-        $ref: "schema:ethdebug/format/data/hex"
+    $ref: "schema:ethdebug/format/data/value"
 
     examples:
       - 5
