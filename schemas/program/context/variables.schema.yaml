@@ -70,6 +70,9 @@ $defs:
           Allocation information for the variable, if it exists.
         $ref: "schema:ethdebug/format/pointer"
 
+    minProperties: 1
+    unevaluatedProperties: false
+
     examples:
       - identifier: x
         declaration:
