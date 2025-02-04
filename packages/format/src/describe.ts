@@ -21,6 +21,11 @@ export interface SchemaInfo {
   rootSchema: JSONSchema;
 }
 
+const parseOptions = {
+  // merge keys were removed from YAML 1.2 spec but used by these schemas
+  merge: true
+};
+
 export function describeSchema({
   schema,
   pointer
@@ -55,8 +60,8 @@ function describeSchemaById({
 
   const yaml = pointToYaml(rootYaml, pointer);
 
-  const schema = YAML.parse(yaml);
-  const rootSchema = YAML.parse(rootYaml);
+  const schema = YAML.parse(yaml, parseOptions);
+  const rootSchema = YAML.parse(rootYaml, parseOptions);
 
   return {
     id,
@@ -73,8 +78,8 @@ function describeSchemaByYaml({
 }: DescribeSchemaOptions<SchemaByYaml>): SchemaInfo {
   const yaml = pointToYaml(referencedYaml, pointer);
 
-  const schema = YAML.parse(yaml);
-  const rootSchema = YAML.parse(referencedYaml);
+  const schema = YAML.parse(yaml, parseOptions);
+  const rootSchema = YAML.parse(referencedYaml, parseOptions);
 
   const id = schema.$id;
 
@@ -104,7 +109,7 @@ function describeSchemaByObject({
 
   const yaml = pointToYaml(rootYaml, pointer);
 
-  const schema = YAML.parse(yaml);
+  const schema = YAML.parse(yaml, parseOptions);
 
   const id = schema.$id;
 
