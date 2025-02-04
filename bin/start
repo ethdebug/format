@@ -13,6 +13,7 @@ concurrently --names=format,pointers,web,jest \
   "cd ./packages/materials && yarn watch" \
   "cd ./packages/pointers && yarn watch" \
   "cd ./packages/types && yarn watch" \
+  "cd ./packages/programs && yarn watch" \
   "cd ./packages/web && yarn start $NO_OPEN_FLAG" \
   "yarn test --watchAll"
 
