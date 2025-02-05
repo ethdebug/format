@@ -1,3 +1,4 @@
+/// <reference path="../../../jest.d.ts" />
 import { expect, describe, it } from "@jest/globals";
 import chalk from "chalk";
 
