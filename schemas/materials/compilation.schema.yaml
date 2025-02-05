@@ -9,9 +9,9 @@ type: object
 properties:
   id:
     description: |
-      Compilation ID. Optional, but **should** be specified.
+      Compilation ID
 
-      This value **must** be globally-unique and generated only from the
+      This value **should** be globally-unique and generated only from the
       compiler inputs (settings, sources, etc.); the same compiler inputs/
       settings **should** produce the same identifier.
 
@@ -75,7 +75,8 @@ required:
   - sources
 
 examples:
-  - compiler:
+  - id: foo
+    compiler:
       name: lllc
       version: 0.4.12-develop.2017.6.27+commit.b83f77e0.Linux.g++
     sources:
