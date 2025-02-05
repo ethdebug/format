@@ -1,41 +1,35 @@
-import type {
-  Id,
-  Source,
-  Instruction,
-  SourceRange,
-  Context
-} from "./types";
+import { Materials } from "@ethdebug/materials";
+import { Program } from "@ethdebug/programs";
 
 export type DynamicInstruction =
-  & Omit<Instruction, "context">
+  & Omit<Program.Instruction, "context" | "operation">
+  & { operation: Program.Instruction.Operation; }
   & { context: DynamicContext; };
 
 export type DynamicContext =
-  | Context
+  | Program.Context
   | ContextThunk;
 
 export type ContextThunk = (props: {
   findSourceRange(
     query: string,
     options?: FindSourceRangeOptions
-  ): SourceRange | undefined;
-}) => Context;
+  ): Materials.SourceRange | undefined;
+}) => Program.Context;
 
 export interface FindSourceRangeOptions {
-  source?: {
-    id: Id;
-  };
+  source?: Materials.Reference<Materials.Source>;
   after?: string;
 }
 
 export interface ResolverOptions {
-  sources: Source[];
+  sources: Materials.Source[];
 }
 
 export function resolveDynamicInstruction(
   dynamicInstruction: DynamicInstruction,
   options: ResolverOptions
-): Instruction {
+): Program.Instruction {
   const context = resolveDynamicContext(
     dynamicInstruction.context,
     options
@@ -52,7 +46,7 @@ export function resolveDynamicInstruction(
 function resolveDynamicContext(
   context: DynamicContext,
   { sources }: ResolverOptions
-): Context {
+): Program.Context {
   if (typeof context !== "function") {
     return context;
   }

@@ -30,7 +30,8 @@ export function SourceContents(
   )
     ? [{
         start: context.code.range.offset,
-        end: context.code.range.offset + context.code.range.length,
+        end:
+          Number(context.code.range.offset) + Number(context.code.range.length),
         properties: {
           style: "font-weight: bold; background-color: var(--ifm-color-primary-lightest);"
         }

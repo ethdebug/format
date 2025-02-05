@@ -3,7 +3,6 @@ import Admonition from "@theme/Admonition";
 import Link from "@docusaurus/Link";
 import { useProgramExampleContext } from "./ProgramExampleContext";
 
-import { type Instruction } from "./types";
 import { ShikiCodeBlock } from "@theme/ShikiCodeBlock";
 
 export function HighlightedInstruction(): JSX.Element {

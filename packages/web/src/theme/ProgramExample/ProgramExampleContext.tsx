@@ -1,19 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-import type { Instruction, Source } from "./types";
+import { Program } from "@ethdebug/programs";
+import { Data, Materials } from "@ethdebug/materials";
 import { computeOffsets } from "./offsets";
 import { type DynamicInstruction, resolveDynamicInstruction } from "./dynamic";
 
 
 export interface ProgramExampleState {
   // props
-  sources: Source[];
-  instructions: Instruction[];
+  sources: Materials.Source[];
+  instructions: Program.Instruction[];
 
   // stateful stuff
-  highlightedOffset: number | undefined;
-  highlightedInstruction: Instruction | undefined;
-  highlightInstruction(offset: number | undefined): void;
+  highlightedOffset: Data.Value | undefined;
+  highlightedInstruction: Program.Instruction | undefined;
+  highlightInstruction(offset: Data.Value | undefined): void;
 }
 
 const ProgramExampleContext =
@@ -29,7 +30,7 @@ export function useProgramExampleContext() {
 }
 
 export interface ProgramExampleProps {
-  sources: Source[];
+  sources: Materials.Source[];
   instructions: Omit<DynamicInstruction, "offset">[];
 }
 
@@ -56,11 +57,11 @@ export function ProgramExampleContextProvider({
   const [
     highlightedOffset,
     highlightInstruction
-  ] = useState<number | undefined>();
+  ] = useState<Data.Value | undefined>();
   const [
     highlightedInstruction,
     setHighlightedInstruction
-  ] = useState<Instruction | undefined>();
+  ] = useState<Program.Instruction | undefined>();
 
   useEffect(() => {
     if (typeof highlightedOffset === "undefined") {

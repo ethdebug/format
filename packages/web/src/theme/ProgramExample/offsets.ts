@@ -1,14 +1,15 @@
-import type { Operation } from "./types";
+import { Data } from "@ethdebug/materials";
+import { Program } from "@ethdebug/programs";
 
 // define base generic instruction since other parts of this module
 // allow dynamic contexts and such
 interface OffsetComputableInstruction {
-  operation: Operation;
+  operation: Program.Instruction.Operation;
 }
 
 type OffsetComputedInstruction<I extends OffsetComputableInstruction> =
   & I
-  & { offset: number; };
+  & { offset: Data.Value; };
 
 export function computeOffsets<I extends OffsetComputableInstruction>(
   instructions: I[]
@@ -34,7 +35,11 @@ export function computeOffsets<I extends OffsetComputableInstruction>(
         1 /* for opcode */ +
         Math.ceil(
           (instruction.operation.arguments || [])
-            .map(prefixed => prefixed.slice(2))
+            .map(
+              value => typeof value === "number"
+                ? value.toString(16)
+                : value.slice(2)
+            )
             .join("")
             .length / 2
         )

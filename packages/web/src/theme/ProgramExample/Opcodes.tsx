@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useProgramExampleContext } from "./ProgramExampleContext";
 
-import { type Instruction } from "./types";
+import { Data } from "@ethdebug/materials";
+import { Program } from "@ethdebug/programs";
 
 import "./Opcodes.css";
 
@@ -12,8 +13,8 @@ export function Opcodes(): JSX.Element {
     highlightInstruction
   } = useProgramExampleContext();
 
-  const [activeOffset, setActiveOffset] = useState<number | undefined>();
-  const [hoverOffset, setHoverOffset] = useState<number | undefined>();
+  const [activeOffset, setActiveOffset] = useState<Data.Value | undefined>();
+  const [hoverOffset, setHoverOffset] = useState<Data.Value | undefined>();
 
   useEffect(() => {
     if (activeOffset !== undefined) {
@@ -36,14 +37,14 @@ export function Opcodes(): JSX.Element {
 
   }, [activeOffset, hoverOffset]);
 
-  const handleClick = (offset: number) => offset === activeOffset
+  const handleClick = (offset: Data.Value) => offset === activeOffset
     ? setActiveOffset(undefined)
     : setActiveOffset(offset);
 
-  const handleMouseEnter = (offset: number) => setHoverOffset(offset);
+  const handleMouseEnter = (offset: Data.Value) => setHoverOffset(offset);
   // skipping the current hover offset check here and assuming that the mouse
   // must leave the boundary of one offset before entering another
-  const handleMouseLeave = (offset: number) => setHoverOffset(undefined);
+  const handleMouseLeave = (offset: Data.Value) => setHoverOffset(undefined);
 
   const paddingLength = instructions.at(-1)!.offset.toString(16).length;
 
@@ -64,7 +65,7 @@ export function Opcodes(): JSX.Element {
 
 
 function Opcode(props: {
-  instruction: Instruction;
+  instruction: Program.Instruction;
   active: boolean;
   paddingLength: number;
   onClick: () => void;
