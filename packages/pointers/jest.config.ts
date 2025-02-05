@@ -1,5 +1,7 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
+import type { Config } from "jest";
+
+const config: Config = {
+  displayName: "@ethdebug/pointers",
   preset: "ts-jest",
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts"],
@@ -7,6 +9,8 @@ module.exports = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  modulePathIgnorePatterns: ["<rootDir>/dist/"],
+  setupFilesAfterEnv: ["<rootDir>/../../jest.setup.ts"],
   transform: {
     // '^.+\\.[tj]sx?$' to process js/ts with `ts-jest`
     // '^.+\\.m?[tj]sx?$' to process js/ts/mjs/mts with `ts-jest`
@@ -18,3 +22,5 @@ module.exports = {
     ],
   },
 };
+
+export default config;
