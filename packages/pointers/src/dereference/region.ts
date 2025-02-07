@@ -1,6 +1,6 @@
+import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "../cursor.js";
 import type { Data } from "../data.js";
-import { Pointer } from "../pointer.js";
 import { evaluate, type EvaluateOptions } from "../evaluate.js";
 
 /**

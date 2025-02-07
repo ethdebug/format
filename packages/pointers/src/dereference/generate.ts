@@ -1,7 +1,7 @@
+import type { Pointer } from "@ethdebug/format";
 import type { Machine } from "../machine.js";
 import type { Cursor } from "../cursor.js";
 import type { Data } from "../data.js";
-import type { Pointer } from "../pointer.js";
 
 import { Memo } from "./memo.js";
 import { processPointer, type ProcessOptions } from "./process.js";

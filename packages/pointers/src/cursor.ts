@@ -1,5 +1,5 @@
+import type { Pointer } from "@ethdebug/format";
 import type { Machine } from "./machine.js";
-import type { Pointer } from "./pointer.js";
 import type { Data } from "./data.js";
 
 /**

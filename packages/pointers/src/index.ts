@@ -1,4 +1,3 @@
-export { Pointer, isPointer } from "./pointer.js";
 export { dereference, DereferenceOptions } from "./dereference/index.js";
 export { Cursor } from "./cursor.js";
 

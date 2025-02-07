@@ -1,7 +1,7 @@
 import { jest, expect, describe, it, beforeEach } from "@jest/globals";
+import { Pointer } from "@ethdebug/format";
 import { Machine } from "../machine.js";
 import { Data } from "../data.js";
-import { Pointer } from "../pointer.js";
 import { dereference } from "./index.js";
 
 describe("dereference", () => {
