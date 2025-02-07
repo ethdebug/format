@@ -35,10 +35,10 @@ export function describeSchema({
   }
 
   return referencesId(schema)
-    ? describeSchemaById({ schema, pointer })
+    ? describeSchemaById({ schema, ...(pointer ? { pointer } : {}) })
     : referencesYaml(schema)
-      ? describeSchemaByYaml({ schema, pointer })
-      : describeSchemaByObject({ schema, pointer });
+      ? describeSchemaByYaml({ schema, ...(pointer ? { pointer } : {}) })
+      : describeSchemaByObject({ schema, ...(pointer ? { pointer } : {}) });
 }
 
 function describeSchemaById({
@@ -65,7 +65,7 @@ function describeSchemaById({
 
   return {
     id,
-    pointer,
+    ...(pointer ? { pointer } : {}),
     yaml,
     schema,
     rootSchema
@@ -86,14 +86,14 @@ function describeSchemaByYaml({
   if (id) {
     return {
       id,
-      pointer,
+      ...(pointer ? { pointer } : {}),
       yaml,
       schema,
       rootSchema
     }
   } else {
     return {
-      pointer,
+      ...(pointer ? { pointer } : {}),
       yaml,
       schema,
       rootSchema
@@ -116,14 +116,14 @@ function describeSchemaByObject({
   if (id) {
     return {
       id,
-      pointer,
+      ...(pointer ? { pointer } : {}),
       yaml,
       schema,
       rootSchema
     }
   } else {
     return {
-      pointer,
+      ...(pointer ? { pointer } : {}),
       yaml,
       schema,
       rootSchema

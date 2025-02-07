@@ -63,6 +63,10 @@ const config: Config = {
       "./plugins/project-code-plugin.ts",
       {
         packages: {
+          "@ethdebug/format": {
+            tsConfigFilePath:
+              path.resolve(__dirname, "../format/tsconfig.json")
+          },
           "@ethdebug/pointers": {
             tsConfigFilePath:
               path.resolve(__dirname, "../pointers/tsconfig.json")

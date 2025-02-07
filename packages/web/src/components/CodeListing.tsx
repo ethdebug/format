@@ -9,6 +9,7 @@ export interface CodeListingProps
 {
   packageName: string;
   sourcePath: string;
+  includePackageNameInTitle?: boolean;
   extract?: (
     sourceFile: SourceFile,
     project: Project
@@ -19,6 +20,7 @@ export interface CodeListingProps
 export default function CodeListing({
   packageName,
   sourcePath,
+  includePackageNameInTitle = false,
   extract,
   links = {},
   ...codeBlockProps
@@ -36,6 +38,9 @@ export default function CodeListing({
   // bit of a HACK
   const listingFullSource = !extract;
 
+  const title = includePackageNameInTitle
+    ? <><strong>{packageName}</strong> {sourcePath}</>
+    : sourcePath;
 
   if (Object.keys(links).length > 0) {
     return (
@@ -49,12 +54,13 @@ export default function CodeListing({
   }
 
   return (
+    // @ts-ignore element seems to work even though title says it wants string
     <CodeBlock
       language="typescript"
       {...{
         ...(
           listingFullSource
-            ? { title: sourcePath, showLineNumbers: true }
+            ? { title, showLineNumbers: true }
             : { showLineNumbers: false }
         ),
         ...codeBlockProps

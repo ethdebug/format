@@ -1,10 +1,13 @@
 import { expect, describe, it, beforeEach } from "@jest/globals";
+
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { toHex } from "ethereum-cryptography/utils";
+
+import { Pointer } from "@ethdebug/format";
+
 import { Machine } from "./machine.js";
 import { Data } from "./data.js";
 import { Cursor } from "./cursor.js";
-import { Pointer } from "./pointer.js";
 import { evaluate, type EvaluateOptions } from "./evaluate.js";
 
 // Create a stub for the Machine.State interface

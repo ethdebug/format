@@ -1,7 +1,9 @@
 import { jest, expect, describe, it, beforeEach } from "@jest/globals";
+
+import type { Pointer } from "@ethdebug/format";
+
 import { Machine } from "./machine.js";
 import { Data } from "./data.js";
-import type { Pointer } from "./pointer.js";
 import { read, type ReadOptions } from "./read.js";
 import { Cursor } from "./cursor.js";
 

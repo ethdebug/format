@@ -1,14 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2016",
+    "target": "es2017",
     "module": "commonjs",
     "moduleResolution": "node10",
+    "exactOptionalPropertyTypes": true,
     "rootDir": "./",
     "outDir": "./dist/",
   },
   "include": [
     "./src/**/*.ts",
+    "jest.d.ts",
     "yamls.ts"
   ]
 }

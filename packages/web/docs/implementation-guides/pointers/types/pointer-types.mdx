@@ -8,21 +8,21 @@ import CodeListing from "@site/src/components/CodeListing";
 
 ## Types and type guards for all kinds of pointers
 
-This package provides the root `Pointer` type and accompanying `Pointer`
-namespace, which contains TypeScript type definitions and type guards for
-working with **ethdebug/format/pointer** objects.
+The **@ethdebug/format** package provides the root `Pointer` type and
+accompanying `Pointer` namespace, which contains TypeScript type definitions
+and type predicates for working with **ethdebug/format/pointer** objects.
 
 The `Pointer` namespace is organized itself into namespaces in a nested manner,
 roughly to correspond to the JSON-Schema organization itself.
 
-Types and type guards are available for all pointer schemas, i.e., for every
-different kind of region and collection.
+Types and type predicates are available for all pointer schemas, i.e., for
+every different kind of region and collection.
 
 A [full source listing](#code-listing) follows below, but see example usage to
 get a sense for how these types are organized:
 
 ```typescript title="Usage example"
-import { Pointer, isPointer } from "@ethdebug/pointers";
+import { Pointer, isPointer } from "@ethdebug/format";
 
 const region: Pointer.Region = { location: "stack", slot: 0 };
 const group: Pointer.Collection.Group = { group: [region] };
@@ -43,7 +43,7 @@ nested, also roughly to correspond to the root JSON-Schema.
 See these quick examples to get a sense for this part of the type hierarchy:
 
 ```typescript title="Usage example"
-import { Pointer } from "@ethdebug/pointers";
+import { Pointer } from "@ethdebug/format";
 
 const expression: Pointer.Expression = {
   $sum: [0, 1]
@@ -57,5 +57,6 @@ Pointer.Expression.Arithmetic.isSum(expression); // true
 ## Code listing
 
 <CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/pointer.ts" />
+  packageName="@ethdebug/format"
+  includePackageNameInTitle
+  sourcePath="src/types/pointer/pointer.ts" />

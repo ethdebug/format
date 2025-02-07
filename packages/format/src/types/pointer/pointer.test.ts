@@ -1,11 +1,8 @@
-/// <reference path="../../../jest.d.ts" />
 import { expect, describe, it } from "@jest/globals";
-import chalk from "chalk";
 
-import { describeSchema } from "@ethdebug/format";
+import { describeSchema } from "../../describe";
 
-import { Pointer, isPointer } from "./index.js";
-
+import { Pointer, isPointer } from "./pointer";
 
 describe("type guards", () => {
   const expressionSchema = {

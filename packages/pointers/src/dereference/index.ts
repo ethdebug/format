@@ -1,4 +1,4 @@
-import type { Pointer } from "../pointer.js";
+import type { Pointer } from "@ethdebug/format";
 import type { Machine } from "../machine.js";
 import type { Cursor } from "../cursor.js";
 
