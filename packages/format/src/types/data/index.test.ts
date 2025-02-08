@@ -7,21 +7,15 @@ import { Data } from "./index.js";
 describe("type guards", () => {
   const schemaGuards = [
     {
-      schema: {
-        id: "schema:ethdebug/format/data/value"
-      },
+      schema: "schema:ethdebug/format/data/value",
       guard: Data.isValue
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/data/unsigned"
-      },
+      schema: "schema:ethdebug/format/data/unsigned",
       guard: Data.isUnsigned
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/data/hex"
-      },
+      schema: "schema:ethdebug/format/data/hex",
       guard: Data.isHex
     },
   ] as const;

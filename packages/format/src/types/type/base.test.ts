@@ -7,23 +7,17 @@ import * as Base from "./base";
 describe("type guards", () => {
   const schemaGuards = [
     {
-      schema: {
-        id: "schema:ethdebug/format/type/base"
-      },
+      schema: "schema:ethdebug/format/type/base",
       pointer: "#/$defs/ElementaryType",
       guard: Base.isElementary
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/base"
-      },
+      schema: "schema:ethdebug/format/type/base",
       pointer: "#/$defs/ComplexType",
       guard: Base.isComplex
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/base"
-      },
+      schema: "schema:ethdebug/format/type/base",
       pointer: "#/$defs/TypeWrapper",
       guard: Base.isWrapper
     },
@@ -32,7 +26,7 @@ describe("type guards", () => {
   for (const { guard, ...describeSchemaOptions } of schemaGuards) {
     const { schema, pointer } = describeSchemaOptions;
     describe(
-      `${schema.id.slice("schema:".length)}${pointer}`,
+      `${schema.slice("schema:".length)}${pointer}`,
       () => {
       it("matches its examples", () => {
         const {

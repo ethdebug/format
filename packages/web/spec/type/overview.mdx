@@ -88,7 +88,7 @@ Here are some example **ethdebug/format/type** type representations.
     "ethdebug/format/type/complex/mapping",
     "ethdebug/format/type/complex/struct"
   ].map((id, index) => {
-    const { schema } = describeSchema({ schema: { id: `schema:${id}` } });
+    const { schema } = describeSchema({ schema: `schema:${id}` });
     return <TabItem
       key={index}
       value={index}

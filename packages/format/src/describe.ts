@@ -34,11 +34,30 @@ export function describeSchema({
     throw new Error("`pointer` option must start with '#'");
   }
 
-  return referencesId(schema)
-    ? describeSchemaById({ schema, ...(pointer ? { pointer } : {}) })
-    : referencesYaml(schema)
-      ? describeSchemaByYaml({ schema, ...(pointer ? { pointer } : {}) })
-      : describeSchemaByObject({ schema, ...(pointer ? { pointer } : {}) });
+  const pointerOptions = pointer
+    ? { pointer }
+    : {};
+
+  if (referencesId(schema)) {
+    return describeSchemaById({
+      schema: typeof schema === "object"
+        ? schema
+        : { id: schema },
+      ...pointerOptions
+    });
+  }
+
+  if (referencesYaml(schema)) {
+    return describeSchemaByYaml({
+      schema,
+      ...pointerOptions
+    });
+  }
+
+  return describeSchemaByObject({
+    schema,
+    ...pointerOptions
+  });
 }
 
 function describeSchemaById({
@@ -180,12 +199,15 @@ type NoExtraProperties<T, U extends T = T> =
 export type SchemaPointer = `#${string}`;
 
 export type SchemaReference =
+  | SchemaId
   | SchemaById
   | SchemaByYaml
   | object /* JSONSchema object itself */;
 
+export type SchemaId = string;
+
 export type SchemaById = NoExtraProperties<{
-  id: string;
+  id: SchemaId;
 }>;
 
 export type SchemaByYaml = NoExtraProperties<{
@@ -194,12 +216,16 @@ export type SchemaByYaml = NoExtraProperties<{
 
 export function referencesId(
   schema: SchemaReference
-): schema is SchemaById {
-  return Object.keys(schema).length === 1 && "id" in schema;
+): schema is SchemaId | SchemaById {
+  return (
+    typeof schema === "string" ||
+    (Object.keys(schema).length === 1 && "id" in schema)
+  );
 }
 
 export function referencesYaml(
   schema: SchemaReference
 ): schema is SchemaByYaml {
-  return Object.keys(schema).length === 1 && "yaml" in schema;
+  return typeof schema === "object" &&
+    Object.keys(schema).length === 1 && "yaml" in schema;
 }
