@@ -1,0 +1,10 @@
+
+.highlighted-code {
+  font-weight: bold;
+  background-color: var(--ifm-color-primary-lightest);
+}
+
+.highlighted-variable-declaration {
+  text-decoration: underline;
+  text-decoration-style: wavy;
+}
