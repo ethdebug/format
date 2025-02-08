@@ -7,124 +7,88 @@ import { Type, isType } from "./index";
 describe("type guards", () => {
   const schemaGuards = [
     {
-      schema: {
-        id: "schema:ethdebug/format/type"
-      },
+      schema: "schema:ethdebug/format/type",
       guard: isType
     },
 
     // elementary types
 
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary"
-      },
+      schema: "schema:ethdebug/format/type/elementary",
       guard: Type.isElementary
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/uint"
-      },
+      schema: "schema:ethdebug/format/type/elementary/uint",
       guard: Type.Elementary.isUint
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/int"
-      },
+      schema: "schema:ethdebug/format/type/elementary/int",
       guard: Type.Elementary.isInt
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/ufixed"
-      },
+      schema: "schema:ethdebug/format/type/elementary/ufixed",
       guard: Type.Elementary.isUfixed
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/fixed"
-      },
+      schema: "schema:ethdebug/format/type/elementary/fixed",
       guard: Type.Elementary.isFixed
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/bool"
-      },
+      schema: "schema:ethdebug/format/type/elementary/bool",
       guard: Type.Elementary.isBool
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/bytes"
-      },
+      schema: "schema:ethdebug/format/type/elementary/bytes",
       guard: Type.Elementary.isBytes
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/string"
-      },
+      schema: "schema:ethdebug/format/type/elementary/string",
       guard: Type.Elementary.isString
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/address"
-      },
+      schema: "schema:ethdebug/format/type/elementary/address",
       guard: Type.Elementary.isAddress
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/contract"
-      },
+      schema: "schema:ethdebug/format/type/elementary/contract",
       guard: Type.Elementary.isContract
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/elementary/enum"
-      },
+      schema: "schema:ethdebug/format/type/elementary/enum",
       guard: Type.Elementary.isEnum
     },
 
     // complex types
 
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex"
-      },
+      schema: "schema:ethdebug/format/type/complex",
       guard: Type.isComplex
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex/alias"
-      },
+      schema: "schema:ethdebug/format/type/complex/alias",
       guard: Type.Complex.isAlias
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex/tuple"
-      },
+      schema: "schema:ethdebug/format/type/complex/tuple",
       guard: Type.Complex.isTuple
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex/array"
-      },
+      schema: "schema:ethdebug/format/type/complex/array",
       guard: Type.Complex.isArray
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex/mapping"
-      },
+      schema: "schema:ethdebug/format/type/complex/mapping",
       guard: Type.Complex.isMapping
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/type/complex/struct"
-      },
+      schema: "schema:ethdebug/format/type/complex/struct",
       guard: Type.Complex.isStruct
     },
   ] as const;
 
   for (const { guard, ...describeSchemaOptions } of schemaGuards) {
     const { schema } = describeSchemaOptions;
-    describe(schema.id.slice("schema:".length), () => {
+    describe(schema.slice("schema:".length), () => {
       it("matches its examples", () => {
         const {
           schema: {

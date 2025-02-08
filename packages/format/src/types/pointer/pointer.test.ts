@@ -5,9 +5,7 @@ import { describeSchema } from "../../describe";
 import { Pointer, isPointer } from "./pointer";
 
 describe("type guards", () => {
-  const expressionSchema = {
-    id: "schema:ethdebug/format/pointer/expression"
-  };
+  const expressionSchema = "schema:ethdebug/format/pointer/expression";
 
   const schemaGuards = [
     {
@@ -60,75 +58,51 @@ describe("type guards", () => {
       guard: Pointer.Expression.isResize
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region"
-      },
+      schema: "schema:ethdebug/format/pointer/region",
       guard: Pointer.isRegion
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/stack"
-      },
+      schema: "schema:ethdebug/format/pointer/region/stack",
       guard: Pointer.Region.isStack
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/memory"
-      },
+      schema: "schema:ethdebug/format/pointer/region/memory",
       guard: Pointer.Region.isMemory
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/storage"
-      },
+      schema: "schema:ethdebug/format/pointer/region/storage",
       guard: Pointer.Region.isStorage
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/calldata"
-      },
+      schema: "schema:ethdebug/format/pointer/region/calldata",
       guard: Pointer.Region.isCalldata
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/returndata"
-      },
+      schema: "schema:ethdebug/format/pointer/region/returndata",
       guard: Pointer.Region.isReturndata
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/transient"
-      },
+      schema: "schema:ethdebug/format/pointer/region/transient",
       guard: Pointer.Region.isTransient
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/region/code"
-      },
+      schema: "schema:ethdebug/format/pointer/region/code",
       guard: Pointer.Region.isCode
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/collection/group"
-      },
+      schema: "schema:ethdebug/format/pointer/collection/group",
       guard: Pointer.Collection.isGroup
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/collection/list"
-      },
+      schema: "schema:ethdebug/format/pointer/collection/list",
       guard: Pointer.Collection.isList
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer"
-      },
+      schema: "schema:ethdebug/format/pointer",
       guard: isPointer
     },
     {
-      schema: {
-        id: "schema:ethdebug/format/pointer/template"
-      },
+      schema: "schema:ethdebug/format/pointer/template",
       guard: Pointer.isTemplate
     },
   ] as const;
