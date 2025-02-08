@@ -9,9 +9,9 @@
     "dist"
   ],
   "scripts": {
-    "prepare:yamls": "node ./bin/generate-schema-yamls.js > yamls.ts",
+    "prepare:yamls": "node ./bin/generate-schema-yamls.js > src/schemas/yamls.ts",
     "prepare": "yarn prepare:yamls && tsc",
-    "clean": "rm -rf dist && rm yamls.ts",
+    "clean": "rm -rf dist && rm src/schemas/yamls.ts",
     "test": "node --experimental-vm-modules $(yarn bin jest)",
     "watch:typescript": "tsc --watch",
     "watch:schemas": "nodemon --watch ../../schemas -e 'yaml' --exec 'yarn prepare:yamls'",

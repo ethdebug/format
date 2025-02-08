@@ -1,2 +1,2 @@
 dist
-yamls.ts
+src/schemas/yamls.ts
