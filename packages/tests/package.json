@@ -11,7 +11,8 @@
   },
   "devDependencies": {
     "@ethdebug/format": "^0.1.0-0",
-    "@hyperjump/json-schema": "1.6.7",
+    "@hyperjump/browser": "^1.2.0",
+    "@hyperjump/json-schema": "^1.11.0",
     "cli-highlight": "^2.1.11",
     "indent-string": "^5.0.0",
     "typescript": "^5.3.3",
