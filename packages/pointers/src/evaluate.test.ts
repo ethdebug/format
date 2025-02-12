@@ -1,4 +1,4 @@
-import { expect, describe, it, beforeEach } from "@jest/globals";
+import { expect, describe, it, beforeEach } from "vitest";
 
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { toHex } from "ethereum-cryptography/utils";

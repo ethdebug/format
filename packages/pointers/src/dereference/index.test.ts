@@ -1,4 +1,4 @@
-import { jest, expect, describe, it, beforeEach } from "@jest/globals";
+import { vitest, expect, describe, it, beforeEach } from "vitest";
 import { Pointer } from "@ethdebug/format";
 import { Machine } from "../machine.js";
 import { Data } from "../data.js";
@@ -11,25 +11,25 @@ describe("dereference", () => {
     state = {
       stack: {
         length: Promise.resolve(10n),
-        peek: jest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        peek: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
       },
       memory: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
       },
       storage: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
       },
       calldata: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
       },
       returndata: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
       },
       transient: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
       },
       code: {
-        read: jest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
       },
     } as unknown as Machine.State;
   });

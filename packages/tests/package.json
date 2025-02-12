@@ -7,16 +7,14 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "node --experimental-vm-modules $(yarn bin jest)"
+    "test": "vitest"
   },
   "devDependencies": {
     "@ethdebug/format": "^0.1.0-0",
     "@hyperjump/json-schema": "1.6.7",
-    "@jest/globals": "^29.7.0",
     "cli-highlight": "^2.1.11",
     "indent-string": "^5.0.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.5"
   }
 }

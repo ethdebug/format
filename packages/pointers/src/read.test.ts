@@ -1,4 +1,4 @@
-import { jest, expect, describe, it, beforeEach } from "@jest/globals";
+import { vitest, expect, describe, it, beforeEach } from "vitest";
 
 import type { Pointer } from "@ethdebug/format";
 
@@ -14,43 +14,43 @@ describe("read", () => {
     const state: Machine.State = {
       stack: {
         length: 50n,
-        peek: jest.fn(
+        peek: vitest.fn(
           async ({ depth, slice }) =>
             Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))
         ),
       },
       memory: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slice }) =>
             Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))
         ),
       },
       storage: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slot, slice }) =>
             Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))
         ),
       },
       calldata: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slice }) =>
             Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))
         ),
       },
       returndata: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slice }) =>
             Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))
         ),
       },
       transient: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slot, slice }) =>
             Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))
         ),
       },
       code: {
-        read: jest.fn(
+        read: vitest.fn(
           async ({ slice }) =>
             Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))
         ),

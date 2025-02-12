@@ -2,15 +2,17 @@
 
 # Check if the --no-open flag is provided
 if [[ " $* " == *" --no-open "* ]]; then
-  NO_OPEN_FLAG="--no-open"
+  DOCUSAURUS_NO_OPEN="--no-open"
+  VITEST_NO_OPEN="--open=false"
 else
-  NO_OPEN_FLAG=""
+  DOCUSAURUS_NO_OPEN=""
+  VITEST_NO_OPEN=""
 fi
 
 # Run the commands with concurrently
-concurrently --names=format,pointers,web,jest \
+concurrently --names=format,pointers,web,tests \
   "cd ./packages/format && yarn watch" \
   "cd ./packages/pointers && yarn watch" \
-  "cd ./packages/web && yarn start $NO_OPEN_FLAG" \
-  "yarn test --watchAll"
+  "cd ./packages/web && yarn start $DOCUSAURUS_NO_OPEN" \
+  "sleep 5 && yarn test --ui $VITEST_NO_OPEN"
 

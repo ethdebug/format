@@ -1,9 +1,8 @@
-import type { DescribeSchemaOptions } from "@ethdebug/format";
-
 import "vitest";
 
 interface CustomMatchers<R = unknown> {
-  toValidate(schemaOptions: DescribeSchemaOptions): R;
+  toSatisfy(received: any): R;
+  toSatisfyAll(values: readonly any[]): R;
 }
 
 declare module "vitest" {
