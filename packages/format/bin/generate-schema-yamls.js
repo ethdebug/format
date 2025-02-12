@@ -33,7 +33,10 @@ const rawSchemas = Object.entries(schemaYamls)
   .map(([id, yaml]) => ({ [id]: YAML.parse(yaml) }))
   .reduce((a, b) => ({ ...a, ...b }), {});
 
-console.log(`export type SchemaYamlsById = {
+console.log(`// THIS FILE GETS AUTO-GENERATED AS PART OF THIS PACKAGE'S BUILD PROCESS
+// Please do not modify it directly or allow it to get checked into source control.
+
+export type SchemaYamlsById = {
   [id: string]: string;
 };
 
