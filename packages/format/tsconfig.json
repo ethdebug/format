@@ -10,7 +10,7 @@
   },
   "include": [
     "./src/**/*.ts",
-    "jest.d.ts",
+    "vitest.d.ts",
     "yamls.ts"
   ]
 }
