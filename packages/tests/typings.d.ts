@@ -1,10 +1,13 @@
 import type { DescribeSchemaOptions } from "@ethdebug/format";
 
-declare module "@jest/expect" {
-  interface Matchers<R> {
-    toValidate(schemaOptions: DescribeSchemaOptions): R;
+import "vitest";
 
-    toSatisfy(received: any): R;
-    toSatisfyAll(values: readonly any[]): R;
-  }
+interface CustomMatchers<R = unknown> {
+  toValidate(schemaOptions: DescribeSchemaOptions): R;
+}
+
+declare module "vitest" {
+  interface Assertion<T = any> extends CustomMatchers<T> {}
+
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
