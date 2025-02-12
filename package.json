@@ -13,11 +13,9 @@
     "postinstall": "lerna run prepare"
   },
   "devDependencies": {
-    "@hyperjump/json-schema": "1.6.7",
     "@vitest/ui": "^3.0.5",
     "concurrently": "^8.2.2",
     "lerna": "^8.0.2",
-    "nodemon": "^3.0.2",
     "tsx": "^4.16.2",
     "vitest": "^3.0.5"
   }
