@@ -33,15 +33,10 @@ domain of experts. Without a mechanism for machine-to-human translation,
 smart contract software quality comes at a higher cost, and any promise of
 trust risks erosion.
 
-[^1]: See [Debugging data format -
-  Wikipedia](https://en.wikipedia.org/wiki/Debugging_data_format)
-
-[^2]: See [DWARF - Wikipedia](https://en.wikipedia.org/wiki/DWARF)
-
 ## Purpose of this repository
 
-This repository serves as a home for the working group to design
-a standard debugging data format for smart contracts on
+This repository serves as a home for the **ethdebug/format** working group to
+design a standard debugging data format for smart contracts on
 Ethereum-compatible networks.
 
 ## Contents
@@ -50,12 +45,29 @@ This repository contains a
 [`schemas/`](https://github.com/ethdebug/format/tree/main/schemas) directory
 with the formal JSON Schemas defined by this project (in YAML format).
 
-This repository also contains a number of NPM packages (currently unpublished):
-- **@ethdebug/format**: A Node.js-compatible distribution of these schemas
-- **@ethdebug/format-tests**: Contains a test suite for validating schemas and
-  testing examples/other constraints.
-- **@ethdebug/format-web**: The docusaurus site source that powers this
-  project's homepage.
+This repository also contains the source materials for the following NPM packages:
+- **@ethdebug/format** in
+  [`packages/format/`](https://github.com/ethdebug/format/tree/main/packages/format)
+  distributes the formal schemas for use in TypeScript
+  or JavaScript projects, along with corresponding
+  type predicate functions[^3] to help maintain type-safety when reading
+  objects in these schemas.
+
+- **@ethdebug/pointers** in
+  [`packages/pointers/`](https://github.com/ethdebug/format/tree/main/packages/pointers)
+  provides a functional reference implementation for dereferencing
+  [ethdebug/format/pointer](https://ethdebug.github.io/format/spec/pointer/overview)
+  objects against running raw EVM machine state.
+
+  For more about this reference implementation, please see accompanying
+  [Dereferencing pointers](https://ethdebug.github.io/format/docs/implementation-guides/pointers/)
+  implementation guide on this project's homepage.
+
+- **@ethdebug/format-web** _(unpublished package)_ in
+  [`packages/web/`](https://github.com/ethdebug/format/tree/main/packages/web)
+  contains the materials for
+  the Docusaurus site powering
+  [this project's homepage](https://ethdebug.github.io/format).
 
 ## Developing locally
 
@@ -75,3 +87,11 @@ on any changes. This will open your browser to `http://localhost:3000/format`:
 ```console
 yarn start
 ```
+
+[^1]: See [Debugging data format -
+  Wikipedia](https://en.wikipedia.org/wiki/Debugging_data_format)
+
+[^2]: See [DWARF - Wikipedia](https://en.wikipedia.org/wiki/DWARF)
+
+[^3]: See [Using type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)
+  section from TypeScript's Narrowing documentation.
