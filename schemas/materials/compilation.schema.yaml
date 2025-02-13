@@ -71,6 +71,7 @@ properties:
       $ref: "schema:ethdebug/format/materials/source"
 
 required:
+  - id
   - compiler
   - sources
 
