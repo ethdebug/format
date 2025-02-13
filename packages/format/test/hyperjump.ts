@@ -4,18 +4,19 @@ import {
   validate,
   setMetaSchemaOutputFormat,
 } from "@hyperjump/json-schema/draft-2020-12";
+// @ts-ignore
 import { BASIC } from "@hyperjump/json-schema/experimental";
 import { bundle } from "@hyperjump/json-schema/bundle";
-import YAML from "yaml";
+import * as YAML from "yaml";
 import indentString from "indent-string";
 import { highlight } from "cli-highlight";
 
 import {
   describeSchema,
   type DescribeSchemaOptions
-} from "@ethdebug/format";
+} from "../src/describe";
 
-import schemas from "./schemas.js";
+import { schemas } from "../src/schemas";
 
 const main = () => {
   setMetaSchemaOutputFormat(BASIC);

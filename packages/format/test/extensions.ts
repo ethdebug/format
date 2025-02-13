@@ -1,4 +1,4 @@
-import { schemas } from "@ethdebug/format";
+import { schemas } from "../src";
 
 export const schemaExtensions: {
   [schemaId: string]: {
@@ -81,5 +81,3 @@ export const schemaExtensions: {
     extends: new Set(["schema:ethdebug/format/type/complex"])
   },
 }
-
-export default schemas;
