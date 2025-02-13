@@ -4,6 +4,7 @@ import {
   validate,
   setMetaSchemaOutputFormat,
 } from "@hyperjump/json-schema/draft-2020-12";
+import { BASIC } from "@hyperjump/json-schema/experimental";
 import { bundle } from "@hyperjump/json-schema/bundle";
 import YAML from "yaml";
 import indentString from "indent-string";
@@ -17,7 +18,7 @@ import {
 import schemas from "./schemas.js";
 
 const main = () => {
-  setMetaSchemaOutputFormat("BASIC");
+  setMetaSchemaOutputFormat(BASIC);
 
   for (const schema of Object.values(schemas)) {
     addSchema(schema as any);
@@ -40,15 +41,18 @@ const main = () => {
           ? schema.title
           : schemaReference;
 
-      const output = await validate(schemaReference, received, "DETAILED");
+      const output = await validate(schemaReference, received, BASIC);
 
       const pass = output.valid;
 
       return {
         pass,
-        message: () => `expected ${
-          JSON.stringify(received)
-        } ${
+        message: () => `expected input:\n${
+          indentString(
+            highlight(YAML.stringify(received), { language: "yaml" }),
+            2
+          )
+        }\n${
           pass
             ? "not to be"
             : "to be"
