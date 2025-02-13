@@ -22,8 +22,12 @@
     "yaml": "^2.3.4"
   },
   "devDependencies": {
+    "@hyperjump/browser": "^1.2.0",
+    "@hyperjump/json-schema": "^1.11.0",
     "chalk": "^4.1.0",
+    "cli-highlight": "^2.1.11",
     "concurrently": "^8.2.2",
+    "indent-string": "^4.0.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
