@@ -5,12 +5,14 @@ import { Pointer, isPointer } from "../pointer";
 export type Context =
   | Context.Code
   | Context.Variables
-  | Context.Remark;
+  | Context.Remark
+  | Context.Pick;
 
 export const isContext = (value: unknown): value is Context => [
   Context.isCode,
   Context.isVariables,
   Context.isRemark,
+  Context.isPick,
 ].some(guard => guard(value));
 
 export namespace Context {
@@ -76,4 +78,13 @@ export namespace Context {
   export const isRemark = (value: unknown): value is Remark =>
     typeof value === "object" && !!value &&
       "remark" in value && typeof value.remark === "string";
+
+  export interface Pick {
+    pick: Context[];
+  }
+
+  export const isPick = (value: unknown): value is Pick =>
+    typeof value === "object" && !!value &&
+      "pick" in value && value.pick instanceof Array &&
+      value.pick.every(isContext);
 }

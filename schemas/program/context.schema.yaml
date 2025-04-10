@@ -34,6 +34,10 @@ allOf:
       required: ["remark"]
     then:
       $ref: "schema:ethdebug/format/program/context/remark"
+  - if:
+      required: ["pick"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/pick"
 
 unevaluatedProperties: false
 
