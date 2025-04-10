@@ -1,0 +1,35 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/pick"
+
+title: ethdebug/format/program/context/pick
+description: |
+  A program context that specifies the `"pick"` property indicates that
+  one of several possible contexts are known to be true, possibly requiring
+  additional information to disambiguate.
+
+type: object
+properties:
+  pick:
+    title: Contexts to pick from
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/program/context"
+    minItems: 2
+    additionalItems: false
+required:
+  - pick
+
+examples:
+  - pick:
+    - code:
+        source:
+          id: 5
+        range:
+          offset: 68
+          length: 16
+    - code:
+        source:
+          id: 5
+        range:
+          offset: 132
+          length: 16

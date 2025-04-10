@@ -12,6 +12,7 @@ anyOf:
   - $ref: "schema:ethdebug/format/program/context/code"
   - $ref: "schema:ethdebug/format/program/context/variables"
   - $ref: "schema:ethdebug/format/program/context/remark"
+  - $ref: "schema:ethdebug/format/program/context/pick"
 
 unevaluatedProperties: false
 
