@@ -5,7 +5,8 @@ import { Pointer, isPointer } from "../pointer";
 export type Context =
   | Context.Code
   | Context.Variables
-  | Context.Remark;
+  | Context.Remark
+  | Context.Frame;
 
 export const isContext = (value: unknown): value is Context => [
   Context.isCode,
@@ -76,4 +77,12 @@ export namespace Context {
   export const isRemark = (value: unknown): value is Remark =>
     typeof value === "object" && !!value &&
       "remark" in value && typeof value.remark === "string";
+
+  export interface Frame {
+    frame: string;
+  }
+
+  export const isFrame = (value: unknown): value is Frame =>
+    typeof value === "object" && !!value &&
+      "frame" in value && typeof value.frame === "string";
 }
