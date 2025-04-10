@@ -39,6 +39,10 @@ allOf:
     then:
       $ref: "schema:ethdebug/format/program/context/pick"
   - if:
+      required: ["gather"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/gather"
+  - if:
       required: ["frame"]
     then:
       $ref: "schema:ethdebug/format/program/context/frame"

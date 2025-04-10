@@ -23,6 +23,10 @@ testSchemaGuards("ethdebug/format/program/context", [
     guard: Context.isPick
   },
   {
+    schema: "schema:ethdebug/format/program/context/gather",
+    guard: Context.isGather
+  },
+  {
     schema: "schema:ethdebug/format/program/context/frame",
     guard: Context.isFrame
   },

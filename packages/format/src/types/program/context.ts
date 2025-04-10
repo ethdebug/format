@@ -7,6 +7,7 @@ export type Context =
   | Context.Variables
   | Context.Remark
   | Context.Pick
+  | Context.Gather
   | Context.Frame;
 
 export const isContext = (value: unknown): value is Context => [
@@ -15,6 +16,7 @@ export const isContext = (value: unknown): value is Context => [
   Context.isRemark,
   Context.isPick,
   Context.isFrame,
+  Context.isGather,
 ].some(guard => guard(value));
 
 export namespace Context {
@@ -89,6 +91,15 @@ export namespace Context {
     typeof value === "object" && !!value &&
       "pick" in value && value.pick instanceof Array &&
       value.pick.every(isContext);
+
+  export interface Gather {
+    gather: Context[];
+  }
+
+  export const isGather = (value: unknown): value is Pick =>
+    typeof value === "object" && !!value &&
+      "gather" in value && value.gather instanceof Array &&
+      value.gather.every(isContext);
 
   export interface Frame {
     frame: string;
