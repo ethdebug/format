@@ -38,6 +38,10 @@ allOf:
       required: ["pick"]
     then:
       $ref: "schema:ethdebug/format/program/context/pick"
+  - if:
+      required: ["frame"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/frame"
 
 unevaluatedProperties: false
 

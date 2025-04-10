@@ -22,4 +22,8 @@ testSchemaGuards("ethdebug/format/program/context", [
     schema: "schema:ethdebug/format/program/context/pick",
     guard: Context.isPick
   },
+  {
+    schema: "schema:ethdebug/format/program/context/frame",
+    guard: Context.isFrame
+  },
 ] as const);

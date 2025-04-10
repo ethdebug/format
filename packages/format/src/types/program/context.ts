@@ -6,13 +6,15 @@ export type Context =
   | Context.Code
   | Context.Variables
   | Context.Remark
-  | Context.Pick;
+  | Context.Pick
+  | Context.Frame;
 
 export const isContext = (value: unknown): value is Context => [
   Context.isCode,
   Context.isVariables,
   Context.isRemark,
   Context.isPick,
+  Context.isFrame,
 ].some(guard => guard(value));
 
 export namespace Context {
@@ -87,4 +89,12 @@ export namespace Context {
     typeof value === "object" && !!value &&
       "pick" in value && value.pick instanceof Array &&
       value.pick.every(isContext);
+
+  export interface Frame {
+    frame: string;
+  }
+
+  export const isFrame = (value: unknown): value is Frame =>
+    typeof value === "object" && !!value &&
+      "frame" in value && typeof value.frame === "string";
 }
