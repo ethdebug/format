@@ -31,7 +31,9 @@ export function SourceContents(
 
   const simpleDecorations = Program.Context.isCode(context)
     ? decorateCodeContext(context, source)
-    : [];
+    : Program.Context.isPick(context)
+      ? decoratePickContext(context, source)
+      : [];
 
   const detailedDecorations = [
     ...simpleDecorations,
@@ -56,7 +58,8 @@ export function SourceContents(
 
 function decorateCodeContext(
   { code }: Program.Context.Code,
-  source: Materials.Source
+  source: Materials.Source,
+  className: string = "highlighted-code"
 ): Shiki.DecorationItem[] {
   const { offset, length } = normalizeRange(code.range, source);
 
@@ -65,11 +68,27 @@ function decorateCodeContext(
       start: offset,
       end: offset + length,
       properties: {
-        class: "highlighted-code"
+        class: className
       }
     }
   ];
 }
+
+function decoratePickContext(
+  { pick }: Program.Context.Pick,
+  source: Materials.Source
+): Shiki.DecorationItem[] {
+  // HACK this only supports picking from a choice of several different code
+  // contexts
+  if (!pick.every(Program.Context.isCode)) {
+    return [];
+  }
+
+  return pick.flatMap(
+    (choice) => decorateCodeContext(choice, source, "highlighted-ambiguous-code")
+  );
+}
+
 
 function decorateVariablesContext(
   { variables }: Program.Context.Variables,
