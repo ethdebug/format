@@ -4,6 +4,11 @@
   background-color: var(--ifm-color-primary-lightest);
 }
 
+.highlighted-ambiguous-code {
+  font-weight: bold;
+  background-color: var(--ifm-color-warning-lightest);
+}
+
 .highlighted-variable-declaration {
   text-decoration: underline;
   text-decoration-style: wavy;
