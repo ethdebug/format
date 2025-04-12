@@ -8,13 +8,37 @@ description: |
 
 type: object
 
-anyOf:
-  - $ref: "schema:ethdebug/format/program/context/code"
-  - $ref: "schema:ethdebug/format/program/context/variables"
-  - $ref: "schema:ethdebug/format/program/context/remark"
-  - $ref: "schema:ethdebug/format/program/context/pick"
-  - $ref: "schema:ethdebug/format/program/context/gather"
-  - $ref: "schema:ethdebug/format/program/context/frame"
+allOf:
+  - if:
+      required: ["code"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/code"
+    else: true
+  - if:
+      required: ["variables"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/variables"
+    else: true
+  - if:
+      required: ["remark"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/remark"
+    else: true
+  - if:
+      required: ["pick"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/pick"
+    else: true
+  - if:
+      required: ["gather"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/gather"
+    else: true
+  - if:
+      required: ["frame"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/frame"
+    else: true
 
 unevaluatedProperties: false
 
