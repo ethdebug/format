@@ -13,7 +13,6 @@ anyOf:
   - $ref: "schema:ethdebug/format/program/context/variables"
   - $ref: "schema:ethdebug/format/program/context/remark"
 
-minProperties: 1
 unevaluatedProperties: false
 
 examples:

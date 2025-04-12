@@ -43,11 +43,14 @@ properties:
   context:
     description: |
       The context known to exist following the execution of this instruction.
+
+      This field is **optional**. Omitting it is equivalent to specifying the
+      empty context value (`{}`).
     $ref: "schema:ethdebug/format/program/context"
+    default: {}
 
 required:
   - offset
-  - context
 
 examples:
   - offset: 0
