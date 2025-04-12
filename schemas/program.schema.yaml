@@ -38,7 +38,11 @@ properties:
     description: |
       The context known to exist prior to the execution of the first
       instruction in the bytecode.
+
+      This field is **optional**. Omitting it is equivalent to specifying the
+      empty context value (`{}`).
     $ref: "schema:ethdebug/format/program/context"
+    default: {}
 
   instructions:
     type: array
