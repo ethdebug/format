@@ -18,4 +18,12 @@ testSchemaGuards("ethdebug/format/program/context", [
     schema: "schema:ethdebug/format/program/context/remark",
     guard: Context.isRemark
   },
+  {
+    schema: "schema:ethdebug/format/program/context/frame",
+    guard: Context.isFrame
+  },
+  {
+    schema: "schema:ethdebug/format/program/context/pick",
+    guard: Context.isPick
+  },
 ] as const);

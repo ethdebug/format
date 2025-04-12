@@ -1,0 +1,58 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/gather"
+
+title: ethdebug/format/program/context/gather
+description: |
+  A context specifying the `"gather"` property with a list of contexts
+  indicates that all specified contexts apply simultaneously.
+
+type: object
+properties:
+  gather:
+    title: Contexts to gather
+    type: array
+    items:
+      $ref: "schema:ethdebug/format/program/context"
+    minItems: 2
+    additionalItems: false
+required:
+  - gather
+
+examples:
+  - gather:
+      - frame: "ir"
+        code:
+          source:
+            id: 0
+          range:
+            offset: 8
+            length: 11
+      - frame: "source"
+        code:
+          source:
+            id: 3
+          range:
+            offset: 113
+            length: 19
+  - gather:
+    - variables:
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56
+        type:
+          kind: string
+    - variables:
+      - identifier: x
+        declaration:
+          source:
+            id: 5
+          range:
+            offset: 10
+            length: 56
+        pointer:
+          location: storage
+          slot: 0

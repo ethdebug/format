@@ -28,6 +28,7 @@ code {
 
   let localValue = storedValue + 1;
   storedValue = localValue;
+  return;
 }
 `}]}
   instructions={[
@@ -285,8 +286,10 @@ code {
         mnemonic: "JUMPDEST"
       },
       context: ({ findSourceRange }) => ({
-        code: findSourceRange("return;"),
-        remark: "skip to here if not enough paid"
+        pick: [
+          { code: findSourceRange("return;") },
+          { code: findSourceRange("return;", { after: "return;" }) },
+        ]
       })
     }
   ]}
