@@ -8,10 +8,19 @@ description: |
 
 type: object
 
-anyOf:
-  - $ref: "schema:ethdebug/format/program/context/code"
-  - $ref: "schema:ethdebug/format/program/context/variables"
-  - $ref: "schema:ethdebug/format/program/context/remark"
+allOf:
+  - if:
+      required: ["code"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/code"
+  - if:
+      required: ["variables"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/variables"
+  - if:
+      required: ["remark"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/remark"
 
 unevaluatedProperties: false
 
