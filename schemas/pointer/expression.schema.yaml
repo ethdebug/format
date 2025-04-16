@@ -63,7 +63,7 @@ $defs:
         maxItems: 2
       "$product":
         description: |
-          A list of expressions to be multipled.
+          A list of expressions to be multiplied.
         $ref: "#/$defs/Operands"
       "$quotient":
         description: |
@@ -200,13 +200,13 @@ $defs:
       This object's value is evaluated as follows, based on the bytes width of
       the value `<expression>` evaluates to and based on `<N>` (using the
       value of `"$wordsize"` for `<N>` in the case of the latter form above):
-      - If the width equals `<N>`, this object evalutes to the same value as
+      - If the width equals `<N>`, this object evaluates to the same value as
         `<expression>` (equivalent to the identity function or no-op).
-      - If the width is less than `<N>`, this object evalutes to the same value
+      - If the width is less than `<N>`, this object evaluates to the same value
         as `<expression>` but with additional zero-bytes (`0x00`) prepended on
         the left (most significant) side, such that the resulting bytes width
         equals `<N>`.
-      - If the width exceeds `<N>`, this object evalutes to the same value
+      - If the width exceeds `<N>`, this object evaluates to the same value
         as `<expression>` but with a number of bytes removed from the left
         (most significant) side until the bytes width equals `<N>`.
 
