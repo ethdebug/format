@@ -1,0 +1,36 @@
+name: Deploy PR preview
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build website
+        run: BASE_URL='/format/pr-preview/pr-${{ github.event.number }}/' yarn build
+        working-directory: ./packages/web
+
+      - name: Deploy to GitHub Pages
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          source-dir: ./packages/web/build
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto

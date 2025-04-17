@@ -23,13 +23,16 @@ jobs:
         working-directory: ./packages/web
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          publish_dir: ./packages/web/build
-
+          token: ${{ secrets.GITHUB_TOKEN }}
+          folder: ./packages/web/build
+          branch: gh-pages
           # default deployer
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+          git-config-name: 'github-actions[bot]'
+          git-config-email: 'github-actions[bot]@users.noreply.github.com'
+          # don't break preview deployments
+          clean-exclude: pr-preview
+          force: false
+
 
