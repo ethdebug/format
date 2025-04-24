@@ -10,6 +10,10 @@ import ExclusiveRequiredPropertiesSchema, {
   detectExclusiveRequiredProperties
 } from "./ExclusiveRequiredPropertiesSchema";
 
+import InclusiveRequiredPropertiesSchema, {
+  detectInclusiveRequiredProperties
+} from "./InclusiveRequiredPropertiesSchema";
+
 export default function allOfSchemaWrapper(props: {
   schema: Exclude<JSONSchema, boolean> & { allOf: JSONSchema[]; }
 }) {
@@ -23,6 +27,11 @@ export default function allOfSchemaWrapper(props: {
   const exclusions = detectExclusiveRequiredProperties(schema);
   if (exclusions) {
     return <ExclusiveRequiredPropertiesSchema {...exclusions} />
+  }
+
+  const inclusions = detectInclusiveRequiredProperties(schema);
+  if (inclusions) {
+    return <InclusiveRequiredPropertiesSchema {...inclusions} />
   }
 
   return (
