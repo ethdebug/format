@@ -3,15 +3,37 @@ $id: "schema:ethdebug/format/program/context"
 
 title: ethdebug/format/program/context
 description: |
-  A schema for representing the information known at compile-time about the
-  high-level language concerns at a particular point in code execution.
+  An **ethdebug/format/program/context** object represents compile-time
+  information about the high-level runtime execution state at a specific point
+  in a program's bytecode.
+
+  This schema defines the structure for encoding compile-time knowledge about
+  the high-level runtime state. Contexts are treated as units of information
+  that may encompass multiple related or unrelated facts about the program's
+  state. This may include, e.g., source mapping information (via the `"code"`
+  property) or information about known variable allocations, etc.
+
+  The interpretation of a context depends on its properties and its
+  relationship to program elements such as instructions or control flow
+  structures. For example, a context associated with an instruction may
+  indicate that the specified conditions hold true following the execution of
+  that instruction.
 
 type: object
 
-anyOf:
-  - $ref: "schema:ethdebug/format/program/context/code"
-  - $ref: "schema:ethdebug/format/program/context/variables"
-  - $ref: "schema:ethdebug/format/program/context/remark"
+allOf:
+  - if:
+      required: ["code"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/code"
+  - if:
+      required: ["variables"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/variables"
+  - if:
+      required: ["remark"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/remark"
 
 unevaluatedProperties: false
 
