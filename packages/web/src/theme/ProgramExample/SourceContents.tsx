@@ -81,6 +81,7 @@ function decoratePickContext(
   // HACK this only supports picking from a choice of several different code
   // contexts
   if (!pick.every(Program.Context.isCode)) {
+    console.warn("decoratePickContext encountered non-code contexts in pick array. These will be ignored.");
     return [];
   }
 
