@@ -96,7 +96,7 @@ export namespace Context {
     gather: Context[];
   }
 
-  export const isGather = (value: unknown): value is Pick =>
+  export const isGather = (value: unknown): value is Gather =>
     typeof value === "object" && !!value &&
       "gather" in value && value.gather instanceof Array &&
       value.gather.every(isContext);
