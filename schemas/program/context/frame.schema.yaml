@@ -1,0 +1,20 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/frame"
+
+title: ethdebug/format/program/context/frame
+description: |
+  A context may specify a `"frame"` property to indicate that its facts apply
+  only to one of several possible compilation frames, e.g. for compilers with
+  distinct frontend/backends to specify debugging data for the IR separately
+  from the debugging data for the source language.
+type: object
+properties:
+  frame:
+    title: Relevant compilation frame
+    type: string
+required:
+  - frame
+
+examples:
+  - frame: "ir"
+  - frame: "source"

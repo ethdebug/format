@@ -7,17 +7,21 @@ description: |
   information about the high-level runtime execution state at a specific point
   in a program's bytecode.
 
-  This schema defines the structure for encoding compile-time knowledge about
-  the high-level runtime state. Contexts are treated as units of information
-  that may encompass multiple related or unrelated facts about the program's
-  state. This may include, e.g., source mapping information (via the `"code"`
-  property) or information about known variable allocations, etc.
+  This schema provides a formal specification for this format's model of what
+  information can be known at compile-time about the high-level runtime. This
+  includes data such as a particular machine instruction's source mapping or
+  what variables exist in runtime state following some instruction.
 
-  The interpretation of a context depends on its properties and its
-  relationship to program elements such as instructions or control flow
-  structures. For example, a context associated with an instruction may
-  indicate that the specified conditions hold true following the execution of
-  that instruction.
+  The context object supports dynamic context combination and selection through
+  the use of `gather`, and `pick` properties. This allows for flexible
+  composition and extraction of context information.
+
+  Contexts serve as a bridge between low-level EVM execution and high-level
+  language constructs. Debuggers can use these compile-time guarantees to
+  maintain a coherent view of the high-level language runtime throughout
+  program execution. This enables debugging tools to map execution points to
+  source code, reconstruct variable states, provide meaningful stack traces,
+  and offer insights into control flow and data structures.
 
 type: object
 
@@ -34,6 +38,18 @@ allOf:
       required: ["remark"]
     then:
       $ref: "schema:ethdebug/format/program/context/remark"
+  - if:
+      required: ["pick"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/pick"
+  - if:
+      required: ["gather"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/gather"
+  - if:
+      required: ["frame"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/frame"
 
 unevaluatedProperties: false
 

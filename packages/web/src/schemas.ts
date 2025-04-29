@@ -215,7 +215,7 @@ const programSchemaIndex: SchemaIndex = {
   },
 
   ...(
-    ["code", "variables", "remark"].map(name => ({
+    ["code", "variables", "remark", "pick", "gather", "frame"].map(name => ({
       [`schema:ethdebug/format/program/context/${name}`]: {
         href: `/spec/program/context/${name}`
       }
