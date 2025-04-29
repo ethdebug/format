@@ -89,7 +89,7 @@ export namespace Context {
 
   export const isPick = (value: unknown): value is Pick =>
     typeof value === "object" && !!value &&
-      "pick" in value && value.pick instanceof Array &&
+      "pick" in value && Array.isArray(value.pick) &&
       value.pick.every(isContext);
 
   export interface Gather {
@@ -98,7 +98,7 @@ export namespace Context {
 
   export const isGather = (value: unknown): value is Gather =>
     typeof value === "object" && !!value &&
-      "gather" in value && value.gather instanceof Array &&
+      "gather" in value && Array.isArray(value.gather) &&
       value.gather.every(isContext);
 
   export interface Frame {
