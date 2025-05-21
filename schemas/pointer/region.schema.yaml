@@ -6,74 +6,14 @@ description: |
   A representation of a region of data in the EVM
 type: object
 
-properties:
-  location:
-    $ref: "#/$defs/Location"
-
-
-allOf:
-  - if:
-      properties:
-        location:
-          const: stack
-
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/stack"
-
-  - if:
-      properties:
-        location:
-          const: memory
-
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/memory"
-
-  - if:
-      properties:
-        location:
-          const: storage
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/storage"
-
-  - if:
-      properties:
-        location:
-          const: calldata
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/calldata"
-
-  - if:
-      properties:
-        location:
-          const: returndata
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/returndata"
-
-  - if:
-      properties:
-        location:
-          const: transient
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/transient"
-
-  - if:
-      properties:
-        location:
-          const: code
-    then:
-      $ref: "schema:ethdebug/format/pointer/region/code"
-
-$defs:
-  Location:
-    type: string
-    enum:
-      - stack
-      - memory
-      - storage
-      - calldata
-      - returndata
-      - transient
-      - code
+oneOf:
+  - $ref: "schema:ethdebug/format/pointer/region/stack"
+  - $ref: "schema:ethdebug/format/pointer/region/memory"
+  - $ref: "schema:ethdebug/format/pointer/region/storage"
+  - $ref: "schema:ethdebug/format/pointer/region/calldata"
+  - $ref: "schema:ethdebug/format/pointer/region/returndata"
+  - $ref: "schema:ethdebug/format/pointer/region/transient"
+  - $ref: "schema:ethdebug/format/pointer/region/code"
 
 unevaluatedProperties: false
 
