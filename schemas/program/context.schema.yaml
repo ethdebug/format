@@ -29,26 +29,40 @@ allOf:
   - if:
       required: ["code"]
     then:
+      description: |
+        The context's corresponding source code range.
       $ref: "schema:ethdebug/format/program/context/code"
   - if:
       required: ["variables"]
     then:
+      description: |
+        Variable definitions, types, allocations known to exist in the context.
       $ref: "schema:ethdebug/format/program/context/variables"
   - if:
       required: ["remark"]
     then:
+      description: |
+        Human-readable context annotation. Not intended for compiler use.
       $ref: "schema:ethdebug/format/program/context/remark"
   - if:
       required: ["pick"]
     then:
+      description: |
+        Alternation between several possible contexts.
       $ref: "schema:ethdebug/format/program/context/pick"
   - if:
       required: ["gather"]
     then:
+      description: |
+        Collection of multiple known, separate contexts.
       $ref: "schema:ethdebug/format/program/context/gather"
   - if:
       required: ["frame"]
     then:
+      description: |
+        For use by compilers with multiple pipeline outputs (e.g., use of an
+        intermediary representation) to associate a
+        context with a particular compiler step.
       $ref: "schema:ethdebug/format/program/context/frame"
 
 unevaluatedProperties: false
