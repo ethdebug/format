@@ -6,35 +6,9 @@ description: |
   A representation of a collection of pointers to data in the EVM
 type: object
 
-allOf:
-  - oneOf:
-      - required: [group]
-      - required: [list]
-      - required: [if]
-      - required: [define]
-      - required: [template]
-
-  - if:
-      required: [group]
-    then:
-      $ref: "schema:ethdebug/format/pointer/collection/group"
-
-  - if:
-      required: [list]
-    then:
-      $ref: "schema:ethdebug/format/pointer/collection/list"
-
-  - if:
-      required: [if]
-    then:
-      $ref: "schema:ethdebug/format/pointer/collection/conditional"
-
-  - if:
-      required: [define]
-    then:
-      $ref: "schema:ethdebug/format/pointer/collection/scope"
-
-  - if:
-      required: [template]
-    then:
-      $ref: "schema:ethdebug/format/pointer/collection/reference"
+oneOf:
+  - $ref: "schema:ethdebug/format/pointer/collection/group"
+  - $ref: "schema:ethdebug/format/pointer/collection/list"
+  - $ref: "schema:ethdebug/format/pointer/collection/conditional"
+  - $ref: "schema:ethdebug/format/pointer/collection/scope"
+  - $ref: "schema:ethdebug/format/pointer/collection/reference"
