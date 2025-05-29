@@ -50,6 +50,18 @@ allOf:
       required: ["frame"]
     then:
       $ref: "schema:ethdebug/format/program/context/frame"
+  - if:
+      required: ["invoke"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/invoke"
+  - if:
+      required: ["return"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/return"
+  - if:
+      required: ["revert"]
+    then:
+      $ref: "schema:ethdebug/format/program/context/revert"
 
 unevaluatedProperties: false
 

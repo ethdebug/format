@@ -1,0 +1,250 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/invoke"
+
+title: ethdebug/format/program/context/invoke
+description: |
+  Schema for representing function invocation context at a specific point in
+  program execution.
+
+  This context captures information about function calls, including both
+  internal function calls (via JUMP) and external contract calls (via CALL,
+  DELEGATECALL, STATICCALL, etc.). The schema distinguishes between these
+  different invocation types through the use of `internal` and `external`
+  boolean properties.
+
+type: object
+properties:
+  invoke:
+    type: object
+    title: Function invocation
+    description: |
+      Represents a function invocation, either internal (via JUMP) or external
+      (via CALL opcodes). The schema enforces that exactly one of `internal`
+      or `external` must be true.
+
+      For internal calls, only `target` and `arguments` are valid.
+      For external calls, `gas`, `value`, `input`, `salt`, `delegate`,
+      `static`, `create`, and `create2` may be used as appropriate.
+
+    properties:
+      target:
+        type: object
+        title: Invocation target
+        description: |
+          Pointer to the target of the invocation. For internal calls, this
+          typically points to a code location. For external calls, this points
+          to the address being called.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      internal:
+        type: boolean
+        description: |
+          Indicates this is an internal function call (JUMP/JUMPI).
+
+      external:
+        type: boolean
+        description: |
+          Indicates this is an external contract call (CALL/DELEGATECALL/etc).
+
+      arguments:
+        type: object
+        title: Function arguments
+        description: |
+          Pointer to the arguments for an internal function call.
+          Only valid for internal calls.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      gas:
+        type: object
+        title: Gas allocation
+        description: |
+          Pointer to the gas allocated for an external call.
+          Only valid for external calls.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      value:
+        type: object
+        title: ETH value
+        description: |
+          Pointer to the amount of ETH being sent with an external call.
+          Only valid for external calls.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      input:
+        type: object
+        title: Call input data
+        description: |
+          Pointer to the input data for an external call.
+          Only valid for external calls.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      salt:
+        type: object
+        title: CREATE2 salt
+        description: |
+          Pointer to the salt value for CREATE2.
+          Only valid when create2 is true.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      delegate:
+        type: boolean
+        description: |
+          Indicates this external call is a DELEGATECALL.
+          Only valid when external is true.
+
+      static:
+        type: boolean
+        description: |
+          Indicates this external call is a STATICCALL.
+          Only valid when external is true.
+
+      create:
+        type: boolean
+        description: |
+          Indicates this external call creates a new contract (CREATE).
+          Only valid when external is true.
+
+      create2:
+        type: boolean
+        description: |
+          Indicates this external call creates a new contract (CREATE2).
+          Only valid when external is true.
+
+    required:
+      - target
+
+    oneOf:
+      - properties:
+          internal:
+            const: true
+        required:
+          - internal
+      - properties:
+          external:
+            const: true
+        required:
+          - external
+
+required:
+  - invoke
+
+additionalProperties: false
+
+examples:
+  - invoke:
+      target:
+        pointer:
+          location: code
+          offset: 291
+          length: 2
+      internal: true
+      arguments:
+        pointer:
+          location: stack
+          slot: 0
+          length: 3
+
+  - invoke:
+      target:
+        pointer:
+          location: stack
+          slot: 0
+      external: true
+      value:
+        pointer:
+          location: stack
+          slot: 1
+      gas:
+        pointer:
+          location: stack
+          slot: 2
+      input:
+        pointer:
+          location: memory
+          offset: 128
+          length: 68
+
+  - invoke:
+      target:
+        pointer:
+          location: stack
+          slot: 0
+      external: true
+      delegate: true
+      gas:
+        pointer:
+          location: stack
+          slot: 1
+      input:
+        pointer:
+          location: calldata
+          offset: 4
+          length: 68
+
+  - invoke:
+      target:
+        pointer:
+          location: stack
+          slot: 0
+      external: true
+      create2: true
+      salt:
+        pointer:
+          location: stack
+          slot: 1
+      value:
+        pointer:
+          location: stack
+          slot: 2
+      input:
+        pointer:
+          location: memory
+          offset: 0
+          length: 200
+
+  - invoke:
+      target:
+        pointer:
+          location: stack
+          slot: 0
+      external: true
+      static: true
+      gas:
+        pointer:
+          location: stack
+          slot: 1
+      input:
+        pointer:
+          location: calldata
+          offset: 4
+          length: 36
