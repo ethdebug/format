@@ -33,7 +33,7 @@ properties:
         description: |
           Pointer to the target of the invocation. For internal calls, this
           typically points to a code location. For external calls, this points
-          to the address being called.
+          to the address and/or selector being called.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -41,15 +41,26 @@ properties:
           - pointer
         additionalProperties: false
 
+    oneOf:
+      - $ref: "#/$defs/InternalFunctionInvocation"
+      - $ref: "#/$defs/ExternalFunctionInvocation"
+
+    required:
+      - target
+
+required:
+  - invoke
+
+additionalProperties: false
+
+$defs:
+  InternalFunctionInvocation:
+    type: object
+    properties:
       internal:
-        type: boolean
         description: |
           Indicates this is an internal function call (JUMP/JUMPI).
-
-      external:
-        type: boolean
-        description: |
-          Indicates this is an external contract call (CALL/DELEGATECALL/etc).
+        const: true
 
       arguments:
         type: object
@@ -63,13 +74,21 @@ properties:
         required:
           - pointer
         additionalProperties: false
+    required: [internal]
+
+  ExternalFunctionInvocation:
+    type: object
+    properties:
+      external:
+        description: |
+          Indicates this is an external contract call (CALL/DELEGATECALL/etc).
+        const: true
 
       gas:
         type: object
         title: Gas allocation
         description: |
-          Pointer to the gas allocated for an external call.
-          Only valid for external calls.
+          Pointer to the gas allocated for an external call
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -82,20 +101,6 @@ properties:
         title: ETH value
         description: |
           Pointer to the amount of ETH being sent with an external call.
-          Only valid for external calls.
-        properties:
-          pointer:
-            $ref: "schema:ethdebug/format/pointer"
-        required:
-          - pointer
-        additionalProperties: false
-
-      input:
-        type: object
-        title: Call input data
-        description: |
-          Pointer to the input data for an external call.
-          Only valid for external calls.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -109,6 +114,19 @@ properties:
         description: |
           Pointer to the salt value for CREATE2.
           Only valid when create2 is true.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+      input:
+        type: object
+        title: Call input data
+        description: |
+          Pointer to the input data for an external call.
+          Only valid for external calls.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -140,25 +158,7 @@ properties:
           Indicates this external call creates a new contract (CREATE2).
           Only valid when external is true.
 
-    required:
-      - target
-
-    oneOf:
-      - properties:
-          internal:
-            const: true
-        required:
-          - internal
-      - properties:
-          external:
-            const: true
-        required:
-          - external
-
-required:
-  - invoke
-
-additionalProperties: false
+    required: [external]
 
 examples:
   - invoke:
