@@ -1,0 +1,69 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/return"
+
+title: ethdebug/format/program/context/return
+description: |
+  Schema for representing function return context at a specific point in
+  program execution.
+
+  This context captures information about successful function returns,
+  including the return data and, for external calls, the success status.
+
+type: object
+properties:
+  return:
+    type: object
+    properties:
+      data:
+        type: object
+        title: Return data
+        description: |
+          Pointer to the data being returned from the function.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+
+      success:
+        type: object
+        title: Call success status
+        description: |
+          Pointer to the success status of an external call.
+          Typically points to a boolean value on the stack.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+
+required:
+  - return
+
+additionalProperties: false
+
+examples:
+  - return:
+      data:
+        pointer:
+          location: memory
+          offset: 0x40
+          length: 0x20
+
+  - return:
+      data:
+        pointer:
+          location: memory
+          offset: 0x40
+          length: 0x20
+      success:
+        pointer:
+          location: stack
+          slot: 0
+
+  - return:
+      data:
+        pointer:
+          location: returndata
+          offset: 0
+          length: 32
