@@ -53,8 +53,6 @@ properties:
 required:
   - invoke
 
-additionalProperties: false
-
 $defs:
   InternalFunctionInvocation:
     type: object
