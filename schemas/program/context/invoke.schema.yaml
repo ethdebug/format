@@ -45,6 +45,8 @@ properties:
       - $ref: "#/$defs/InternalFunctionInvocation"
       - $ref: "#/$defs/ExternalFunctionInvocation"
 
+    unevaluatedProperties: false
+
     required:
       - target
 
