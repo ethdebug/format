@@ -88,6 +88,14 @@ on any changes. This will open your browser to `http://localhost:3000/format`:
 yarn start
 ```
 
+## License
+
+This project uses a dual-license approach:
+
+- The JSON schemas in the [`schemas/`](https://github.com/ethdebug/format/tree/main/schemas) directory are licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/), allowing anyone to use, modify, and distribute them freely without attribution.
+
+- All other code and documentation in this repository is licensed under the [MIT License](LICENSE).
+
 [^1]: See [Debugging data format -
   Wikipedia](https://en.wikipedia.org/wiki/Debugging_data_format)
 
