@@ -63,7 +63,7 @@ properties:
           have access to the full representation by some other means)
 
     allOf:
-      - true
+      - {}
 
   sources:
     type: array
