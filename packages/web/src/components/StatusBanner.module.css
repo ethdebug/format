@@ -1,0 +1,75 @@
+.banner {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid;
+}
+
+.banner.in-design {
+  background-color: rgba(99, 102, 241, 0.1);
+  border-left-color: #6366f1;
+}
+
+.banner.implementable {
+  background-color: rgba(217, 119, 6, 0.1);
+  border-left-color: #d97706;
+}
+
+.banner.reference-available {
+  background-color: rgba(5, 150, 105, 0.1);
+  border-left-color: #059669;
+}
+
+.header {
+  margin-bottom: 0.75rem;
+}
+
+.summary {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.caveats {
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.caveats ul {
+  margin: 0.25rem 0 0 1.25rem;
+  padding: 0;
+}
+
+.caveats li {
+  margin: 0.25rem 0;
+}
+
+.note {
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.reference {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+}
+
+.learnMore {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .banner.in-design {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="dark"] .banner.implementable {
+  background-color: rgba(217, 119, 6, 0.15);
+}
+
+[data-theme="dark"] .banner.reference-available {
+  background-color: rgba(5, 150, 105, 0.15);
+}
