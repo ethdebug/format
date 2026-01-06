@@ -128,8 +128,8 @@ const config: Config = {
         },
         {
           to: '/status',
-          label: "⚠️ INCOMPLETE DRAFT ⚠️",
-          className: "draft-warning",
+          label: "Status: Draft",
+          className: "status-indicator",
           position: "right"
         },
         {

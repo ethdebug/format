@@ -1,13 +1,54 @@
-# Draft status
+# Specification Status
 
-:::warning
+import StatusLevelExplainer from "@site/src/components/StatusLevelExplainer";
+import StatusTable from "@site/src/components/StatusTable";
 
-The **ethdebug/format** specification and this site are incomplete drafts.
-These efforts are an active work in progress and everything here is subject to
-change significantly.
+The **ethdebug/format** specification is actively evolving. Different parts
+of the specification are at different stages of maturity, and we want to be
+transparent about what tooling implementers can rely on today.
 
-Please watch the [GitHub repository](https://github.com/ethdebug/format) or
-join our [Matrix.chat](https://matrix.to/#/#ethdebug:matrix.org) to follow
-along and contribute.
+## Status Levels
 
-:::
+We use three status levels to indicate the maturity of each schema section:
+
+<StatusLevelExplainer />
+
+## Current status by schema
+
+<StatusTable />
+
+## Guidance for tooling implementers
+
+All schemas have TypeScript type definitions available in
+[`@ethdebug/format`](https://www.npmjs.com/package/@ethdebug/format), useful
+for both debugger and compiler implementations.
+
+### Ready to implement
+
+The **pointer** and **type** schemas are mature enough for implementation:
+
+- **[Pointer schema](/spec/pointer/overview)**: Has a working debugger-side
+  reference implementation (`@ethdebug/pointers`) with comprehensive
+  documentation. Start here if you want to build pointer dereferencing into
+  your debugger.
+
+- **[Type schema](/spec/type/overview)**: Stable design covering all Solidity
+  types.
+
+### Early adopters welcome
+
+The **[program schema](/spec/program/overview)** is under active development.
+The core structure (programs, instructions, contexts) is defined and
+foundational, but context types for function calls, returns, and reverts are
+still being designed.
+
+If you're interested in helping shape this part of the format, we'd love your
+input! However, implementations should expect breaking changes as the design
+evolves.
+
+## Stay informed
+
+- Watch the [GitHub repository](https://github.com/ethdebug/format) for updates
+- Join our [Matrix.chat](https://matrix.to/#/#ethdebug:matrix.org) for
+  discussions
+- Our working group meets bi-weekly on Thursdays at 17:00 Berlin time

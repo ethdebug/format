@@ -34,9 +34,25 @@
   overflow: auto;
 }
 
-.navbar .draft-warning {
-  font-weight: bold;
-  text-decoration: underline;
+.navbar .status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background-color: #d97706;
+  color: white !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none !important;
+}
+
+.navbar .status-indicator:hover {
+  background-color: #b45309;
+}
+
+[data-theme="dark"] .navbar .status-indicator {
+  background-color: #f59e0b;
+  color: #1e1e1e !important;
 }
 
 /* Styling for Playground */
