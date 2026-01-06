@@ -225,6 +225,7 @@ export namespace Pointer {
     | Expression.Lookup
     | Expression.Read
     | Expression.Keccak256
+    | Expression.Concat
     | Expression.Resize;
 
   export const isExpression = (value: unknown): value is Expression =>
@@ -236,6 +237,7 @@ export namespace Pointer {
       Expression.isLookup,
       Expression.isRead,
       Expression.isKeccak256,
+      Expression.isConcat,
       Expression.isResize
     ].some(guard => guard(value));
 
@@ -393,6 +395,12 @@ export namespace Pointer {
     }
     export const isKeccak256 =
       makeIsOperation<"$keccak256", Keccak256>("$keccak256", isOperands);
+
+    export interface Concat {
+      $concat: Expression[];
+    }
+    export const isConcat =
+      makeIsOperation<"$concat", Concat>("$concat", isOperands);
 
     export type Resize<N extends number = number> =
       | Resize.ToNumber<N>

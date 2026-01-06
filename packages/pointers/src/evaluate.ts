@@ -58,6 +58,10 @@ export async function evaluate(
     return evaluateKeccak256(expression, options);
   }
 
+  if (Pointer.Expression.isConcat(expression)) {
+    return evaluateConcat(expression, options);
+  }
+
   if (Pointer.Expression.isResize(expression)) {
     return evaluateResize(expression, options);
   }
@@ -217,6 +221,17 @@ async function evaluateKeccak256(
   const hash = Data.fromBytes(keccak256(preimage));
 
   return hash;
+}
+
+async function evaluateConcat(
+  expression: Pointer.Expression.Concat,
+  options: EvaluateOptions
+): Promise<Data> {
+  const operands = await Promise.all(expression.$concat.map(
+    async expression => await evaluate(expression, options)
+  ));
+
+  return Data.zero().concat(...operands);
 }
 
 async function evaluateResize(

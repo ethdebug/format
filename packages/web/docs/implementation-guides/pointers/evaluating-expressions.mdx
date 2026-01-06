@@ -158,6 +158,18 @@ use of hashing to allocate persistent data.
     sourceFile => sourceFile.getFunction("evaluateKeccak256")
   } />
 
+## Evaluating concatenation
+
+Byte concatenation is straightforward: recursively evaluate the operands and
+join them together, preserving the byte width of each operand.
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={
+    sourceFile => sourceFile.getFunction("evaluateConcat")
+  } />
+
 ## Evaluating property lookups
 
 Pointer expressions can compose values taken from the properties of other,

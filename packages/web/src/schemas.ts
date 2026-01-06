@@ -147,6 +147,10 @@ const pointerSchemaIndex: SchemaIndex = {
       title: "Keccak256 hash expression schema",
       anchor: "#keccak256-hashes"
     },
+    Concat: {
+      title: "Bytes concatenation schema",
+      anchor: "#bytes-concatenation"
+    },
     Resize: {
       title: "Resize operation schema",
       anchor: "#resize-operations"

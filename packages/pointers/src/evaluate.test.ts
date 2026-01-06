@@ -127,6 +127,69 @@ describe("evaluate", () => {
       .toEqual(Data.fromUint(42n % 0x1fn));
   });
 
+  describe("evaluates concat expressions", () => {
+    it("concatenates hex literals", async () => {
+      const expression: Pointer.Expression = {
+        $concat: ["0x00", "0x00"]
+      };
+      expect(await evaluate(expression, options))
+        .toEqual(Data.fromHex("0x0000"));
+    });
+
+    it("concatenates multiple values preserving byte widths", async () => {
+      const expression: Pointer.Expression = {
+        $concat: ["0xdead", "0xbeef"]
+      };
+      expect(await evaluate(expression, options))
+        .toEqual(Data.fromHex("0xdeadbeef"));
+    });
+
+    it("returns empty data for empty operand list", async () => {
+      const expression: Pointer.Expression = {
+        $concat: []
+      };
+      expect(await evaluate(expression, options))
+        .toEqual(Data.zero());
+    });
+
+    it("preserves single operand unchanged", async () => {
+      const expression: Pointer.Expression = {
+        $concat: ["0xabcdef"]
+      };
+      expect(await evaluate(expression, options))
+        .toEqual(Data.fromHex("0xabcdef"));
+    });
+
+    it("concatenates variables", async () => {
+      const expression: Pointer.Expression = {
+        $concat: ["foo", "bar"]
+      };
+      // foo = 0x2a (42), bar = 0x1f
+      expect(await evaluate(expression, options))
+        .toEqual(Data.fromHex("0x2a1f"));
+    });
+
+    it("concatenates nested expressions", async () => {
+      const expression: Pointer.Expression = {
+        $concat: [
+          { $sum: [1, 2] },  // 3 = 0x03
+          "0xff"
+        ]
+      };
+      expect(await evaluate(expression, options))
+        .toEqual(Data.fromHex("0x03ff"));
+    });
+
+    it("preserves leading zeros in hex literals", async () => {
+      const expression: Pointer.Expression = {
+        $concat: ["0x0001", "0x0002"]
+      };
+      const result = await evaluate(expression, options);
+      expect(result).toEqual(Data.fromHex("0x00010002"));
+      expect(result.length).toBe(4);
+    });
+  });
+
   // skipped because test does not perform proper padding
   it.skip("evaluates keccak256 expressions", async () => {
     const expression: Pointer.Expression = {
