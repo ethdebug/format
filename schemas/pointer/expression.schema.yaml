@@ -13,6 +13,7 @@ oneOf:
   - $ref: "#/$defs/Lookup"
   - $ref: "#/$defs/Read"
   - $ref: "#/$defs/Keccak256"
+  - $ref: "#/$defs/Concat"
   - $ref: "#/$defs/Resize"
 
 $defs:
@@ -187,6 +188,32 @@ $defs:
       - $keccak256:
           - 0
           - "0x00"
+
+  Concat:
+    title: Concatenate values
+    description: |
+      An object of the form `{ "$concat": [...values] }`, indicating that this
+      expression evaluates to the concatenation of bytes from each value.
+      The byte width of each operand is preserved; no padding is added or
+      removed between operands.
+    type: object
+    properties:
+      $concat:
+        title: Array of values to concatenate
+        type: array
+        items:
+          $ref: "schema:ethdebug/format/pointer/expression"
+    additionalProperties: false
+    required:
+      - $concat
+    examples:
+      - $concat:
+          - "0x00"
+          - "0x00"
+      - $concat:
+          - "0xdead"
+          - "0xbeef"
+      - $concat: []
 
   Resize:
     title: Resize data

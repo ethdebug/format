@@ -92,6 +92,21 @@ hash of the concatenation of bytes specified by the list.
   pointer="#/$defs/Keccak256"
   />
 
+## Bytes concatenation
+
+An expression can be an object of form `{ "$concat": [...] }`, indicating
+that the value of the expression is the concatenation of bytes from each
+value in the list. The byte width of each operand is preserved; no padding
+is added or removed between operands.
+
+This is useful for building composite byte sequences, for example when
+constructing storage slot keys or preparing data for hashing.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/pointer/expression" }}
+  pointer="#/$defs/Concat"
+  />
+
 ## Resize operations
 
 In certain situations, e.g. keccak256 hashes, it's crucially important to be
