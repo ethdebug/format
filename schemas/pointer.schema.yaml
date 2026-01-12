@@ -67,34 +67,48 @@ examples:
 
   - # example `struct Record { uint8 x; uint8 y; bytes4 salt; }` in storage
     #
-    # this example uses the "packed-field" template (defined separately) to
-    # demonstrate how templates can be reused with `yields` to rename regions.
+    # this example defines the "packed-field" template inline and demonstrates
+    # how templates can be reused with `yields` to rename regions.
     # each field is placed by packing right-to-left from the previous offset.
-    define:
-      "struct-storage-contract-variable-slot": 0
-    in:
-      group:
-        # sentinel region marking where packing begins (end of word)
-        - name: "packing-begin"
+    templates:
+      packed-field:
+        expect:
+          - "struct-storage-contract-variable-slot"
+          - "previous"
+          - "size"
+        for:
+          name: "field"
           location: storage
           slot: "struct-storage-contract-variable-slot"
-          offset: $wordsize
-          length: 0
+          offset:
+            $difference: ["previous", "size"]
+          length: "size"
+    in:
+      define:
+        "struct-storage-contract-variable-slot": 0
+      in:
+        group:
+          # sentinel region marking where packing begins (end of word)
+          - name: "packing-begin"
+            location: storage
+            slot: "struct-storage-contract-variable-slot"
+            offset: $wordsize
+            length: 0
 
-        - define: { previous: { .offset: "packing-begin" }, size: 1 }
-          in:
-            template: "packed-field"
-            yields: { "field": "x" }
+          - define: { previous: { .offset: "packing-begin" }, size: 1 }
+            in:
+              template: "packed-field"
+              yields: { "field": "x" }
 
-        - define: { previous: { .offset: "x" }, size: 1 }
-          in:
-            template: "packed-field"
-            yields: { "field": "y" }
+          - define: { previous: { .offset: "x" }, size: 1 }
+            in:
+              template: "packed-field"
+              yields: { "field": "y" }
 
-        - define: { previous: { .offset: "y" }, size: 4 }
-          in:
-            template: "packed-field"
-            yields: { "field": "salt" }
+          - define: { previous: { .offset: "y" }, size: 4 }
+            in:
+              template: "packed-field"
+              yields: { "field": "salt" }
 
   - # example `(struct Record { uint256 x; uint256 y; })[] memory`
     group:

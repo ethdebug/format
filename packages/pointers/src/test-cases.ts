@@ -3,25 +3,11 @@ import {
   findExamplePointer,
   type ObserveTraceOptions
 } from "../test/index.js";
-import { Pointer } from "@ethdebug/format";
 import { type Cursor, Data } from "./index.js";
 
 export interface ObserveTraceTest<V> extends ObserveTraceOptions<V> {
   expectedValues: V[];
 }
-
-const packedFieldTemplate: Pointer.Template = {
-  expect: ["struct-storage-contract-variable-slot", "previous", "size"],
-  for: {
-    name: "field",
-    location: "storage",
-    slot: "struct-storage-contract-variable-slot",
-    offset: {
-      $difference: ["previous", "size"]
-    },
-    length: "size"
-  }
-};
 
 const structStorageTest: ObserveTraceTest<{
   x: number;
@@ -29,9 +15,6 @@ const structStorageTest: ObserveTraceTest<{
   salt: string;
 }> = {
   pointer: findExamplePointer("packed-field"),
-  templates: {
-    "packed-field": packedFieldTemplate
-  },
   compileOptions: singleSourceCompilation({
     path: "StructStorage.sol",
     contractName: "StructStorage",

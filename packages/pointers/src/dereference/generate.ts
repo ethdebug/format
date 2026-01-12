@@ -38,6 +38,9 @@ export async function* generateRegions(
   // Stack of rename mappings for template references with yields
   const renameStack: Array<Record<string, string>> = [];
 
+  // Stack of template definitions for inline templates
+  const templatesStack: Array<Pointer.Templates> = [];
+
   const stack: Memo[] = [Memo.dereferencePointer(pointer)];
   while (stack.length > 0) {
     const memo: Memo = stack.pop() as Memo;
@@ -45,8 +48,17 @@ export async function* generateRegions(
     let memos: Memo[] = [];
     switch (memo.kind) {
       case "dereference-pointer": {
+        // Merge inline templates with base templates (inline takes precedence)
+        const currentTemplates = templatesStack.reduce(
+          (acc, templates) => ({ ...acc, ...templates }),
+          options.templates
+        );
+
         // Process the pointer, intercepting yielded regions to apply renames
-        const process = processPointer(memo.pointer, options);
+        const process = processPointer(memo.pointer, {
+          ...options,
+          templates: currentTemplates
+        });
         let result = await process.next();
         while (!result.done) {
           let region = result.value;
@@ -92,6 +104,14 @@ export async function* generateRegions(
             }
           }
         }
+        break;
+      }
+      case "push-templates": {
+        templatesStack.push(memo.templates);
+        break;
+      }
+      case "pop-templates": {
+        templatesStack.pop();
         break;
       }
     }

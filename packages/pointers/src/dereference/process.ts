@@ -61,6 +61,10 @@ export async function* processPointer(
     return yield* processReference(collection, options);
   }
 
+  if (Pointer.Collection.isTemplates(collection)) {
+    return yield* processTemplates(collection, options);
+  }
+
   console.error("%s", JSON.stringify(pointer, undefined, 2));
   throw new Error("Unexpected unknown kind of pointer");
 }
@@ -201,5 +205,18 @@ async function* processReference(
 
   return [
     Memo.dereferencePointer(pointer)
+  ];
+}
+
+async function* processTemplates(
+  collection: Pointer.Collection.Templates,
+  options: ProcessOptions
+): Process {
+  const { templates, in: in_ } = collection;
+
+  return [
+    Memo.pushTemplates(templates),
+    Memo.dereferencePointer(in_),
+    Memo.popTemplates()
   ];
 }

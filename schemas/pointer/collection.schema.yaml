@@ -13,6 +13,7 @@ allOf:
       - required: [if]
       - required: [define]
       - required: [template]
+      - required: [templates]
 
   - if:
       required: [group]
@@ -38,3 +39,8 @@ allOf:
       required: [template]
     then:
       $ref: "schema:ethdebug/format/pointer/collection/reference"
+
+  - if:
+      required: [templates]
+    then:
+      $ref: "schema:ethdebug/format/pointer/collection/templates"

@@ -479,4 +479,144 @@ describe("dereference", () => {
     expect(regions[1].name).toEqual("outer-data");
     expect(regions.named("outer-data")).toHaveLength(2);
   });
+
+  it("works for inline template definitions", async () => {
+    const pointer: Pointer = {
+      templates: {
+        "memory-range": {
+          expect: ["offset", "length"],
+          for: {
+            location: "memory",
+            offset: "offset",
+            length: "length"
+          }
+        }
+      },
+      in: {
+        define: {
+          "offset": 0,
+          "length": 32
+        },
+        in: {
+          template: "memory-range"
+        }
+      }
+    };
+
+    const cursor = await dereference(pointer);
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].offset).toEqual(Data.fromNumber(0));
+    expect(regions[0].length).toEqual(Data.fromNumber(32));
+  });
+
+  it("inline templates take precedence over external templates", async () => {
+    // External template defines a slot-based region
+    const externalTemplates: Pointer.Templates = {
+      "my-region": {
+        expect: ["value"],
+        for: {
+          name: "external",
+          location: "storage",
+          slot: "value"
+        }
+      }
+    };
+
+    // Inline template overrides with memory-based region
+    const pointer: Pointer = {
+      templates: {
+        "my-region": {
+          expect: ["value"],
+          for: {
+            name: "inline",
+            location: "memory",
+            offset: "value",
+            length: 32
+          }
+        }
+      },
+      in: {
+        define: { "value": 64 },
+        in: {
+          template: "my-region"
+        }
+      }
+    };
+
+    const cursor = await dereference(pointer, { templates: externalTemplates });
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].name).toEqual("inline");
+    expect(regions[0].location).toEqual("memory");
+  });
+
+  it("works for nested inline templates", async () => {
+    const pointer: Pointer = {
+      templates: {
+        "outer-template": {
+          expect: ["base"],
+          for: {
+            templates: {
+              "inner-template": {
+                expect: ["offset"],
+                for: {
+                  name: "data",
+                  location: "memory",
+                  offset: "offset",
+                  length: 32
+                }
+              }
+            },
+            in: {
+              define: { "offset": "base" },
+              in: { template: "inner-template" }
+            }
+          }
+        }
+      },
+      in: {
+        define: { "base": 128 },
+        in: { template: "outer-template" }
+      }
+    };
+
+    const cursor = await dereference(pointer);
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].name).toEqual("data");
+    expect(regions[0].offset).toEqual(Data.fromNumber(128));
+  });
+
+  it("inline templates with yields work correctly", async () => {
+    const pointer: Pointer = {
+      templates: {
+        "named-slot": {
+          expect: ["slot"],
+          for: {
+            name: "value",
+            location: "storage",
+            slot: "slot"
+          }
+        }
+      },
+      in: {
+        define: { "slot": 5 },
+        in: {
+          template: "named-slot",
+          yields: { "value": "my-slot-value" }
+        }
+      }
+    };
+
+    const cursor = await dereference(pointer);
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].name).toEqual("my-slot-value");
+    expect(regions.lookup["my-slot-value"]).toBeDefined();
+  });
 });

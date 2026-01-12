@@ -10,7 +10,9 @@ export type Memo =
   | Memo.SaveRegions
   | Memo.SaveVariables
   | Memo.PushRegionRenames
-  | Memo.PopRegionRenames;
+  | Memo.PopRegionRenames
+  | Memo.PushTemplates
+  | Memo.PopTemplates;
 
 export namespace Memo {
   /**
@@ -104,5 +106,38 @@ export namespace Memo {
    */
   export const popRegionRenames = (): PopRegionRenames => ({
     kind: "pop-region-renames"
+  });
+
+  /**
+   * A request to push template definitions onto the context stack.
+   * While active, these templates are available for use by reference
+   * collections.
+   */
+  export interface PushTemplates {
+    kind: "push-templates";
+    templates: Pointer.Templates;
+  }
+
+  /**
+   * Initialize a PushTemplates memo
+   */
+  export const pushTemplates =
+    (templates: Pointer.Templates): PushTemplates => ({
+      kind: "push-templates",
+      templates
+    });
+
+  /**
+   * A request to pop the current template definitions from the context stack.
+   */
+  export interface PopTemplates {
+    kind: "pop-templates";
+  }
+
+  /**
+   * Initialize a PopTemplates memo
+   */
+  export const popTemplates = (): PopTemplates => ({
+    kind: "pop-templates"
   });
 }
