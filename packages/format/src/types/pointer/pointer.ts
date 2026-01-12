@@ -208,13 +208,21 @@ export namespace Pointer {
 
     export interface Reference {
       template: string;
+      yields?: Record<string, string>;
     }
 
     export const isReference = (value: unknown): value is Reference =>
       !!value &&
         typeof value === "object" &&
         "template" in value &&
-        typeof value.template === "string" && !!value.template
+        typeof value.template === "string" && !!value.template &&
+        (!("yields" in value) || (
+          typeof value.yields === "object" &&
+          value.yields !== null &&
+          Object.entries(value.yields as Record<string, unknown>).every(
+            ([k, v]) => isIdentifier(k) && isIdentifier(v)
+          )
+        ))
   }
 
   export type Expression =

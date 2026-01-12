@@ -66,34 +66,35 @@ examples:
               length: $wordsize
 
   - # example `struct Record { uint8 x; uint8 y; bytes4 salt; }` in storage
+    #
+    # this example uses the "packed-field" template (defined separately) to
+    # demonstrate how templates can be reused with `yields` to rename regions.
+    # each field is placed by packing right-to-left from the previous offset.
     define:
       "struct-storage-contract-variable-slot": 0
     in:
       group:
-        - name: "x"
+        # sentinel region marking where packing begins (end of word)
+        - name: "packing-begin"
           location: storage
           slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - $wordsize
-              - .length: $this
-          length: 1  # uint8
-        - name: "y"
-          location: storage
-          slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - .offset: "x"
-              - .length: $this
-          length: 1  # uint8
-        - name: "salt"
-          location: storage
-          slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - .offset: "y"
-              - .length: $this
-          length: 4  # bytes4
+          offset: $wordsize
+          length: 0
+
+        - define: { previous: { .offset: "packing-begin" }, size: 1 }
+          in:
+            template: "packed-field"
+            yields: { "field": "x" }
+
+        - define: { previous: { .offset: "x" }, size: 1 }
+          in:
+            template: "packed-field"
+            yields: { "field": "y" }
+
+        - define: { previous: { .offset: "y" }, size: 4 }
+          in:
+            template: "packed-field"
+            yields: { "field": "salt" }
 
   - # example `(struct Record { uint256 x; uint256 y; })[] memory`
     group:

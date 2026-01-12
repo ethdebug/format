@@ -8,7 +8,9 @@ import type { Data } from "../data.js";
 export type Memo =
   | Memo.DereferencePointer
   | Memo.SaveRegions
-  | Memo.SaveVariables;
+  | Memo.SaveVariables
+  | Memo.PushRegionRenames
+  | Memo.PopRegionRenames;
 
 export namespace Memo {
   /**
@@ -69,4 +71,38 @@ export namespace Memo {
       kind: "save-variables",
       variables
     });
+
+  /**
+   * A request to push a region rename mapping onto the context stack.
+   * While active, regions with names in the mapping will be saved under
+   * both their original name (for internal references) and their new name
+   * (for external references after the template).
+   */
+  export interface PushRegionRenames {
+    kind: "push-region-renames";
+    mapping: Record<string, string>;
+  }
+
+  /**
+   * Initialize a PushRegionRenames memo
+   */
+  export const pushRegionRenames =
+    (mapping: Record<string, string>): PushRegionRenames => ({
+      kind: "push-region-renames",
+      mapping
+    });
+
+  /**
+   * A request to pop the current region rename mapping from the context stack.
+   */
+  export interface PopRegionRenames {
+    kind: "pop-region-renames";
+  }
+
+  /**
+   * Initialize a PopRegionRenames memo
+   */
+  export const popRegionRenames = (): PopRegionRenames => ({
+    kind: "pop-region-renames"
+  });
 }

@@ -160,7 +160,7 @@ async function* processReference(
   collection: Pointer.Collection.Reference,
   options: ProcessOptions
 ): Process {
-  const { template: templateName } = collection;
+  const { template: templateName, yields } = collection;
 
   const { templates, variables } = options;
 
@@ -187,6 +187,16 @@ async function* processReference(
       `variables with identifiers: ${missingVariables.join(", ")}. `,
       `Please ensure these variables are defined prior to this reference.`
     ].join(""));
+  }
+
+  // If yields is specified with mappings, wrap the dereference with
+  // push/pop region renames memos
+  if (yields && Object.keys(yields).length > 0) {
+    return [
+      Memo.pushRegionRenames(yields),
+      Memo.dereferencePointer(pointer),
+      Memo.popRegionRenames()
+    ];
   }
 
   return [
