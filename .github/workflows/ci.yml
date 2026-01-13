@@ -3,6 +3,26 @@ on:
   - pull_request
 
 jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Check formatting
+        run: yarn format:check
+
+      - name: Lint
+        run: yarn lint
+
   run-tests:
     runs-on: ubuntu-latest
     steps:
