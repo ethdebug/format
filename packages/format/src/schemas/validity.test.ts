@@ -24,7 +24,7 @@ const printErrors = (output: OutputUnit): string =>
     .join("\n");
 
 describe("Valid schemas", () => {
-  for (const [id, schema] of Object.entries(schemas)) {
+  for (const [id, _schema] of Object.entries(schemas)) {
     it(`should include ${id}`, async () => {
       try {
         await validate(id);

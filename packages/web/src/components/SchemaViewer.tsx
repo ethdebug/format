@@ -9,7 +9,6 @@ import { type DescribeSchemaOptions, describeSchema } from "@ethdebug/format";
 import { schemaIndex } from "@site/src/schemas";
 import {
   SchemaContext,
-  type PointerSchemaIds,
   internalIdKey,
 } from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
@@ -20,7 +19,7 @@ export interface SchemaViewerProps extends DescribeSchemaOptions {}
 
 export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
   const rootSchemaInfo = describeSchema(props);
-  const { id, rootSchema, yaml, pointer } = rootSchemaInfo;
+  const { id, rootSchema, yaml: _yaml, pointer } = rootSchemaInfo;
 
   const transformedSchema = transformSchema(rootSchema, id || "");
 
@@ -103,7 +102,7 @@ function insertIds<T>(obj: T, rootId: string): T {
   } else if (obj !== null && typeof obj === "object") {
     return Object.entries(obj).reduce(
       (newObj, [key, value]) => {
-        // @ts-ignore
+        // @ts-expect-error dynamic key assignment
         newObj[key] = insertIds(value, `${rootId}/${key}`);
         return newObj;
       },
@@ -151,7 +150,7 @@ function ensureRefsLackSiblings<T>(obj: T): T {
   const { $ref, ...rest } = obj as T & object & { $ref?: string };
 
   const result = Object.entries(rest).reduce((newObj, [key, value]) => {
-    // @ts-ignore
+    // @ts-expect-error dynamic key assignment
     newObj[key] = ensureRefsLackSiblings(value);
     return newObj;
   }, {} as T);
@@ -171,7 +170,7 @@ function ensureRefsLackSiblings<T>(obj: T): T {
     );
   }
 
-  // @ts-ignore
+  // @ts-expect-error dynamic property assignment
   result[propertyName] = [{ $ref: $ref }];
 
   return result;

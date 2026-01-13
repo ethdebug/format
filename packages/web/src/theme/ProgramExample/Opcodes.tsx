@@ -54,7 +54,7 @@ export function Opcodes(): JSX.Element {
   const handleMouseEnter = (offset: Data.Value) => setHoverOffset(offset);
   // skipping the current hover offset check here and assuming that the mouse
   // must leave the boundary of one offset before entering another
-  const handleMouseLeave = (offset: Data.Value) => setHoverOffset(undefined);
+  const handleMouseLeave = (_offset: Data.Value) => setHoverOffset(undefined);
 
   const paddingLength = instructions.at(-1)!.offset.toString(16).length;
 

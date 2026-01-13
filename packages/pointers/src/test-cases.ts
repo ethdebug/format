@@ -153,7 +153,7 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
 
   expectedValues: [[], [1], [1, 2], [1, 2, 3]],
 
-  async observe({ regions, read }, state): Promise<number[]> {
+  async observe({ regions, read }, _state): Promise<number[]> {
     const items = regions.named("array-item");
 
     return await Promise.all(

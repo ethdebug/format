@@ -1,4 +1,4 @@
-import { expect, describe, it, beforeEach } from "vitest";
+import { expect, describe, it } from "vitest";
 
 import { observeTrace } from "../test/index.js";
 import { observeTraceTests } from "./test-cases.js";

@@ -1,6 +1,5 @@
 import React from "react";
 
-import Translate from "@docusaurus/Translate";
 
 import {
   IfElseThen,
@@ -8,8 +7,6 @@ import {
   DependentSchemas,
   Dependencies,
 } from "@theme-original/JSONSchemaViewer/JSONSchemaElements/SchemaConditional";
-
-import { Collapsible } from "@theme-original/JSONSchemaViewer/components";
 
 type Props = {
   schema: any;

@@ -3,13 +3,12 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; // Import the FontAwesomeIcon component.
 import IconExternalLink from "@theme/Icon/ExternalLink";
 
 import styles from "./index.module.css";
 
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
+  const { siteConfig: _siteConfig } = useDocusaurusContext();
   return (
     <Layout title={`Home`} description="ethdebug format homepage">
       <HomepageHeader />

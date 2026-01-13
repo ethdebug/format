@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  type Highlighter,
-  type HighlightOptions,
-  useHighlighter,
-} from "./useHighlighter";
+import { type HighlightOptions, useHighlighter } from "./useHighlighter";
 
 export interface Props extends HighlightOptions {
   code: string;

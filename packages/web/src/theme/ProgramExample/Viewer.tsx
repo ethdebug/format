@@ -1,15 +1,12 @@
-import Admonition from "@theme/Admonition";
-import Link from "@docusaurus/Link";
 import { SourceContents } from "./SourceContents";
 import { Opcodes } from "./Opcodes";
 import { Details } from "./Details";
-import { Variables } from "./Variables";
 
 import "./Viewer.css";
 
 export interface Props {}
 
-export function Viewer(props: Props): JSX.Element {
+export function Viewer(_props: Props): JSX.Element {
   return (
     <>
       <h2>Interactive example</h2>

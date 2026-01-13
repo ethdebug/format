@@ -101,7 +101,7 @@ function processNode(node: Node, links: Links): ProcessedNode {
 // Process a text node to replace linkable text with Link components
 function processTextNode(node: Text, links: Links): ProcessedNode {
   const result: (JSX.Element | string)[] = [];
-  let text = node.textContent || "";
+  const text = node.textContent || "";
   let lastIndex = 0;
 
   for (const [linkText, url] of Object.entries(links)) {

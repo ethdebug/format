@@ -57,7 +57,7 @@ export default function CodeListing({
   }
 
   return (
-    // @ts-ignore element seems to work even though title says it wants string
+    // @ts-expect-error element seems to work even though title says it wants string
     <CodeBlock
       language="typescript"
       {...{

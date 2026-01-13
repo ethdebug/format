@@ -1,5 +1,5 @@
 import { testSchemaGuards } from "../../../test/guards";
-import { Instruction, isInstruction } from "./instruction";
+import { isInstruction } from "./instruction";
 
 testSchemaGuards("ethdebug/format/program/instruction", [
   {

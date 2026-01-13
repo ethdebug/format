@@ -9,7 +9,7 @@ import { betterAjvErrors } from "@apideck/better-ajv-errors";
 // To use Ajv with the support of all JSON Schema draft-2019-09/2020-12
 // features you need to use a different export:
 // refer: https://github.com/ajv-validator/ajv/issues/2335
-import Ajv, { ErrorObject } from "ajv/dist/2020";
+import Ajv from "ajv/dist/2020";
 
 export interface PlaygroundProps {
   schema: SchemaById;
@@ -72,7 +72,9 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
 
   // Validate schema on editor input change
   useEffect(() => {
-    ready && validateSchema();
+    if (ready) {
+      validateSchema();
+    }
   }, [editorInput]);
 
   /**
@@ -92,7 +94,7 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     const sourceMap = getParsedEditorInput();
     validate(sourceMap.data);
     const betterErrors = betterAjvErrors({
-      //@ts-ignore
+      // @ts-expect-error dynamic schema lookup
       schema: schemas[props.schema.id],
       data: sourceMap.data,
       errors: validate.errors,
@@ -112,11 +114,11 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
   ) {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return showError("Unable to validate schema");
-    let markers = [];
+    const markers = [];
     if (errors) {
       for (const [_, error] of Object.entries(errors)) {
-        let instancePath = error.path.replace("{base}", "").replace(/\./g, "/");
-        let node = sourceMap.pointers[instancePath];
+        const instancePath = error.path.replace("{base}", "").replace(/\./g, "/");
+        const node = sourceMap.pointers[instancePath];
         let message = error.message.replace("{base}", "").replace(/\./g, "/");
         if (error.context.errorType == "const") {
           message = `Expecting a constant value of "${error.context.allowedValue}"`;

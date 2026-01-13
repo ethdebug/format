@@ -37,7 +37,7 @@ expect.extend({
           .map(
             (result) =>
               `  ${result.pass ? chalk.green("✓") : chalk.red("✗")} ${
-                // @ts-ignore
+                // @ts-expect-error this.utils exists in vitest matcher context
                 this.utils.printReceived(result.value)
               }`,
           )

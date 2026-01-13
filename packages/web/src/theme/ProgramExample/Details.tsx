@@ -3,14 +3,13 @@ import Link from "@docusaurus/Link";
 import { Program } from "@ethdebug/format";
 import { useProgramExampleContext } from "./ProgramExampleContext";
 import { HighlightedInstruction } from "./HighlightedInstruction";
-import { Variables } from "./Variables";
 
 // imported for style legend
 import "./SourceContents.css";
 
 export interface Props {}
 
-export function Details(props: Props): JSX.Element {
+export function Details(_props: Props): JSX.Element {
   const { highlightedInstruction, highlightMode } = useProgramExampleContext();
 
   if (highlightMode === "simple" || !highlightedInstruction) {
@@ -40,7 +39,7 @@ interface InstructionAdmonitionProps {
   instruction: Program.Instruction;
 }
 function InstructionAdmonition({
-  instruction,
+  instruction: _instruction,
 }: InstructionAdmonitionProps): JSX.Element {
   return (
     <Admonition type="info">
@@ -69,7 +68,7 @@ function InstructionAdmonition({
   );
 }
 
-function BasicAdmonition(props: {}): JSX.Element {
+function BasicAdmonition(_props: {}): JSX.Element {
   return (
     <Admonition type="tip">
       Select an instruction offset to see associated{" "}

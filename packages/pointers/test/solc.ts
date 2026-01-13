@@ -4,7 +4,9 @@ import type * as Solc from "solc";
 let solc: typeof Solc | undefined;
 try {
   solc = (await import("solc")).default;
-} catch {}
+} catch {
+  // solc not available
+}
 
 /**
  * Organizes the sources being compiled by their path identifier, as well

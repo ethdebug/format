@@ -4,7 +4,6 @@ import { Data } from "./data.js";
 import type { Cursor } from "./cursor.js";
 import { read } from "./read.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
-import { toHex } from "ethereum-cryptography/utils";
 
 export interface EvaluateOptions {
   state: Machine.State;
@@ -296,7 +295,7 @@ async function evaluateRead(
   expression: Pointer.Expression.Read,
   options: EvaluateOptions,
 ): Promise<Data> {
-  const { state, regions } = options;
+  const { state: _state, regions } = options;
 
   const identifier = expression.$read;
   const region = regions[identifier];

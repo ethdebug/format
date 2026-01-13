@@ -14,37 +14,37 @@ describe("read", () => {
     const state: Machine.State = {
       stack: {
         length: 50n,
-        peek: vitest.fn(async ({ depth, slice }) =>
+        peek: vitest.fn(async ({ depth: _depth, slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
         ),
       },
       memory: {
-        read: vitest.fn(async ({ slice }) =>
+        read: vitest.fn(async ({ slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
         ),
       },
       storage: {
-        read: vitest.fn(async ({ slot, slice }) =>
+        read: vitest.fn(async ({ slot: _slot, slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
         ),
       },
       calldata: {
-        read: vitest.fn(async ({ slice }) =>
+        read: vitest.fn(async ({ slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
         ),
       },
       returndata: {
-        read: vitest.fn(async ({ slice }) =>
+        read: vitest.fn(async ({ slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
         ),
       },
       transient: {
-        read: vitest.fn(async ({ slot, slice }) =>
+        read: vitest.fn(async ({ slot: _slot, slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
         ),
       },
       code: {
-        read: vitest.fn(async ({ slice }) =>
+        read: vitest.fn(async ({ slice: _slice }) =>
           Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
         ),
       },

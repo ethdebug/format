@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { highlight } from "cli-highlight";
 import { describeSchema } from "@ethdebug/format";
 
-import { type Cursor, Data } from "../src/index.js";
+import "../src/index.js";
 
 import { observeTrace } from "../test/index.js";
 

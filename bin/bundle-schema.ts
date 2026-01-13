@@ -1,7 +1,6 @@
 import { addSchema } from "@hyperjump/json-schema/draft-2020-12";
 import { bundle as bundleSchema } from "@hyperjump/json-schema/bundle";
 import { schemas, describeSchema } from "@ethdebug/format";
-import type { JSONSchema } from "json-schema-typed/draft-2020-12";
 
 async function main() {
   const schema = { id: process.argv[2] }; // a bit brittle

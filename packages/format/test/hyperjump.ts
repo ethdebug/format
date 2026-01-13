@@ -4,9 +4,8 @@ import {
   validate,
   setMetaSchemaOutputFormat,
 } from "@hyperjump/json-schema/draft-2020-12";
-// @ts-ignore
+// @ts-expect-error no types for experimental export
 import { BASIC } from "@hyperjump/json-schema/experimental";
-import { bundle } from "@hyperjump/json-schema/bundle";
 import * as YAML from "yaml";
 import indentString from "indent-string";
 import { highlight } from "cli-highlight";

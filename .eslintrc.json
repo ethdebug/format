@@ -9,7 +9,9 @@
       { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }
     ],
     "@typescript-eslint/no-namespace": "off",
-    "no-console": "warn"
+    "@typescript-eslint/no-empty-object-type": "off",
+    "no-console": "warn",
+    "require-yield": "off"
   },
   "env": {
     "node": true,

@@ -1,9 +1,7 @@
 import React from "react";
 import Link from "@docusaurus/Link";
 import CreateNodes from "@theme/JSONSchemaViewer/components/CreateNodes";
-import CreateEdge from "@theme-original/JSONSchemaViewer/components/CreateEdge";
 import { SchemaHierarchyComponent } from "@theme-original/JSONSchemaViewer/contexts";
-import { Collapsible } from "@theme/JSONSchemaViewer/components";
 import {
   GenerateFriendlyName,
   QualifierMessages,
@@ -199,7 +197,7 @@ function separateDocumentationFromSemantics(schema: JSONSchema): {
     description,
     examples,
     default: default_,
-    // @ts-ignore
+    // @ts-expect-error internal key for tracking
     [internalIdKey]: _id,
     ...semantics
   } = schema;

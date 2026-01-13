@@ -1,7 +1,5 @@
 import { type Pointer, describeSchema } from "@ethdebug/format";
 
-import type { CompileOptions } from "./solc.js";
-
 export const findExamplePointer = (() => {
   const {
     schema: { examples: examplePointers },

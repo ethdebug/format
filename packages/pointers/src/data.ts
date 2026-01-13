@@ -5,7 +5,9 @@ import type * as Util from "util";
 let util: typeof Util | undefined;
 try {
   util = await import("util");
-} catch {}
+} catch {
+  // util is not available in browser environments
+}
 
 export class Data extends Uint8Array {
   static zero(): Data {
@@ -102,9 +104,9 @@ export class Data extends Uint8Array {
   }
 
   inspect(
-    depth: number,
+    _depth: number,
     options: Util.InspectOptionsStylized,
-    inspect: typeof Util.inspect,
+    _inspect: typeof Util.inspect,
   ): string {
     return `Data[${options.stylize(this.toHex(), "number")}]`;
   }

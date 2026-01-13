@@ -1,4 +1,3 @@
-import { schemas } from "../src";
 
 export const schemaExtensions: {
   [schemaId: string]: {

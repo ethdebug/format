@@ -88,7 +88,7 @@ async function* processRegion(
 
 async function* processGroup(
   collection: Pointer.Collection.Group,
-  options: ProcessOptions,
+  _options: ProcessOptions,
 ): Process {
   const { group } = collection;
   return group.map(Memo.dereferencePointer);
@@ -202,7 +202,7 @@ async function* processReference(
 
 async function* processTemplates(
   collection: Pointer.Collection.Templates,
-  options: ProcessOptions,
+  _options: ProcessOptions,
 ): Process {
   const { templates, in: in_ } = collection;
 

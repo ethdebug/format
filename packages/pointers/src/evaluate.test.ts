@@ -29,7 +29,7 @@ const state: Machine.State = {
 describe("evaluate", () => {
   let regions: { [identifier: string]: Cursor.Region };
   let variables: { [identifier: string]: Data };
-  let cursor: Cursor;
+  let _cursor: Cursor;
   let options: EvaluateOptions;
 
   beforeEach(() => {

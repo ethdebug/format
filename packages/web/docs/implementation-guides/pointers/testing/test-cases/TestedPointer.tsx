@@ -1,4 +1,3 @@
-import { Collapsible } from "@theme/JSONSchemaViewer/components";
 import CodeBlock from "@theme/CodeBlock";
 import { describeSchema } from "@ethdebug/format";
 

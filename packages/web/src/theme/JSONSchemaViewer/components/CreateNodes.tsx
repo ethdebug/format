@@ -1,5 +1,4 @@
 import React from "react";
-import CreateTypes from "@theme-original/JSONSchemaViewer/components/CreateTypes";
 import CreateNodes from "@theme-original/JSONSchemaViewer/components/CreateNodes";
 import { useSchemaHierarchyContext } from "@theme-original/JSONSchemaViewer/contexts";
 import {

@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from "react";
-import Admonition from "@theme/Admonition";
-import Link from "@docusaurus/Link";
+import React from "react";
 import { useProgramExampleContext } from "./ProgramExampleContext";
 
 import { ShikiCodeBlock } from "@theme/ShikiCodeBlock";

@@ -170,7 +170,7 @@ function pointToYaml(yaml: string, pointer?: SchemaPointer): string {
 
   // slice(2) because we want to remove leading #/
   for (const step of pointer.slice(2).split("/")) {
-    // @ts-ignore
+    // @ts-expect-error doc.get exists at runtime
     doc = doc.get(step, true);
 
     if (!doc) {
