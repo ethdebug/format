@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.d.ts
+*.config.js
+*.config.ts
+
+# Auto-generated files
+packages/format/src/schemas/yamls.ts
+
+# Docusaurus
+packages/web/.docusaurus/
+packages/web/build/
