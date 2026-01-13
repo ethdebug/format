@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+yarn.lock
+package-lock.json
+
+# Auto-generated files
+packages/format/src/schemas/yamls.ts
+
+# Docusaurus build output
+packages/web/.docusaurus/
+packages/web/build/
