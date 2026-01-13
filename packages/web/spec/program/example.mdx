@@ -2,13 +2,7 @@
 sidebar_position: 3
 ---
 
-import {
-  ProgramExampleContextProvider,
-  useProgramExampleContext,
-  SourceContents,
-  Opcodes,
-  Viewer,
-} from "@theme/ProgramExample";
+import { ProgramExampleContextProvider, useProgramExampleContext, SourceContents, Opcodes, Viewer } from "@theme/ProgramExample";
 
 # Example program
 
@@ -22,109 +16,109 @@ import {
 // define storage layout to include variable
 // at slot 0
 storage {
-[0] storedValue: uint256;
+  [0] storedValue: uint256;
 }
 
 // runtime logic
 code {
-// require fee for incrementing
-if (msg.callvalue < 3 finney) {
-return;
-}
+  // require fee for incrementing
+  if (msg.callvalue < 3 finney) {
+    return;
+  }
 
-let localValue = storedValue + 1;
-storedValue = localValue;
-return;
+  let localValue = storedValue + 1;
+  storedValue = localValue;
+  return;
 }
 `}]}
-instructions={[
-{
-operation: {
-mnemonic: "PUSH6",
-arguments: ["0x02ba7def3000"],
-},
-context: ({ findSourceRange }) => ({
-code: findSourceRange("3 finney"),
-variables: [{
-identifier: "storedValue",
-type: {
-kind: "uint",
-bits: 256
-},
-pointer: {
-location: "storage",
-slot: 0
-},
-declaration: findSourceRange("[0] storedValue: uint256")
-}],
-remark: "hexadecimal for 3 finney"
-})
-},
-{
-operation: {
-mnemonic: "CALLVALUE"
-},
-context: ({ findSourceRange }) => ({
-code: findSourceRange("msg.callvalue"),
-variables: [{
-identifier: "storedValue",
-type: {
-kind: "uint",
-bits: 256
-},
-pointer: {
-location: "storage",
-slot: 0
-},
-declaration: findSourceRange("[0] storedValue: uint256")
-}],
-})
-},
-{
-operation: {
-mnemonic: "LT"
-},
-context: ({ findSourceRange }) => ({
-code: findSourceRange("msg.callvalue < 3 finney"),
-variables: [{
-identifier: "storedValue",
-type: {
-kind: "uint",
-bits: 256
-},
-pointer: {
-location: "storage",
-slot: 0
-},
-declaration: findSourceRange("[0] storedValue: uint256")
-}],
-})
-},
-{
-operation: {
-mnemonic: "PUSH1",
-arguments: ["0x13"]
-},
-context: ({ findSourceRange }) => ({
-code: findSourceRange("if (msg.callvalue < 3 finney) {\n return;\n }"),
-variables: [{
-identifier: "storedValue",
-type: {
-kind: "uint",
-bits: 256
-},
-pointer: {
-location: "storage",
-slot: 0
-},
-declaration: findSourceRange("[0] storedValue: uint256")
-}],
-})
-},
-{
-operation: {
-mnemonic: "JUMPI"
-},
+  instructions={[
+    {
+      operation: {
+        mnemonic: "PUSH6",
+        arguments: ["0x02ba7def3000"],
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("3 finney"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+        remark: "hexadecimal for 3 finney"
+      })
+    },
+    {
+      operation: {
+        mnemonic: "CALLVALUE"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "LT"
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("msg.callvalue < 3 finney"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "PUSH1",
+        arguments: ["0x13"]
+      },
+      context: ({ findSourceRange }) => ({
+        code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }"),
+        variables: [{
+          identifier: "storedValue",
+          type: {
+            kind: "uint",
+            bits: 256
+          },
+          pointer: {
+            location: "storage",
+            slot: 0
+          },
+          declaration: findSourceRange("[0] storedValue: uint256")
+        }],
+      })
+    },
+    {
+      operation: {
+        mnemonic: "JUMPI"
+      },
 
       context: ({ findSourceRange }) => ({
         code: findSourceRange("if (msg.callvalue < 3 finney) {\n    return;\n  }"),
@@ -298,10 +292,9 @@ mnemonic: "JUMPI"
         ]
       })
     }
-
-]}
-
+  ]}
 >
+
 
 This page helps illustrate the program schema's
 [key concepts](/spec/program/concepts) by offering a fictional

@@ -12,3 +12,6 @@ packages/format/src/schemas/yamls.ts
 # Docusaurus build output
 packages/web/.docusaurus/
 packages/web/build/
+
+# Contains embedded source code with specific formatting for findSourceRange
+packages/web/spec/program/example.mdx
