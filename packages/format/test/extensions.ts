@@ -1,4 +1,3 @@
-
 export const schemaExtensions: {
   [schemaId: string]: {
     extends: Set<string /* fully qualified base schema ID */>;

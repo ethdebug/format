@@ -7,10 +7,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import { type DescribeSchemaOptions, describeSchema } from "@ethdebug/format";
 import { schemaIndex } from "@site/src/schemas";
-import {
-  SchemaContext,
-  internalIdKey,
-} from "@site/src/contexts/SchemaContext";
+import { SchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
 import SchemaListing from "./SchemaListing";
 import Playground from "./Playground";

@@ -64,7 +64,13 @@ export function detectDiscriminator(schema: {
         return false;
       }
 
-      const { title: _title, description: _description, if: if_, then, ...others } = clause;
+      const {
+        title: _title,
+        description: _description,
+        if: if_,
+        then,
+        ...others
+      } = clause;
 
       return !!if_ && !!then && Object.keys(others).length === 0;
     },

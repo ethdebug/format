@@ -117,7 +117,9 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     const markers = [];
     if (errors) {
       for (const [_, error] of Object.entries(errors)) {
-        const instancePath = error.path.replace("{base}", "").replace(/\./g, "/");
+        const instancePath = error.path
+          .replace("{base}", "")
+          .replace(/\./g, "/");
         const node = sourceMap.pointers[instancePath];
         let message = error.message.replace("{base}", "").replace(/\./g, "/");
         if (error.context.errorType == "const") {
