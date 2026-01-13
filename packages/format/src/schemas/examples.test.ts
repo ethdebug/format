@@ -21,10 +21,7 @@ describe("Examples", () => {
   }
 });
 
-function testSchema(options: {
-  id: string;
-  schema: JSONSchema
-}): void {
+function testSchema(options: { id: string; schema: JSONSchema }): void {
   const { id, schema } = options;
 
   const { title } = schema;
@@ -38,17 +35,13 @@ function testSchema(options: {
   const allowedToOmitExamples = idsOfSchemasAllowedToOmitExamples.has(id);
 
   describe(title || id, () => {
-    (
-      allowedToOmitExamples
-        ? it.skip
-        : it
-    )("has examples", () => {
+    (allowedToOmitExamples ? it.skip : it)("has examples", () => {
       expect(hasExamples).toBe(true);
     });
 
     if (!hasExamples) {
       return;
-    };
+    }
 
     testExamples({ id, schema });
 
@@ -57,18 +50,15 @@ function testSchema(options: {
         for (const name of exampledDefinitionNames) {
           testSchema({
             id: `${id}#/$defs/${name}`,
-            schema: schema!.$defs![name] as JSONSchema
-          })
+            schema: schema!.$defs![name] as JSONSchema,
+          });
         }
       });
     }
   });
 }
 
-function testExamples(options: {
-  id: string;
-  schema: JSONSchema
-}): void {
+function testExamples(options: { id: string; schema: JSONSchema }): void {
   const { id, schema } = options;
   const { examples = [] } = schema;
 
@@ -76,7 +66,7 @@ function testExamples(options: {
     describe(`example #${index}`, () => {
       it(`is a valid ${schema.title || id}`, async () => {
         await expect(example).toValidate({ schema: { id } });
-      })
+      });
 
       const testedParentSchemas = new Set<string>();
 
@@ -84,7 +74,8 @@ function testExamples(options: {
       const testParentSchemas = (schemaId: string) => {
         testedParentSchemas.add(schemaId);
 
-        const parentSchemaIds = schemaExtensions[schemaId]?.extends || new Set<string>();
+        const parentSchemaIds =
+          schemaExtensions[schemaId]?.extends || new Set<string>();
 
         for (const parentSchemaId of parentSchemaIds) {
           if (testedParentSchemas.has(parentSchemaId)) {
@@ -93,7 +84,7 @@ function testExamples(options: {
 
           it(`is also a valid ${parentSchemaId}`, async () => {
             await expect(example).toValidate({
-              schema: { id: parentSchemaId }
+              schema: { id: parentSchemaId },
             });
           });
 
@@ -112,14 +103,12 @@ function definitionsWithExamples(schema: JSONSchema): string[] {
     return [];
   }
 
-  return Object.entries(schema.$defs)
-    .flatMap(([name, definition]) => (
-      typeof definition !== "boolean" &&
-      "examples" in definition &&
-      definition.examples &&
-      definition.examples.length > 0
-    )
+  return Object.entries(schema.$defs).flatMap(([name, definition]) =>
+    typeof definition !== "boolean" &&
+    "examples" in definition &&
+    definition.examples &&
+    definition.examples.length > 0
       ? [name]
-      : []
-    )
+      : [],
+  );
 }

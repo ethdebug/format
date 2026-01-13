@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-import TOCInline from '@theme/TOCInline';
+import TOCInline from "@theme/TOCInline";
 
 # Known challenges
 
@@ -14,7 +14,7 @@ languages in the future; but also, we want to keep down the complexity of the
 format itself if possible.
 
 In what follows we'll outline some particular thorns of the EVM in general and
-Solidity and Vyper in particular that will have to be addressed.  This is not
+Solidity and Vyper in particular that will have to be addressed. This is not
 necessarily a complete list.
 
 <TOCInline toc={toc} />
@@ -23,7 +23,7 @@ necessarily a complete list.
 
 Any debugging data format will need to handle the fact that in both Solidity and
 in Vyper the same type can have different representations depending on which
-location (the stack, memory, storage, calldata, or code) it is stored in.  As
+location (the stack, memory, storage, calldata, or code) it is stored in. As
 such it does not suffice to give a single representation for a single type, but
 rather, it may be necessary to specify multiple representations, corresponding
 to the different data locations.
@@ -31,21 +31,21 @@ to the different data locations.
 ## The word-based nature of storage and the stack
 
 Of the data locations mentioned above, most are byte-based, but two, the stack
-and storage, are word-based.  This will likely necessitate slightly different
+and storage, are word-based. This will likely necessitate slightly different
 handling for them.
 
 Moreover, the fact that these two locations are word-based means there can be a
-need to specify endianness.  For instance, in Solidity, arrays may pack multiple
-elements into the same storage word, starting from the low byte.  However,
-segments of strings in storage start at the high byte of their word.  So it will
-be necessary to have a way to specify this.  (In particular, consider the case
+need to specify endianness. For instance, in Solidity, arrays may pack multiple
+elements into the same storage word, starting from the low byte. However,
+segments of strings in storage start at the high byte of their word. So it will
+be necessary to have a way to specify this. (In particular, consider the case
 of a `bytes2[] storage`; each `bytes2` is packed into the word in a
 little-endian order, but each `bytes2` itself is stored in a big-endian order.)
 
 (Of course, there can also be a need to specify endianness in byte-based
-locations, e.g. for storage of integers.  Currently all EVM languages known to
+locations, e.g. for storage of integers. Currently all EVM languages known to
 me do this in a big-endian fashion, because this is what the EVM makes
-convenient.  It may be OK to assume that integers are big-endian, but the
+convenient. It may be OK to assume that integers are big-endian, but the
 reverse possibility is at least worth noting.)
 
 ## Complex stride patterns
@@ -58,9 +58,9 @@ array whose elements are 2 bytes long but which each only begin on 8-byte
 boundaries.
 
 However, this simple notion of stride length is not sufficient for handling
-Solidity's storage arrays, whose stride patterns can be more complex.  Solidity
+Solidity's storage arrays, whose stride patterns can be more complex. Solidity
 allows for multiple elements in an array to be packed into a word, without
-filling the whole word.  If we for a moment ignore the word-based nature of
+filling the whole word. If we for a moment ignore the word-based nature of
 storage and instead think of it as byte-based in a little-endian fashion,
 Solidity allows for patterns like "15 bytes for one element, 15 bytes for the
 next element, 2 bytes of empty space, repeat", which can't be expressed with a
@@ -76,8 +76,8 @@ hash of various things; e.g., in a dynamically-sized array in Solidity, if the
 length is stored at a slot `p`, the elements are stored beginning at
 `keccak(p)`.
 
-The format needs some way to be able to specify this.  This also raises the
-question of whether we should allow for other hash functions.  Other hash
+The format needs some way to be able to specify this. This also raises the
+question of whether we should allow for other hash functions. Other hash
 functions are unlikely to be used due to the EVM making keccak much more
 convenient than other hashes, but it may not be the only possibility as there
 are precompiles for both SHA-256 and RIPEMD-160.
@@ -93,23 +93,23 @@ representations, somewhat similar to the notion of union types?
 ## Mappings
 
 Both Solidity and Vyper use mappings, and while these work similarly in both
-languages, the two aren't the same.  It will be necessary to handle both styles,
+languages, the two aren't the same. It will be necessary to handle both styles,
 and ideally other potential styles as well.
 
 In both languages, given a mapping at position `p` and a key `k`, the value
 corresponding to `k` is stored at a location determined by the Keccak hash of a
-combination of `p` and `k`.  But the details differ both by the language, and
+combination of `p` and `k`. But the details differ both by the language, and
 whether we are looking at a value type that fits into a word, or whether we are
 looking at a string or bytestring.
 
 Solidity always performs the computation `keccak(k.p)`, where the `.` represents
-concatenation.  However, for value types the key is padded to a full word, while
+concatenation. However, for value types the key is padded to a full word, while
 for a string or bytestring, no padding is used.
 
-Vyper is similar, but differs in two ways.  For value types, the computation is
+Vyper is similar, but differs in two ways. For value types, the computation is
 instead `keccak(p.k)`, with the concatenands in the other order; note that `k`
-is still padded.  Meanwhile, for strings and bytestrings, the computation is
-instead `keccak(p.keccak(k))` (again with no padding on `k`).  There will need
+is still padded. Meanwhile, for strings and bytestrings, the computation is
+instead `keccak(p.keccak(k))` (again with no padding on `k`). There will need
 to be a way to specify this additional complexity.
 
 ## Markings for mapping keys
@@ -117,13 +117,13 @@ to be a way to specify this additional complexity.
 The problem of keeping track of mapping keys is worth discussing separately.
 
 Mappings do not keep track of their keys; as such, it is up to the debugger to
-keep track of mapping keys touched in a given transaction.  This will require
+keep track of mapping keys touched in a given transaction. This will require
 some kind of markings.
 
 Truffle Debugger currently handles this by using the AST and determining what
 value on the stack corresponds to the key specified for a given mapping access.
 However, this process is complex and requires several workarounds for unusual
-cases.  While presumably markings could be devised that allow this process to
+cases. While presumably markings could be devised that allow this process to
 work in more generality, it's not clear that it's actually a good solution.
 
 An alternate approach, suggested some time ago by Nomic Labs, would be to have
@@ -135,16 +135,16 @@ string or bytestring is pre-hashed, prior to the main hashing.
 ## The use of pointers in or to calldata
 
 In Solidity's ABI encoding format (used also by Vyper), which is necessarily
-used for variables stored in calldata, pointers are relative.  However, they are
+used for variables stored in calldata, pointers are relative. However, they are
 not relative to their own location, but rather relative to the start of the
-structure containing them.  There will need to be some way to handle this.
+structure containing them. There will need to be some way to handle this.
 
 Moreover, for types in Solidity with a variable number of elements (including
 strings and bytestrings), pointers on the stack to that type in calldata do not
 point to the beginning of the calldata representation (which would start with
 the length), but rather have both a start word and a length word, with the start
 word pointing just past where the length is stored (to the beginning of the
-actual contents).  It will be necessary to handle this as well.
+actual contents). It will be necessary to handle this as well.
 
 ## Internal function pointers
 
@@ -161,7 +161,7 @@ mapping indices to functions.
 Thirdly, in the format with `viaIR` turned off, an internal function pointer
 actually breaks down into one PC value for the deployed code and one PC value
 for the constructor code (although the latter is not always set and is sometimes
-left as zero).  So there will need to be a way to specify this complexity.
+left as zero). So there will need to be a way to specify this complexity.
 
 Moreover, an internal function pointer can point to a designated revert function
 introduced by the compiler rather than defined by the user; it will be necessary
@@ -170,7 +170,7 @@ to handle this case.
 ## Lack of fixed variable locations on the stack
 
 In languages that put variables on the stack, those variables may not have a
-fixed location.  (For instance, Solidity with optimization turned on.)  There
+fixed location. (For instance, Solidity with optimization turned on.) There
 will need to be a way to keep track of variables that move around on the stack.
 
 ## The possibility of handling other languages
@@ -180,6 +180,6 @@ to be able to handle features that we may expect to see in other languages even
 if they do not appear in Solidity or Vyper.
 
 For instance, the (now-defunct) EVM language Pyramid was (largely) dynamically
-typed, making each variable effectively a sum type.  Sum types are an example of
+typed, making each variable effectively a sum type. Sum types are an example of
 a feature we may want to be able to handle even if not present in either
 Solidity or Vyper.

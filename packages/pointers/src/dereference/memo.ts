@@ -26,11 +26,10 @@ export namespace Memo {
   /**
    * Initialize a DereferencePointer memo
    */
-  export const dereferencePointer =
-    (pointer: Pointer): DereferencePointer => ({
-      kind: "dereference-pointer",
-      pointer
-    });
+  export const dereferencePointer = (pointer: Pointer): DereferencePointer => ({
+    kind: "dereference-pointer",
+    pointer,
+  });
 
   /**
    * A request to modify the stateful map of regions by name with a
@@ -47,11 +46,12 @@ export namespace Memo {
   /**
    * Initialize a SaveRegions memo
    */
-  export const saveRegions =
-    (regions: Record<string, Cursor.Region>): SaveRegions => ({
-      kind: "save-regions",
-      regions
-    });
+  export const saveRegions = (
+    regions: Record<string, Cursor.Region>,
+  ): SaveRegions => ({
+    kind: "save-regions",
+    regions,
+  });
 
   /**
    * A request to modify the stateful map of variable values with a
@@ -68,11 +68,12 @@ export namespace Memo {
   /**
    * Initialize a SaveVariables memo
    */
-  export const saveVariables =
-    (variables: Record<string, Data>): SaveVariables => ({
-      kind: "save-variables",
-      variables
-    });
+  export const saveVariables = (
+    variables: Record<string, Data>,
+  ): SaveVariables => ({
+    kind: "save-variables",
+    variables,
+  });
 
   /**
    * A request to push a region rename mapping onto the context stack.
@@ -88,11 +89,12 @@ export namespace Memo {
   /**
    * Initialize a PushRegionRenames memo
    */
-  export const pushRegionRenames =
-    (mapping: Record<string, string>): PushRegionRenames => ({
-      kind: "push-region-renames",
-      mapping
-    });
+  export const pushRegionRenames = (
+    mapping: Record<string, string>,
+  ): PushRegionRenames => ({
+    kind: "push-region-renames",
+    mapping,
+  });
 
   /**
    * A request to pop the current region rename mapping from the context stack.
@@ -105,7 +107,7 @@ export namespace Memo {
    * Initialize a PopRegionRenames memo
    */
   export const popRegionRenames = (): PopRegionRenames => ({
-    kind: "pop-region-renames"
+    kind: "pop-region-renames",
   });
 
   /**
@@ -121,11 +123,12 @@ export namespace Memo {
   /**
    * Initialize a PushTemplates memo
    */
-  export const pushTemplates =
-    (templates: Pointer.Templates): PushTemplates => ({
-      kind: "push-templates",
-      templates
-    });
+  export const pushTemplates = (
+    templates: Pointer.Templates,
+  ): PushTemplates => ({
+    kind: "push-templates",
+    templates,
+  });
 
   /**
    * A request to pop the current template definitions from the context stack.
@@ -138,6 +141,6 @@ export namespace Memo {
    * Initialize a PopTemplates memo
    */
   export const popTemplates = (): PopTemplates => ({
-    kind: "pop-templates"
+    kind: "pop-templates",
   });
 }

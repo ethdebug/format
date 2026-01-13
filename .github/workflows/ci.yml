@@ -1,6 +1,6 @@
 name: Continuous integration checks
 on:
-- pull_request
+  - pull_request
 
 jobs:
   run-tests:

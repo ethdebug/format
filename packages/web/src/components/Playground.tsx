@@ -108,7 +108,7 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
    */
   function showValidationErrors(
     errors: ValidationError[],
-    sourceMap: SourceMap
+    sourceMap: SourceMap,
   ) {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return showError("Unable to validate schema");

@@ -1,18 +1,16 @@
 import { Program, Materials } from "@ethdebug/format";
 
-export type DynamicInstruction =
-  & Omit<Program.Instruction, "context" | "operation">
-  & { operation: Program.Instruction.Operation; }
-  & { context: DynamicContext; };
+export type DynamicInstruction = Omit<
+  Program.Instruction,
+  "context" | "operation"
+> & { operation: Program.Instruction.Operation } & { context: DynamicContext };
 
-export type DynamicContext =
-  | Program.Context
-  | ContextThunk;
+export type DynamicContext = Program.Context | ContextThunk;
 
 export type ContextThunk = (props: {
   findSourceRange(
     query: string,
-    options?: FindSourceRangeOptions
+    options?: FindSourceRangeOptions,
   ): Materials.SourceRange | undefined;
 }) => Program.Context;
 
@@ -27,16 +25,13 @@ export interface ResolverOptions {
 
 export function resolveDynamicInstruction(
   dynamicInstruction: DynamicInstruction,
-  options: ResolverOptions
+  options: ResolverOptions,
 ): Program.Instruction {
-  const context = resolveDynamicContext(
-    dynamicInstruction.context,
-    options
-  );
+  const context = resolveDynamicContext(dynamicInstruction.context, options);
 
   const instruction = {
     ...dynamicInstruction,
-    context
+    context,
   };
 
   return instruction;
@@ -44,7 +39,7 @@ export function resolveDynamicInstruction(
 
 function resolveDynamicContext(
   context: DynamicContext,
-  { sources }: ResolverOptions
+  { sources }: ResolverOptions,
 ): Program.Context {
   if (typeof context !== "function") {
     return context;
@@ -52,11 +47,12 @@ function resolveDynamicContext(
 
   const findSourceRange = (
     query: string,
-    options: FindSourceRangeOptions = {}
+    options: FindSourceRangeOptions = {},
   ) => {
-    const source = "source" in options && options.source
-      ? sources.find(source => source.id === options.source?.id)
-      : sources[0];
+    const source =
+      "source" in options && options.source
+        ? sources.find((source) => source.id === options.source?.id)
+        : sources[0];
 
     if (!source) {
       return;
@@ -67,10 +63,9 @@ function resolveDynamicContext(
     const afterQueryOffset = source.contents.indexOf(afterQuery);
     if (afterQueryOffset === -1) {
       throw new Error(
-        `Unexpected could not find string ${options.after} as prior occurrence to ${query}`
+        `Unexpected could not find string ${options.after} as prior occurrence to ${query}`,
       );
     }
-
 
     const startOffset = afterQueryOffset + afterQuery.length;
 
@@ -85,8 +80,8 @@ function resolveDynamicContext(
       source: { id: source.id },
       range: {
         offset,
-        length
-      }
+        length,
+      },
     };
   };
 

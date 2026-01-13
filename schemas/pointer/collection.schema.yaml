@@ -5,7 +5,6 @@ title: ethdebug/format/pointer/collection
 description: |
   A representation of a collection of pointers to data in the EVM
 type: object
-
 allOf:
   - oneOf:
       - required: [group]

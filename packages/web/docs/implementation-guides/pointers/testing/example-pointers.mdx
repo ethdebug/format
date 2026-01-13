@@ -25,9 +25,10 @@ function:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="test/examples.ts"
-  extract={
-    sourceFile => sourceFile.getVariableStatement("findExamplePointer")
-  } />
+  extract={(sourceFile) =>
+    sourceFile.getVariableStatement("findExamplePointer")
+  }
+/>
 
 (This function is written as an immediately-invoked inline function so as to
 avoid unnecessary redundant calls to `describeSchema()`.)

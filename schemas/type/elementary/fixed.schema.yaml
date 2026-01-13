@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/fixed"
 
 title: ethdebug/format/type/elementary/fixed
-description:
-  Schema describing the representation of a signed fixed decimal type
+description: Schema describing the representation of a signed fixed decimal type
 
 type: object
 properties:

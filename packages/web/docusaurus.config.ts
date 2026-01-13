@@ -1,18 +1,18 @@
-import {themes as prismThemes} from 'prism-react-renderer';
+import { themes as prismThemes } from "prism-react-renderer";
 import path from "path";
-import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import type { Config } from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
 import type { Configuration } from "webpack";
 
 const baseUrl = process.env["BASE_URL"] || "/";
 
 const config: Config = {
-  title: 'ethdebug format',
-  tagline: 'Debugging data format for smart contracts',
-  favicon: 'img/favicon.ico',
+  title: "ethdebug format",
+  tagline: "Debugging data format for smart contracts",
+  favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: 'https://ethdebug.github.io',
+  url: "https://ethdebug.github.io",
 
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
@@ -20,23 +20,23 @@ const config: Config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'ethdebug', // Usually your GitHub org/user name.
-  projectName: 'format', // Usually your repo name.
+  organizationName: "ethdebug", // Usually your GitHub org/user name.
+  projectName: "format", // Usually your repo name.
 
-  onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: "throw",
+  onBrokenMarkdownLinks: "warn",
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: "en",
+    locales: ["en"],
   },
 
   themes: [
     ["docusaurus-json-schema-plugin", {}],
-    "@saucelabs/theme-github-codeblock"
+    "@saucelabs/theme-github-codeblock",
   ],
 
   plugins: [
@@ -47,16 +47,16 @@ const config: Config = {
           return {
             resolve: {
               alias: {
-                react: path.resolve('../../node_modules/react'),
+                react: path.resolve("../../node_modules/react"),
               },
               fallback: {
                 buffer: false,
-                util: false
-              }
-            }
+                util: false,
+              },
+            },
           };
-        }
-      }
+        },
+      };
     },
 
     [
@@ -64,27 +64,30 @@ const config: Config = {
       {
         packages: {
           "@ethdebug/format": {
-            tsConfigFilePath:
-              path.resolve(__dirname, "../format/tsconfig.json")
+            tsConfigFilePath: path.resolve(
+              __dirname,
+              "../format/tsconfig.json",
+            ),
           },
           "@ethdebug/pointers": {
-            tsConfigFilePath:
-              path.resolve(__dirname, "../pointers/tsconfig.json")
-          }
-        }
-      }
+            tsConfigFilePath: path.resolve(
+              __dirname,
+              "../pointers/tsconfig.json",
+            ),
+          },
+        },
+      },
     ],
 
     // Used to maintain separate spec/ directory, outside the core docs/
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'spec',
-        path: 'spec',
-        routeBasePath: 'spec',
-        sidebarPath: './sidebars.ts',
-        editUrl:
-          'https://github.com/ethdebug/format/tree/main/packages/web'
+        id: "spec",
+        path: "spec",
+        routeBasePath: "spec",
+        sidebarPath: "./sidebars.ts",
+        editUrl: "https://github.com/ethdebug/format/tree/main/packages/web",
         // ... other options
       },
     ],
@@ -92,15 +95,14 @@ const config: Config = {
 
   presets: [
     [
-      'classic',
+      "classic",
       {
         docs: {
-          sidebarPath: './sidebars.ts',
-          editUrl:
-            'https://github.com/ethdebug/format/tree/main/packages/web',
+          sidebarPath: "./sidebars.ts",
+          editUrl: "https://github.com/ethdebug/format/tree/main/packages/web",
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: "./src/css/custom.css",
         },
       } satisfies Preset.Options,
     ],
@@ -108,76 +110,76 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: 'ethdebug format',
+      title: "ethdebug format",
       logo: {
-        alt: 'ethdebug logo',
-        src: 'img/logo.svg',
+        alt: "ethdebug logo",
+        src: "img/logo.svg",
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'docsSidebar',
-          position: 'left',
-          label: 'Documentation',
+          type: "docSidebar",
+          sidebarId: "docsSidebar",
+          position: "left",
+          label: "Documentation",
         },
         {
-          to: '/spec/overview',
-          label: 'Specification',
-          position: 'left',
+          to: "/spec/overview",
+          label: "Specification",
+          position: "left",
           activeBaseRegex: `/spec/`,
         },
         {
-          to: '/status',
+          to: "/status",
           label: "Status: Draft",
           className: "status-indicator",
-          position: "right"
+          position: "right",
         },
         {
-          href: 'https://github.com/ethdebug/format',
-          label: 'GitHub',
-          position: 'right',
+          href: "https://github.com/ethdebug/format",
+          label: "GitHub",
+          position: "right",
         },
       ],
     },
     footer: {
-      style: 'dark',
+      style: "dark",
       links: [
         {
-          title: 'Docs',
+          title: "Docs",
           items: [
             {
               label: "Project overview",
-              to: "/docs/overview"
+              to: "/docs/overview",
             },
             {
-              label: 'Known challenges',
-              to: '/docs/known-challenges',
+              label: "Known challenges",
+              to: "/docs/known-challenges",
             },
           ],
         },
         {
-          title: 'Spec',
+          title: "Spec",
           items: [
             {
               label: "Specification overview",
-              to: "/spec/overview"
+              to: "/spec/overview",
             },
           ],
         },
         {
-          title: 'Community',
+          title: "Community",
           items: [
             {
-              label: 'Matrix.chat',
-              href: 'https://matrix.to/#/#ethdebug:matrix.org',
+              label: "Matrix.chat",
+              href: "https://matrix.to/#/#ethdebug:matrix.org",
             },
             {
-              label: 'Twitter',
-              href: 'https://twitter.com/ethdebug',
+              label: "Twitter",
+              href: "https://twitter.com/ethdebug",
             },
             {
-              label: 'GitHub',
-              href: 'https://github.com/ethdebug/format',
+              label: "GitHub",
+              href: "https://github.com/ethdebug/format",
             },
           ],
         },
@@ -187,9 +189,7 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-      additionalLanguages: [
-        "json"
-      ],
+      additionalLanguages: ["json"],
     },
   } satisfies Preset.ThemeConfig,
 };

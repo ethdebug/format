@@ -21,15 +21,15 @@ required:
 
 examples:
   - pick:
-    - code:
-        source:
-          id: 5
-        range:
-          offset: 68
-          length: 16
-    - code:
-        source:
-          id: 5
-        range:
-          offset: 132
-          length: 16
+      - code:
+          source:
+            id: 5
+          range:
+            offset: 68
+            length: 16
+      - code:
+          source:
+            id: 5
+          range:
+            offset: 132
+            length: 16

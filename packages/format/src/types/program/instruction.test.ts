@@ -4,6 +4,6 @@ import { Instruction, isInstruction } from "./instruction";
 testSchemaGuards("ethdebug/format/program/instruction", [
   {
     schema: "schema:ethdebug/format/program/instruction",
-    guard: isInstruction
+    guard: isInstruction,
   },
 ] as const);

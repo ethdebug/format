@@ -4,17 +4,18 @@ import { Project, type SourceFile, type ts } from "ts-morph";
 import useProjectCode from "@site/src/hooks/useProjectCode";
 import LinkedCodeBlock from "./LinkedCodeBlock";
 
-export interface CodeListingProps
-  extends Omit<CodeBlockProps, "language" | "children">
-{
+export interface CodeListingProps extends Omit<
+  CodeBlockProps,
+  "language" | "children"
+> {
   packageName: string;
   sourcePath: string;
   includePackageNameInTitle?: boolean;
   extract?: (
     sourceFile: SourceFile,
-    project: Project
+    project: Project,
   ) => Pick<ts.Node, "getFullText">;
-  links?: { [key: string]: string; };
+  links?: { [key: string]: string };
 }
 
 export default function CodeListing({
@@ -29,18 +30,20 @@ export default function CodeListing({
 
   const sourceFile = project.getSourceFileOrThrow(sourcePath);
 
-  const node = !extract
-    ? sourceFile
-    : extract(sourceFile, project);
+  const node = !extract ? sourceFile : extract(sourceFile, project);
 
   const code = node.getFullText().trim();
 
   // bit of a HACK
   const listingFullSource = !extract;
 
-  const title = includePackageNameInTitle
-    ? <><strong>{packageName}</strong> {sourcePath}</>
-    : sourcePath;
+  const title = includePackageNameInTitle ? (
+    <>
+      <strong>{packageName}</strong> {sourcePath}
+    </>
+  ) : (
+    sourcePath
+  );
 
   if (Object.keys(links).length > 0) {
     return (
@@ -58,15 +61,13 @@ export default function CodeListing({
     <CodeBlock
       language="typescript"
       {...{
-        ...(
-          listingFullSource
-            ? { title, showLineNumbers: true }
-            : { showLineNumbers: false }
-        ),
-        ...codeBlockProps
+        ...(listingFullSource
+          ? { title, showLineNumbers: true }
+          : { showLineNumbers: false }),
+        ...codeBlockProps,
       }}
-    >{
-      node.getFullText().trim()
-    }</CodeBlock>
+    >
+      {node.getFullText().trim()}
+    </CodeBlock>
   );
 }

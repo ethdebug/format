@@ -10,11 +10,11 @@ describe("dereference (integration)", () => {
 
       describe(`example pointer: ${name}`, () => {
         it("resolves to values containing the expected sequence", async () => {
-          const observedValues =
-            await observeTrace(options as any);
+          const observedValues = await observeTrace(options as any);
 
-          expect(observedValues)
-            .toEqual(expect.arrayContaining(expectedValues as any));
+          expect(observedValues).toEqual(
+            expect.arrayContaining(expectedValues as any),
+          );
         });
       });
     }

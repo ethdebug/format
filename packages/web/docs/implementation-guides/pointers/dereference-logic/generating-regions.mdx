@@ -23,8 +23,8 @@ with `GenerateRegionsOptions`):
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/generate.ts"
-  extract={sourceFile => sourceFile.getInterface("GenerateRegionsOptions")}
-  />
+  extract={(sourceFile) => sourceFile.getInterface("GenerateRegionsOptions")}
+/>
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -106,7 +106,8 @@ The signature of this function and associated types are as follows:
 
       return tempSourceFile.getFunction("processPointer");
     }
-  } />
+
+} />
 
 The `ProcessOptions` interface captures the runtime data at a particular
 point in the region generation process:
@@ -114,8 +115,8 @@ point in the region generation process:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getInterface("ProcessOptions")}
-  />
+  extract={(sourceFile) => sourceFile.getInterface("ProcessOptions")}
+/>
 
 The `Process` type alias provides a short type alias for functions like
 `processPointer` to use:
@@ -123,11 +124,12 @@ The `Process` type alias provides a short type alias for functions like
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getTypeAlias("Process")}
-  />
+  extract={(sourceFile) => sourceFile.getTypeAlias("Process")}
+/>
 
 Effectively, by returning a `Process`, the `processPointer()` has two
 different mechanisms of data return:
+
 - By being a JavaScript `AsyncGenerator`, it produces `Cursor.Region` objects
   one at a time, emitted as a side effect of execution (via JavaScript `yield`)
 - Upon completion of exection, the return value is a list of memos to be
@@ -158,8 +160,8 @@ consider the implementation of the `processRegion()` function as a base case:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getFunction("processRegion")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("processRegion")}
+/>
 
 Effectively, this function converts a `Pointer.Region` into a
 fully-evaluated, concrete `Cursor.Region`, emits this concrete region as the
@@ -172,7 +174,6 @@ This pointer evaluation process will be described later.
 
 The recursive cases are fairly straightforward following this architecture.
 
-
 ### Groups
 
 The simplest collection, a group of other pointers, yields no regions of its
@@ -181,8 +182,8 @@ own, but instead pushes each of its child pointers for evaluation later:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getFunction("processGroup")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("processGroup")}
+/>
 
 It's essential that each of the child pointers get evaluated in the order
 they appear in the list, since later pointers may reference regions named
@@ -197,8 +198,8 @@ variable identifier for use inside the dynamic composed pointer evaluation.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getFunction("processList")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("processList")}
+/>
 
 Note how, because each dynamic child pointer is evaluated based on the
 next incremented index value, the memos for updating this variable and
@@ -217,8 +218,8 @@ the `"else"` pointer if it is specified:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getFunction("processConditional")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("processConditional")}
+/>
 
 ### Scopes
 
@@ -234,5 +235,5 @@ variable values are available immediately.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/process.ts"
-  extract={sourceFile => sourceFile.getFunction("processScope")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("processScope")}
+/>

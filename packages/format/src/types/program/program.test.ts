@@ -4,6 +4,6 @@ import { Program, isProgram } from "./program";
 testSchemaGuards("ethdebug/format/program", [
   {
     schema: "schema:ethdebug/format/program",
-    guard: isProgram
+    guard: isProgram,
   },
 ] as const);

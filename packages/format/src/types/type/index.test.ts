@@ -1,84 +1,83 @@
 import { testSchemaGuards } from "../../../test/guards";
 import { Type, isType } from "./index";
 
-
 testSchemaGuards("ethdebug/format/type", [
   {
     schema: "schema:ethdebug/format/type",
-    guard: isType
+    guard: isType,
   },
 
   // elementary types
 
   {
     schema: "schema:ethdebug/format/type/elementary",
-    guard: Type.isElementary
+    guard: Type.isElementary,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/uint",
-    guard: Type.Elementary.isUint
+    guard: Type.Elementary.isUint,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/int",
-    guard: Type.Elementary.isInt
+    guard: Type.Elementary.isInt,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/ufixed",
-    guard: Type.Elementary.isUfixed
+    guard: Type.Elementary.isUfixed,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/fixed",
-    guard: Type.Elementary.isFixed
+    guard: Type.Elementary.isFixed,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/bool",
-    guard: Type.Elementary.isBool
+    guard: Type.Elementary.isBool,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/bytes",
-    guard: Type.Elementary.isBytes
+    guard: Type.Elementary.isBytes,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/string",
-    guard: Type.Elementary.isString
+    guard: Type.Elementary.isString,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/address",
-    guard: Type.Elementary.isAddress
+    guard: Type.Elementary.isAddress,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/contract",
-    guard: Type.Elementary.isContract
+    guard: Type.Elementary.isContract,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/enum",
-    guard: Type.Elementary.isEnum
+    guard: Type.Elementary.isEnum,
   },
 
   // complex types
 
   {
     schema: "schema:ethdebug/format/type/complex",
-    guard: Type.isComplex
+    guard: Type.isComplex,
   },
   {
     schema: "schema:ethdebug/format/type/complex/alias",
-    guard: Type.Complex.isAlias
+    guard: Type.Complex.isAlias,
   },
   {
     schema: "schema:ethdebug/format/type/complex/tuple",
-    guard: Type.Complex.isTuple
+    guard: Type.Complex.isTuple,
   },
   {
     schema: "schema:ethdebug/format/type/complex/array",
-    guard: Type.Complex.isArray
+    guard: Type.Complex.isArray,
   },
   {
     schema: "schema:ethdebug/format/type/complex/mapping",
-    guard: Type.Complex.isMapping
+    guard: Type.Complex.isMapping,
   },
   {
     schema: "schema:ethdebug/format/type/complex/struct",
-    guard: Type.Complex.isStruct
+    guard: Type.Complex.isStruct,
   },
 ] as const);

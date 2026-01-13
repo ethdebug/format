@@ -6,8 +6,8 @@ export interface PluginOptions {
   packages: {
     [packageName: string]: {
       tsConfigFilePath: string;
-    }
-  }
+    };
+  };
 }
 
 export type LoadedContent = {
@@ -15,15 +15,15 @@ export type LoadedContent = {
     [packageName: string]: {
       sourceFiles: {
         filePath: string;
-        text: string
+        text: string;
       }[];
-    }
-  }
+    };
+  };
 };
 
 export default function projectCodePlugin(
   context: LoadContext,
-  options: PluginOptions
+  options: PluginOptions,
 ): Plugin<LoadedContent> {
   const { packages } = options;
 
@@ -32,29 +32,27 @@ export default function projectCodePlugin(
 
     async loadContent() {
       const content: LoadedContent = {
-        packages: {}
+        packages: {},
       };
 
       for (const [packageName, packageConfig] of Object.entries(packages)) {
         const { tsConfigFilePath } = packageConfig;
 
         const project = new Project({
-          tsConfigFilePath
+          tsConfigFilePath,
         });
 
-        const sourceFiles = project.getSourceFiles()
-          .map(sourceFile => ({
-            filePath:
-              path.relative(
-                path.dirname(tsConfigFilePath),
-                sourceFile.getFilePath()
-              ),
+        const sourceFiles = project.getSourceFiles().map((sourceFile) => ({
+          filePath: path.relative(
+            path.dirname(tsConfigFilePath),
+            sourceFile.getFilePath(),
+          ),
 
-            text: sourceFile.getText()
-          }));
+          text: sourceFile.getText(),
+        }));
 
         content.packages[packageName] = {
-          sourceFiles
+          sourceFiles,
         };
       }
 
@@ -65,6 +63,6 @@ export default function projectCodePlugin(
       const { setGlobalData } = actions;
 
       setGlobalData(content);
-    }
+    },
   };
 }

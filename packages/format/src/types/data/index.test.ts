@@ -5,14 +5,14 @@ import { Data } from "./index.js";
 testSchemaGuards("ethdebug/format/data", [
   {
     schema: "schema:ethdebug/format/data/value",
-    guard: Data.isValue
+    guard: Data.isValue,
   },
   {
     schema: "schema:ethdebug/format/data/unsigned",
-    guard: Data.isUnsigned
+    guard: Data.isUnsigned,
   },
   {
     schema: "schema:ethdebug/format/data/hex",
-    guard: Data.isHex
+    guard: Data.isHex,
   },
 ]);

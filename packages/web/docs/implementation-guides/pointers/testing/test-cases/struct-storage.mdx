@@ -17,11 +17,9 @@ with a few small fields (`struct Record { uint8 x; uint8 y; bytes4 salt; }`).
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/test-cases.ts"
-  extract={sourceFile => sourceFile.getVariableStatement("structStorageTest")}
-  />
+  extract={(sourceFile) => sourceFile.getVariableStatement("structStorageTest")}
+/>
 
 ## Tested pointer
 
-<TestedPointer
-  pointerQuery="struct-storage-contract-variable-slot"
-  />
+<TestedPointer pointerQuery="struct-storage-contract-variable-slot" />

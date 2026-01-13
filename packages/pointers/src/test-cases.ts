@@ -1,7 +1,7 @@
 import {
   singleSourceCompilation,
   findExamplePointer,
-  type ObserveTraceOptions
+  type ObserveTraceOptions,
 } from "../test/index.js";
 import { type Cursor, Data } from "./index.js";
 
@@ -51,7 +51,7 @@ const structStorageTest: ObserveTraceTest<{
       uint8 y;
       bytes4 salt;
     }
-    `
+    `,
   }),
 
   expectedValues: [
@@ -61,13 +61,9 @@ const structStorageTest: ObserveTraceTest<{
   ],
 
   async observe({ regions, read }) {
-    const x = Number(
-      (await read(regions.lookup["x"])).asUint()
-    );
+    const x = Number((await read(regions.lookup["x"])).asUint());
 
-    const y = Number(
-      (await read(regions.lookup["y"])).asUint()
-    );
+    const y = Number((await read(regions.lookup["y"])).asUint());
 
     const salt = (await read(regions.lookup["salt"])).toHex();
 
@@ -76,7 +72,7 @@ const structStorageTest: ObserveTraceTest<{
 
   equals(a, b) {
     return a.x === b.x && a.y === b.y && a.salt === b.salt;
-  }
+  },
 };
 
 const stringStorageTest: ObserveTraceTest<string> = {
@@ -98,13 +94,13 @@ const stringStorageTest: ObserveTraceTest<string> = {
         done = true;
       }
     }
-    `
+    `,
   }),
 
   expectedValues: [
     "",
     "hello world",
-    "solidity storage is a fun lesson in endianness"
+    "solidity storage is a fun lesson in endianness",
   ],
 
   async observe({ regions, read }: Cursor.View): Promise<string> {
@@ -112,8 +108,9 @@ const stringStorageTest: ObserveTraceTest<string> = {
     const strings = regions.named("string");
 
     // read each region and concatenate all the bytes
-    const stringData: Data = Data.zero()
-      .concat(...await Promise.all(strings.map(read)));
+    const stringData: Data = Data.zero().concat(
+      ...(await Promise.all(strings.map(read))),
+    );
 
     // decode into JS string
     return new TextDecoder().decode(stringData);
@@ -151,26 +148,21 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
         return newArray;
       }
     }
-    `
+    `,
   }),
 
-  expectedValues: [
-    [],
-    [1],
-    [1, 2],
-    [1, 2, 3]
-  ],
+  expectedValues: [[], [1], [1, 2], [1, 2, 3]],
 
   async observe({ regions, read }, state): Promise<number[]> {
     const items = regions.named("array-item");
 
-    return (await Promise.all(
+    return await Promise.all(
       items.map(async (item) => {
         const data = await read(item);
 
         return Number(data.asUint());
-      })
-    ));
+      }),
+    );
   },
 
   equals(a, b) {
@@ -205,13 +197,13 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
     const arrayCount = await state.memory.read({
       slice: {
         offset: arrayOffset.asUint(),
-        length: 32n
-      }
-    })
+        length: 32n,
+      },
+    });
 
     // the example code only appends three times
     return arrayCount.asUint() < 4n;
-  }
+  },
 };
 
 /**

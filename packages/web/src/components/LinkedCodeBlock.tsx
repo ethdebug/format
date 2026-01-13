@@ -50,12 +50,12 @@ export default function LinkedCodeBlock({
         const codeElement = codeRef.current.querySelector("pre > code");
         if (codeElement) {
           const processedNodes = Array.from(codeElement.childNodes).flatMap(
-            (node) => processNode(node, links)
+            (node) => processNode(node, links),
           );
           setProcessedCode(
             <pre className={codeElement.parentElement?.className}>
               <code className={codeElement.className}>{processedNodes}</code>
-            </pre>
+            </pre>,
           );
         }
       }
@@ -83,9 +83,7 @@ export default function LinkedCodeBlock({
   return processedCode;
 }
 
-type ProcessedNode =
-  | JSX.Element
-  | (JSX.Element | string)[];
+type ProcessedNode = JSX.Element | (JSX.Element | string)[];
 
 // Recursively process a DOM node and its children
 function processNode(node: Node, links: Links): ProcessedNode {
@@ -119,7 +117,7 @@ function processTextNode(node: Text, links: Links): ProcessedNode {
           className="linked-code-block-link"
         >
           {linkText}
-        </Link>
+        </Link>,
       );
       lastIndex = index + linkText.length;
       index = text.indexOf(linkText, lastIndex);
@@ -137,8 +135,20 @@ function processTextNode(node: Text, links: Links): ProcessedNode {
 let nodeKey: number = 0;
 // elements that do not allow closing tags
 const voidElements = new Set([
-  "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
-  "param", "source", "track", "wbr"
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
 ]);
 
 function processElementNode(node: HTMLElement, links: Links): ProcessedNode {
@@ -158,8 +168,9 @@ function processElementNode(node: HTMLElement, links: Links): ProcessedNode {
     return React.createElement(tagName, props);
   }
 
-  const children = Array.from(node.childNodes)
-    .flatMap((child) => processNode(child, links));
+  const children = Array.from(node.childNodes).flatMap((child) =>
+    processNode(child, links),
+  );
 
   return React.createElement(tagName, props, children);
 }
@@ -170,10 +181,9 @@ function convertStyleToObject(style: string): React.CSSProperties {
     if (declaration) {
       const [property, value] = declaration.split(":");
       if (property && value) {
-        const camelCaseProperty = property.trim().replace(
-          /-./g,
-          (x) => x[1].toUpperCase()
-        );
+        const camelCaseProperty = property
+          .trim()
+          .replace(/-./g, (x) => x[1].toUpperCase());
         // HACK coerce object instead of key to avoid a giant keyof union
         (styleObject as any)[camelCaseProperty] = value.trim();
       }

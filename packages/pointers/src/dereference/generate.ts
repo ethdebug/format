@@ -25,15 +25,12 @@ export interface GenerateRegionsOptions {
  */
 export async function* generateRegions(
   pointer: Pointer,
-  generateRegionsOptions: GenerateRegionsOptions
+  generateRegionsOptions: GenerateRegionsOptions,
 ): AsyncIterable<Cursor.Region> {
   const options = await initializeProcessOptions(generateRegionsOptions);
 
   // extract records for mutation
-  const {
-    regions,
-    variables
-  } = options;
+  const { regions, variables } = options;
 
   // Stack of rename mappings for template references with yields
   const renameStack: Array<Record<string, string>> = [];
@@ -51,13 +48,13 @@ export async function* generateRegions(
         // Merge inline templates with base templates (inline takes precedence)
         const currentTemplates = templatesStack.reduce(
           (acc, templates) => ({ ...acc, ...templates }),
-          options.templates
+          options.templates,
         );
 
         // Process the pointer, intercepting yielded regions to apply renames
         const process = processPointer(memo.pointer, {
           ...options,
-          templates: currentTemplates
+          templates: currentTemplates,
         });
         let result = await process.next();
         while (!result.done) {
@@ -126,7 +123,7 @@ export async function* generateRegions(
 async function initializeProcessOptions({
   templates,
   state,
-  initialStackLength
+  initialStackLength,
 }: GenerateRegionsOptions): Promise<ProcessOptions> {
   const currentStackLength = await state.stack.length;
   const stackLengthChange = currentStackLength - initialStackLength;
@@ -139,6 +136,6 @@ async function initializeProcessOptions({
     state,
     stackLengthChange,
     regions,
-    variables
+    variables,
   };
 }

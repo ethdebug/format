@@ -5,7 +5,6 @@ title: ethdebug/format/pointer/collection/list
 description: |
   An ordered list of pointers, indexed starting at zero.
 type: object
-
 properties:
   list:
     type: object

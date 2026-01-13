@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/contract"
 
 title: ethdebug/format/type/elementary/contract
-description:
-  Schema describing the representation of a contract type
+description: Schema describing the representation of a contract type
 
 type: object
 properties:
@@ -13,8 +12,7 @@ properties:
     const: contract
   payable:
     type: boolean
-    description:
-      If this field is omitted, this type represents an address whose
+    description: If this field is omitted, this type represents an address whose
       payability is not known.
   definition:
     $ref: "schema:ethdebug/format/type/definition"
@@ -31,8 +29,7 @@ oneOf:
     properties:
       library:
         const: true
-        description:
-          Indicates that this is a type representing a library
+        description: Indicates that this is a type representing a library
     required:
       - library
 
@@ -40,8 +37,7 @@ oneOf:
     properties:
       interface:
         const: true
-        description:
-          Indicates that this is a type representing an interface
+        description: Indicates that this is a type representing an interface
     required:
       - interface
 

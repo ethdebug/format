@@ -2,15 +2,13 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type"
 
 title: ethdebug/format/type
-description:
-  Canonical representation for all types.
+description: Canonical representation for all types.
 type: object
 
 if:
   type: object
   title: Known kind
-  description:
-    If `kind` adheres to the set of known kinds defined by this format
+  description: If `kind` adheres to the set of known kinds defined by this format
   properties:
     kind:
       anyOf:
@@ -20,8 +18,7 @@ if:
 then:
   type: object
   title: KnownType
-  description:
-    Then the object must adhere to exactly one known kind of type
+  description: Then the object must adhere to exactly one known kind of type
   allOf:
     - if:
         properties:
@@ -49,14 +46,12 @@ else:
     - title: Specialized complex type `contains` field
       type: object
       if:
-        description:
-          If this object is a complex type
+        description: If this object is a complex type
         properties:
           class:
             const: complex
       then:
-        description:
-          Then the `contains` field must adhere to
+        description: Then the `contains` field must adhere to
           **ethdebug/format/type/wrapper** schemas, not the
           **ethdebug/format/type/base** equivalent.
 

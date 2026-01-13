@@ -4,4 +4,3 @@ export * from "./Opcodes";
 export * from "./HighlightedInstruction";
 
 export * from "./Viewer";
-

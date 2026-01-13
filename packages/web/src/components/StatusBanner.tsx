@@ -1,9 +1,6 @@
 import React from "react";
 import Link from "@docusaurus/Link";
-import {
-  schemaStatus,
-  statusLevels,
-} from "@site/src/status/status-config";
+import { schemaStatus, statusLevels } from "@site/src/status/status-config";
 import StatusBadge from "./StatusBadge";
 import styles from "./StatusBanner.module.css";
 

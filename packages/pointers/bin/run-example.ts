@@ -2,26 +2,22 @@ import chalk from "chalk";
 import { highlight } from "cli-highlight";
 import { describeSchema } from "@ethdebug/format";
 
-import {
-  type Cursor,
-  Data
-} from "../src/index.js";
+import { type Cursor, Data } from "../src/index.js";
 
 import { observeTrace } from "../test/index.js";
 
 import { observeTraceTests } from "../src/test-cases.js";
 
 export async function run() {
-  const {
-    pointer,
-    compileOptions,
-    observe
-  } = observeTraceTests["string storage"];
+  const { pointer, compileOptions, observe } =
+    observeTraceTests["string storage"];
 
   console.log(
-    chalk.bold(chalk.cyan(
-      "demo: run compiled solidity and watch a changing ethdebug/format pointer\n"
-    ))
+    chalk.bold(
+      chalk.cyan(
+        "demo: run compiled solidity and watch a changing ethdebug/format pointer\n",
+      ),
+    ),
   );
 
   console.group(chalk.bold("ethdebug/format pointer used by demo"));
@@ -29,25 +25,26 @@ export async function run() {
     highlight(
       describeSchema({
         schema: { id: "schema:ethdebug/format/pointer" },
-        pointer: "#/examples/4"
+        pointer: "#/examples/4",
       }).yaml,
-      { language: "yaml" }
-    ).trim()
+      { language: "yaml" },
+    ).trim(),
   );
   console.groupEnd();
   console.log("");
 
   console.group(chalk.bold("solidity source code used by demo"));
-  console.log(
-    compileOptions.sources["StringStorage.sol"].content.trim()
-  );
+  console.log(compileOptions.sources["StringStorage.sol"].content.trim());
   console.groupEnd();
   console.log("");
 
   console.group(chalk.bold("observing deployment trace"));
 
-  const observedValues =
-    await observeTrace({ pointer, compileOptions, observe });
+  const observedValues = await observeTrace({
+    pointer,
+    compileOptions,
+    observe,
+  });
 
   console.groupEnd();
   console.log("");
