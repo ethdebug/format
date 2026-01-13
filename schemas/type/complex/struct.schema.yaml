@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/struct"
 
 title: ethdebug/format/type/complex/struct
-description:
-  Schema for representing struct types
+description: Schema for representing struct types
 
 type: object
 properties:

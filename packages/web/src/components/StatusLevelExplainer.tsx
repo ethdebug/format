@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  statusLevels,
-  type StatusLevel,
-} from "@site/src/status/status-config";
+import { statusLevels, type StatusLevel } from "@site/src/status/status-config";
 import StatusBadge from "./StatusBadge";
 import styles from "./StatusLevelExplainer.module.css";
 

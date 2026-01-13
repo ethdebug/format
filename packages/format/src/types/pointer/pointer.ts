@@ -1,12 +1,7 @@
-export type Pointer =
-  | Pointer.Region
-  | Pointer.Collection;
+export type Pointer = Pointer.Region | Pointer.Collection;
 
 export const isPointer = (value: unknown): value is Pointer =>
-  [
-    Pointer.isRegion,
-    Pointer.isCollection
-  ].some(guard => guard(value));
+  [Pointer.isRegion, Pointer.isCollection].some((guard) => guard(value));
 
 export namespace Pointer {
   export type Identifier = string;
@@ -30,8 +25,8 @@ export namespace Pointer {
       Region.isCalldata,
       Region.isReturndata,
       Region.isTransient,
-      Region.isCode
-    ].some(guard => guard(value));
+      Region.isCode,
+    ].some((guard) => guard(value));
 
   export namespace Region {
     export interface Base {
@@ -40,59 +35,40 @@ export namespace Pointer {
     }
     export const isBase = (value: unknown): value is Base =>
       !!value &&
-        typeof value === "object" &&
-        (!("name" in value) || typeof value.name === "string") &&
-        "location" in value &&
-        typeof value.location === "string";
+      typeof value === "object" &&
+      (!("name" in value) || typeof value.name === "string") &&
+      "location" in value &&
+      typeof value.location === "string";
 
     export type Name = Base["name"];
 
-    export type Stack =
-      & Base
-      & Scheme.Segment
-      & { location: "stack" };
+    export type Stack = Base & Scheme.Segment & { location: "stack" };
     export const isStack = (value: unknown): value is Stack =>
       isBase(value) && Scheme.isSegment(value) && value.location === "stack";
 
-    export type Memory =
-      & Base
-      & Scheme.Slice
-      & { location: "memory" };
+    export type Memory = Base & Scheme.Slice & { location: "memory" };
     export const isMemory = (value: unknown): value is Memory =>
       isBase(value) && Scheme.isSlice(value) && value.location === "memory";
 
-    export type Storage =
-      & Base
-      & Scheme.Segment
-      & { location: "storage" };
+    export type Storage = Base & Scheme.Segment & { location: "storage" };
     export const isStorage = (value: unknown): value is Storage =>
       isBase(value) && Scheme.isSegment(value) && value.location === "storage";
 
-    export type Calldata =
-      & Base
-      & Scheme.Slice
-      & { location: "calldata" };
+    export type Calldata = Base & Scheme.Slice & { location: "calldata" };
     export const isCalldata = (value: unknown): value is Calldata =>
       isBase(value) && Scheme.isSlice(value) && value.location === "calldata";
 
-    export type Returndata =
-      & Base
-      & Scheme.Slice
-      & { location: "returndata" };
+    export type Returndata = Base & Scheme.Slice & { location: "returndata" };
     export const isReturndata = (value: unknown): value is Returndata =>
       isBase(value) && Scheme.isSlice(value) && value.location === "returndata";
 
-    export type Transient =
-      & Base
-      & Scheme.Segment
-      & { location: "transient" };
+    export type Transient = Base & Scheme.Segment & { location: "transient" };
     export const isTransient = (value: unknown): value is Transient =>
-      isBase(value) && Scheme.isSegment(value) && value.location === "transient";
+      isBase(value) &&
+      Scheme.isSegment(value) &&
+      value.location === "transient";
 
-    export type Code =
-      & Base
-      & Scheme.Slice
-      & { location: "code" };
+    export type Code = Base & Scheme.Slice & { location: "code" };
     export const isCode = (value: unknown): value is Code =>
       isBase(value) && Scheme.isSlice(value) && value.location === "code";
   }
@@ -105,11 +81,11 @@ export namespace Pointer {
     }
     export const isSegment = (value: unknown): value is Segment =>
       !!value &&
-        typeof value === "object" &&
-        "slot" in value &&
-        isExpression(value.slot) &&
-        (!("offset" in value) || isExpression(value.offset)) &&
-        (!("length" in value) || isExpression(value.length));
+      typeof value === "object" &&
+      "slot" in value &&
+      isExpression(value.slot) &&
+      (!("offset" in value) || isExpression(value.offset)) &&
+      (!("length" in value) || isExpression(value.length));
 
     export interface Slice {
       offset: Expression;
@@ -118,11 +94,11 @@ export namespace Pointer {
 
     export const isSlice = (value: unknown): value is Slice =>
       !!value &&
-        typeof value === "object" &&
-        "offset" in value &&
-        isExpression(value.offset) &&
-        "length" in value &&
-        isExpression(value.length);
+      typeof value === "object" &&
+      "offset" in value &&
+      isExpression(value.offset) &&
+      "length" in value &&
+      isExpression(value.length);
   }
 
   export type Collection =
@@ -140,8 +116,8 @@ export namespace Pointer {
       Collection.isConditional,
       Collection.isScope,
       Collection.isReference,
-      Collection.isTemplates
-    ].some(guard => guard(value));
+      Collection.isTemplates,
+    ].some((guard) => guard(value));
 
   export namespace Collection {
     export interface Group {
@@ -149,34 +125,34 @@ export namespace Pointer {
     }
     export const isGroup = (value: unknown): value is Group =>
       !!value &&
-        typeof value === "object" &&
-        Object.keys(value).length === 1 &&
-        "group" in value &&
-        value.group instanceof Array &&
-        value.group.length >= 1 &&
-        value.group.every(isPointer);
+      typeof value === "object" &&
+      Object.keys(value).length === 1 &&
+      "group" in value &&
+      value.group instanceof Array &&
+      value.group.length >= 1 &&
+      value.group.every(isPointer);
 
     export interface List {
       list: {
         count: Expression;
         each: Identifier;
         is: Pointer;
-      }
+      };
     }
     export const isList = (value: unknown): value is List =>
       !!value &&
-        typeof value === "object" &&
-        Object.keys(value).length === 1 &&
-        "list" in value &&
-        !!value.list &&
-        typeof value.list === "object" &&
-        Object.keys(value.list).length === 3 &&
-        "count" in value.list &&
-        isExpression(value.list.count) &&
-        "each" in value.list &&
-        isIdentifier(value.list.each) &&
-        "is" in value.list &&
-        isPointer(value.list.is);
+      typeof value === "object" &&
+      Object.keys(value).length === 1 &&
+      "list" in value &&
+      !!value.list &&
+      typeof value.list === "object" &&
+      Object.keys(value.list).length === 3 &&
+      "count" in value.list &&
+      isExpression(value.list.count) &&
+      "each" in value.list &&
+      isIdentifier(value.list.each) &&
+      "is" in value.list &&
+      isPointer(value.list.is);
 
     export interface Conditional {
       if: Expression;
@@ -185,28 +161,29 @@ export namespace Pointer {
     }
     export const isConditional = (value: unknown): value is Conditional =>
       !!value &&
-        typeof value === "object" &&
-        "if" in value &&
-        isExpression(value.if) &&
-        "then" in value &&
-        isPointer(value.then) &&
-        (!("else" in value) || isPointer(value.else));
+      typeof value === "object" &&
+      "if" in value &&
+      isExpression(value.if) &&
+      "then" in value &&
+      isPointer(value.then) &&
+      (!("else" in value) || isPointer(value.else));
 
     export interface Scope {
       define: {
         [identifier: string]: Expression;
-      }
+      };
       in: Pointer;
     }
 
     export const isScope = (value: unknown): value is Scope =>
       !!value &&
-        typeof value === "object" &&
-        "define" in value &&
-        typeof value.define === "object" && !!value.define &&
-        Object.keys(value.define).every(key => isIdentifier(key)) &&
-        "in" in value &&
-        isPointer(value.in);
+      typeof value === "object" &&
+      "define" in value &&
+      typeof value.define === "object" &&
+      !!value.define &&
+      Object.keys(value.define).every((key) => isIdentifier(key)) &&
+      "in" in value &&
+      isPointer(value.in);
 
     export interface Reference {
       template: string;
@@ -215,16 +192,16 @@ export namespace Pointer {
 
     export const isReference = (value: unknown): value is Reference =>
       !!value &&
-        typeof value === "object" &&
-        "template" in value &&
-        typeof value.template === "string" && !!value.template &&
-        (!("yields" in value) || (
-          typeof value.yields === "object" &&
+      typeof value === "object" &&
+      "template" in value &&
+      typeof value.template === "string" &&
+      !!value.template &&
+      (!("yields" in value) ||
+        (typeof value.yields === "object" &&
           value.yields !== null &&
           Object.entries(value.yields as Record<string, unknown>).every(
-            ([k, v]) => isIdentifier(k) && isIdentifier(v)
-          )
-        ))
+            ([k, v]) => isIdentifier(k) && isIdentifier(v),
+          )));
 
     export interface Templates {
       templates: {
@@ -235,13 +212,14 @@ export namespace Pointer {
 
     export const isTemplates = (value: unknown): value is Templates =>
       !!value &&
-        typeof value === "object" &&
-        "templates" in value &&
-        typeof value.templates === "object" && !!value.templates &&
-        Object.keys(value.templates).every(isIdentifier) &&
-        Object.values(value.templates).every(isTemplate) &&
-        "in" in value &&
-        isPointer(value.in);
+      typeof value === "object" &&
+      "templates" in value &&
+      typeof value.templates === "object" &&
+      !!value.templates &&
+      Object.keys(value.templates).every(isIdentifier) &&
+      Object.values(value.templates).every(isTemplate) &&
+      "in" in value &&
+      isPointer(value.in);
   }
 
   export type Expression =
@@ -265,17 +243,16 @@ export namespace Pointer {
       Expression.isRead,
       Expression.isKeccak256,
       Expression.isConcat,
-      Expression.isResize
-    ].some(guard => guard(value));
+      Expression.isResize,
+    ].some((guard) => guard(value));
 
   export namespace Expression {
     export type Literal = number | `0x${string}`;
     export const isLiteral = (value: unknown): value is Literal =>
       typeof value === "number" ||
-        typeof value === "string" && /^0x[0-9a-fA-F]+$/.test(value);
+      (typeof value === "string" && /^0x[0-9a-fA-F]+$/.test(value));
 
-    export type Constant =
-      | "$wordsize";
+    export type Constant = "$wordsize";
     export const isConstant = (value: unknown): value is Constant =>
       typeof value === "string" && ["$wordsize"].includes(value);
 
@@ -296,26 +273,24 @@ export namespace Pointer {
         Arithmetic.isDifference,
         Arithmetic.isProduct,
         Arithmetic.isQuotient,
-        Arithmetic.isRemainder
-      ].some(guard => guard(value));
+        Arithmetic.isRemainder,
+      ].some((guard) => guard(value));
 
-    const makeIsOperation = <
-      O extends string,
-      T extends { [K in O]: any; }
-    >(
-      operation: O,
-      checkOperands: (operands: unknown) => operands is T[O]
-    ) => (value: unknown): value is T =>
-      !!value &&
+    const makeIsOperation =
+      <O extends string, T extends { [K in O]: any }>(
+        operation: O,
+        checkOperands: (operands: unknown) => operands is T[O],
+      ) =>
+      (value: unknown): value is T =>
+        !!value &&
         typeof value === "object" &&
         Object.keys(value).length === 1 &&
         operation in value &&
         checkOperands(value[operation as keyof typeof value]);
 
     export type Operands = Expression[];
-    export const isOperands =
-      (value: unknown): value is Expression[] =>
-        value instanceof Array && value.every(isExpression);
+    export const isOperands = (value: unknown): value is Expression[] =>
+      value instanceof Array && value.every(isExpression);
 
     export namespace Arithmetic {
       export type Operation =
@@ -325,132 +300,137 @@ export namespace Pointer {
         | keyof Quotient
         | keyof Remainder;
 
-      export const isTwoOperands =
-        (value: unknown): value is [Expression, Expression] =>
-          isOperands(value) && value.length === 2;
+      export const isTwoOperands = (
+        value: unknown,
+      ): value is [Expression, Expression] =>
+        isOperands(value) && value.length === 2;
 
       export interface Sum {
         $sum: Expression[];
       }
-      export const isSum =
-        makeIsOperation<"$sum", Sum>("$sum", isOperands);
+      export const isSum = makeIsOperation<"$sum", Sum>("$sum", isOperands);
 
       export interface Difference {
         $difference: [Expression, Expression];
       }
-      export const isDifference =
-        makeIsOperation<"$difference", Difference>("$difference", isTwoOperands);
+      export const isDifference = makeIsOperation<"$difference", Difference>(
+        "$difference",
+        isTwoOperands,
+      );
 
       export interface Product {
         $product: Expression[];
       }
-      export const isProduct =
-        makeIsOperation<"$product", Product>("$product", isOperands);
+      export const isProduct = makeIsOperation<"$product", Product>(
+        "$product",
+        isOperands,
+      );
 
       export interface Quotient {
         $quotient: [Expression, Expression];
       }
-      export const isQuotient =
-        makeIsOperation<"$quotient", Quotient>("$quotient", isTwoOperands);
+      export const isQuotient = makeIsOperation<"$quotient", Quotient>(
+        "$quotient",
+        isTwoOperands,
+      );
 
       export interface Remainder {
         $remainder: [Expression, Expression];
       }
-      export const isRemainder =
-        makeIsOperation<"$remainder", Remainder>("$remainder", isTwoOperands);
+      export const isRemainder = makeIsOperation<"$remainder", Remainder>(
+        "$remainder",
+        isTwoOperands,
+      );
     }
 
-    export type Reference =
-      | Identifier
-      | "$this";
+    export type Reference = Identifier | "$this";
     export const isReference = (value: unknown): value is Reference =>
       isIdentifier(value) || value === "$this";
 
-    export type Lookup =
-      | Lookup.Offset
-      | Lookup.Length
-      | Lookup.Slot;
+    export type Lookup = Lookup.Offset | Lookup.Length | Lookup.Slot;
     export const isLookup = (value: unknown): value is Lookup =>
-      [
-        Lookup.isOffset,
-        Lookup.isLength,
-        Lookup.isSlot
-      ].some(guard => guard(value));
+      [Lookup.isOffset, Lookup.isLength, Lookup.isSlot].some((guard) =>
+        guard(value),
+      );
 
     export namespace Lookup {
-      export type Operation =
-        | keyof Offset
-        | keyof Length
-        | keyof Slot;
+      export type Operation = keyof Offset | keyof Length | keyof Slot;
 
-      export type ForOperation<O extends Operation> =
-        & Lookup
-        & { [K in O]: any };
+      export type ForOperation<O extends Operation> = Lookup & {
+        [K in O]: any;
+      };
 
       export const propertyFrom = <O extends Operation>(
-        operation: O
+        operation: O,
       ): "slot" | "offset" | "length" => {
         return operation.slice(1) as "slot" | "offset" | "length";
-      }
+      };
 
       export interface Offset {
         ".offset": Reference;
       }
-      export const isOffset =
-        makeIsOperation<".offset", Offset>(".offset", isReference);
+      export const isOffset = makeIsOperation<".offset", Offset>(
+        ".offset",
+        isReference,
+      );
 
       export interface Length {
         ".length": Reference;
       }
-      export const isLength =
-        makeIsOperation<".length", Length>(".length", isReference);
+      export const isLength = makeIsOperation<".length", Length>(
+        ".length",
+        isReference,
+      );
 
       export interface Slot {
         ".slot": Reference;
       }
-      export const isSlot =
-        makeIsOperation<".slot", Slot>(".slot", isReference);
+      export const isSlot = makeIsOperation<".slot", Slot>(
+        ".slot",
+        isReference,
+      );
     }
 
     export interface Read {
-      $read: Reference
+      $read: Reference;
     }
     export const isRead = makeIsOperation<"$read", Read>("$read", isReference);
 
     export interface Keccak256 {
       $keccak256: Expression[];
     }
-    export const isKeccak256 =
-      makeIsOperation<"$keccak256", Keccak256>("$keccak256", isOperands);
+    export const isKeccak256 = makeIsOperation<"$keccak256", Keccak256>(
+      "$keccak256",
+      isOperands,
+    );
 
     export interface Concat {
       $concat: Expression[];
     }
-    export const isConcat =
-      makeIsOperation<"$concat", Concat>("$concat", isOperands);
+    export const isConcat = makeIsOperation<"$concat", Concat>(
+      "$concat",
+      isOperands,
+    );
 
     export type Resize<N extends number = number> =
       | Resize.ToNumber<N>
       | Resize.ToWordsize;
     export const isResize = <N extends number>(
-      value: unknown
+      value: unknown,
     ): value is Resize<N> =>
-      [
-        Resize.isToWordsize,
-        Resize.isToNumber,
-      ].some(guard => guard(value));
+      [Resize.isToWordsize, Resize.isToNumber].some((guard) => guard(value));
 
     export namespace Resize {
       export type ToNumber<N extends number> = {
         [K in `$sized${N}`]: Expression;
       };
       export const isToNumber = <N extends number>(
-        value: unknown
+        value: unknown,
       ): value is ToNumber<N> => {
         if (
           !value ||
-            typeof value !== "object" ||
-            Object.keys(value).length !== 1
+          typeof value !== "object" ||
+          Object.keys(value).length !== 1
         ) {
           return false;
         }
@@ -461,14 +441,14 @@ export namespace Pointer {
 
       export type ToWordsize = {
         $wordsized: Expression;
-      }
+      };
       export const isToWordsize = (value: unknown): value is ToWordsize =>
         !!value &&
-          typeof value === "object" &&
-          Object.keys(value).length === 1 &&
-          "$wordsized" in value &&
-          typeof value.$wordsized !== "undefined" &&
-          isExpression(value.$wordsized);
+        typeof value === "object" &&
+        Object.keys(value).length === 1 &&
+        "$wordsized" in value &&
+        typeof value.$wordsized !== "undefined" &&
+        isExpression(value.$wordsized);
     }
   }
 
@@ -478,9 +458,9 @@ export namespace Pointer {
 
   export const isTemplates = (value: unknown): value is Templates =>
     !!value &&
-      typeof value === "object" &&
-      Object.keys(value).every(isIdentifier) &&
-      Object.values(value).every(isTemplate);
+    typeof value === "object" &&
+    Object.keys(value).every(isIdentifier) &&
+    Object.values(value).every(isTemplate);
 
   export interface Template {
     expect: string[];
@@ -489,12 +469,11 @@ export namespace Pointer {
 
   export const isTemplate = (value: unknown): value is Template =>
     !!value &&
-      typeof value === "object" &&
-      Object.keys(value).length === 2 &&
-      "expect" in value &&
-      value.expect instanceof Array &&
-      value.expect.every(isIdentifier) &&
-      "for" in value &&
-      isPointer(value.for);
-
+    typeof value === "object" &&
+    Object.keys(value).length === 2 &&
+    "expect" in value &&
+    value.expect instanceof Array &&
+    value.expect.every(isIdentifier) &&
+    "for" in value &&
+    isPointer(value.for);
 }

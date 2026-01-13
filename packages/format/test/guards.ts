@@ -8,16 +8,14 @@ export interface SchemaGuard extends DescribeSchemaOptions {
 
 export const testSchemaGuards = (
   namespace: string,
-  schemaGuards: SchemaGuard[]
+  schemaGuards: SchemaGuard[],
 ) => {
   describe(`type guards for ${namespace} schemas`, () => {
     for (const { guard, ...describeSchemaOptions } of schemaGuards) {
       const {
         id,
         pointer,
-        schema: {
-          examples = []
-        }
+        schema: { examples = [] },
       } = describeSchema(describeSchemaOptions);
 
       const schemaName = `${id?.slice("schema:".length) || ""}${pointer || ""}`;

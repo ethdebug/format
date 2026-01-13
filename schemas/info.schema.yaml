@@ -14,12 +14,10 @@ properties:
     type: array
     items:
       $ref: "schema:ethdebug/format/program"
-    additionalItems:
-      false
+    additionalItems: false
 
   compilation:
     $ref: "schema:ethdebug/format/materials/compilation"
-
 
 required:
   - compilation
@@ -181,4 +179,3 @@ examples:
                 range:
                   offset: 891
                   length: 20
-

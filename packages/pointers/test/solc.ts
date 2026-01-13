@@ -4,7 +4,9 @@ import type * as Solc from "solc";
 let solc: typeof Solc | undefined;
 try {
   solc = (await import("solc")).default;
-} catch {}
+} catch {
+  // solc not available
+}
 
 /**
  * Organizes the sources being compiled by their path identifier, as well
@@ -13,8 +15,8 @@ try {
 export interface CompileOptions {
   sources: {
     [path: string]: {
-      content: string
-    }
+      content: string;
+    };
   };
 
   target: {
@@ -29,7 +31,7 @@ export interface CompileOptions {
  */
 export async function compileCreateBytecode({
   sources,
-  target
+  target,
 }: CompileOptions): Promise<Data> {
   if (!solc) {
     throw new Error("Unable to load solc");
@@ -42,31 +44,27 @@ export async function compileCreateBytecode({
       outputSelection: {
         "*": {
           "*": ["ir", "*"],
-          "": ["*"]
-        }
+          "": ["*"],
+        },
       },
       viaIR: true,
       optimizer: {
-        enabled: true
-      }
-    }
+        enabled: true,
+      },
+    },
   };
 
-  const output = JSON.parse(
-    solc.compile(
-      JSON.stringify(input),
-    )
-  );
+  const output = JSON.parse(solc.compile(JSON.stringify(input)));
 
   const { errors = [] } = output;
   if (errors.length > 0) {
-    throw new Error(`Compilation error: ${JSON.stringify(errors, undefined, 2)}`);
+    throw new Error(
+      `Compilation error: ${JSON.stringify(errors, undefined, 2)}`,
+    );
   }
 
   const {
-    evm: {
-      bytecode: createBytecode
-    }
+    evm: { bytecode: createBytecode },
   } = output.contracts[target.path][target.contractName];
 
   return Data.fromHex(`0x${createBytecode.object}`);
@@ -90,13 +88,13 @@ export function singleSourceCompilation(options: {
   return {
     sources: {
       [path]: {
-        content: `${header}\n${contentWithoutHeader}\n`
-      }
+        content: `${header}\n${contentWithoutHeader}\n`,
+      },
     },
 
     target: {
       path,
-      contractName
-    }
+      contractName,
+    },
   };
 }

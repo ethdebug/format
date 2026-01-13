@@ -5,16 +5,16 @@ testSchemaGuards("ethdebug/format/type/base", [
   {
     schema: "schema:ethdebug/format/type/base",
     pointer: "#/$defs/ElementaryType",
-    guard: Base.isElementary
+    guard: Base.isElementary,
   },
   {
     schema: "schema:ethdebug/format/type/base",
     pointer: "#/$defs/ComplexType",
-    guard: Base.isComplex
+    guard: Base.isComplex,
   },
   {
     schema: "schema:ethdebug/format/type/base",
     pointer: "#/$defs/TypeWrapper",
-    guard: Base.isWrapper
+    guard: Base.isWrapper,
   },
 ] as const);

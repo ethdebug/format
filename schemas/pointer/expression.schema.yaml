@@ -96,10 +96,10 @@ $defs:
       - "$quotient": [5, 3]
       - "$remainder":
           - "$product":
-            - 2
-            - 2
-            - 2
-            - 2
+              - 2
+              - 2
+              - 2
+              - 2
           - 3
 
   Operands:
@@ -131,7 +131,6 @@ $defs:
       - .length: "array-item"
       - .offset: $this
 
-
   Read:
     title: Read region bytes
     description: |
@@ -161,7 +160,6 @@ $defs:
       the matching name, then secondly resolving to the parent if it matches,
       then to parent's earlier siblings, and so on.
     type: string
-
     oneOf:
       - $ref: "schema:ethdebug/format/pointer/identifier"
       - const: "$this"

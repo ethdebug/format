@@ -6,11 +6,7 @@
     "moduleResolution": "node10",
     "exactOptionalPropertyTypes": true,
     "rootDir": "./",
-    "outDir": "./dist/",
+    "outDir": "./dist/"
   },
-  "include": [
-    "./src/**/*.ts",
-    "vitest.d.ts",
-    "yamls.ts"
-  ]
+  "include": ["./src/**/*.ts", "vitest.d.ts", "yamls.ts"]
 }

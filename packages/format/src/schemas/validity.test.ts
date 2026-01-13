@@ -10,22 +10,21 @@ import { schemas } from ".";
 // loads schemas into global hyperjump json schema validator
 import "../../test/hyperjump";
 
-const printErrors = (output: OutputUnit): string => output.errors!
-  .map((error) => {
-    if (!error.valid && !error.keyword.endsWith("#validate")) {
-      return `${
-        error.instanceLocation
-      } fails schema constraint ${
-        error.absoluteKeywordLocation
-      }`;
-    }
-  })
-  .filter((message): message is string => !!message)
-  .map(message => `  - ${message}`)
-  .join("\n");
+const printErrors = (output: OutputUnit): string =>
+  output
+    .errors!.map((error) => {
+      if (!error.valid && !error.keyword.endsWith("#validate")) {
+        return `${error.instanceLocation} fails schema constraint ${
+          error.absoluteKeywordLocation
+        }`;
+      }
+    })
+    .filter((message): message is string => !!message)
+    .map((message) => `  - ${message}`)
+    .join("\n");
 
 describe("Valid schemas", () => {
-  for (const [id, schema] of Object.entries(schemas)) {
+  for (const [id, _schema] of Object.entries(schemas)) {
     it(`should include ${id}`, async () => {
       try {
         await validate(id);
@@ -34,11 +33,10 @@ describe("Valid schemas", () => {
           throw error;
         }
 
-        throw new Error(`Invalid schema. Errors:\n${
-          printErrors(error.output)
-        }`);
+        throw new Error(
+          `Invalid schema. Errors:\n${printErrors(error.output)}`,
+        );
       }
-
     });
   }
 });

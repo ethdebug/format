@@ -145,8 +145,8 @@ examples:
                     - .offset: "array-count"
                     - .length: "array-count"
                     - $product:
-                      - "item-index"
-                      - .length: "struct-pointer"
+                        - "item-index"
+                        - .length: "struct-pointer"
                 length: $wordsize
 
               # following that pointer leads to the region corresponding to
@@ -214,8 +214,8 @@ examples:
                   "string-length":
                     $quotient:
                       - $difference:
-                        - $read: "long-string-length-data"
-                        - 1
+                          - $read: "long-string-length-data"
+                          - 1
                       - 2
 
                   "start-slot":

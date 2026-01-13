@@ -5,7 +5,9 @@ import type * as Util from "util";
 let util: typeof Util | undefined;
 try {
   util = await import("util");
-} catch {}
+} catch {
+  // util is not available in browser environments
+}
 
 export class Data extends Uint8Array {
   static zero(): Data {
@@ -37,7 +39,7 @@ export class Data extends Uint8Array {
   }
 
   static fromHex(hex: string): Data {
-    if (!hex.startsWith('0x')) {
+    if (!hex.startsWith("0x")) {
       throw new Error('Invalid hex string format. Expected "0x" prefix.');
     }
     const bytes = new Uint8Array((hex.length - 2) / 2 + 0.5);
@@ -56,8 +58,8 @@ export class Data extends Uint8Array {
 
     let value = 0n;
     for (const byte of this.values()) {
-      const byteValue = BigInt(byte)
-      value = (value << bits) + byteValue
+      const byteValue = BigInt(byte);
+      value = (value << bits) + byteValue;
     }
     return value;
   }
@@ -95,30 +97,27 @@ export class Data extends Uint8Array {
   concat(...others: Data[]): Data {
     // HACK concatenate via string representation
     const concatenatedHex = [this, ...others]
-      .map(data => data.toHex().slice(2))
+      .map((data) => data.toHex().slice(2))
       .reduce((accumulator, hex) => `${accumulator}${hex}`, "0x");
 
     return Data.fromHex(concatenatedHex);
   }
 
   inspect(
-    depth: number,
+    _depth: number,
     options: Util.InspectOptionsStylized,
-    inspect: typeof Util.inspect
+    _inspect: typeof Util.inspect,
   ): string {
     return `Data[${options.stylize(this.toHex(), "number")}]`;
   }
 
-  [
-    util && "inspect" in util && typeof util.inspect === "object"
-      ? util.inspect.custom
-      : "_inspect"
-  ](
+  [util && "inspect" in util && typeof util.inspect === "object"
+    ? util.inspect.custom
+    : "_inspect"](
     depth: number,
     options: Util.InspectOptionsStylized,
-    inspect: typeof Util.inspect
+    inspect: typeof Util.inspect,
   ): string {
     return this.inspect(depth, options, inspect);
   }
-
 }

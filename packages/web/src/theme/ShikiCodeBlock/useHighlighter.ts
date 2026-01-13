@@ -15,8 +15,8 @@ export interface HighlightOptions {
 export function useHighlighter() {
   const [highlighter, setHighlighter] = useState<Highlighter | undefined>();
 
-  useEffect(() =>  {
-    createHighlighter().then(setHighlighter)
+  useEffect(() => {
+    createHighlighter().then(setHighlighter);
   }, [setHighlighter]);
 
   return highlighter;
@@ -24,14 +24,12 @@ export function useHighlighter() {
 
 async function createHighlighter(): Promise<Highlighter> {
   const shiki = await Shiki.createHighlighterCore({
-    themes: [
-      import("@shikijs/themes/github-light"),
-    ],
+    themes: [import("@shikijs/themes/github-light")],
     langs: [
       import("@shikijs/langs/solidity"),
       import("@shikijs/langs/javascript"),
     ],
-    engine: createOnigurumaEngine(import("shiki/wasm"))
+    engine: createOnigurumaEngine(import("shiki/wasm")),
   });
 
   const themeName = "github-light";
@@ -41,8 +39,8 @@ async function createHighlighter(): Promise<Highlighter> {
       return shiki.codeToHtml(text, {
         lang: language || "text",
         theme: themeName,
-        decorations
-      })
-    }
+        decorations,
+      });
+    },
   };
 }

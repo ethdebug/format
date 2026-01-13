@@ -10,7 +10,7 @@ export default function useProjectCode(packageName: string): Project {
   const { sourceFiles } = packages[packageName];
 
   const project = new Project({
-    useInMemoryFileSystem: true
+    useInMemoryFileSystem: true,
   });
   for (const { filePath, text } of sourceFiles) {
     project.createSourceFile(filePath, text, { overwrite: true });

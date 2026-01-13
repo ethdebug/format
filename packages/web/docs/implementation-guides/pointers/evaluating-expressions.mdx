@@ -14,11 +14,10 @@ if variable and region references are pre-evaluated:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getExportedDeclarations()
-      .get("EvaluateOptions")
-      [0]
-  } />
+  extract={(sourceFile) =>
+    sourceFile.getExportedDeclarations().get("EvaluateOptions")[0]
+  }
+/>
 
 The main `evaluate()` function uses type guards to dispatch to the appropriate
 specific logic based on the kind of expression:
@@ -29,11 +28,10 @@ specific logic based on the kind of expression:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getExportedDeclarations()
-      .get("evaluate")
-      [0]
-  } />
+  extract={(sourceFile) =>
+    sourceFile.getExportedDeclarations().get("evaluate")[0]
+  }
+/>
 
 </details>
 
@@ -44,9 +42,8 @@ Evaluating constant expressions is quite straightforward:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateConstant")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateConstant")}
+/>
 
 Evaluating literals involves detecting hex string vs. number and converting
 appropriate to bytes:
@@ -54,9 +51,8 @@ appropriate to bytes:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateLiteral")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateLiteral")}
+/>
 
 Variable lookups, of course, require consulting the `variables` map passed
 in `EvaluateOptions`:
@@ -64,9 +60,8 @@ in `EvaluateOptions`:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateVariable")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateVariable")}
+/>
 
 ## Evaluating arithmetic operations
 
@@ -81,27 +76,26 @@ Evaluating sums:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateArithmeticSum")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticSum")}
+/>
 
 Evaluating products:
 
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateArithmeticProduct")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticProduct")}
+/>
 
 Evaluating differences:
 
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateArithmeticDifference")
-  } />
+  extract={(sourceFile) =>
+    sourceFile.getFunction("evaluateArithmeticDifference")
+  }
+/>
 
 **Note** how this function operates on unsigned values only by bounding the
 result below at 0.
@@ -111,9 +105,8 @@ Evaluating quotients:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateArithmeticQuotient")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticQuotient")}
+/>
 
 (Quotients of course use integer division only.)
 
@@ -122,9 +115,10 @@ Evaluating remainders:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateArithmeticRemainder")
-  } />
+  extract={(sourceFile) =>
+    sourceFile.getFunction("evaluateArithmeticRemainder")
+  }
+/>
 
 ## Evaluating resize expressions
 
@@ -136,9 +130,8 @@ method to perform this operation.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateResize")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateResize")}
+/>
 
 ## Evaluating keccak256 hashes
 
@@ -154,9 +147,8 @@ use of hashing to allocate persistent data.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateKeccak256")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateKeccak256")}
+/>
 
 ## Evaluating concatenation
 
@@ -166,9 +158,8 @@ join them together, preserving the byte width of each operand.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateConcat")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateConcat")}
+/>
 
 ## Evaluating property lookups
 
@@ -189,9 +180,8 @@ implementation needs only a single
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateLookup")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateLookup")}
+/>
 
 (The use of generic types here serves mostly to appease the type-checker; the
 minimal type safety it affords is insignificant compared to runtime data
@@ -215,9 +205,8 @@ this function presents no surprises:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={
-    sourceFile => sourceFile.getFunction("evaluateRead")
-  } />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateRead")}
+/>
 
 ## Note on `"$this"` region lookups
 

@@ -4,7 +4,6 @@ import { Data, Materials, Program } from "@ethdebug/format";
 import { computeOffsets } from "./offsets";
 import { type DynamicInstruction, resolveDynamicInstruction } from "./dynamic";
 
-
 export interface ProgramExampleState {
   // props
   sources: Materials.Source[];
@@ -18,13 +17,16 @@ export interface ProgramExampleState {
   hideDetails(): void;
 }
 
-const ProgramExampleContext =
-  createContext<ProgramExampleState | undefined>(undefined);
+const ProgramExampleContext = createContext<ProgramExampleState | undefined>(
+  undefined,
+);
 
 export function useProgramExampleContext() {
   const context = useContext(ProgramExampleContext);
   if (context === undefined) {
-    throw new Error("useProgramExampleContext must be used within a ProgramExampleContextProvider");
+    throw new Error(
+      "useProgramExampleContext must be used within a ProgramExampleContextProvider",
+    );
   }
 
   return context;
@@ -41,32 +43,23 @@ export function ProgramExampleContextProvider({
 }: ProgramExampleProps & {
   children: React.ReactNode;
 }): JSX.Element {
-  const {
-    sources,
-    instructions: dynamicInstructionsWithoutOffsets
-  } = props;
+  const { sources, instructions: dynamicInstructionsWithoutOffsets } = props;
 
-  const dynamicInstructions = computeOffsets(
-    dynamicInstructionsWithoutOffsets
+  const dynamicInstructions = computeOffsets(dynamicInstructionsWithoutOffsets);
+
+  const instructions = dynamicInstructions.map((dynamicInstruction) =>
+    resolveDynamicInstruction(dynamicInstruction, { sources }),
   );
 
-  const instructions = dynamicInstructions.map(
-    (dynamicInstruction) =>
-      resolveDynamicInstruction(dynamicInstruction, { sources })
+  const [highlightedOffset, highlightInstruction] = useState<
+    Data.Value | undefined
+  >();
+  const [highlightedInstruction, setHighlightedInstruction] = useState<
+    Program.Instruction | undefined
+  >();
+  const [highlightMode, setHighlightMode] = useState<"simple" | "detailed">(
+    "simple",
   );
-
-  const [
-    highlightedOffset,
-    highlightInstruction
-  ] = useState<Data.Value | undefined>();
-  const [
-    highlightedInstruction,
-    setHighlightedInstruction
-  ] = useState<Program.Instruction | undefined>();
-  const [
-    highlightMode,
-    setHighlightMode
-  ] = useState<"simple" | "detailed">("simple");
 
   const showDetails = () => setHighlightMode("detailed");
   const hideDetails = () => setHighlightMode("simple");
@@ -77,25 +70,32 @@ export function ProgramExampleContextProvider({
       return;
     }
 
-    const instruction = instructions
-      .find(({ offset }) => offset === highlightedOffset);
+    const instruction = instructions.find(
+      ({ offset }) => offset === highlightedOffset,
+    );
 
     if (!instruction) {
-      throw new Error(`Unexpected could not find instruction with offset ${highlightedOffset}`);
+      throw new Error(
+        `Unexpected could not find instruction with offset ${highlightedOffset}`,
+      );
     }
 
     setHighlightedInstruction(instruction);
   }, [highlightedOffset, setHighlightedInstruction]);
 
-  return <ProgramExampleContext.Provider value={{
-    sources,
-    instructions,
-    highlightedInstruction,
-    highlightInstruction,
-    highlightMode,
-    showDetails,
-    hideDetails
-  }}>
-    {children}
-  </ProgramExampleContext.Provider>
+  return (
+    <ProgramExampleContext.Provider
+      value={{
+        sources,
+        instructions,
+        highlightedInstruction,
+        highlightInstruction,
+        highlightMode,
+        showDetails,
+        hideDetails,
+      }}
+    >
+      {children}
+    </ProgramExampleContext.Provider>
+  );
 }

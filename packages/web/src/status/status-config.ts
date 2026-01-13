@@ -5,10 +5,7 @@
  * status details across the ethdebug/format specification.
  */
 
-export type StatusLevel =
-  | "in-design"
-  | "implementable"
-  | "reference-available";
+export type StatusLevel = "in-design" | "implementable" | "reference-available";
 
 export interface StatusLevelInfo {
   label: string;
@@ -28,7 +25,7 @@ export const statusLevels: Record<StatusLevel, StatusLevelInfo> = {
       "Early feedback welcome, but implementations should expect breaking " +
       "changes.",
   },
-  "implementable": {
+  implementable: {
     label: "Implementable",
     color: "#d97706", // Amber
     description:
@@ -63,19 +60,14 @@ export const schemaStatus: Record<string, SchemaStatusInfo> = {
     summary:
       "Comprehensive schema for describing data locations in EVM state. " +
       "Debugger-side reference implementation available in @ethdebug/pointers.",
-    caveats: [
-      "No compiler-side reference implementation yet.",
-    ],
+    caveats: ["No compiler-side reference implementation yet."],
     detailsPath: "/spec/pointer/overview#status",
     referenceUrl: "/docs/implementation-guides/pointers",
   },
   type: {
     level: "implementable",
-    summary:
-      "Complete coverage of Solidity types (elementary and complex).",
-    caveats: [
-      "No support for generic types (e.g., parameterized types).",
-    ],
+    summary: "Complete coverage of Solidity types (elementary and complex).",
+    caveats: ["No support for generic types (e.g., parameterized types)."],
     detailsPath: "/spec/type/overview#status",
   },
   program: {
@@ -86,7 +78,7 @@ export const schemaStatus: Record<string, SchemaStatusInfo> = {
       "actively evolving.",
     caveats: [
       "Context types for function calls, returns, and reverts are still " +
-      "being designed.",
+        "being designed.",
       "Broader structural changes may occur to accommodate new concerns.",
     ],
     detailsPath: "/spec/program/overview#status",
@@ -123,7 +115,7 @@ export const schemaStatus: Record<string, SchemaStatusInfo> = {
 export function getOverallStatus(): StatusLevel {
   const primarySchemas = ["pointer", "type", "program"];
   const levels: StatusLevel[] = primarySchemas.map(
-    (key) => schemaStatus[key].level
+    (key) => schemaStatus[key].level,
   );
 
   // Return the least mature level

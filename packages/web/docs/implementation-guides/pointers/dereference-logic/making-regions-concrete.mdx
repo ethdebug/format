@@ -22,8 +22,8 @@ This behavior is encapsulated by the `adjustStackLength` function:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/region.ts"
-  extract={sourceFile => sourceFile.getFunction("adjustStackLength")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("adjustStackLength")}
+/>
 
 ## Evaluating region property expressions
 
@@ -45,10 +45,7 @@ might take this pointer:
 {
   "location": "memory",
   "offset": {
-    "$sum": [
-      0x60,
-      { ".length": "$this" }
-    ]
+    "$sum": [0x60, { ".length": "$this" }]
   },
   "length": "$wordsize"
 }
@@ -70,5 +67,5 @@ implementation can infer that there must be a circular reference.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/region.ts"
-  extract={sourceFile => sourceFile.getFunction("evaluateRegion")}
-  />
+  extract={(sourceFile) => sourceFile.getFunction("evaluateRegion")}
+/>

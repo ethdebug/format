@@ -8,7 +8,6 @@ description: |
   This schema is constructed by extending the base region schema
   and the schema for the slice addressing scheme.
 type: object
-
 allOf:
   - title: '{ "location": "code" }' # note: whitespace chars are \255 (nbsp)
     properties:

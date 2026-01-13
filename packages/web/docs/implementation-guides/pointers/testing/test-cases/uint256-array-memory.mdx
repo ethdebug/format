@@ -17,11 +17,11 @@ the course of the transaction.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/test-cases.ts"
-  extract={sourceFile => sourceFile.getVariableStatement("uint256ArrayMemoryTest")}
-  />
+  extract={(sourceFile) =>
+    sourceFile.getVariableStatement("uint256ArrayMemoryTest")
+  }
+/>
 
 ## Tested pointer
 
-<TestedPointer
-  pointerQuery="uint256-array-memory-pointer-slot"
-  />
+<TestedPointer pointerQuery="uint256-array-memory-pointer-slot" />

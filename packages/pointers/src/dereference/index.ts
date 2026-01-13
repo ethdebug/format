@@ -11,7 +11,7 @@ export interface DereferenceOptions {
    * Required for any pointers that reference the stack.
    */
   state?: Machine.State;
-  templates?: Pointer.Templates
+  templates?: Pointer.Templates;
 }
 
 /**
@@ -23,18 +23,19 @@ export interface DereferenceOptions {
  */
 export async function dereference(
   pointer: Pointer,
-  dereferenceOptions: DereferenceOptions = {}
+  dereferenceOptions: DereferenceOptions = {},
 ): Promise<Cursor> {
   const options = await initializeGenerateRegionsOptions(dereferenceOptions);
 
   // use a closure to build a simple Cursor-like interface for accepting
   // a machine state and producing a collection of regions.
-  const simpleCursor =
-    (state: Machine.State): AsyncIterable<Cursor.Region> => ({
-      async *[Symbol.asyncIterator]() {
-        yield* generateRegions(pointer, { ...options, state });
-      }
-    });
+  const simpleCursor = (
+    state: Machine.State,
+  ): AsyncIterable<Cursor.Region> => ({
+    async *[Symbol.asyncIterator]() {
+      yield* generateRegions(pointer, { ...options, state });
+    },
+  });
 
   return createCursor(simpleCursor);
 }
@@ -45,7 +46,7 @@ export async function dereference(
  */
 async function initializeGenerateRegionsOptions({
   templates = {},
-  state: initialState
+  state: initialState,
 }: DereferenceOptions): Promise<Omit<GenerateRegionsOptions, "state">> {
   const initialStackLength = initialState
     ? await initialState.stack.length
@@ -53,6 +54,6 @@ async function initializeGenerateRegionsOptions({
 
   return {
     templates,
-    initialStackLength
+    initialStackLength,
   };
 }

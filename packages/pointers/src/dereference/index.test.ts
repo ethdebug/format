@@ -11,25 +11,39 @@ describe("dereference", () => {
     state = {
       stack: {
         length: Promise.resolve(10n),
-        peek: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        peek: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
+        ),
       },
       memory: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
+        ),
       },
       storage: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
+        ),
       },
       calldata: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
+        ),
       },
       returndata: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
+        ),
       },
       transient: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
+        ),
       },
       code: {
-        read: vitest.fn(async () => Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44]))),
+        read: vitest.fn(async () =>
+          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
+        ),
       },
     } as unknown as Machine.State;
   });
@@ -38,9 +52,9 @@ describe("dereference", () => {
     const pointer: Pointer = {
       location: "memory",
       offset: {
-        $sum: [0x40, 0x20]
+        $sum: [0x40, 0x20],
       },
-      length: 0x20
+      length: 0x20,
     };
 
     const cursor = await dereference(pointer);
@@ -51,29 +65,29 @@ describe("dereference", () => {
     expect(regions[0]).toEqual({
       location: "memory",
       offset: Data.fromNumber(0x60),
-      length: Data.fromNumber(0x20)
+      length: Data.fromNumber(0x20),
     });
   });
 
   it("works for a group of regions", async () => {
     const pointer: Pointer = {
-      group: [{
-        name: "a",
-        location: "memory",
-        offset: {
-          $sum: [0x40, 0x20]
+      group: [
+        {
+          name: "a",
+          location: "memory",
+          offset: {
+            $sum: [0x40, 0x20],
+          },
+          length: 0x20,
         },
-        length: 0x20
-      }, {
-        location: "memory",
-        offset: {
-          $sum: [
-            { ".offset": "a" },
-            { ".length": "a" }
-          ]
+        {
+          location: "memory",
+          offset: {
+            $sum: [{ ".offset": "a" }, { ".length": "a" }],
+          },
+          length: { ".length": "a" },
         },
-        length: { ".length": "a" }
-      }]
+      ],
     };
 
     const cursor = await dereference(pointer);
@@ -85,12 +99,12 @@ describe("dereference", () => {
       name: "a",
       location: "memory",
       offset: Data.fromNumber(0x60),
-      length: Data.fromNumber(0x20)
+      length: Data.fromNumber(0x20),
     });
     expect(regions[1]).toEqual({
       location: "memory",
       offset: Data.fromNumber(0x80),
-      length: Data.fromNumber(0x20)
+      length: Data.fromNumber(0x20),
     });
   });
 
@@ -105,7 +119,7 @@ describe("dereference", () => {
           offset: {
             $product: ["i", 32],
           },
-          length: 32
+          length: 32,
         },
       },
     };
@@ -122,10 +136,10 @@ describe("dereference", () => {
         name: "item",
         location: "memory",
         offset: Data.fromUint(
-          Data.fromNumber(index).asUint() * 32n
+          Data.fromNumber(index).asUint() * 32n,
         ).padUntilAtLeast(1),
         length: Data.fromNumber(32),
-      })
+      });
     }
   });
 
@@ -133,7 +147,7 @@ describe("dereference", () => {
     const pointer: Pointer = {
       location: "memory",
       offset: 32,
-      length: { ".offset": "$this" }
+      length: { ".offset": "$this" },
     };
 
     const cursor = await dereference(pointer);
@@ -144,7 +158,7 @@ describe("dereference", () => {
     expect(regions[0]).toEqual({
       location: "memory",
       offset: Data.fromNumber(32),
-      length: Data.fromNumber(32)
+      length: Data.fromNumber(32),
     });
   });
 
@@ -152,7 +166,7 @@ describe("dereference", () => {
     const pointer: Pointer = {
       location: "memory",
       offset: { ".length": "$this" },
-      length: 32
+      length: 32,
     };
 
     const cursor = await dereference(pointer);
@@ -163,7 +177,7 @@ describe("dereference", () => {
     expect(regions[0]).toEqual({
       location: "memory",
       offset: Data.fromNumber(32),
-      length: Data.fromNumber(32)
+      length: Data.fromNumber(32),
     });
   });
 
@@ -172,7 +186,7 @@ describe("dereference", () => {
       location: "storage",
       slot: { ".offset": "$this" },
       offset: { ".length": "$this" },
-      length: 32
+      length: 32,
     };
 
     const cursor = await dereference(pointer);
@@ -184,7 +198,7 @@ describe("dereference", () => {
       location: "storage",
       slot: Data.fromNumber(32),
       offset: Data.fromNumber(32),
-      length: Data.fromNumber(32)
+      length: Data.fromNumber(32),
     });
   });
 
@@ -198,27 +212,27 @@ describe("dereference", () => {
     const cursor = await dereference(pointer);
 
     await expect(cursor.view(state)).rejects.toThrow(
-      "Circular reference detected: $this.offset"
+      "Circular reference detected: $this.offset",
     );
   });
 
   it("works for conditionals", async () => {
     const pointer: Pointer = {
       if: {
-        $difference: [5, 5]
+        $difference: [5, 5],
       },
       then: {
         name: "a",
         location: "memory",
         offset: 0,
-        length: 0
+        length: 0,
       },
       else: {
         name: "b",
         location: "memory",
         offset: 0,
-        length: 0
-      }
+        length: 0,
+      },
     };
 
     const cursor = await dereference(pointer);
@@ -233,13 +247,13 @@ describe("dereference", () => {
     const pointer: Pointer = {
       define: {
         "example-offset": 0,
-        "example-length": 32
+        "example-length": 32,
       },
       in: {
         location: "memory",
         offset: "example-offset",
-        length: "example-length"
-      }
+        length: "example-length",
+      },
     };
 
     const cursor = await dereference(pointer);
@@ -258,19 +272,19 @@ describe("dereference", () => {
         for: {
           location: "memory",
           offset: "offset",
-          length: "length"
-        }
-      }
+          length: "length",
+        },
+      },
     };
 
     const pointer: Pointer = {
       define: {
-        "offset": 0,
-        "length": 32
+        offset: 0,
+        length: 32,
       },
       in: {
-        template: "memory-range"
-      }
+        template: "memory-range",
+      },
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -289,21 +303,21 @@ describe("dereference", () => {
         for: {
           name: "data",
           location: "storage",
-          slot: "slot"
-        }
-      }
+          slot: "slot",
+        },
+      },
     };
 
     const pointer: Pointer = {
       define: {
-        "slot": 0
+        slot: 0,
       },
       in: {
         template: "named-region",
         yields: {
-          "data": "my-data"
-        }
-      }
+          data: "my-data",
+        },
+      },
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -322,28 +336,28 @@ describe("dereference", () => {
         for: {
           name: "value",
           location: "storage",
-          slot: "slot"
-        }
-      }
+          slot: "slot",
+        },
+      },
     };
 
     const pointer: Pointer = {
       group: [
         {
-          define: { "slot": 0 },
+          define: { slot: 0 },
           in: {
             template: "slot-region",
-            yields: { "value": "first-value" }
-          }
+            yields: { value: "first-value" },
+          },
         },
         {
-          define: { "slot": 1 },
+          define: { slot: 1 },
           in: {
             template: "slot-region",
-            yields: { "value": "second-value" }
-          }
-        }
-      ]
+            yields: { value: "second-value" },
+          },
+        },
+      ],
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -363,18 +377,18 @@ describe("dereference", () => {
         for: {
           group: [
             { name: "a", location: "storage", slot: "slot" },
-            { name: "b", location: "storage", slot: { $sum: ["slot", 1] } }
-          ]
-        }
-      }
+            { name: "b", location: "storage", slot: { $sum: ["slot", 1] } },
+          ],
+        },
+      },
     };
 
     const pointer: Pointer = {
-      define: { "slot": 0 },
+      define: { slot: 0 },
       in: {
         template: "two-regions",
-        yields: { "a": "renamed-a" }  // only rename "a", leave "b" as-is
-      }
+        yields: { a: "renamed-a" }, // only rename "a", leave "b" as-is
+      },
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -382,7 +396,7 @@ describe("dereference", () => {
 
     expect(regions).toHaveLength(2);
     expect(regions[0].name).toEqual("renamed-a");
-    expect(regions[1].name).toEqual("b");  // unchanged
+    expect(regions[1].name).toEqual("b"); // unchanged
     expect(regions.lookup["renamed-a"]).toBeDefined();
     expect(regions.lookup["b"]).toBeDefined();
   });
@@ -397,28 +411,30 @@ describe("dereference", () => {
               name: "first",
               location: "memory",
               offset: "base",
-              length: 32
+              length: 32,
             },
             {
               name: "second",
               location: "memory",
-              offset: { $sum: [{ ".offset": "first" }, { ".length": "first" }] },
-              length: { ".length": "first" }
-            }
-          ]
-        }
-      }
+              offset: {
+                $sum: [{ ".offset": "first" }, { ".length": "first" }],
+              },
+              length: { ".length": "first" },
+            },
+          ],
+        },
+      },
     };
 
     const pointer: Pointer = {
-      define: { "base": 64 },
+      define: { base: 64 },
       in: {
         template: "dependent-regions",
         yields: {
-          "first": "my-first",
-          "second": "my-second"
-        }
-      }
+          first: "my-first",
+          second: "my-second",
+        },
+      },
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -431,43 +447,43 @@ describe("dereference", () => {
 
     // Second region depends on first via internal reference
     expect(regions[1].name).toEqual("my-second");
-    expect(regions[1].offset).toEqual(Data.fromNumber(96));  // 64 + 32
+    expect(regions[1].offset).toEqual(Data.fromNumber(96)); // 64 + 32
     expect(regions[1].length).toEqual(Data.fromNumber(32));
   });
 
   it("works for nested template references with yields", async () => {
     const templates: Pointer.Templates = {
-      "inner": {
+      inner: {
         expect: ["slot"],
         for: {
           name: "inner-data",
           location: "storage",
-          slot: "slot"
-        }
+          slot: "slot",
+        },
       },
-      "outer": {
+      outer: {
         expect: ["base-slot"],
         for: {
           group: [
             {
-              define: { "slot": "base-slot" },
-              in: { template: "inner" }
+              define: { slot: "base-slot" },
+              in: { template: "inner" },
             },
             {
-              define: { "slot": { $sum: ["base-slot", 1] } },
-              in: { template: "inner" }
-            }
-          ]
-        }
-      }
+              define: { slot: { $sum: ["base-slot", 1] } },
+              in: { template: "inner" },
+            },
+          ],
+        },
+      },
     };
 
     const pointer: Pointer = {
       define: { "base-slot": 10 },
       in: {
         template: "outer",
-        yields: { "inner-data": "outer-data" }
-      }
+        yields: { "inner-data": "outer-data" },
+      },
     };
 
     const cursor = await dereference(pointer, { templates });
@@ -488,19 +504,19 @@ describe("dereference", () => {
           for: {
             location: "memory",
             offset: "offset",
-            length: "length"
-          }
-        }
+            length: "length",
+          },
+        },
       },
       in: {
         define: {
-          "offset": 0,
-          "length": 32
+          offset: 0,
+          length: 32,
         },
         in: {
-          template: "memory-range"
-        }
-      }
+          template: "memory-range",
+        },
+      },
     };
 
     const cursor = await dereference(pointer);
@@ -519,9 +535,9 @@ describe("dereference", () => {
         for: {
           name: "external",
           location: "storage",
-          slot: "value"
-        }
-      }
+          slot: "value",
+        },
+      },
     };
 
     // Inline template overrides with memory-based region
@@ -533,16 +549,16 @@ describe("dereference", () => {
             name: "inline",
             location: "memory",
             offset: "value",
-            length: 32
-          }
-        }
+            length: 32,
+          },
+        },
       },
       in: {
-        define: { "value": 64 },
+        define: { value: 64 },
         in: {
-          template: "my-region"
-        }
-      }
+          template: "my-region",
+        },
+      },
     };
 
     const cursor = await dereference(pointer, { templates: externalTemplates });
@@ -566,21 +582,21 @@ describe("dereference", () => {
                   name: "data",
                   location: "memory",
                   offset: "offset",
-                  length: 32
-                }
-              }
+                  length: 32,
+                },
+              },
             },
             in: {
-              define: { "offset": "base" },
-              in: { template: "inner-template" }
-            }
-          }
-        }
+              define: { offset: "base" },
+              in: { template: "inner-template" },
+            },
+          },
+        },
       },
       in: {
-        define: { "base": 128 },
-        in: { template: "outer-template" }
-      }
+        define: { base: 128 },
+        in: { template: "outer-template" },
+      },
     };
 
     const cursor = await dereference(pointer);
@@ -599,17 +615,17 @@ describe("dereference", () => {
           for: {
             name: "value",
             location: "storage",
-            slot: "slot"
-          }
-        }
+            slot: "slot",
+          },
+        },
       },
       in: {
-        define: { "slot": 5 },
+        define: { slot: 5 },
         in: {
           template: "named-slot",
-          yields: { "value": "my-slot-value" }
-        }
-      }
+          yields: { value: "my-slot-value" },
+        },
+      },
     };
 
     const cursor = await dereference(pointer);

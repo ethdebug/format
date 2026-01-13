@@ -4,7 +4,6 @@ import { Data } from "./data.js";
 import type { Cursor } from "./cursor.js";
 import { read } from "./read.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
-import { toHex } from "ethereum-cryptography/utils";
 
 export interface EvaluateOptions {
   state: Machine.State;
@@ -18,7 +17,7 @@ export interface EvaluateOptions {
 
 export async function evaluate(
   expression: Pointer.Expression,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
   if (Pointer.Expression.isLiteral(expression)) {
     return evaluateLiteral(expression);
@@ -85,14 +84,14 @@ export async function evaluate(
   }
 
   throw new Error(
-    `Unexpected runtime failure to recognize kind of expression: ${
-      JSON.stringify(expression)
-    }`
+    `Unexpected runtime failure to recognize kind of expression: ${JSON.stringify(
+      expression,
+    )}`,
   );
 }
 
 async function evaluateLiteral(
-  literal: Pointer.Expression.Literal
+  literal: Pointer.Expression.Literal,
 ): Promise<Data> {
   switch (typeof literal) {
     case "string":
@@ -103,7 +102,7 @@ async function evaluateLiteral(
 }
 
 async function evaluateConstant(
-  constant: Pointer.Expression.Constant
+  constant: Pointer.Expression.Constant,
 ): Promise<Data> {
   switch (constant) {
     case "$wordsize":
@@ -113,7 +112,7 @@ async function evaluateConstant(
 
 async function evaluateVariable(
   identifier: Pointer.Expression.Variable,
-  { variables }: EvaluateOptions
+  { variables }: EvaluateOptions,
 ): Promise<Data> {
   const data = variables[identifier];
   if (typeof data === "undefined") {
@@ -125,35 +124,42 @@ async function evaluateVariable(
 
 async function evaluateArithmeticSum(
   expression: Pointer.Expression.Arithmetic.Sum,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const operands = await Promise.all(expression.$sum.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const operands = await Promise.all(
+    expression.$sum.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
-  const maxLength = operands
-    .reduce((max, { length }) => length > max ? length : max, 0);
+  const maxLength = operands.reduce(
+    (max, { length }) => (length > max ? length : max),
+    0,
+  );
 
-  const data = Data
-    .fromUint(operands.reduce((sum, data) => sum + data.asUint(), 0n))
-    .padUntilAtLeast(maxLength);
+  const data = Data.fromUint(
+    operands.reduce((sum, data) => sum + data.asUint(), 0n),
+  ).padUntilAtLeast(maxLength);
 
   return data;
 }
 
 async function evaluateArithmeticDifference(
   expression: Pointer.Expression.Arithmetic.Difference,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const [a, b] = await Promise.all(expression.$difference.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const [a, b] = await Promise.all(
+    expression.$difference.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
   const maxLength = a.length > b.length ? a.length : b.length;
 
-  const unpadded = a.asUint() > b.asUint()
-    ? Data.fromUint(a.asUint() - b.asUint())
-    : Data.fromNumber(0);
+  const unpadded =
+    a.asUint() > b.asUint()
+      ? Data.fromUint(a.asUint() - b.asUint())
+      : Data.fromNumber(0);
 
   const data = unpadded.padUntilAtLeast(maxLength);
   return data;
@@ -161,61 +167,71 @@ async function evaluateArithmeticDifference(
 
 async function evaluateArithmeticProduct(
   expression: Pointer.Expression.Arithmetic.Product,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const operands = await Promise.all(expression.$product.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const operands = await Promise.all(
+    expression.$product.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
-  const maxLength = operands
-    .reduce((max, { length }) => length > max ? length : max, 0);
+  const maxLength = operands.reduce(
+    (max, { length }) => (length > max ? length : max),
+    0,
+  );
 
-  return Data
-    .fromUint(operands.reduce((product, data) => product * data.asUint(), 1n))
-    .padUntilAtLeast(maxLength);
+  return Data.fromUint(
+    operands.reduce((product, data) => product * data.asUint(), 1n),
+  ).padUntilAtLeast(maxLength);
 }
 
 async function evaluateArithmeticQuotient(
   expression: Pointer.Expression.Arithmetic.Quotient,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const [a, b] = await Promise.all(expression.$quotient.map(
-    async expression => (await evaluate(expression, options))
-  ));
+  const [a, b] = await Promise.all(
+    expression.$quotient.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
   const maxLength = a.length > b.length ? a.length : b.length;
 
-  const data = Data
-    .fromUint(a.asUint() / b.asUint())
-    .padUntilAtLeast(maxLength);
+  const data = Data.fromUint(a.asUint() / b.asUint()).padUntilAtLeast(
+    maxLength,
+  );
 
   return data;
 }
 
 async function evaluateArithmeticRemainder(
   expression: Pointer.Expression.Arithmetic.Remainder,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const [a, b] = await Promise.all(expression.$remainder.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const [a, b] = await Promise.all(
+    expression.$remainder.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
   const maxLength = a.length > b.length ? a.length : b.length;
 
-  const data = Data
-    .fromUint(a.asUint() % b.asUint())
-    .padUntilAtLeast(maxLength);
+  const data = Data.fromUint(a.asUint() % b.asUint()).padUntilAtLeast(
+    maxLength,
+  );
 
   return data;
 }
 
 async function evaluateKeccak256(
   expression: Pointer.Expression.Keccak256,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const operands = await Promise.all(expression.$keccak256.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const operands = await Promise.all(
+    expression.$keccak256.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
   const preimage = Data.zero().concat(...operands);
   const hash = Data.fromBytes(keccak256(preimage));
@@ -225,18 +241,20 @@ async function evaluateKeccak256(
 
 async function evaluateConcat(
   expression: Pointer.Expression.Concat,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const operands = await Promise.all(expression.$concat.map(
-    async expression => await evaluate(expression, options)
-  ));
+  const operands = await Promise.all(
+    expression.$concat.map(
+      async (expression) => await evaluate(expression, options),
+    ),
+  );
 
   return Data.zero().concat(...operands);
 }
 
 async function evaluateResize(
   expression: Pointer.Expression.Resize,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
   const [[operation, subexpression]] = Object.entries(expression);
 
@@ -250,7 +268,7 @@ async function evaluateResize(
 async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
   operation: O,
   lookup: Pointer.Expression.Lookup.ForOperation<O>,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
   const { regions } = options;
 
@@ -266,7 +284,7 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
 
   if (typeof data === "undefined") {
     throw new Error(
-      `Region named ${identifier} does not have ${property} needed by lookup`
+      `Region named ${identifier} does not have ${property} needed by lookup`,
     );
   }
 
@@ -275,9 +293,9 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
 
 async function evaluateRead(
   expression: Pointer.Expression.Read,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Data> {
-  const { state, regions } = options;
+  const { state: _state, regions } = options;
 
   const identifier = expression.$read;
   const region = regions[identifier];

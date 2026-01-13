@@ -39,8 +39,7 @@ $defs:
 
   Object:
     title: '{ "key": { "type": ... }, ... }'
-    description:
-      A key-value mapping of wrapped types, where the wrapper may add fields
+    description: A key-value mapping of wrapped types, where the wrapper may add fields
     type: object
     additionalProperties:
       $ref: "schema:ethdebug/format/type/wrapper"

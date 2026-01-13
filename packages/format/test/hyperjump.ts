@@ -4,17 +4,13 @@ import {
   validate,
   setMetaSchemaOutputFormat,
 } from "@hyperjump/json-schema/draft-2020-12";
-// @ts-ignore
+// @ts-expect-error no types for experimental export
 import { BASIC } from "@hyperjump/json-schema/experimental";
-import { bundle } from "@hyperjump/json-schema/bundle";
 import * as YAML from "yaml";
 import indentString from "indent-string";
 import { highlight } from "cli-highlight";
 
-import {
-  describeSchema,
-  type DescribeSchemaOptions
-} from "../src/describe";
+import { describeSchema, type DescribeSchemaOptions } from "../src/describe";
 
 import { schemas } from "../src/schemas";
 
@@ -33,14 +29,9 @@ const main = () => {
         throw new Error("Schema is not known to validator by ID");
       }
 
-      const schemaReference = pointer
-        ? `${id}${pointer}`
-        : id;
+      const schemaReference = pointer ? `${id}${pointer}` : id;
 
-      const schemaName =
-        schema.title
-          ? schema.title
-          : schemaReference;
+      const schemaName = schema.title ? schema.title : schemaReference;
 
       const output = await validate(schemaReference, received, BASIC);
 
@@ -48,28 +39,21 @@ const main = () => {
 
       return {
         pass,
-        message: () => `expected input:\n${
-          indentString(
+        message: () =>
+          `expected input:\n${indentString(
             highlight(YAML.stringify(received), { language: "yaml" }),
-            2
-          )
-        }\n${
-          pass
-            ? "not to be"
-            : "to be"
-        } valid ${schemaName}.${
-          pass
-            ? ""
-            : `\noutput:\n${
-                indentString(
+            2,
+          )}\n${pass ? "not to be" : "to be"} valid ${schemaName}.${
+            pass
+              ? ""
+              : `\noutput:\n${indentString(
                   highlight(YAML.stringify(output), { language: "yaml" }),
-                  2
-                )
-              }`
-        }`
+                  2,
+                )}`
+          }`,
       };
-    }
+    },
   });
-}
+};
 
 main();

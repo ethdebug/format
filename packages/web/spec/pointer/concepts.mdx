@@ -63,6 +63,7 @@ representation can describe the aggregation of other composed pointers.
 </summary>
 
 Consider the `struct` definition:
+
 ```solidity
 struct Record {
     uint256 x;
@@ -76,15 +77,18 @@ members.
 
 ```json
 {
-  "group": [{
-    "location": "memory",
-    "offset": "0x40",
-    "length": 32
-  }, {
-    "location": "memory",
-    "offset": "0x60",
-    "length": 32
-  }]
+  "group": [
+    {
+      "location": "memory",
+      "offset": "0x40",
+      "length": 32
+    },
+    {
+      "location": "memory",
+      "offset": "0x60",
+      "length": 32
+    }
+  ]
 }
 ```
 
@@ -95,7 +99,6 @@ This schema includes several sub-schemas for different kinds of collections
 (e.g., since the allocation of struct types are very different from the
 allocation of array types, etc.). The **ethdebug/format/pointer/collection**
 schema aggregates these.
-
 
 ## Pointers allow describing a value as a complex **expression**
 
@@ -141,17 +144,20 @@ known at some point in execution to be the value at the top of the stack.
 
 ```json
 {
-  "group": [{
-    "name": "pointer-to-storage-slot",
-    "location": "stack",
-    "slot": 0
-  }, {
-    "name": "storage-slot",
-    "location": "storage",
-    "slot": {
-      "$read": "pointer-to-storage-slot"
+  "group": [
+    {
+      "name": "pointer-to-storage-slot",
+      "location": "stack",
+      "slot": 0
+    },
+    {
+      "name": "storage-slot",
+      "location": "storage",
+      "slot": {
+        "$read": "pointer-to-storage-slot"
+      }
     }
-  }]
+  ]
 }
 ```
 
@@ -170,25 +176,29 @@ and length.
 
 ```json
 {
-  "group": [{
-    "name": "record-pointer",
-    "location": "stack",
-    "slot": 0
-  }, {
-    "name": "record-x",
-    "location": "memory",
-    "offset": {
-      "$read": "record-pointer"
+  "group": [
+    {
+      "name": "record-pointer",
+      "location": "stack",
+      "slot": 0
     },
-    "length": 32
-  }, {
-    "name": "record-y",
-    "location": "memory",
-    "offset": {
-      "$sum": [{ ".offset": "record-x" }, { ".length": "record-x" }]
+    {
+      "name": "record-x",
+      "location": "memory",
+      "offset": {
+        "$read": "record-pointer"
+      },
+      "length": 32
     },
-    "length": 32
-  }]
+    {
+      "name": "record-y",
+      "location": "memory",
+      "offset": {
+        "$sum": [{ ".offset": "record-x" }, { ".length": "record-x" }]
+      },
+      "length": 32
+    }
+  ]
 }
 ```
 

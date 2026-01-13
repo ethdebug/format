@@ -3,7 +3,7 @@ import type { Cursor } from "../cursor.js";
 import { read } from "../read.js";
 
 export function createCursor(
-  simpleCursor: (state: Machine.State) => AsyncIterable<Cursor.Region>
+  simpleCursor: (state: Machine.State) => AsyncIterable<Cursor.Region>,
 ): Cursor {
   return {
     async view(state: Machine.State) {
@@ -18,14 +18,14 @@ export function createCursor(
       const propertyFlags = {
         writable: false,
         enumerable: false,
-        configurable: false
+        configurable: false,
       } as const;
 
       const regions: Cursor.Regions = Object.create(Array.prototype, {
         length: {
           value: list.length,
-          ...propertyFlags
-        }
+          ...propertyFlags,
+        },
       });
 
       for (const [index, region] of list.entries()) {
@@ -47,29 +47,29 @@ export function createCursor(
       for (const [name, region] of Object.entries(current)) {
         Object.defineProperty(regions, name, {
           value: region,
-          ...propertyFlags
+          ...propertyFlags,
         });
       }
 
       Object.defineProperties(regions, {
         named: {
           value: (name: string) => named[name] || [],
-          ...propertyFlags
+          ...propertyFlags,
         },
         lookup: {
           value: {
-            ...current
+            ...current,
           },
-          ...propertyFlags
-        }
+          ...propertyFlags,
+        },
       });
 
       return {
         regions,
         async read(region: Cursor.Region) {
           return await read(region, { state });
-        }
+        },
       };
-    }
+    },
   };
 }

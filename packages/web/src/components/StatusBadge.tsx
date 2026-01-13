@@ -1,9 +1,6 @@
 import React from "react";
 import Link from "@docusaurus/Link";
-import {
-  statusLevels,
-  type StatusLevel,
-} from "@site/src/status/status-config";
+import { statusLevels, type StatusLevel } from "@site/src/status/status-config";
 import styles from "./StatusBadge.module.css";
 
 export interface StatusBadgeProps {

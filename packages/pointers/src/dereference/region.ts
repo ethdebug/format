@@ -18,13 +18,13 @@ import { evaluate, type EvaluateOptions } from "../evaluate.js";
  */
 export async function evaluateRegion<R extends Pointer.Region>(
   region: R,
-  options: EvaluateOptions
+  options: EvaluateOptions,
 ): Promise<Cursor.Region<R>> {
   const evaluatedProperties: {
-    [K in keyof R]?: Data
+    [K in keyof R]?: Data;
   } = {};
   const propertyAttempts: {
-    [K in keyof R]?: number
+    [K in keyof R]?: number;
   } = {};
 
   const partialRegion: Cursor.Region<R> = new Proxy(
@@ -34,19 +34,22 @@ export async function evaluateRegion<R extends Pointer.Region>(
         if (property in evaluatedProperties) {
           return evaluatedProperties[property as keyof R];
         }
-        throw new Error(`Property not evaluated yet: $this.${property.toString()}`)
+        throw new Error(
+          `Property not evaluated yet: $this.${property.toString()}`,
+        );
       },
-    }
+    },
   );
 
   const propertiesRequiringEvaluation = ["slot", "offset", "length"] as const;
 
   const expressionQueue: [keyof R, Pointer.Expression][] =
     propertiesRequiringEvaluation
-      .filter(property => property in region)
-      .map(
-        property => [property, region[property as keyof R]]
-      ) as [keyof R, Pointer.Expression][];
+      .filter((property) => property in region)
+      .map((property) => [property, region[property as keyof R]]) as [
+      keyof R,
+      Pointer.Expression,
+    ][];
 
   while (expressionQueue.length > 0) {
     const [property, expression] = expressionQueue.shift()!;
@@ -70,7 +73,9 @@ export async function evaluateRegion<R extends Pointer.Region>(
         // fields may reference each other, but the chain of references
         // should not exceed the number of fields minus 1
         if (attempts > propertiesRequiringEvaluation.length - 1) {
-          throw new Error(`Circular reference detected: $this.${property.toString()}`);
+          throw new Error(
+            `Circular reference detected: $this.${property.toString()}`,
+          );
         }
 
         propertyAttempts[property] = attempts + 1;
@@ -94,18 +99,24 @@ export async function evaluateRegion<R extends Pointer.Region>(
  */
 export function adjustStackLength<R extends Pointer.Region>(
   region: R,
-  stackLengthChange: bigint
+  stackLengthChange: bigint,
 ): R {
   if (Pointer.Region.isStack(region)) {
-    const slot: Pointer.Expression = stackLengthChange === 0n
-      ? region.slot
-      : stackLengthChange > 0n
-        ? { $sum: [region.slot, `0x${stackLengthChange.toString(16)}`] }
-        : { $difference: [region.slot, `0x${-stackLengthChange.toString(16)}`] };
+    const slot: Pointer.Expression =
+      stackLengthChange === 0n
+        ? region.slot
+        : stackLengthChange > 0n
+          ? { $sum: [region.slot, `0x${stackLengthChange.toString(16)}`] }
+          : {
+              $difference: [
+                region.slot,
+                `0x${-stackLengthChange.toString(16)}`,
+              ],
+            };
 
     return {
       ...region,
-      slot
+      slot,
     };
   }
 

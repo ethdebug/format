@@ -5,11 +5,9 @@ title: ethdebug/format/pointer/region
 description: |
   A representation of a region of data in the EVM
 type: object
-
 properties:
   location:
     $ref: "#/$defs/Location"
-
 
 allOf:
   - if:
@@ -80,4 +78,3 @@ unevaluatedProperties: false
 examples:
   - location: storage
     slot: "0x0000000000000000000000000000000000000000000000000000000000000000"
-
