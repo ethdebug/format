@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "tsc --build packages/format packages/pointers",
     "bundle": "tsx ./bin/bundle-schema.ts",
     "test": "vitest",
     "start": "./bin/start",

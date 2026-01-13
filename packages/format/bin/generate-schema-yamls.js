@@ -33,7 +33,7 @@ const rawSchemas = Object.entries(schemaYamls)
   .map(([id, yaml]) => ({ [id]: YAML.parse(yaml) }))
   .reduce((a, b) => ({ ...a, ...b }), {});
 
-console.log(`// THIS FILE GETS AUTO-GENERATED AS PART OF THIS PACKAGE'S BUILD PROCESS
+const output = `// THIS FILE GETS AUTO-GENERATED AS PART OF THIS PACKAGE'S BUILD PROCESS
 // Please do not modify it directly or allow it to get checked into source control.
 
 export type SchemaYamlsById = {
@@ -50,4 +50,11 @@ const rawSchemas = ${JSON.stringify(rawSchemas, undefined, 2)} as const;
 
 export type Schema<Id extends keyof typeof rawSchemas> =
   (typeof rawSchemas)[Id];
-`);
+`;
+
+const outputPath = path.resolve(__dirname, "../src/schemas/yamls.ts");
+const tempPath = outputPath + ".tmp";
+
+// Write to temp file, then rename atomically to avoid race conditions
+fs.writeFileSync(tempPath, output);
+fs.renameSync(tempPath, outputPath);
