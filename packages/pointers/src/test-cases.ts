@@ -14,7 +14,7 @@ const structStorageTest: ObserveTraceTest<{
   y: number;
   salt: string;
 }> = {
-  pointer: findExamplePointer("struct-storage-contract-variable-slot"),
+  pointer: findExamplePointer("packed-field"),
   compileOptions: singleSourceCompilation({
     path: "StructStorage.sol",
     contractName: "StructStorage",

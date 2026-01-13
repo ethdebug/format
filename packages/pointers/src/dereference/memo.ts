@@ -8,7 +8,11 @@ import type { Data } from "../data.js";
 export type Memo =
   | Memo.DereferencePointer
   | Memo.SaveRegions
-  | Memo.SaveVariables;
+  | Memo.SaveVariables
+  | Memo.PushRegionRenames
+  | Memo.PopRegionRenames
+  | Memo.PushTemplates
+  | Memo.PopTemplates;
 
 export namespace Memo {
   /**
@@ -69,4 +73,71 @@ export namespace Memo {
       kind: "save-variables",
       variables
     });
+
+  /**
+   * A request to push a region rename mapping onto the context stack.
+   * While active, regions with names in the mapping will be saved under
+   * both their original name (for internal references) and their new name
+   * (for external references after the template).
+   */
+  export interface PushRegionRenames {
+    kind: "push-region-renames";
+    mapping: Record<string, string>;
+  }
+
+  /**
+   * Initialize a PushRegionRenames memo
+   */
+  export const pushRegionRenames =
+    (mapping: Record<string, string>): PushRegionRenames => ({
+      kind: "push-region-renames",
+      mapping
+    });
+
+  /**
+   * A request to pop the current region rename mapping from the context stack.
+   */
+  export interface PopRegionRenames {
+    kind: "pop-region-renames";
+  }
+
+  /**
+   * Initialize a PopRegionRenames memo
+   */
+  export const popRegionRenames = (): PopRegionRenames => ({
+    kind: "pop-region-renames"
+  });
+
+  /**
+   * A request to push template definitions onto the context stack.
+   * While active, these templates are available for use by reference
+   * collections.
+   */
+  export interface PushTemplates {
+    kind: "push-templates";
+    templates: Pointer.Templates;
+  }
+
+  /**
+   * Initialize a PushTemplates memo
+   */
+  export const pushTemplates =
+    (templates: Pointer.Templates): PushTemplates => ({
+      kind: "push-templates",
+      templates
+    });
+
+  /**
+   * A request to pop the current template definitions from the context stack.
+   */
+  export interface PopTemplates {
+    kind: "pop-templates";
+  }
+
+  /**
+   * Initialize a PopTemplates memo
+   */
+  export const popTemplates = (): PopTemplates => ({
+    kind: "pop-templates"
+  });
 }

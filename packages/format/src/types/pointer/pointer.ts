@@ -130,7 +130,8 @@ export namespace Pointer {
     | Collection.List
     | Collection.Conditional
     | Collection.Scope
-    | Collection.Reference;
+    | Collection.Reference
+    | Collection.Templates;
 
   export const isCollection = (value: unknown): value is Collection =>
     [
@@ -138,7 +139,8 @@ export namespace Pointer {
       Collection.isList,
       Collection.isConditional,
       Collection.isScope,
-      Collection.isReference
+      Collection.isReference,
+      Collection.isTemplates
     ].some(guard => guard(value));
 
   export namespace Collection {
@@ -208,13 +210,38 @@ export namespace Pointer {
 
     export interface Reference {
       template: string;
+      yields?: Record<string, string>;
     }
 
     export const isReference = (value: unknown): value is Reference =>
       !!value &&
         typeof value === "object" &&
         "template" in value &&
-        typeof value.template === "string" && !!value.template
+        typeof value.template === "string" && !!value.template &&
+        (!("yields" in value) || (
+          typeof value.yields === "object" &&
+          value.yields !== null &&
+          Object.entries(value.yields as Record<string, unknown>).every(
+            ([k, v]) => isIdentifier(k) && isIdentifier(v)
+          )
+        ))
+
+    export interface Templates {
+      templates: {
+        [identifier: string]: Pointer.Template;
+      };
+      in: Pointer;
+    }
+
+    export const isTemplates = (value: unknown): value is Templates =>
+      !!value &&
+        typeof value === "object" &&
+        "templates" in value &&
+        typeof value.templates === "object" && !!value.templates &&
+        Object.keys(value.templates).every(isIdentifier) &&
+        Object.values(value.templates).every(isTemplate) &&
+        "in" in value &&
+        isPointer(value.in);
   }
 
   export type Expression =

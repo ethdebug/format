@@ -64,8 +64,6 @@ export const schemaStatus: Record<string, SchemaStatusInfo> = {
       "Comprehensive schema for describing data locations in EVM state. " +
       "Debugger-side reference implementation available in @ethdebug/pointers.",
     caveats: [
-      "Pointer templates cannot rename their output region names, limiting " +
-      "composability for complex scenarios.",
       "No compiler-side reference implementation yet.",
     ],
     detailsPath: "/spec/pointer/overview#status",

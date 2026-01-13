@@ -61,6 +61,10 @@ export async function* processPointer(
     return yield* processReference(collection, options);
   }
 
+  if (Pointer.Collection.isTemplates(collection)) {
+    return yield* processTemplates(collection, options);
+  }
+
   console.error("%s", JSON.stringify(pointer, undefined, 2));
   throw new Error("Unexpected unknown kind of pointer");
 }
@@ -160,7 +164,7 @@ async function* processReference(
   collection: Pointer.Collection.Reference,
   options: ProcessOptions
 ): Process {
-  const { template: templateName } = collection;
+  const { template: templateName, yields } = collection;
 
   const { templates, variables } = options;
 
@@ -189,7 +193,30 @@ async function* processReference(
     ].join(""));
   }
 
+  // If yields is specified with mappings, wrap the dereference with
+  // push/pop region renames memos
+  if (yields && Object.keys(yields).length > 0) {
+    return [
+      Memo.pushRegionRenames(yields),
+      Memo.dereferencePointer(pointer),
+      Memo.popRegionRenames()
+    ];
+  }
+
   return [
     Memo.dereferencePointer(pointer)
+  ];
+}
+
+async function* processTemplates(
+  collection: Pointer.Collection.Templates,
+  options: ProcessOptions
+): Process {
+  const { templates, in: in_ } = collection;
+
+  return [
+    Memo.pushTemplates(templates),
+    Memo.dereferencePointer(in_),
+    Memo.popTemplates()
   ];
 }
