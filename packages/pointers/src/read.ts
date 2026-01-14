@@ -1,5 +1,5 @@
 import { Pointer } from "@ethdebug/format";
-import { Machine } from "#machine";
+import type { Machine } from "#machine";
 import { Data } from "#data";
 import type { Cursor } from "#cursor";
 
