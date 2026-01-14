@@ -1,6 +1,6 @@
 import type { Pointer } from "@ethdebug/format";
-import type { Machine } from "../machine.js";
-import type { Cursor } from "../cursor.js";
+import type { Machine } from "#machine";
+import type { Cursor } from "#cursor";
 
 import { generateRegions, type GenerateRegionsOptions } from "./generate.js";
 import { createCursor } from "./cursor.js";

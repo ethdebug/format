@@ -1,7 +1,7 @@
 import { Pointer } from "@ethdebug/format";
-import { Machine } from "./machine.js";
-import { Data } from "./data.js";
-import type { Cursor } from "./cursor.js";
+import { Machine } from "#machine";
+import { Data } from "#data";
+import type { Cursor } from "#cursor";
 
 export interface ReadOptions {
   state: Machine.State;

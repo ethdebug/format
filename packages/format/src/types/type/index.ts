@@ -1,5 +1,5 @@
-import { Data } from "../data/index.js";
-import { Materials } from "../materials/index.js";
+import { Data } from "#types/data";
+import { Materials } from "#types/materials";
 
 import * as _Base from "./base.js";
 

@@ -1,4 +1,4 @@
-import { testSchemaGuards } from "../../../test/guards.js";
+import { testSchemaGuards } from "#test/guards";
 import { isInstruction } from "./instruction.js";
 
 testSchemaGuards("ethdebug/format/program/instruction", [

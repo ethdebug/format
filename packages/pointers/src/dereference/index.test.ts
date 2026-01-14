@@ -1,7 +1,7 @@
 import { vitest, expect, describe, it, beforeEach } from "vitest";
 import { Pointer } from "@ethdebug/format";
-import { Machine } from "../machine.js";
-import { Data } from "../data.js";
+import { Machine } from "#machine";
+import { Data } from "#data";
 import { dereference } from "./index.js";
 
 describe("dereference", () => {

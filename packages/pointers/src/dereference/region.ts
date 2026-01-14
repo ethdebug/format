@@ -1,7 +1,7 @@
 import { Pointer } from "@ethdebug/format";
-import type { Cursor } from "../cursor.js";
-import type { Data } from "../data.js";
-import { evaluate, type EvaluateOptions } from "../evaluate.js";
+import type { Cursor } from "#cursor";
+import type { Data } from "#data";
+import { evaluate, type EvaluateOptions } from "#evaluate";
 
 /**
  * Evaluate all Pointer.Expression-value properties on a given region

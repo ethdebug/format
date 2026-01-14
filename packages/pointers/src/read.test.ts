@@ -2,10 +2,10 @@ import { vitest, expect, describe, it, beforeEach } from "vitest";
 
 import type { Pointer } from "@ethdebug/format";
 
-import { Machine } from "./machine.js";
-import { Data } from "./data.js";
+import { Machine } from "#machine";
+import { Data } from "#data";
 import { read, type ReadOptions } from "./read.js";
-import { Cursor } from "./cursor.js";
+import { Cursor } from "#cursor";
 
 describe("read", () => {
   let options: ReadOptions;

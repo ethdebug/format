@@ -1,4 +1,4 @@
-import { testSchemaGuards } from "../../../test/guards.js";
+import { testSchemaGuards } from "#test/guards";
 
 import { Pointer, isPointer } from "./pointer.js";
 

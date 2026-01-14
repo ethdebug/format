@@ -1,8 +1,8 @@
 import { Pointer } from "@ethdebug/format";
-import { Machine } from "./machine.js";
-import { Data } from "./data.js";
-import type { Cursor } from "./cursor.js";
-import { read } from "./read.js";
+import { Machine } from "#machine";
+import { Data } from "#data";
+import type { Cursor } from "#cursor";
+import { read } from "#read";
 import { keccak256 } from "ethereum-cryptography/keccak";
 
 export interface EvaluateOptions {

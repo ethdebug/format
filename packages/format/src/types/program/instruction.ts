@@ -1,4 +1,4 @@
-import { Data } from "../data/index.js";
+import { Data } from "#types/data";
 
 import { Context, isContext } from "./context.js";
 

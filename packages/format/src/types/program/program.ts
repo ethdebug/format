@@ -1,4 +1,4 @@
-import { Materials } from "../materials/index.js";
+import { Materials } from "#types/materials";
 
 import { Context as _Context, isContext as _isContext } from "./context.js";
 

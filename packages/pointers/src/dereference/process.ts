@@ -1,8 +1,8 @@
 import { Pointer } from "@ethdebug/format";
-import type { Machine } from "../machine.js";
-import type { Cursor } from "../cursor.js";
-import { Data } from "../data.js";
-import { evaluate } from "../evaluate.js";
+import type { Machine } from "#machine";
+import type { Cursor } from "#cursor";
+import { Data } from "#data";
+import { evaluate } from "#evaluate";
 
 import { Memo } from "./memo.js";
 import { adjustStackLength, evaluateRegion } from "./region.js";

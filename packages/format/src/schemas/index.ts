@@ -1,4 +1,4 @@
-import { describeSchema } from "../describe.js";
+import { describeSchema } from "#describe";
 import { schemaYamls } from "./yamls.js";
 export type { Schema } from "./yamls.js";
 

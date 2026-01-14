@@ -5,6 +5,37 @@
   "main": "dist/src/index.js",
   "type": "module",
   "license": "MIT",
+  "imports": {
+    "#cursor": {
+      "types": "./src/cursor.ts",
+      "default": "./dist/src/cursor.js"
+    },
+    "#data": {
+      "types": "./src/data.ts",
+      "default": "./dist/src/data.js"
+    },
+    "#evaluate": {
+      "types": "./src/evaluate.ts",
+      "default": "./dist/src/evaluate.js"
+    },
+    "#machine": {
+      "types": "./src/machine.ts",
+      "default": "./dist/src/machine.js"
+    },
+    "#read": {
+      "types": "./src/read.ts",
+      "default": "./dist/src/read.js"
+    },
+    "#dereference": {
+      "types": "./src/dereference/index.ts",
+      "default": "./dist/src/dereference/index.js"
+    },
+    "#dereference/*": {
+      "types": "./src/dereference/*.ts",
+      "default": "./dist/src/dereference/*.js"
+    },
+    "#test/*": "./test/*.ts"
+  },
   "scripts": {
     "run-example": "node ./dist/bin/run-example.js",
     "prepare": "tsc --build",
