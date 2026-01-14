@@ -1,0 +1,56 @@
+name PhiNodes;
+
+storage {
+  [0] x: uint256;
+  [1] y: uint256;
+}
+
+code {
+  // Test 1: Simple phi node for local variable
+  let a = 10;
+
+  if (x > 5) {
+    a = 20;
+  } else {
+    a = 30;
+  }
+
+  y = a;  // 'a' should need a phi node here
+  /*@test y-at-assignment
+  after: deploy
+  variables:
+    y:
+      pointer: { location: storage, slot: 1 }
+      value: 0
+  */
+
+  // Test 2: Phi node with multiple updates
+  let b = 0;
+
+  if (x < 10) {
+    b = 1;
+  } else {
+    if (x < 20) {
+      b = 2;
+    } else {
+      b = 3;
+    }
+  }
+
+  x = b;  // 'b' should need a phi node here
+
+  // Test 3: Multiple reassignments through different paths
+  let c = 100;
+
+  if (x == 0) {
+    c = 200;
+  } else {
+    if (y == 0) {
+      c = 300;
+    } else {
+      c = 400;
+    }
+  }
+
+  y = c;  // 'c' should need a phi node here
+}

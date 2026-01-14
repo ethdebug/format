@@ -1,0 +1,23 @@
+name NestedMappings;
+
+// Example 4: Nested Mappings
+//
+// Expected IR:
+//   %slot1 = slot[10].mapping[%owner]
+//   %slot2 = slot[%slot1].mapping[%spender]
+//   storage[%slot2*] = %amount
+//
+// EVM Strategy: Double keccak256 hashing for nested mappings
+//
+// Key Insight: Each mapping level requires a separate compute_slot operation
+
+storage {
+  [10] approvals: mapping<address, mapping<address, uint256>>;
+}
+
+code {
+  let owner = msg.sender;
+  let spender = 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045;
+  let amount = 1000;
+  approvals[owner][spender] = amount;
+}

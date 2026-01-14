@@ -1,0 +1,27 @@
+name Optimizations;
+
+storage {
+  [0] result: uint256;
+}
+
+code {
+  // Constant folding example
+  let a = 10 + 20;      // Should fold to 30
+  let b = a * 2;        // After constant prop, should fold to 60
+  let c = 100 - 40;     // Should fold to 60
+
+  // This comparison should be folded
+  if (a > 25) {         // 30 > 25 = true, always taken
+    result = b + c;     // 60 + 60 = 120
+    /*@test constant-folding-result
+    fails: constant comparison folding not implemented
+    variables:
+      result:
+        pointer: { location: storage, slot: 0 }
+        value: 120
+    */
+  } else {
+    // Dead code - should be eliminated
+    result = 999;
+  }
+}

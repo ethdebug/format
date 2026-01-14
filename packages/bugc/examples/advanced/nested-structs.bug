@@ -1,0 +1,39 @@
+name NestedStructsStorage;
+
+// Example 9: Nested Structs in Storage
+//
+// Expected IR:
+//   // CEO salary is at slot 4 (base slot 2 + struct layout)
+//   write location="storage", slot=4, offset=0, length=32, value=1000000
+//
+//   // CEO address is at slot 3, first 20 bytes
+//   %ceo_addr = read location="storage", slot=3, offset=0, length=20
+//
+// EVM Strategy: Calculate nested struct slot offsets based on layout
+//
+// Key Insight: Nested structures need recursive offset computation,
+// especially when crossing slot boundaries
+
+define {
+  struct CEO {
+    addr: address;      // offset 0-19
+    salary: uint256;    // next slot
+  };
+
+  struct Company {
+    name: string;      // slot 0 (relative)
+    founded: uint64;    // slot 1 (relative)
+    ceo: CEO;           // slots 2-3 (relative)
+  };
+}
+
+storage {
+  [2] company: Company;
+}
+
+code {
+  company.ceo.salary = 1000000;
+  company.founded = 1988;
+  let ceo_addr = company.ceo.addr;
+  let x = ceo_addr;
+}

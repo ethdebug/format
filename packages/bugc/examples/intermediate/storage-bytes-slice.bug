@@ -1,0 +1,35 @@
+name StorageBytesSlice;
+
+// Example 12: Storage Bytes Slice (Complex)
+//
+// Expected IR (simplified):
+//   // Storage bytes: length at slot 20, data starts at keccak256(20)
+//   %length = read location="storage", slot=20, offset=0, length=32
+//
+//   // Calculate starting position
+//   %data_base = compute_array_slot location="storage", base=20
+//   %start_slot = div 100, 32
+//   %start_slot_abs = add %data_base, %start_slot
+//   %start_offset = mod 100, 32
+//
+//   // Allocate memory for result
+//   %slice = alloc_memory length=100
+//
+//   // Read loop (simplified - would need proper loop construct)
+//   %slot0 = read location="storage", slot=%start_slot_abs, offset=%start_offset, length=32
+//   write location="memory", offset=%slice, length=32, value=%slot0
+//   // ... continue reading slots and writing to memory
+//
+// EVM Strategy: Complex multi-slot reading with offset calculation, reassemble in memory
+//
+// Key Insight: Storage slicing is complex - requires multi-slot reads and
+// reassembly in memory due to how dynamic bytes are stored
+
+storage {
+  [20] data: bytes;  // Dynamic bytes in storage
+}
+
+code {
+  // Assume data is initialized with at least 200 bytes
+  let slice = data[100:200];  // Extract 100 bytes
+}

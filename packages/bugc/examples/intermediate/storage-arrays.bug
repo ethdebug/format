@@ -1,0 +1,45 @@
+name StorageArray;
+
+// Example 5: Storage Array Access
+//
+// Expected IR:
+//   // Array literal assignment would expand to:
+//   // First, store the array length at slot 7
+//   %t0: uint256 = const 4
+//   storage[7*] = %t0
+//
+//   // Then store each element at keccak256(7) + index
+//   %t1: uint256 = const 42
+//   %t2: uint256 = const 0
+//   %t3: uint256 = slot[7].array[%t2]
+//   storage[%t3*] = %t1
+//   %t4: uint256 = const 12
+//   %t5: uint256 = const 1
+//   %t6: uint256 = slot[7].array[%t5]
+//   storage[%t6*] = %t4
+//   %t7: uint256 = const 99
+//   %t8: uint256 = const 2
+//   %t9: uint256 = slot[7].array[%t8]
+//   storage[%t9*] = %t7
+//   %t10: uint256 = const 101
+//   %t11: uint256 = const 3
+//   %t12: uint256 = slot[7].array[%t11]
+//   storage[%t12*] = %t10
+//
+//   // Array index access:
+//   %t13: uint256 = const 3
+//   %t14: uint256 = slot[7].array[%t13]
+//   %t15: uint256 = storage[%t14*]
+//
+// EVM Strategy: Keccak256(7) + i, then SSTORE/SLOAD
+//
+// Key Insight: Dynamic arrays in storage use keccak hashing for base slot
+
+storage {
+  [7] items: array<uint256>;
+}
+
+code {
+  items = [42, 12, 99, 101];
+  let item = items[3];
+}

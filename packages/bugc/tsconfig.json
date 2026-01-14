@@ -1,0 +1,63 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist/",
+    "baseUrl": "./",
+    "paths": {
+      "#ast": ["./src/ast/index"],
+      "#ast/spec": ["./src/ast/spec"],
+      "#ast/visitor": ["./src/ast/visitor"],
+      "#ast/analysis": ["./src/ast/analysis/index"],
+
+      "#cli": ["./src/cli/index"],
+
+      "#compiler": ["./src/compiler/index"],
+
+      "#errors": ["./src/errors/index"],
+
+      "#evm": ["./src/evm/index"],
+      "#evm/spec": ["./src/evm/spec"],
+      "#evm/analysis": ["./src/evm/analysis"],
+
+      "#evmgen": ["./src/evmgen/index"],
+      "#evmgen/analysis": ["./src/evmgen/analysis"],
+      "#evmgen/errors": ["./src/evmgen/errors"],
+      "#evmgen/state": ["./src/evmgen/state"],
+      "#evmgen/operations": ["./src/evmgen/operations"],
+      "#evmgen/generation": ["./src/evmgen/generation"],
+      "#evmgen/serialize": ["./src/evmgen/serialize"],
+      "#evmgen/pass": ["./src/evmgen/pass"],
+
+      "#ir": ["./src/ir/index"],
+      "#ir/spec": ["./src/ir/spec"],
+      "#ir/analysis": ["./src/ir/analysis"],
+
+      "#irgen": ["./src/irgen/index"],
+      "#irgen/pass": ["./src/irgen/pass"],
+      "#irgen/errors": ["./src/irgen/errors"],
+      "#irgen/type": ["./src/irgen/type"],
+      "#irgen/generate": ["./src/irgen/generate/index"],
+
+      "#optimizer": ["./src/optimizer/index"],
+      "#optimizer/*": ["./src/optimizer/*"],
+
+      "#result": ["./src/result"],
+
+      "#parser": ["./src/parser/index"],
+      "#parser/pass": ["./src/parser/pass"],
+
+      "#typechecker": ["./src/typechecker/index"],
+      "#typechecker/pass": ["./src/typechecker/pass"],
+
+      "#types": ["./src/types/index"],
+      "#types/analysis": ["./src/types/analysis/index"],
+      "#types/spec": ["./src/types/spec"],
+
+      "#test/*": ["./test/*"]
+    }
+  },
+  "include": ["src/**/*", "bin/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../format" }, { "path": "../pointers" }]
+}

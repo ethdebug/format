@@ -1,0 +1,16 @@
+name CSEDemo;
+
+storage {
+  [0] values: mapping<address, uint256>;
+  [1] result: uint256;
+}
+
+create {
+  let userValue = values[msg.sender];
+
+  if (userValue > 100) {
+    result = values[msg.sender] * 2;
+  } else {
+    result = values[msg.sender] + msg.value;
+  }
+}

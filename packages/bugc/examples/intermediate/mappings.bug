@@ -1,0 +1,40 @@
+name Mappings;
+
+define {
+  struct UserInfo {
+    name: bytes32;
+    age: uint256;
+    active: bool;
+  };
+}
+
+storage {
+  [0] balances: mapping<address, uint256>;
+  [1] allowances: mapping<address, mapping<address, uint256>>;
+  [2] userInfo: mapping<address, UserInfo>;
+}
+
+code {
+  // Simple mapping access
+  let sender: address = msg.sender;
+  balances[sender] = 1000;
+  /*@test balances-pointer
+  after: deploy
+  variables:
+    balances:
+      pointer: { location: storage, slot: 0 }
+  */
+
+  // Read from mapping
+  let balance: uint256 = balances[sender];
+
+  // Nested mapping access
+  let spender: address = 0x1234567890123456789012345678901234567890;
+  allowances[sender][spender] = 500;
+
+  // Read nested mapping
+  let allowance: uint256 = allowances[sender][spender];
+
+  // Struct in mapping (would need more complex handling)
+  // userInfo[sender].age = 25;
+}

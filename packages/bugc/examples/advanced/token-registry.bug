@@ -1,0 +1,328 @@
+// @wip
+name TokenRegistry;
+
+// This example demonstrates:
+// 1. A create {} block for constructor/initialization code
+// 2. User-defined functions for modular code organization
+// 3. Realistic entrypoints using calldata parsing with 4-byte function selectors
+// 4. Full selector comparison (all 4 bytes)
+// 5. Selector computation that should be optimized out by the compiler
+// 6. Calldata parameter validation and amount decoding
+//
+// Function selectors (first 4 bytes of keccak256 hash):
+// - transfer(address,uint256): 0xa9059cbb
+// - mint(uint256): 0xa0712d68
+// - pause(): 0x8456cb59
+// - unpause(): 0x3f4ba83a
+
+define {
+  struct Token {
+    totalSupply: uint256;
+    decimals: uint8;
+    owner: address;
+    isPaused: bool;
+    mintingFinished: bool;
+  };
+
+  // Helper function to check if caller is admin
+  function isAdmin(sender: address) -> bool {
+    return admins[sender];
+  };
+
+  // Helper function to check if caller is owner
+  function isOwner(sender: address) -> bool {
+    return sender == token.owner;
+  };
+
+  // Transfer tokens from sender to recipient
+  function doTransfer(from: address, to: address, amount: uint256) -> bool {
+    // Check frozen accounts
+    if (frozen[from] || frozen[to]) {
+      return false;
+    }
+
+    // Check transfer limit
+    if (amount > maxTransferAmount) {
+      return false;
+    }
+
+    let senderBalance = balances[from];
+    let totalAmount = amount + transferFee;
+
+    // Check sufficient balance
+    if (senderBalance < totalAmount) {
+      return false;
+    }
+
+    // Execute transfer
+    balances[from] = senderBalance - totalAmount;
+    balances[to] = balances[to] + amount;
+    balances[token.owner] = balances[token.owner] + transferFee;
+    
+    return true;
+  };
+
+  // Mint new tokens
+  function doMint(recipient: address, amount: uint256) -> bool {
+    // Check minting not finished
+    if (token.mintingFinished) {
+      return false;
+    }
+
+    // Update total supply and balance
+    token.totalSupply = token.totalSupply + amount;
+    balances[recipient] = balances[recipient] + amount;
+    
+    return true;
+  };
+
+  // Decode address from calldata (bytes 4-35)
+  function decodeAddress(offset: uint256) -> address {
+    return msg.data[offset:offset+32] as address;
+  };
+
+  // Decode uint256 from calldata (32 bytes)
+  function decodeUint256(offset: uint256) -> uint256 {
+    return msg.data[offset:offset+32] as uint256;
+  };
+
+}
+
+storage {
+  // Token data
+  [0] token: Token;
+  [1] balances: mapping<address, uint256>;
+
+  // Access control
+  [2] admins: mapping<address, bool>;
+  [3] frozen: mapping<address, bool>;
+
+  // Parameters
+  [4] transferFee: uint256;
+  [5] maxTransferAmount: uint256;
+}
+
+create {
+  // Initialize token with 1M tokens (18 decimals)
+  token.totalSupply = 1000000000000000000000000;
+  token.decimals = 18;
+  token.owner = msg.sender;
+  token.isPaused = false;
+  token.mintingFinished = false;
+
+  // Give initial supply to owner
+  balances[msg.sender] = token.totalSupply;
+
+  // Set up initial admin
+  admins[msg.sender] = true;
+
+  // Set initial parameters
+  transferFee = 1000000000000000; // 0.001 tokens
+  maxTransferAmount = 10000000000000000000000; // 10k tokens
+}
+
+code {
+  // Minimum calldata size check
+  if (msg.data.length < 4) {
+    return;
+  }
+
+  // Extract 4-byte function selector from calldata
+  let selector = msg.data[0:4];
+
+  // Compute function selectors from signatures (optimizer should evaluate these as constants)
+  // These keccak256 computations should be optimized out to constants
+  let TRANSFER_SELECTOR = keccak256("transfer(address,uint256)")[0:4];
+  let MINT_SELECTOR = keccak256("mint(uint256)")[0:4];
+  let PAUSE_SELECTOR = keccak256("pause()")[0:4];
+  let UNPAUSE_SELECTOR = keccak256("unpause()")[0:4];
+
+  // Check if token is paused for non-admin operations
+  if (token.isPaused && !isAdmin(msg.sender)) {
+    // Only admin functions allowed when paused
+    if (selector != PAUSE_SELECTOR && selector != UNPAUSE_SELECTOR) {
+      return;
+    }
+  }
+
+  // transfer(address,uint256)
+  if (selector == TRANSFER_SELECTOR) {
+    // Ensure we have enough calldata (4 + 32 + 32 = 68 bytes)
+    if (msg.data.length < 68) {
+      return;
+    }
+
+    // Decode parameters
+    let to = decodeAddress(4);
+    let amount = decodeUint256(36);
+
+    // Execute transfer
+    doTransfer(msg.sender, to, amount);
+    return;
+  }
+
+  // mint(uint256)
+  if (selector == MINT_SELECTOR) {
+    // Only admins can mint
+    if (!isAdmin(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata (4 + 32 = 36 bytes)
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode amount parameter
+    let mintAmount = decodeUint256(4);
+
+    // Execute mint
+    doMint(msg.sender, mintAmount);
+    return;
+  }
+
+  // pause()
+  if (selector == PAUSE_SELECTOR) {
+    // Only owner can pause
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    token.isPaused = true;
+    return;
+  }
+
+  // unpause()
+  if (selector == UNPAUSE_SELECTOR) {
+    // Only owner can unpause
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    token.isPaused = false;
+    return;
+  }
+
+  // Additional selectors for completeness
+  // finishMinting()
+  if (selector == keccak256("finishMinting()")[0:4]) {
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    token.mintingFinished = true;
+    return;
+  }
+
+  // addAdmin(address)
+  if (selector == keccak256("addAdmin(address)")[0:4]) {
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode address parameter
+    let newAdmin = decodeAddress(4);
+    
+    admins[newAdmin] = true;
+    return;
+  }
+
+  // freezeAccount(address)
+  if (selector == keccak256("freezeAccount(address)")[0:4]) {
+    if (!isAdmin(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode address parameter
+    let account = decodeAddress(4);
+    
+    frozen[account] = true;
+    return;
+  }
+
+  // unfreezeAccount(address)
+  if (selector == keccak256("unfreezeAccount(address)")[0:4]) {
+    if (!isAdmin(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode address parameter
+    let account = decodeAddress(4);
+    
+    frozen[account] = false;
+    return;
+  }
+
+  // setTransferFee(uint256)
+  if (selector == keccak256("setTransferFee(uint256)")[0:4]) {
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode uint256 parameter
+    let newFee = decodeUint256(4);
+    
+    transferFee = newFee;
+    return;
+  }
+
+  // setMaxTransfer(uint256)
+  if (selector == keccak256("setMaxTransfer(uint256)")[0:4]) {
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    // Ensure we have enough calldata
+    if (msg.data.length < 36) {
+      return;
+    }
+
+    // Decode uint256 parameter
+    let newMax = decodeUint256(4);
+    
+    maxTransferAmount = newMax;
+    return;
+  }
+
+  // emergencyWithdraw()
+  if (selector == keccak256("emergencyWithdraw()")[0:4]) {
+    // Emergency function - owner only, sends all owner balance
+    if (!isOwner(msg.sender)) {
+      return;
+    }
+
+    let ownerBalance = balances[token.owner];
+    if (ownerBalance > 0) {
+      balances[token.owner] = 0;
+      // In real contract, would transfer ETH/tokens out
+    }
+
+    // Also pause the contract
+    token.isPaused = true;
+    return;
+  }
+
+  // Default: revert for unknown selectors
+  // In real EVM, this would revert the transaction
+  return;
+}

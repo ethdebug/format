@@ -1,0 +1,51 @@
+name InternalFunctions;
+
+// Example 10: Internal Function Calls
+//
+// Note: As of the recent IR redesign, function calls are now block terminators,
+// not regular instructions. This ensures explicit control flow and proper SSA form.
+//
+// Expected IR (simplified):
+//   function main() {
+//     entry:
+//       %t0 = const 10
+//       %t1 = const 20
+//       %t2 = const 30
+//       %result = call addThree(%t0, %t1, %t2) -> call_cont_1
+//     call_cont_1:
+//       return void
+//   }
+//
+//   function addThree(^x, ^y, ^z) -> uint256 {
+//     entry:
+//       %sum1 = call add(^x, ^y) -> call_cont_1
+//     call_cont_1:
+//       %sum2 = call add(%sum1, ^z) -> call_cont_2
+//     call_cont_2:
+//       return %sum2
+//   }
+//
+// EVM Strategy:
+//   - Internal functions become labeled sections in bytecode
+//   - Parameters passed via stack manipulation
+//   - JUMP to function label, JUMP back after return
+//   - Could be inlined by optimizer for small functions
+//
+// Key Insight: Call terminators split blocks at call sites with explicit
+// continuation blocks
+
+define {
+  function add(a: uint256, b: uint256) -> uint256 {
+    return a + b;
+  };
+
+  function addThree(x: uint256, y: uint256, z: uint256) -> uint256 {
+    let sum1 = add(x, y);
+    let sum2 = add(sum1, z);
+    return sum2;
+  };
+}
+
+code {
+  let result = addThree(10, 20, 30);
+}
