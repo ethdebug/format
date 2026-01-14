@@ -30,7 +30,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
   const partialRegion: Cursor.Region<R> = new Proxy(
     { ...region } as Cursor.Region<R>,
     {
-      get(target, property) {
+      get(_target, property) {
         if (property in evaluatedProperties) {
           return evaluatedProperties[property as keyof R];
         }
