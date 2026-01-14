@@ -14,5 +14,5 @@ concurrently --names=format,pointers,web,tests \
   "cd ./packages/format && yarn watch" \
   "cd ./packages/pointers && yarn watch" \
   "cd ./packages/web && yarn start $DOCUSAURUS_NO_OPEN" \
-  "sleep 5 && yarn test --ui $VITEST_NO_OPEN"
+  "sleep 5 && yarn test --ui --watch --coverage $VITEST_NO_OPEN"
 
