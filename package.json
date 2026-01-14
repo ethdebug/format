@@ -20,15 +20,15 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.21.0",
     "@typescript-eslint/parser": "^8.21.0",
-    "@vitest/ui": "^3.0.5",
+    "@vitest/ui": "^3.2.4",
     "concurrently": "^8.2.2",
     "eslint": "^8.57.1",
     "husky": "^9.1.7",
     "lerna": "^8.0.2",
     "lint-staged": "^15.4.1",
     "prettier": "^3.4.2",
-    "tsx": "^4.16.2",
-    "vitest": "^3.0.5"
+    "tsx": "^4.21.0",
+    "vitest": "^3.2.4"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
