@@ -1,6 +1,6 @@
 import { expect, describe, it } from "vitest";
 
-import { type DescribeSchemaOptions, describeSchema } from "../src";
+import { type DescribeSchemaOptions, describeSchema } from "../src/index.js";
 
 export interface SchemaGuard extends DescribeSchemaOptions {
   guard(value: unknown): boolean;

@@ -1,9 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "moduleResolution": "node10",
+    "target": "es2020",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "exactOptionalPropertyTypes": true,
     "rootDir": "./",
     "outDir": "./dist/"

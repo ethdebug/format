@@ -1,9 +1,12 @@
-const fs = require("fs");
-const path = require("path");
-const YAML = require("yaml");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import YAML from "yaml";
 
-const filename = __dirname;
-const repositoryRoot = path.resolve(filename, "../../../");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const repositoryRoot = path.resolve(__dirname, "../../../");
 const schemasRoot = path.resolve(repositoryRoot, "./schemas");
 
 const readSchemaYamls = (directory) => {

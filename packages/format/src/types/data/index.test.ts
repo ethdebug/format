@@ -1,4 +1,4 @@
-import { testSchemaGuards } from "../../../test/guards";
+import { testSchemaGuards } from "../../../test/guards.js";
 
 import { Data } from "./index.js";
 

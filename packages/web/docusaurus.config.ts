@@ -45,6 +45,20 @@ const config: Config = {
         name: "custom-resolve",
         configureWebpack(config: Configuration) {
           return {
+            module: {
+              rules: [
+                {
+                  test: /\.m?js$/,
+                  include: /node_modules\/@ethdebug/,
+                  use: {
+                    loader: "babel-loader",
+                    options: {
+                      presets: [["@babel/preset-env", { modules: false }]],
+                    },
+                  },
+                },
+              ],
+            },
             resolve: {
               alias: {
                 react: path.resolve("../../node_modules/react"),
@@ -53,6 +67,7 @@ const config: Config = {
                 buffer: false,
                 util: false,
               },
+              fullySpecified: false,
             },
           };
         },

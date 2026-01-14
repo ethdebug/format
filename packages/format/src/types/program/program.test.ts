@@ -1,5 +1,5 @@
-import { testSchemaGuards } from "../../../test/guards";
-import { isProgram } from "./program";
+import { testSchemaGuards } from "../../../test/guards.js";
+import { isProgram } from "./program.js";
 
 testSchemaGuards("ethdebug/format/program", [
   {

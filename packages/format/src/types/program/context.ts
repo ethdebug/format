@@ -1,6 +1,6 @@
-import { Materials } from "../materials";
-import { Type, isType } from "../type";
-import { Pointer, isPointer } from "../pointer";
+import { Materials } from "../materials/index.js";
+import { Type, isType } from "../type/index.js";
+import { Pointer, isPointer } from "../pointer/index.js";
 
 export type Context =
   | Context.Code

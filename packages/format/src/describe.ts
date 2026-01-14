@@ -1,6 +1,6 @@
 import * as YAML from "yaml";
 
-import { schemaYamls } from "./schemas/yamls";
+import { schemaYamls } from "./schemas/yamls.js";
 
 import type { JSONSchema as JSONSchemaTyped } from "json-schema-typed/draft-2020-12";
 

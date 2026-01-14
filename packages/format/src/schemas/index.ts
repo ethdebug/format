@@ -1,6 +1,6 @@
-import { describeSchema } from "../describe";
-import { schemaYamls } from "./yamls";
-export type { Schema } from "./yamls";
+import { describeSchema } from "../describe.js";
+import { schemaYamls } from "./yamls.js";
+export type { Schema } from "./yamls.js";
 
 export const schemaIds: string[] = Object.keys(schemaYamls);
 export const schemas = schemaIds

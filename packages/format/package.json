@@ -2,6 +2,7 @@
   "name": "@ethdebug/format",
   "version": "0.1.0-0",
   "description": "ethdebug/format schemas distributed as NPM package",
+  "type": "module",
   "main": "dist/src/index.js",
   "repository": "https://github.com/ethdebug/format",
   "license": "MIT",

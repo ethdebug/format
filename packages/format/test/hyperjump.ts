@@ -4,15 +4,14 @@ import {
   validate,
   setMetaSchemaOutputFormat,
 } from "@hyperjump/json-schema/draft-2020-12";
-// @ts-expect-error no types for experimental export
 import { BASIC } from "@hyperjump/json-schema/experimental";
 import * as YAML from "yaml";
 import indentString from "indent-string";
 import { highlight } from "cli-highlight";
 
-import { describeSchema, type DescribeSchemaOptions } from "../src/describe";
+import { describeSchema, type DescribeSchemaOptions } from "../src/describe.js";
 
-import { schemas } from "../src/schemas";
+import { schemas } from "../src/schemas/index.js";
 
 const main = () => {
   setMetaSchemaOutputFormat(BASIC);

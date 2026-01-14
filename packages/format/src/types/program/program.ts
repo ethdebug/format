@@ -1,11 +1,11 @@
-import { Materials } from "../materials";
+import { Materials } from "../materials/index.js";
 
-import { Context as _Context, isContext as _isContext } from "./context";
+import { Context as _Context, isContext as _isContext } from "./context.js";
 
 import {
   Instruction as _Instruction,
   isInstruction as _isInstruction,
-} from "./instruction";
+} from "./instruction.js";
 
 export interface Program {
   compilation?: Materials.Reference<Materials.Compilation>;

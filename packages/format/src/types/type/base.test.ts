@@ -1,5 +1,5 @@
-import { testSchemaGuards } from "../../../test/guards";
-import * as Base from "./base";
+import { testSchemaGuards } from "../../../test/guards.js";
+import * as Base from "./base.js";
 
 testSchemaGuards("ethdebug/format/type/base", [
   {

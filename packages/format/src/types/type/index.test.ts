@@ -1,5 +1,5 @@
-import { testSchemaGuards } from "../../../test/guards";
-import { Type, isType } from "./index";
+import { testSchemaGuards } from "../../../test/guards.js";
+import { Type, isType } from "./index.js";
 
 testSchemaGuards("ethdebug/format/type", [
   {

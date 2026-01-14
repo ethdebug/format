@@ -1,5 +1,5 @@
 import "vitest";
-import type { DescribeSchemaOptions } from "./src/describe";
+import type { DescribeSchemaOptions } from "./src/describe.js";
 
 interface CustomMatchers<R = unknown> {
   toValidate(schemaOptions: DescribeSchemaOptions): R;
