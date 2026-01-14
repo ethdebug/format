@@ -7,8 +7,8 @@
   "license": "MIT",
   "scripts": {
     "run-example": "node ./dist/bin/run-example.js",
-    "prepare": "tsc",
-    "watch": "yarn prepare --watch",
+    "prepare": "tsc --build",
+    "watch": "tsc --build --watch",
     "test": "vitest"
   },
   "devDependencies": {

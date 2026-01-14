@@ -9,13 +9,13 @@
     "dist"
   ],
   "scripts": {
-    "prepare:yamls": "node ./bin/generate-schema-yamls.js > src/schemas/yamls.ts",
+    "prepare:yamls": "node ./bin/generate-schema-yamls.js",
     "prepare": "yarn prepare:yamls && tsc",
     "clean": "rm -rf dist && rm src/schemas/yamls.ts",
     "test": "vitest",
     "watch:typescript": "tsc --watch",
     "watch:schemas": "nodemon --watch ../../schemas -e 'yaml' --exec 'yarn prepare:yamls'",
-    "watch": "concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
+    "watch": "yarn prepare && concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
   },
   "dependencies": {
     "json-schema-typed": "^8.0.1",

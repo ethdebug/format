@@ -8,5 +8,5 @@
     "rootDir": "./",
     "outDir": "./dist/"
   },
-  "include": ["./src/**/*.ts", "vitest.d.ts", "yamls.ts"]
+  "include": ["./src/**/*.ts", "./test/**/*.ts", "./*.ts"]
 }

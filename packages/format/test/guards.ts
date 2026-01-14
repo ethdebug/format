@@ -8,7 +8,7 @@ export interface SchemaGuard extends DescribeSchemaOptions {
 
 export const testSchemaGuards = (
   namespace: string,
-  schemaGuards: SchemaGuard[],
+  schemaGuards: readonly SchemaGuard[],
 ) => {
   describe(`type guards for ${namespace} schemas`, () => {
     for (const { guard, ...describeSchemaOptions } of schemaGuards) {
