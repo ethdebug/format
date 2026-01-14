@@ -8,7 +8,7 @@ import {
 import { schemas } from "./index.js";
 
 // loads schemas into global hyperjump json schema validator
-import "../../test/hyperjump.js";
+import "#test/hyperjump";
 
 const printErrors = (output: { errors?: OutputUnit[] }): string =>
   output

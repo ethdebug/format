@@ -11,7 +11,36 @@
     "@typescript-eslint/no-namespace": "off",
     "@typescript-eslint/no-empty-object-type": "off",
     "no-console": "warn",
-    "require-yield": "off"
+    "require-yield": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["../types/*/index*", "../types/*/index"],
+            "message": "Use #types/* alias instead of relative imports"
+          },
+          {
+            "group": [
+              "../materials/*",
+              "../data/*",
+              "../pointer/*",
+              "../program/*",
+              "../type/*"
+            ],
+            "message": "Use #types/* alias instead of relative imports"
+          },
+          {
+            "group": ["../../test/*", "../../../test/*"],
+            "message": "Use #test/* alias instead of relative imports"
+          },
+          {
+            "group": ["../describe*"],
+            "message": "Use #describe alias instead of relative imports"
+          }
+        ]
+      }
+    ]
   },
   "env": {
     "node": true,

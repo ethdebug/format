@@ -1,4 +1,4 @@
-import type { Data } from "./data.js";
+import type { Data } from "#data";
 
 export interface Machine {
   trace(): AsyncIterable<Machine.State>;

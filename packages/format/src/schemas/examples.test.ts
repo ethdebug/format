@@ -1,11 +1,11 @@
 import { expect, describe, it } from "vitest";
 
-import { schemaExtensions } from "../../test/extensions.js";
+import { schemaExtensions } from "#test/extensions";
 import { schemas } from "./index.js";
-import type { JSONSchema } from "../describe.js";
+import type { JSONSchema } from "#describe";
 
 // loads schemas into global hyperjump json schema validator
-import "../../test/hyperjump.js";
+import "#test/hyperjump";
 
 const idsOfSchemasAllowedToOmitExamples = new Set([
   "schema:ethdebug/format/type",

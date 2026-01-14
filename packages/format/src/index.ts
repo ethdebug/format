@@ -1,4 +1,4 @@
-export * from "./describe.js";
-export { schemas, schemaIds, type Schema } from "./schemas/index.js";
+export * from "#describe";
+export { schemas, schemaIds, type Schema } from "#schemas";
 
-export * from "./types/index.js";
+export * from "#types";

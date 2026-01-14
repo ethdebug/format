@@ -1,6 +1,6 @@
 import type { Pointer } from "@ethdebug/format";
-import type { Cursor } from "../cursor.js";
-import type { Data } from "../data.js";
+import type { Cursor } from "#cursor";
+import type { Data } from "#data";
 
 /**
  * A single state transition for processing on a stack

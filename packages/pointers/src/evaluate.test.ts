@@ -5,9 +5,9 @@ import { toHex } from "ethereum-cryptography/utils";
 
 import { Pointer } from "@ethdebug/format";
 
-import { Machine } from "./machine.js";
-import { Data } from "./data.js";
-import { Cursor } from "./cursor.js";
+import { Machine } from "#machine";
+import { Data } from "#data";
+import { Cursor } from "#cursor";
 import { evaluate, type EvaluateOptions } from "./evaluate.js";
 
 // Create a stub for the Machine.State interface

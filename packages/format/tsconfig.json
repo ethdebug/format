@@ -6,7 +6,19 @@
     "moduleResolution": "nodenext",
     "exactOptionalPropertyTypes": true,
     "rootDir": "./",
-    "outDir": "./dist/"
+    "outDir": "./dist/",
+    "baseUrl": "./",
+    "paths": {
+      "#describe": ["./src/describe"],
+      "#schemas": ["./src/schemas/index"],
+      "#types": ["./src/types/index"],
+      "#types/data": ["./src/types/data/index"],
+      "#types/materials": ["./src/types/materials/index"],
+      "#types/pointer": ["./src/types/pointer/index"],
+      "#types/program": ["./src/types/program/index"],
+      "#types/type": ["./src/types/type/index"],
+      "#test/*": ["./test/*"]
+    }
   },
   "include": ["./src/**/*.ts", "./test/**/*.ts", "./*.ts"]
 }

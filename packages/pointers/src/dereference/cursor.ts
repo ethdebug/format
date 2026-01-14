@@ -1,6 +1,6 @@
-import type { Machine } from "../machine.js";
-import type { Cursor } from "../cursor.js";
-import { read } from "../read.js";
+import type { Machine } from "#machine";
+import type { Cursor } from "#cursor";
+import { read } from "#read";
 
 export function createCursor(
   simpleCursor: (state: Machine.State) => AsyncIterable<Cursor.Region>,

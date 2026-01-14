@@ -9,6 +9,41 @@
   "files": [
     "dist"
   ],
+  "imports": {
+    "#describe": {
+      "types": "./src/describe.ts",
+      "default": "./dist/src/describe.js"
+    },
+    "#schemas": {
+      "types": "./src/schemas/index.ts",
+      "default": "./dist/src/schemas/index.js"
+    },
+    "#types": {
+      "types": "./src/types/index.ts",
+      "default": "./dist/src/types/index.js"
+    },
+    "#types/data": {
+      "types": "./src/types/data/index.ts",
+      "default": "./dist/src/types/data/index.js"
+    },
+    "#types/materials": {
+      "types": "./src/types/materials/index.ts",
+      "default": "./dist/src/types/materials/index.js"
+    },
+    "#types/pointer": {
+      "types": "./src/types/pointer/index.ts",
+      "default": "./dist/src/types/pointer/index.js"
+    },
+    "#types/program": {
+      "types": "./src/types/program/index.ts",
+      "default": "./dist/src/types/program/index.js"
+    },
+    "#types/type": {
+      "types": "./src/types/type/index.ts",
+      "default": "./dist/src/types/type/index.js"
+    },
+    "#test/*": "./test/*.ts"
+  },
   "scripts": {
     "prepare:yamls": "node ./bin/generate-schema-yamls.js",
     "prepare": "yarn prepare:yamls && tsc",

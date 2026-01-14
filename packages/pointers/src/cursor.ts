@@ -1,6 +1,6 @@
 import type { Pointer } from "@ethdebug/format";
-import type { Machine } from "./machine.js";
-import type { Data } from "./data.js";
+import type { Machine } from "#machine";
+import type { Data } from "#data";
 
 /**
  * The result of dereferencing a pointer
