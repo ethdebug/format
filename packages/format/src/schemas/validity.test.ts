@@ -10,7 +10,7 @@ import { schemas } from ".";
 // loads schemas into global hyperjump json schema validator
 import "../../test/hyperjump";
 
-const printErrors = (output: OutputUnit): string =>
+const printErrors = (output: { errors?: OutputUnit[] }): string =>
   output
     .errors!.map((error) => {
       if (!error.valid && !error.keyword.endsWith("#validate")) {

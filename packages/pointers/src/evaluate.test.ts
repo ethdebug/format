@@ -201,12 +201,14 @@ describe("evaluate", () => {
     };
 
     const expectedHash = keccak256(
-      Buffer.from(
-        toHex(Data.fromNumber(42)).slice(2) +
-          toHex(Data.fromHex("0x1f")).slice(2) +
-          toHex(variables.foo).slice(2) +
-          toHex(variables.bar).slice(2),
-        "hex",
+      new Uint8Array(
+        Buffer.from(
+          toHex(Data.fromNumber(42)).slice(2) +
+            toHex(Data.fromHex("0x1f")).slice(2) +
+            toHex(variables.foo).slice(2) +
+            toHex(variables.bar).slice(2),
+          "hex",
+        ),
       ),
     );
 
