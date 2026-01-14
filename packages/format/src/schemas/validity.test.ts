@@ -5,10 +5,10 @@ import {
   InvalidSchemaError,
 } from "@hyperjump/json-schema/draft-2020-12";
 
-import { schemas } from ".";
+import { schemas } from "./index.js";
 
 // loads schemas into global hyperjump json schema validator
-import "../../test/hyperjump";
+import "../../test/hyperjump.js";
 
 const printErrors = (output: { errors?: OutputUnit[] }): string =>
   output

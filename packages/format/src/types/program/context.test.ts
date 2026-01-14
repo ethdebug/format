@@ -1,5 +1,5 @@
-import { testSchemaGuards } from "../../../test/guards";
-import { Context, isContext } from "./context";
+import { testSchemaGuards } from "../../../test/guards.js";
+import { Context, isContext } from "./context.js";
 
 testSchemaGuards("ethdebug/format/program/context", [
   {

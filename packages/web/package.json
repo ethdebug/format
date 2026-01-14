@@ -22,6 +22,7 @@
     "@docusaurus/tsconfig": "^3.9.2",
     "@docusaurus/types": "^3.9.2",
     "@ethdebug/format": "^0.1.0-0",
+    "@ethdebug/pointers": "^0.1.0-0",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
@@ -44,9 +45,12 @@
     "yaml-template": "^1.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.6",
+    "@babel/preset-env": "^7.28.6",
     "@docusaurus/module-type-aliases": "^3.9.2",
     "@docusaurus/tsconfig": "^3.9.2",
     "@docusaurus/types": "^3.9.2",
+    "babel-loader": "^10.0.0",
     "json-schema-typed": "8.0.1",
     "typescript": "^5.9.3"
   },

@@ -1,7 +1,7 @@
-import { Data } from "../data";
-import { Materials } from "../materials";
+import { Data } from "../data/index.js";
+import { Materials } from "../materials/index.js";
 
-import * as _Base from "./base";
+import * as _Base from "./base.js";
 
 export type Type = Type.Known | Type.Unknown;
 

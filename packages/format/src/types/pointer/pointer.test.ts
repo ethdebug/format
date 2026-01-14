@@ -1,6 +1,6 @@
-import { testSchemaGuards } from "../../../test/guards";
+import { testSchemaGuards } from "../../../test/guards.js";
 
-import { Pointer, isPointer } from "./pointer";
+import { Pointer, isPointer } from "./pointer.js";
 
 const expressionSchema = "schema:ethdebug/format/pointer/expression";
 testSchemaGuards("ethdebug/format/pointer", [

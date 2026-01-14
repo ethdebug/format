@@ -1,1 +1,1 @@
-export { Pointer, isPointer } from "./pointer";
+export { Pointer, isPointer } from "./pointer.js";

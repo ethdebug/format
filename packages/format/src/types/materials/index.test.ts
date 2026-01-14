@@ -1,5 +1,5 @@
-import { testSchemaGuards } from "../../../test/guards";
-import { Materials } from "./index";
+import { testSchemaGuards } from "../../../test/guards.js";
+import { Materials } from "./index.js";
 
 testSchemaGuards("ethdebug/format/materials", [
   {

@@ -1,4 +1,4 @@
-import { Data } from "../data";
+import { Data } from "../data/index.js";
 
 export namespace Materials {
   export type Id = number | string;

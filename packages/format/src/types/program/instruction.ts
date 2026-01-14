@@ -1,6 +1,6 @@
-import { Data } from "../data";
+import { Data } from "../data/index.js";
 
-import { Context, isContext } from "./context";
+import { Context, isContext } from "./context.js";
 
 export interface Instruction {
   offset: Data.Value;
