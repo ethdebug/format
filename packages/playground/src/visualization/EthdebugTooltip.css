@@ -1,0 +1,71 @@
+.ethdebug-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background-color: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 0.5rem;
+  max-width: 600px;
+  max-height: 400px;
+  overflow: auto;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.ethdebug-tooltip.pinned {
+  pointer-events: auto;
+  border-color: #569cd6;
+  box-shadow: 0 4px 16px rgba(86, 156, 214, 0.3);
+}
+
+.ethdebug-tooltip pre {
+  margin: 0;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.debug-info-icon {
+  color: #569cd6;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: inline-block;
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+.debug-info-icon:hover {
+  background-color: rgba(86, 156, 214, 0.15);
+  color: #7cb6f0;
+}
+
+.debug-info-spacer {
+  display: inline-block;
+  min-width: 1.2rem;
+  padding: 0.125rem 0.25rem;
+}
+
+.tooltip-close-btn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background: transparent;
+  border: none;
+  color: #d4d4d4;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.tooltip-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}

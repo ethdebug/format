@@ -12,6 +12,7 @@ export default defineConfig({
         "**/*.test.ts",
         "**/*.d.ts",
         "packages/web/**",
+        "packages/playground/**",
         "**/vitest.config.ts",
         "**/vitest.setup.ts",
         "**/jest.config.ts",

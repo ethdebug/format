@@ -1,0 +1,195 @@
+.cfg-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.cfg-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.cfg-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.cfg-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.cfg-graph {
+  flex: 1;
+  position: relative;
+}
+
+.cfg-sidebar {
+  width: 400px;
+  border-left: 1px solid var(--border-color);
+  padding: 1rem;
+  overflow-y: auto;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.cfg-sidebar h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cfg-sidebar h5 {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.cfg-sidebar-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.cfg-sidebar-close:hover {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+/* Custom node styles */
+.cfg-node {
+  background: white;
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 10px 15px;
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cfg-node.entry {
+  border-color: #4caf50;
+  background: #e8f5e9;
+}
+
+.cfg-node.selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+}
+
+.cfg-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cfg-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cfg-node-header strong {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+}
+
+.entry-badge {
+  background: #4caf50;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cfg-node-stats {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Instruction display */
+.block-instructions {
+  margin-top: 1rem;
+}
+
+.instruction-list {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  color: #333;
+}
+
+.instruction {
+  margin: 0.25rem 0;
+  padding: 0.125rem 0;
+}
+
+.instruction.terminator {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #ddd;
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+/* React Flow overrides */
+.cfg-view .react-flow__attribution {
+  display: none;
+}
+
+.cfg-view .react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.cfg-view .react-flow__edge-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cfg-view .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: #2196f3;
+  border: 2px solid white;
+}
+
+.cfg-view .react-flow__handle-top {
+  top: -4px;
+}
+
+.cfg-view .react-flow__handle-bottom {
+  bottom: -4px;
+}
+
+.cfg-view .react-flow__handle-left {
+  left: -4px;
+}
+
+.cfg-view .react-flow__handle-right {
+  right: -4px;
+}
