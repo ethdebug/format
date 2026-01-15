@@ -1,0 +1,51 @@
+.error-view {
+  padding: 1rem;
+  height: 100%;
+  overflow: auto;
+}
+
+.error-content {
+  background-color: #5a1d1d;
+  border: 1px solid #f48771;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.error-content h3 {
+  color: #f48771;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.error-message {
+  color: #ffcccc;
+  margin: 0;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.error-warnings {
+  background-color: #332b00;
+  border: 1px solid #665500;
+  border-radius: 4px;
+  padding: 1rem;
+  color: #ffcc00;
+}
+
+.error-warnings h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.error-warnings ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.error-warnings li {
+  font-size: 0.813rem;
+  line-height: 1.5;
+}
