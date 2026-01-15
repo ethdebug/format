@@ -1,0 +1,31 @@
+// @wip
+// Test packed struct fields
+module PackedStruct {
+  struct Packed {
+    uint8 a;    // 1 byte at offset 0
+    uint16 b;   // 2 bytes at offset 1
+    uint8 c;    // 1 byte at offset 3
+    address d;  // 20 bytes at offset 4
+    uint32 e;   // 4 bytes at offset 24
+    uint32 f;   // 4 bytes at offset 28
+  }
+
+  storage {
+    data: Packed
+  }
+
+  @main
+  function main() {
+    // Write to individual packed fields
+    data.a = 42;
+    data.b = 1234;
+    data.c = 99;
+    data.d = address(0xdead);
+    data.e = 0x12345678;
+    data.f = 0xabcdef00;
+
+    // Read from packed fields
+    let x = data.b;
+    let y = data.e;
+  }
+}

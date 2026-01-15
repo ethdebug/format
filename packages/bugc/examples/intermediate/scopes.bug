@@ -1,0 +1,15 @@
+name Scopes;
+
+code {
+  let x = 0;
+  let y = 1;
+  if (x == 0) {
+    let x = "hello";
+    let z = 2;
+    if (y == 1) {
+      let x = true;
+      let y = false;
+    }
+  }
+  let x = 0x42;
+}

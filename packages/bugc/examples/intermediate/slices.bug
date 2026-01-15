@@ -1,0 +1,7 @@
+name SlicesTest;
+
+create {
+  let short = "hello world";
+  let long = "all the world's a stage, and all the men and women merely players. they have their exits and their entrances, and one man in his time plays many parts, his acts being seven ages.";
+  let shortSlice = (short as bytes)[3:8];
+}

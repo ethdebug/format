@@ -1,0 +1,22 @@
+// @wip
+name ReturnDataAccess;
+
+// Example 16: Return Data Access
+//
+// Expected IR (simplified):
+//   %result = call function="external", target=%other_contract, ...
+//   %success = extract_field %result, 0  // Extract success flag
+//   %return_val = read location="returndata", offset=0, length=32
+//
+// EVM Strategy: After CALL, use RETURNDATASIZE and RETURNDATACOPY
+//
+// Note: Return data is available after external calls, read-only
+
+code {
+  let other_contract: address = 0x1234567890123456789012345678901234567890;
+  // Simplified - in reality would use call opcode and check success
+  // let result = other_contract.call(0x);
+  // if (success) {
+  let return_val = returndata[0:32];
+  // }
+}

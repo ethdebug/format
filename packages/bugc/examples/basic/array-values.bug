@@ -1,0 +1,20 @@
+name ArrayValues;
+
+storage {
+  [0] nums: array<uint256>;
+}
+
+create {
+  nums = [100, 200, 300];
+
+  /**@test array-values-check
+   * variables:
+   *   nums:
+   *     values:
+   *       array-length: 3
+   *       element: [100, 200, 300]
+   */
+}
+
+code {
+}
