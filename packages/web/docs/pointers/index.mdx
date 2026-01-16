@@ -4,14 +4,202 @@ sidebar_position: 1
 
 # Pointers
 
-How ethdebug/format describes data locations.
+Pointers describe where data lives in the EVM. They're recipes that tell a
+debugger how to find bytes at runtime—recipes that can depend on the current
+machine state.
 
-:::note[Coming soon]
-This section is under construction. It will explain how pointers work as
-recipes for finding data at runtime.
-:::
+## Why pointers are complex
 
-## Overview
+In high-level languages, a variable like `uint256 balance` seems simple. But
+at the EVM level, finding that value might require:
 
-Pointers in ethdebug/format describe where data lives. Unlike simple offsets,
-pointers can express complex, dynamic locations that depend on runtime state.
+1. Reading a storage slot whose address depends on a mapping key
+2. Following a memory pointer stored on the stack
+3. Computing an offset based on array indices
+
+A pointer in **ethdebug/format** captures all this complexity in a
+self-contained description.
+
+## Core concepts
+
+### Pointers are recursive
+
+A pointer is either:
+- A **region**: a single, continuous sequence of bytes
+- A **collection**: an aggregation of other pointers
+
+This recursive structure lets you build up complex allocations from simple
+pieces.
+
+### Regions locate bytes
+
+A region identifies a contiguous block of bytes in a specific data location:
+
+```json
+{
+  "location": "memory",
+  "offset": "0x40",
+  "length": 32
+}
+```
+
+This says: "32 bytes in memory starting at offset 0x40."
+
+Different locations use different addressing schemes:
+- **Memory, calldata, returndata, code**: byte offsets (`offset` + `length`)
+- **Storage, transient, stack**: slot-based (`slot`)
+
+### Collections group pointers
+
+When data spans multiple regions (like struct members), collections aggregate
+them:
+
+```json
+{
+  "group": [
+    {
+      "name": "balance",
+      "location": "memory",
+      "offset": "0x40",
+      "length": 32
+    },
+    {
+      "name": "owner",
+      "location": "memory",
+      "offset": "0x60",
+      "length": 32
+    }
+  ]
+}
+```
+
+Collection types include:
+- `group`: unordered set of pointers
+- `list`: ordered, possibly dynamic sequence
+- `conditional`: pointers that apply only under certain conditions
+
+### Expressions make pointers dynamic
+
+Real allocations rarely use constant offsets. Expressions let you compute
+addresses from runtime state:
+
+```json
+{
+  "location": "storage",
+  "slot": {
+    "$keccak256": [
+      { "$read": "mapping-key" },
+      { ".slot": "base-slot" }
+    ]
+  }
+}
+```
+
+This computes a Solidity mapping slot by hashing the key with the base slot.
+
+Common expression operations:
+- `$sum`, `$product`, `$quotient`, `$remainder`: arithmetic
+- `$read`: read bytes from a named region
+- `.offset`, `.length`, `.slot`: reference properties of named regions
+- `$keccak256`: hash computation
+
+### Named regions enable composition
+
+Regions can have names that other parts of the pointer reference:
+
+```json
+{
+  "group": [
+    {
+      "name": "array-pointer",
+      "location": "stack",
+      "slot": 0
+    },
+    {
+      "name": "array-data",
+      "location": "memory",
+      "offset": { "$read": "array-pointer" },
+      "length": 32
+    }
+  ]
+}
+```
+
+Here, `array-data`'s offset comes from reading the value in `array-pointer`.
+
+## Example: Dynamic array in memory
+
+Here's how you might describe a `uint256[]` stored in memory:
+
+```json
+{
+  "group": [
+    {
+      "name": "array-length",
+      "location": "memory",
+      "offset": "0x80",
+      "length": 32
+    },
+    {
+      "list": {
+        "count": { "$read": "array-length" },
+        "each": "i",
+        "is": {
+          "name": "array-element",
+          "location": "memory",
+          "offset": {
+            "$sum": [
+              { ".offset": "array-length" },
+              32,
+              { "$product": ["i", 32] }
+            ]
+          },
+          "length": 32
+        }
+      }
+    }
+  ]
+}
+```
+
+This describes:
+1. A region for the array length
+2. A dynamic list of elements, where each element's position is computed from
+   the index
+
+## What's next
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Regions</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          How to specify byte ranges in different data locations.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="./regions">Learn more →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Full specification</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Complete JSON schemas and expression reference.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="/spec/pointer">View spec →</a>
+      </div>
+    </div>
+  </div>
+</div>

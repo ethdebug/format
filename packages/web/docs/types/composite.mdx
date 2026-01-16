@@ -1,0 +1,206 @@
+---
+sidebar_position: 3
+---
+
+# Composite types
+
+Composite types (also called complex types) contain other types. They use the
+`contains` field to express this composition.
+
+## Arrays
+
+Arrays represent ordered collections of a single element type.
+
+### Dynamic arrays
+
+```json
+{
+  "kind": "array",
+  "contains": {
+    "type": { "kind": "uint", "bits": 256 }
+  }
+}
+```
+
+This represents `uint256[]`—an array of any length.
+
+### Fixed-size arrays
+
+```json
+{
+  "kind": "array",
+  "count": 10,
+  "contains": {
+    "type": { "kind": "address" }
+  }
+}
+```
+
+This represents `address[10]`—exactly 10 addresses.
+
+## Structs
+
+Structs group named members of potentially different types:
+
+```json
+{
+  "kind": "struct",
+  "definition": {
+    "name": "User"
+  },
+  "contains": [
+    {
+      "name": "balance",
+      "type": { "kind": "uint", "bits": 256 }
+    },
+    {
+      "name": "owner",
+      "type": { "kind": "address" }
+    },
+    {
+      "name": "active",
+      "type": { "kind": "bool" }
+    }
+  ]
+}
+```
+
+The `contains` field is an ordered list. Each element includes:
+- `name`: The member's identifier
+- `type`: The member's type (inline or by reference)
+
+## Mappings
+
+Mappings represent key-value associations:
+
+```json
+{
+  "kind": "mapping",
+  "contains": {
+    "key": {
+      "type": { "kind": "address" }
+    },
+    "value": {
+      "type": { "kind": "uint", "bits": 256 }
+    }
+  }
+}
+```
+
+This represents `mapping(address => uint256)`.
+
+### Nested mappings
+
+Mappings can nest by using another mapping as the value type:
+
+```json
+{
+  "kind": "mapping",
+  "contains": {
+    "key": {
+      "type": { "kind": "address" }
+    },
+    "value": {
+      "type": {
+        "kind": "mapping",
+        "contains": {
+          "key": { "type": { "kind": "address" } },
+          "value": { "type": { "kind": "uint", "bits": 256 } }
+        }
+      }
+    }
+  }
+}
+```
+
+This represents `mapping(address => mapping(address => uint256))`, commonly
+used for ERC-20 allowances.
+
+## Tuples
+
+Tuples represent ordered, unnamed sequences:
+
+```json
+{
+  "kind": "tuple",
+  "contains": [
+    { "type": { "kind": "uint", "bits": 256 } },
+    { "type": { "kind": "address" } },
+    { "type": { "kind": "bool" } }
+  ]
+}
+```
+
+Unlike structs, tuple elements don't have names. Tuples commonly appear in
+function return types and event parameters.
+
+## Type aliases
+
+Aliases give names to other types:
+
+```json
+{
+  "kind": "alias",
+  "definition": {
+    "name": "TokenId"
+  },
+  "contains": {
+    "type": { "kind": "uint", "bits": 256 }
+  }
+}
+```
+
+This represents a user-defined type like Solidity's `type TokenId is uint256`.
+
+## Function types
+
+Function types represent callable references:
+
+```json
+{
+  "kind": "function",
+  "contains": {
+    "parameters": {
+      "type": {
+        "kind": "tuple",
+        "contains": [
+          { "type": { "kind": "address" } },
+          { "type": { "kind": "uint", "bits": 256 } }
+        ]
+      }
+    },
+    "returns": {
+      "type": { "kind": "bool" }
+    }
+  }
+}
+```
+
+## Using type references
+
+For deeply nested or repeated types, use references to avoid duplication:
+
+```json
+{
+  "kind": "struct",
+  "definition": { "name": "Order" },
+  "contains": [
+    {
+      "name": "maker",
+      "type": { "id": "user-type-id" }
+    },
+    {
+      "name": "taker",
+      "type": { "id": "user-type-id" }
+    }
+  ]
+}
+```
+
+Both `maker` and `taker` reference the same `User` type by ID rather than
+repeating the full definition.
+
+## Learn more
+
+For complete schema definitions, see the
+[complex types specification](/spec/category/complex-types).

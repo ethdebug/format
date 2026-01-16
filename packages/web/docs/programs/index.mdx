@@ -4,16 +4,142 @@ sidebar_position: 1
 
 # Programs
 
-How ethdebug/format describes runtime context.
+Programs describe the high-level context at each point in EVM bytecode
+execution. They're the bridge between raw machine instructions and the
+source code developers wrote.
 
-:::note[Coming soon]
-This section is under construction. It will explain how programs describe
-what's in scope at each bytecode instruction.
-:::
+## What programs contain
 
-## Overview
+A program record corresponds to one block of executable bytecode—either a
+contract's runtime code (executed when called) or its creation code (executed
+during deployment).
 
-Programs in ethdebug/format describe the runtime context at each point in
-execution. They tell a debugger which variables are in scope, what source
-code corresponds to the current instruction, and how to interpret the
-current state.
+Each program contains:
+- **Contract metadata**: which contract this bytecode belongs to
+- **Instruction list**: one entry per bytecode instruction, in order
+
+## Instructions carry context
+
+The instruction list is the heart of a program. Each instruction record
+provides:
+
+- **Byte offset**: where this instruction appears in the bytecode (equivalent
+  to program counter on pre-EOF EVMs)
+- **Context information**: high-level details valid after this instruction
+  executes
+
+Context information may include:
+- **Source ranges**: which lines of source code this instruction relates to
+- **Variables**: what variables are in scope and where their values live
+- **Control flow hints**: whether this instruction is part of a function call,
+  return, or other high-level operation
+
+## How debuggers use programs
+
+When stepping through EVM execution, a debugger:
+
+1. Observes the current program counter
+2. Looks up the corresponding instruction in the program
+3. Uses the context to update its model of the high-level state
+4. Presents source code, variables, and call stacks to the developer
+
+Each instruction's context acts as a state transition—a compile-time guarantee
+about what's true after that instruction runs.
+
+## Example: Simple instruction
+
+```json
+{
+  "offset": 42,
+  "context": {
+    "code": {
+      "source": {
+        "id": 0,
+        "range": {
+          "start": { "line": 15, "column": 4 },
+          "end": { "line": 15, "column": 28 }
+        }
+      }
+    }
+  }
+}
+```
+
+This says: "The instruction at byte 42 corresponds to line 15, columns 4-28
+of source file 0."
+
+## Example: Instruction with variables
+
+```json
+{
+  "offset": 100,
+  "context": {
+    "code": {
+      "source": { "id": 0, "range": { ... } }
+    },
+    "variables": [
+      {
+        "name": "balance",
+        "type": { "kind": "uint", "bits": 256 },
+        "pointer": {
+          "location": "stack",
+          "slot": 0
+        }
+      }
+    ]
+  }
+}
+```
+
+After instruction 100, the variable `balance` is in scope and its value is at
+the top of the stack.
+
+## Context accumulates
+
+Not every instruction needs complete context. The format supports incremental
+updates:
+
+- **`"pick"`**: select from multiple possible contexts based on runtime
+  conditions
+- **`"gather"`**: combine contexts (like nested scopes)
+- **`"remark"`**: add metadata without changing variable scope
+
+This lets compilers emit compact debugging info that debuggers expand at
+runtime.
+
+## What's next
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Instructions</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          How instruction records map bytecode to source.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="./instructions">Learn more →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Full specification</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Complete JSON schemas for programs, instructions, and contexts.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="/spec/program">View spec →</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,147 @@
+---
+sidebar_position: 3
+---
+
+# Variables
+
+Variables connect source-level identifiers to runtime locations. They're the
+key to showing developers meaningful values instead of raw bytes.
+
+## Variable structure
+
+A variable declaration includes three parts:
+
+```json
+{
+  "name": "balance",
+  "type": { "kind": "uint", "bits": 256 },
+  "pointer": {
+    "location": "storage",
+    "slot": 0
+  }
+}
+```
+
+- **`name`**: the identifier from source code
+- **`type`**: how to interpret the bytes (an ethdebug/format type)
+- **`pointer`**: where to find the bytes (an ethdebug/format pointer)
+
+## Types tell debuggers how to decode
+
+The `type` field references the type system. A debugger uses this to:
+
+1. Know how many bytes to read
+2. Interpret those bytes correctly (signed vs unsigned, struct layout, etc.)
+3. Display the value in a readable format
+
+For complex types, the type definition guides the debugger through nested
+structures:
+
+```json
+{
+  "name": "user",
+  "type": {
+    "kind": "struct",
+    "contains": [
+      { "name": "id", "type": { "kind": "uint", "bits": 256 } },
+      { "name": "active", "type": { "kind": "bool" } }
+    ]
+  },
+  "pointer": { ... }
+}
+```
+
+## Pointers tell debuggers where to look
+
+The `pointer` field specifies the data's location. This can be simple:
+
+```json
+{
+  "pointer": {
+    "location": "stack",
+    "slot": 0
+  }
+}
+```
+
+Or complex, for data spread across multiple locations:
+
+```json
+{
+  "pointer": {
+    "group": [
+      { "name": "id", "location": "storage", "slot": 5 },
+      { "name": "active", "location": "storage", "slot": 5, "offset": 31 }
+    ]
+  }
+}
+```
+
+## Scope and lifetime
+
+Variables appear in context when they're valid. The instruction's context
+represents what's true *after* that instruction executes.
+
+A variable might:
+- Become available when a function is entered
+- Change location as it moves from stack to memory
+- Go out of scope when a block ends
+
+The instruction list captures these transitions. As a debugger steps through
+execution, it accumulates and discards variables based on each instruction's
+context.
+
+## Example: Local variable lifecycle
+
+Consider this Solidity snippet:
+
+```solidity
+function transfer(address to, uint256 amount) {
+    uint256 balance = balances[msg.sender];
+    // ... use balance ...
+}
+```
+
+The compiled bytecode might have:
+
+1. **Instruction at offset 50**: `balance` comes into scope, stored on stack
+2. **Instructions 51-100**: `balance` remains in scope
+3. **Instruction at offset 101**: `balance` leaves scope (function returns)
+
+The program captures this by including `balance` in the variables list for
+instructions 50-100 and omitting it afterward.
+
+## Multiple variables
+
+An instruction's context can declare multiple variables:
+
+```json
+{
+  "offset": 75,
+  "context": {
+    "variables": [
+      {
+        "name": "sender",
+        "type": { "kind": "address" },
+        "pointer": { "location": "stack", "slot": 2 }
+      },
+      {
+        "name": "value",
+        "type": { "kind": "uint", "bits": 256 },
+        "pointer": { "location": "stack", "slot": 1 }
+      },
+      {
+        "name": "success",
+        "type": { "kind": "bool" },
+        "pointer": { "location": "stack", "slot": 0 }
+      }
+    ]
+  }
+}
+```
+
+## Learn more
+
+- [Types documentation](../types) for type representation details
+- [Pointers documentation](../pointers) for location specification
+- [Context schema](/spec/program/context/variables) for the full schema

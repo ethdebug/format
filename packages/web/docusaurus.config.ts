@@ -168,7 +168,7 @@ const config: Config = {
             },
             {
               label: "Known challenges",
-              to: "/docs/known-challenges",
+              to: "/docs/reference/challenges",
             },
           ],
         },

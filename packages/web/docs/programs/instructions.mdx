@@ -1,0 +1,179 @@
+---
+sidebar_position: 2
+---
+
+# Instructions
+
+Each instruction record in a program corresponds to one EVM opcode in the
+bytecode. Instructions carry the context information that debuggers need.
+
+## Structure
+
+An instruction has two required fields:
+
+```json
+{
+  "offset": 42,
+  "context": { ... }
+}
+```
+
+- **`offset`**: byte position in the bytecode (the program counter value when
+  this instruction executes)
+- **`context`**: high-level information valid after this instruction
+
+## Context types
+
+The `context` field can take several forms:
+
+### Code context
+
+Maps the instruction to source code:
+
+```json
+{
+  "offset": 42,
+  "context": {
+    "code": {
+      "source": {
+        "id": 0,
+        "range": {
+          "start": { "line": 10, "column": 4 },
+          "end": { "line": 10, "column": 20 }
+        }
+      }
+    }
+  }
+}
+```
+
+The `source` field references a source file by ID and specifies the exact
+character range.
+
+### Variables context
+
+Declares variables that are in scope:
+
+```json
+{
+  "offset": 100,
+  "context": {
+    "variables": [
+      {
+        "name": "amount",
+        "type": { "kind": "uint", "bits": 256 },
+        "pointer": {
+          "location": "stack",
+          "slot": 0
+        }
+      }
+    ]
+  }
+}
+```
+
+Each variable includes:
+- `name`: the identifier from source code
+- `type`: an ethdebug/format type reference
+- `pointer`: where to find the variable's value
+
+### Frame context
+
+Indicates call stack changes:
+
+```json
+{
+  "offset": 200,
+  "context": {
+    "frame": "step-in"
+  }
+}
+```
+
+Frame values include:
+- `"step-in"`: entering a function
+- `"step-out"`: returning from a function
+
+## Composing contexts
+
+### Gather
+
+Combine multiple contexts (like nested scopes):
+
+```json
+{
+  "offset": 150,
+  "context": {
+    "gather": [
+      {
+        "code": {
+          "source": { "id": 0, "range": { ... } }
+        }
+      },
+      {
+        "variables": [
+          { "name": "x", "type": { ... }, "pointer": { ... } }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Pick
+
+Choose between contexts based on runtime conditions:
+
+```json
+{
+  "offset": 175,
+  "context": {
+    "pick": [
+      {
+        "guard": { "$read": "condition-flag" },
+        "context": {
+          "variables": [
+            { "name": "result", "type": { ... }, "pointer": { ... } }
+          ]
+        }
+      },
+      {
+        "context": {
+          "variables": []
+        }
+      }
+    ]
+  }
+}
+```
+
+The debugger evaluates guards at runtime and uses the first matching context.
+A context without a guard acts as the default.
+
+### Remark
+
+Add metadata without affecting scope:
+
+```json
+{
+  "offset": 180,
+  "context": {
+    "remark": "loop iteration boundary"
+  }
+}
+```
+
+## Instruction ordering
+
+Instructions must be listed in bytecode order, matching the sequence of
+opcodes. The list is indexed by offset, so debuggers can quickly find the
+instruction for any program counter value.
+
+Not every byte offset needs an instruction—only positions where opcodes begin.
+Push data, for instance, doesn't get its own instruction entry.
+
+## Learn more
+
+For complete schemas, see:
+- [Instruction schema](/spec/program/instruction)
+- [Context schema](/spec/program/context)

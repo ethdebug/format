@@ -4,15 +4,155 @@ sidebar_position: 1
 
 # Types
 
-How ethdebug/format describes data types.
-
-:::note[Coming soon]
-This section is under construction. It will explain how the format represents
-types like integers, structs, arrays, and mappings.
-:::
-
-## Overview
-
-Types in ethdebug/format describe the structure and interpretation of raw
+Types in **ethdebug/format** describe the structure and interpretation of raw
 bytes. They tell a debugger how to decode values from EVM state into
 human-readable representations.
+
+## Why types matter
+
+When a debugger reads bytes from storage, memory, or the stack, those bytes
+are meaningless without context. A 32-byte value could be:
+
+- A `uint256` representing a token balance
+- An `address` padded to 32 bytes
+- Part of a `string` or `bytes` array
+- A storage slot containing packed struct members
+
+Type information bridges this gap. It tells the debugger exactly how to
+interpret the raw bytes and present them to developers in a meaningful way.
+
+## Core ideas
+
+### Types are organized by kind
+
+Every type representation is a JSON object with a `kind` field:
+
+```json
+{
+  "kind": "uint",
+  "bits": 256
+}
+```
+
+The `kind` field determines which schema applies. Common kinds include:
+
+- **Elementary types**: `uint`, `int`, `bool`, `address`, `bytes`, `string`,
+  `enum`, `ufixed`, `fixed`
+- **Complex types**: `array`, `struct`, `mapping`, `tuple`, `alias`, `function`
+
+### Elementary vs. complex
+
+Types fall into two classes:
+
+- **Elementary types** stand alone—they don't contain other types. Examples:
+  `uint256`, `address`, `bool`
+- **Complex types** compose other types. A `uint256[]` array contains a
+  `uint256`. A `mapping(address => uint256)` contains both `address` and
+  `uint256`.
+
+### Complex types use `contains`
+
+Complex types express their composition through a `contains` field. This field
+can take three forms:
+
+**Single type** (arrays, aliases):
+```json
+{
+  "kind": "array",
+  "contains": {
+    "type": { "kind": "uint", "bits": 256 }
+  }
+}
+```
+
+**Ordered list** (structs, tuples):
+```json
+{
+  "kind": "struct",
+  "contains": [
+    { "name": "balance", "type": { "kind": "uint", "bits": 256 } },
+    { "name": "owner", "type": { "kind": "address" } }
+  ]
+}
+```
+
+**Object mapping** (mappings):
+```json
+{
+  "kind": "mapping",
+  "contains": {
+    "key": { "type": { "kind": "address" } },
+    "value": { "type": { "kind": "uint", "bits": 256 } }
+  }
+}
+```
+
+### Type references avoid duplication
+
+Instead of repeating a full type definition everywhere it's used, you can
+reference types by ID:
+
+```json
+{
+  "kind": "array",
+  "contains": {
+    "type": { "id": "some-opaque-type-id" }
+  }
+}
+```
+
+This keeps debugging information compact and allows types to reference each
+other (useful for recursive structures).
+
+## What's next
+
+<div className="row">
+  <div className="col col--4">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Elementary types</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Integers, addresses, booleans, and other atomic types.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="./elementary">Learn more →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--4">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Composite types</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Arrays, structs, mappings, and types that contain other types.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="./composite">Learn more →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--4">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Full specification</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Complete JSON schemas and detailed reference.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="/spec/type">View spec →</a>
+      </div>
+    </div>
+  </div>
+</div>
