@@ -2,6 +2,10 @@
 sidebar_position: 4
 ---
 
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+<PointerPlayground>
+
 # Collections
 
 While [regions](./regions) describe single contiguous byte ranges, **collections**
@@ -26,19 +30,29 @@ Collections provide six patterns for composing pointers:
 | `reference` | Invoke reusable pointer templates |
 | `templates` | Define inline templates for local reuse |
 
+Click **"▶ Try it"** on any example to load it into the Pointer Playground
+drawer at the bottom of the screen.
+
 ## Group
 
 A **group** combines multiple pointers into a single composite pointer. Each
 pointer in the group can have a name for identification.
 
-```json
-{
-  "group": [
-    { "name": "length", "location": "storage", "slot": 0 },
-    { "name": "data", "location": "storage", "slot": 1 }
-  ]
-}
-```
+<PointerExample
+  title="Struct with two fields"
+  pointer={{
+    group: [
+      { name: "len", location: "storage", slot: 0 },
+      { name: "data", location: "storage", slot: 1 }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000005",
+      "0x01": "0x48656c6c6f000000000000000000000000000000000000000000000000000000"
+    }
+  }}
+/>
 
 Groups are useful for structs and other compound data types where multiple
 fields need to be accessed together.
@@ -48,27 +62,62 @@ fields need to be accessed together.
 A **list** generates a sequence of pointers based on a count expression. This
 handles dynamic arrays and other indexed collections.
 
-```json
-{
-  "list": {
-    "count": { "$read": { "location": "storage", "slot": 0 } },
-    "each": "i",
-    "is": {
-      "location": "storage",
-      "slot": {
-        "$sum": [
-          { "$keccak256": [{ "$wordsized": 0 }] },
-          "i"
-        ]
+<PointerExample
+  title="Dynamic array (3 elements)"
+  pointer={{
+    list: {
+      count: 3,
+      each: "i",
+      is: {
+        name: "element",
+        location: "storage",
+        slot: { $sum: [10, "i"] }
       }
     }
-  }
-}
-```
+  }}
+  state={{
+    storage: {
+      "0x0a": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x0b": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x0c": "0x0000000000000000000000000000000000000000000000000000000000000003"
+    }
+  }}
+/>
 
 The list evaluates `count` to determine how many pointers to generate, then
 for each index (bound to the variable named by `each`), it evaluates the `is`
 pointer template.
+
+### List with dynamic count
+
+When the count comes from storage:
+
+<PointerExample
+  title="Array with length from storage"
+  pointer={{
+    group: [
+      { name: "arrayLength", location: "storage", slot: 0 },
+      {
+        list: {
+          count: { $read: "arrayLength" },
+          each: "i",
+          is: {
+            name: "element",
+            location: "storage",
+            slot: { $sum: [1, "i"] }
+          }
+        }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x01": "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x02": "0x0000000000000000000000000000000000000000000000000000000000000014"
+    }
+  }}
+/>
 
 ### List properties
 
@@ -83,16 +132,51 @@ pointer template.
 A **conditional** selects between pointers based on whether an expression
 evaluates to a non-zero value.
 
-```json
-{
-  "if": { "$read": { "location": "storage", "slot": 5 } },
-  "then": { "location": "storage", "slot": 6 },
-  "else": { "location": "storage", "slot": 7 }
-}
-```
+<PointerExample
+  title="Conditional (true branch)"
+  pointer={{
+    group: [
+      { name: "flag", location: "storage", slot: 0 },
+      {
+        if: { $read: "flag" },
+        then: { name: "whenTrue", location: "storage", slot: 1 },
+        else: { name: "whenFalse", location: "storage", slot: 2 }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x01": "0x000000000000000000000000000000000000000000000000000000000000002a",
+      "0x02": "0x00000000000000000000000000000000000000000000000000000000000000ff"
+    }
+  }}
+  description="Condition is non-zero, so 'then' branch is taken"
+/>
 
-The `else` branch is optional. If omitted and the condition is false, the
-conditional yields no regions.
+Try changing storage slot 0 to `0x00` to see the `else` branch:
+
+<PointerExample
+  title="Conditional (false branch)"
+  pointer={{
+    group: [
+      { name: "flag", location: "storage", slot: 0 },
+      {
+        if: { $read: "flag" },
+        then: { name: "whenTrue", location: "storage", slot: 1 },
+        else: { name: "whenFalse", location: "storage", slot: 2 }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x01": "0x000000000000000000000000000000000000000000000000000000000000002a",
+      "0x02": "0x00000000000000000000000000000000000000000000000000000000000000ff"
+    }
+  }}
+  description="Condition is zero, so 'else' branch is taken"
+/>
 
 ### Conditional properties
 
@@ -107,20 +191,52 @@ conditional yields no regions.
 A **scope** defines variables that can be used in a nested pointer. Variables
 are evaluated in order, so later variables can reference earlier ones.
 
-```json
-{
-  "define": {
-    "baseSlot": 3,
-    "arrayStart": { "$keccak256": [{ "$wordsized": "baseSlot" }] }
-  },
-  "in": {
-    "location": "storage",
-    "slot": { "$sum": ["arrayStart", 5] }
-  }
-}
-```
+<PointerExample
+  title="Scope with computed slot"
+  pointer={{
+    define: {
+      baseSlot: 3,
+      offset: 2
+    },
+    in: {
+      name: "result",
+      location: "storage",
+      slot: { $sum: ["baseSlot", "offset"] }
+    }
+  }}
+  state={{
+    storage: {
+      "0x05": "0x0000000000000000000000000000000000000000000000000000000000000064"
+    }
+  }}
+  description="Computes slot 3 + 2 = 5"
+/>
 
 Scopes help break complex pointer definitions into readable steps.
+
+### Scope with keccak256
+
+<PointerExample
+  title="Array element via hash"
+  pointer={{
+    define: {
+      arraySlot: 0,
+      dataStart: { $keccak256: [{ $wordsized: "arraySlot" }] }
+    },
+    in: {
+      name: "element0",
+      location: "storage",
+      slot: "dataStart"
+    }
+  }}
+  state={{
+    storage: {
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563":
+        "0x00000000000000000000000000000000000000000000000000000000000003e8"
+    }
+  }}
+  description="Computes keccak256(0) for Solidity dynamic array data location"
+/>
 
 ### Scope properties
 
@@ -129,54 +245,41 @@ Scopes help break complex pointer definitions into readable steps.
 | `define` | Object mapping variable names to expressions |
 | `in` | Pointer where defined variables are available |
 
-## Reference
+## Reference and Templates
 
-A **reference** invokes a named pointer template. Templates can be defined
-elsewhere and reused across multiple pointers.
+A **reference** invokes a named pointer template, while **templates** defines
+them inline. These work together for reusable pointer patterns.
 
-```json
-{
-  "template": "array-element",
-  "yields": {
-    "element": "first-item"
-  }
-}
-```
-
-The optional `yields` property renames regions produced by the template,
-allowing the same template to be used in different contexts.
-
-### Reference properties
-
-| Property | Description |
-|----------|-------------|
-| `template` | Name of the template to invoke |
-| `yields` | Optional object mapping template region names to new names |
-
-## Templates
-
-A **templates** collection defines pointer templates inline, making them
-available within a nested pointer.
-
-```json
-{
-  "templates": {
-    "slot-reader": {
-      "expect": ["n"],
-      "for": { "location": "storage", "slot": "n" }
+<PointerExample
+  title="Template with reference"
+  pointer={{
+    templates: {
+      "read-slot": {
+        expect: ["n"],
+        for: { name: "slot", location: "storage", slot: "n" }
+      }
+    },
+    in: {
+      group: [
+        {
+          define: { n: 0 },
+          in: { template: "read-slot" }
+        },
+        {
+          define: { n: 1 },
+          in: { template: "read-slot" }
+        }
+      ]
     }
-  },
-  "in": {
-    "group": [
-      { "template": "slot-reader", "n": 0 },
-      { "template": "slot-reader", "n": 1 }
-    ]
-  }
-}
-```
-
-Templates follow a pattern similar to `scope`, but define reusable pointer
-patterns rather than variable values.
+  }}
+  state={{
+    storage: {
+      "0x00": "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000014"
+    }
+  }}
+  description="Defines a template and uses it twice"
+/>
 
 ### Template definition
 
@@ -187,35 +290,55 @@ Each template in the `templates` object has:
 | `expect` | Array of required variable names |
 | `for` | The pointer template body |
 
+### Reference properties
+
+| Property | Description |
+|----------|-------------|
+| `template` | Name of the template to invoke |
+| `yields` | Optional object mapping template region names to new names |
+
 ## Nesting collections
 
 Collections can be nested to build complex pointer structures. A group might
 contain lists, conditionals might wrap groups, and scopes can define variables
 used throughout nested collections.
 
-```json
-{
-  "define": {
-    "length": { "$read": { "location": "storage", "slot": 0 } }
-  },
-  "in": {
-    "if": { "$difference": ["length", 0] },
-    "then": {
-      "list": {
-        "count": "length",
-        "each": "i",
-        "is": {
-          "location": "storage",
-          "slot": { "$sum": [1, "i"] }
+<PointerExample
+  title="Nested: scope + conditional + list"
+  pointer={{
+    group: [
+      { name: "lengthSlot", location: "storage", slot: 0 },
+      {
+        define: {
+          len: { $read: "lengthSlot" }
+        },
+        in: {
+          if: "len",
+          then: {
+            list: {
+              count: "len",
+              each: "i",
+              is: {
+                name: "item",
+                location: "storage",
+                slot: { $sum: [1, "i"] }
+              }
+            }
+          }
         }
       }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x02": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x03": "0x0000000000000000000000000000000000000000000000000000000000000003"
     }
-  }
-}
-```
-
-This example reads an array length, checks if it's non-zero, then generates
-pointers for each element.
+  }}
+  description="Reads length, checks if non-zero, then generates that many pointers"
+/>
 
 ## Named regions in collections
 
@@ -223,22 +346,32 @@ Pointers within collections can include a `name` property. Named regions are
 tracked during resolution and can be referenced using the `.slot`, `.offset`,
 and `.length` syntax in expressions.
 
-```json
-{
-  "group": [
-    { "name": "header", "location": "storage", "slot": 0 },
-    {
-      "name": "body",
-      "location": "storage",
-      "slot": { "$sum": [{ ".slot": "header" }, 1] }
+<PointerExample
+  title="Region reference with .slot"
+  pointer={{
+    group: [
+      { name: "header", location: "storage", slot: 0 },
+      {
+        name: "body",
+        location: "storage",
+        slot: { $sum: [{ ".slot": "header" }, 1] }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000010",
+      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000020"
     }
-  ]
-}
-```
+  }}
+  description="Second region's slot is computed from first region's slot (0 + 1 = 1)"
+/>
 
 ## Learn more
 
 - [Regions](./regions) for simple pointer definitions
 - [Expressions](./expressions) for dynamic value computation
-- [Resolution](./resolution) to try collections interactively
+- [Resolution](./resolution) to try more examples interactively
 - [Pointer specification](/spec/pointer/collection) for formal definitions
+
+</PointerPlayground>
