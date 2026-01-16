@@ -1,17 +1,28 @@
+/**
+ * Source contents viewer with instruction context highlighting.
+ */
+
 import React from "react";
 
 import {
   ShikiCodeBlock,
-  type Props as ShikiCodeBlockProps,
-} from "@theme/ShikiCodeBlock";
+  type ShikiCodeBlockProps,
+} from "#shiki/ShikiCodeBlock";
 
-import "./SourceContents.css";
+// CSS is expected to be imported by the consuming application
+// import "./SourceContents.css";
 
 import type * as Shiki from "shiki/core";
-import { useProgramExampleContext } from "./ProgramExampleContext";
+import { useProgramExampleContext } from "./ProgramExampleContext.js";
 
 import { Materials, Program } from "@ethdebug/format";
 
+/**
+ * Displays source contents with highlighting based on instruction context.
+ *
+ * @param props - Highlight options (language is overridden)
+ * @returns Highlighted source code element
+ */
 export function SourceContents(
   props: Omit<ShikiCodeBlockProps, "code" | "decorations">,
 ): JSX.Element {
@@ -79,7 +90,8 @@ function decoratePickContext(
   // contexts
   if (!pick.every(Program.Context.isCode)) {
     console.warn(
-      "decoratePickContext encountered non-code contexts in pick array. These will be ignored.",
+      "decoratePickContext encountered non-code contexts in pick array. " +
+        "These will be ignored.",
     );
     return [];
   }

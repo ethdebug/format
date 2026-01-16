@@ -1,7 +1,9 @@
-import { SourceContents } from "./SourceContents";
-import { Opcodes } from "./Opcodes";
+import { SourceContents, Opcodes } from "@ethdebug/programs-react";
 import { Details } from "./Details";
 
+// Import CSS for the components (programs-react expects consumers to provide)
+import "./Opcodes.css";
+import "./SourceContents.css";
 import "./Viewer.css";
 
 export interface Props {}

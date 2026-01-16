@@ -23,6 +23,7 @@
     "@docusaurus/types": "^3.9.2",
     "@ethdebug/format": "^0.1.0-0",
     "@ethdebug/pointers": "^0.1.0-0",
+    "@ethdebug/programs-react": "^0.1.0-0",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",

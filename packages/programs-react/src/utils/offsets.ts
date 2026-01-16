@@ -1,15 +1,30 @@
+/**
+ * Compute instruction offsets from operation sizes.
+ */
+
 import { Data, Program } from "@ethdebug/format";
 
-// define base generic instruction since other parts of this module
-// allow dynamic contexts and such
+/**
+ * Base instruction type that can have offsets computed.
+ */
 interface OffsetComputableInstruction {
   operation: Program.Instruction.Operation;
 }
 
+/**
+ * Instruction with computed offset.
+ */
 type OffsetComputedInstruction<I extends OffsetComputableInstruction> = I & {
   offset: Data.Value;
 };
 
+/**
+ * Compute bytecode offsets for a sequence of instructions based on their
+ * operation sizes.
+ *
+ * @param instructions - Instructions without offsets
+ * @returns Instructions with computed offsets
+ */
 export function computeOffsets<I extends OffsetComputableInstruction>(
   instructions: I[],
 ): OffsetComputedInstruction<I>[] {

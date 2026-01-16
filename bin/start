@@ -10,11 +10,12 @@ else
 fi
 
 # Run the commands with concurrently
-concurrently --names=format,pointers,evm,bugc,playground,web,tests \
+concurrently --names=format,pointers,evm,bugc,programs-react,playground,web,tests \
   "cd ./packages/format && yarn watch" \
   "cd ./packages/pointers && yarn watch" \
   "cd ./packages/evm && yarn watch" \
   "cd ./packages/bugc && yarn watch" \
+  "cd ./packages/programs-react && yarn watch" \
   "cd ./packages/playground && yarn watch" \
   "cd ./packages/web && yarn start $DOCUSAURUS_NO_OPEN" \
   "sleep 5 && yarn test --ui --watch --coverage $VITEST_NO_OPEN"

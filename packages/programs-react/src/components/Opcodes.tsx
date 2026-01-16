@@ -1,10 +1,20 @@
+/**
+ * Opcodes list component for displaying program instructions.
+ */
+
 import React, { useEffect, useState } from "react";
-import { useProgramExampleContext } from "./ProgramExampleContext";
+import { useProgramExampleContext } from "./ProgramExampleContext.js";
 
 import { Data, Program } from "@ethdebug/format";
 
-import "./Opcodes.css";
+// CSS is expected to be imported by the consuming application
+// import "./Opcodes.css";
 
+/**
+ * Displays a list of opcodes with interactive highlighting.
+ *
+ * @returns Opcodes list element
+ */
 export function Opcodes(): JSX.Element {
   const {
     instructions,
@@ -44,6 +54,7 @@ export function Opcodes(): JSX.Element {
     }
 
     highlightInstruction(undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOffset, hoverOffset, highlightedInstruction, highlightMode]);
 
   const handleClick = (offset: Data.Value) =>
@@ -54,7 +65,7 @@ export function Opcodes(): JSX.Element {
   const handleMouseEnter = (offset: Data.Value) => setHoverOffset(offset);
   // skipping the current hover offset check here and assuming that the mouse
   // must leave the boundary of one offset before entering another
-  const handleMouseLeave = (_offset: Data.Value) => setHoverOffset(undefined);
+  const handleMouseLeave = () => setHoverOffset(undefined);
 
   const paddingLength = instructions.at(-1)!.offset.toString(16).length;
 
@@ -68,7 +79,7 @@ export function Opcodes(): JSX.Element {
           paddingLength={paddingLength}
           onClick={() => handleClick(instruction.offset)}
           onMouseEnter={() => handleMouseEnter(instruction.offset)}
-          onMouseLeave={() => handleMouseLeave(instruction.offset)}
+          onMouseLeave={handleMouseLeave}
         />
       ))}
     </dl>
