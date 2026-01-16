@@ -2,7 +2,7 @@
  * Tests for ProgramExampleContext.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import {
@@ -143,8 +143,13 @@ describe("ProgramExampleContext", () => {
   });
 
   it("throws when used outside provider", () => {
+    // Suppress React's console.error for expected error
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
     expect(() => {
       renderHook(() => useProgramExampleContext());
     }).toThrow(/must be used within a ProgramExampleContextProvider/);
+
+    consoleSpy.mockRestore();
   });
 });
