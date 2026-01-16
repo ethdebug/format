@@ -5,8 +5,8 @@ sidebar_position: 4
 # Tracing execution
 
 Tracing brings together programs, pointers, and types to show what's happening
-at each step of EVM execution. This page will feature an interactive widget
-for exploring transaction traces with full variable inspection.
+at each step of EVM execution. This page explains how to use ethdebug/format
+data for rich debugging experiences.
 
 ## What tracing provides
 
@@ -29,47 +29,171 @@ At each instruction in a transaction trace:
    current value
 4. **Decode values**: Use the type information to interpret raw bytes
 
-## Example: Stepping through a transfer
+## Example: Stepping through code
 
-Consider tracing a simple ERC-20 transfer:
+Consider a trace of this simple operation:
 
 ```
-PC 0x1a4: SLOAD
-  Source: balances[msg.sender]
-  Variables in scope:
-    - sender: 0x1234...abcd (address)
-    - amount: 1000000000000000000 (uint256)
-    - senderBalance: <reading...>
+count = count + 1;
 ```
 
-The trace viewer shows:
-- Which storage slot is being loaded
-- The source-level expression being evaluated
-- Related variables and their current values
+The trace shows these steps:
 
-## Interactive exploration
+| Step | PC | Opcode | Description |
+|------|----|----|-------------|
+| 1 | 0x10 | PUSH1 0x00 | Push storage slot 0 |
+| 2 | 0x12 | SLOAD | Load `count` from storage |
+| 3 | 0x13 | PUSH1 0x01 | Push constant 1 |
+| 4 | 0x15 | ADD | Add count + 1 |
+| 5 | 0x16 | PUSH1 0x00 | Push storage slot 0 |
+| 6 | 0x18 | SSTORE | Store new value |
 
-:::note Coming soon
-An interactive tracing widget will be added here, allowing you to:
+At step 2, the program annotation tells us:
+- **Source**: The expression `count + 1`
+- **Variable**: `count` is a `uint256` at storage slot 0
+- **Operation**: Loading the current value
 
-- Load a transaction trace
-- Step forward and backward through execution
-- See variables come into and out of scope
-- Inspect complex data structures at each step
-- Navigate between source code and bytecode views
+## Trace data structure
 
-This widget will demonstrate how ethdebug/format enables rich debugging
-experiences.
-:::
+A trace step captures the EVM state at a single point:
+
+```typescript
+interface TraceStep {
+  pc: number;           // Program counter
+  opcode: string;       // Mnemonic (SLOAD, ADD, etc.)
+  stack: bigint[];      // Stack contents (top first)
+  memory?: Uint8Array;  // Memory contents
+  storage?: Record<string, string>;  // Changed slots
+}
+```
+
+Combined with the program annotation, this gives us complete visibility.
+
+## Mapping trace to program
+
+The program's instruction list maps each PC to its context:
+
+```json
+{
+  "offset": 18,
+  "operation": { "mnemonic": "SLOAD" },
+  "context": {
+    "gather": [
+      {
+        "code": {
+          "source": { "id": "main" },
+          "range": { "offset": 120, "length": 5 }
+        }
+      },
+      {
+        "variables": [
+          {
+            "identifier": "count",
+            "type": { "kind": "uint", "bits": 256 },
+            "pointer": { "location": "storage", "slot": 0 }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This tells us:
+- The SLOAD at PC 18 corresponds to source at offset 120
+- The variable `count` is in scope
+- We can resolve its value using the pointer
+
+## Variable resolution during tracing
+
+To show variable values, trace viewers:
+
+1. **Get the variable's pointer** from the program context
+2. **Create machine state** from the trace step (stack, storage, memory)
+3. **Resolve the pointer** to get concrete byte regions
+4. **Decode using the type** to get the display value
+
+Example resolution for `count`:
+
+```
+Pointer: { location: "storage", slot: 0 }
+Storage at slot 0: 0x0000...002a
+Type: { kind: "uint", bits: 256 }
+Display value: 42
+```
 
 ## Building a trace viewer
 
 The key components for trace integration:
 
-1. **EVM trace source**: Transaction traces from a node or simulation
-2. **Program data**: The compiled program with instruction records
-3. **Pointer resolver**: Engine to evaluate pointers against EVM state
-4. **Type decoder**: Logic to interpret bytes according to type definitions
+### 1. Trace source
+
+Get transaction traces from:
+- JSON-RPC `debug_traceTransaction`
+- Local simulation (Ganache, Anvil, Hardhat)
+- Historical archive nodes
+
+### 2. Program loader
+
+Load compiled program data containing:
+- Instruction list with contexts
+- Source materials
+- Type definitions
+
+### 3. Pointer resolver
+
+Use `@ethdebug/pointers` to resolve variable locations:
+
+```typescript
+import { dereference } from "@ethdebug/pointers";
+
+// For each variable in scope
+const cursor = await dereference(variable.pointer, { state: machineState });
+const view = await cursor.view(machineState);
+const value = await view.read(view.regions[0]);
+```
+
+### 4. Type decoder
+
+Interpret raw bytes according to type:
+
+```typescript
+function decodeValue(bytes: Data, type: Type): string {
+  switch (type.kind) {
+    case "uint":
+      return bytes.asUint().toString();
+    case "bool":
+      return bytes.asUint() !== 0n ? "true" : "false";
+    case "address":
+      return "0x" + bytes.toHex().slice(-40);
+    // ... other types
+  }
+}
+```
+
+## Interactive demonstration
+
+For a live example of tracing concepts, see the
+[BUG Playground](/docs/examples/bug-playground). While it doesn't show
+runtime traces, it demonstrates:
+
+- How source maps to bytecode
+- How variables are annotated in the program output
+- How debug info is structured
+
+:::note Future widget
+A full interactive trace viewer with step-by-step navigation and variable
+inspection is planned for a future release. The components are available
+in `@ethdebug/programs-react`:
+
+- `TraceProvider` — Context for trace state
+- `TraceControls` — Navigation controls
+- `VariableInspector` — Variable value display
+- `StackInspector` — Stack visualization
+
+See the [implementation guide](/docs/implementation-guides) for details on
+using these components.
+:::
 
 ## Learn more
 

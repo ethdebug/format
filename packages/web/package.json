@@ -26,6 +26,7 @@
     "@ethdebug/bugc": "^0.1.0-0",
     "@ethdebug/bugc-react": "^0.1.0-0",
     "@ethdebug/programs-react": "^0.1.0-0",
+    "@ethdebug/pointers-react": "^0.1.0-0",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",

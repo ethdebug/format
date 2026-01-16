@@ -1,0 +1,206 @@
+---
+sidebar_position: 3
+---
+
+# Glossary
+
+This page defines key terms used throughout the ethdebug/format specification
+and documentation.
+
+## Core Concepts
+
+### Pointer
+
+A structured definition that describes how to locate data within EVM state.
+Pointers act as "recipes" that can be evaluated against machine state to
+produce concrete byte regions. Unlike static offsets, pointers can include
+dynamic computations (like keccak256 hashing for storage slots) that depend on
+runtime values.
+
+See: [Pointers documentation](/docs/pointers)
+
+### Region
+
+A contiguous range of bytes within a specific data location. A region
+specifies:
+- **Location**: Where the data lives (storage, memory, stack, etc.)
+- **Offset/Slot**: Where in that location the region starts
+- **Length**: How many bytes the region spans
+
+Regions are the concrete output of pointer resolution.
+
+See: [Regions documentation](/docs/pointers/regions)
+
+### Cursor
+
+The result of dereferencing a pointer. A cursor provides an interface for
+viewing pointer regions against different machine states. It can be thought of
+as a "resolved pointer" that knows how to extract data from the EVM.
+
+### Type
+
+A structured definition describing how to interpret bytes as meaningful data.
+Types define the semantic meaning of raw bytes, enabling debuggers to display
+values in human-readable form (e.g., showing `0x01` as `true` for a boolean).
+
+See: [Types documentation](/docs/types)
+
+### Program
+
+A representation of compiled code that maps bytecode instructions to their
+semantic context. Programs describe what code means at each instruction,
+including:
+- Source code ranges
+- Variables in scope
+- Frame information
+- Remarks and annotations
+
+See: [Programs documentation](/docs/programs)
+
+## EVM Data Locations
+
+### Storage
+
+Persistent, contract-specific data that survives between transactions.
+Organized as a key-value store where:
+- Keys are 32-byte **slots** (often computed via keccak256)
+- Values are 32-byte words
+
+Storage is the only data location that persists after execution ends.
+
+### Memory
+
+Temporary, byte-addressable scratch space available during execution. Memory:
+- Starts empty at the beginning of each call
+- Can be expanded dynamically (costs gas)
+- Is byte-addressed (unlike word-addressed storage)
+- Is cleared when the call ends
+
+### Stack
+
+The EVM's operand stack, used for computation. The stack:
+- Holds 256-bit (32-byte) values
+- Has a maximum depth of 1024 items
+- Is accessed from the top (LIFO)
+- Is ephemeral per call frame
+
+### Calldata
+
+Read-only input data provided to a transaction or call. Calldata:
+- Is byte-addressed
+- Cannot be modified during execution
+- Contains the function selector and encoded arguments
+
+### Returndata
+
+Data returned by the most recent external call. Returndata:
+- Is byte-addressed
+- Is overwritten by each subsequent call
+- Contains the return value or revert reason
+
+### Code
+
+The deployed bytecode of a contract. Code:
+- Is immutable after deployment
+- Can be read via CODECOPY/EXTCODECOPY
+- Contains both executable instructions and embedded data
+
+### Transient Storage
+
+Temporary storage that persists within a transaction but is cleared at the end.
+Introduced in EIP-1153, transient storage:
+- Has the same slot/word structure as persistent storage
+- Is cleared after each transaction
+- Is cheaper than persistent storage
+
+## Pointer Expressions
+
+### Expression
+
+A computation that produces a bytes value when evaluated against machine state.
+Expressions enable pointers to describe dynamic data locations. Common
+expression types include:
+
+- **Arithmetic**: `$sum`, `$difference`, `$product`, `$quotient`, `$remainder`
+- **Hashing**: `$keccak256` (for computing storage slots)
+- **Lookups**: `$offset`, `$length`, `$slot` (reading from defined regions)
+- **References**: `$this`, variables by name
+
+### Variable (in Pointers)
+
+A named binding that can be referenced within a pointer definition. Variables
+allow pointers to name and reuse intermediate computations:
+
+```json
+{
+  "define": { "name": "baseSlot", "location": "storage", "slot": 0 },
+  "in": { "location": "storage", "slot": { "$keccak256": [{ ".slot": "baseSlot" }] } }
+}
+```
+
+## Program Context
+
+### Context
+
+Information associated with a bytecode instruction that describes its semantic
+meaning. Contexts can include:
+- **Code**: Source location
+- **Variables**: Variables entering scope
+- **Remark**: Human-readable annotation
+- **Frame**: Function/call frame identifier
+
+### Instruction
+
+A single bytecode operation at a specific program counter offset. Instructions
+combine:
+- **Offset**: Byte position in the bytecode
+- **Operation**: The opcode and its arguments
+- **Context**: Semantic information about what the instruction does
+
+### Variable (in Programs)
+
+A named value in the source program that can be inspected during debugging.
+Program variables have:
+- **Identifier**: The variable's name
+- **Declaration**: Where it was defined in source
+- **Type**: How to interpret the value
+- **Pointer**: Where to find the value at runtime
+
+## Execution Tracing
+
+### Trace
+
+A record of EVM execution showing the state at each step. Traces capture:
+- Program counter
+- Opcode executed
+- Stack contents
+- Memory changes
+- Storage modifications
+
+### Machine State
+
+A snapshot of all EVM state at a specific execution point. Machine state
+includes the current values of:
+- Stack
+- Memory
+- Storage
+- Calldata
+- Returndata
+- Program counter
+- Gas remaining
+
+## Materials
+
+### Source
+
+Original source code associated with a compiled program. Sources are referenced
+by ID and contain the raw text content.
+
+### Source Range
+
+A reference to a specific portion of source code, defined by:
+- **Source**: Which source file
+- **Range**: Offset and length within that file
+
+Source ranges enable mapping bytecode back to the original code that produced
+it.

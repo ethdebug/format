@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc --build packages/format packages/pointers packages/evm packages/bugc packages/programs-react",
+    "build": "tsc --build packages/format packages/pointers packages/evm packages/bugc packages/programs-react packages/pointers-react",
     "bundle": "tsx ./bin/bundle-schema.ts",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",

@@ -1,0 +1,101 @@
+/**
+ * Styles for TraceControls component.
+ */
+
+.trace-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--programs-bg-secondary, #f5f6f7);
+  border-radius: 6px;
+}
+
+.trace-controls-navigation {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+.trace-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1rem;
+  border: 1px solid var(--programs-border-primary, #dadde1);
+  border-radius: 4px;
+  background: var(--programs-bg-primary, #ffffff);
+  color: var(--programs-text-primary, #1c1e21);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trace-control-btn:hover:not(:disabled) {
+  background: var(--programs-bg-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--programs-border-highlight, #0969da);
+}
+
+.trace-control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trace-controls-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8125rem;
+}
+
+.trace-step-counter {
+  color: var(--programs-text-secondary, #606770);
+}
+
+.trace-current-opcode code {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+  background: var(--programs-accent-blue-bg, rgba(9, 105, 218, 0.1));
+  color: var(--programs-accent-blue, #0969da);
+  border-radius: 3px;
+}
+
+/* Progress bar */
+.trace-progress {
+  position: relative;
+  height: 8px;
+  background: var(--programs-bg-code, #f5f6f7);
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0.5rem 0;
+}
+
+.trace-progress:focus {
+  outline: 2px solid var(--programs-accent-blue, #0969da);
+  outline-offset: 2px;
+}
+
+.trace-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--programs-accent-blue, #0969da);
+  border-radius: 4px;
+  transition: width 0.1s ease-out;
+}
+
+.trace-progress-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--programs-accent-blue, #0969da);
+  border: 2px solid var(--programs-bg-primary, #ffffff);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.1s ease-out;
+}

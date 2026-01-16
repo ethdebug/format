@@ -1,0 +1,117 @@
+/**
+ * Styles for RegionMap component.
+ */
+
+.region-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.region-map-empty {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.region-map-empty-text {
+  font-size: 0.875rem;
+  color: var(--pointers-text-muted);
+}
+
+.region-map-entry {
+  border: 1px solid var(--pointers-border-secondary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.region-map-entry.selected {
+  border-color: var(--pointers-border-highlight);
+}
+
+.region-map-name {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--ifm-font-family-monospace, monospace);
+  background: var(--pointers-bg-secondary);
+  color: var(--pointers-text-primary);
+}
+
+.region-map-regions {
+  display: flex;
+  flex-direction: column;
+}
+
+.region-map-region {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--pointers-border-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.region-map-region:hover {
+  background: var(--pointers-bg-hover);
+}
+
+.region-map-region:focus {
+  outline: none;
+  background: var(--pointers-bg-highlight);
+}
+
+.region-location-badge {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* Region type colors */
+.region-storage .region-location-badge {
+  color: var(--pointers-region-storage);
+  background: var(--pointers-region-storage-bg);
+}
+
+.region-memory .region-location-badge {
+  color: var(--pointers-region-memory);
+  background: var(--pointers-region-memory-bg);
+}
+
+.region-stack .region-location-badge {
+  color: var(--pointers-region-stack);
+  background: var(--pointers-region-stack-bg);
+}
+
+.region-calldata .region-location-badge {
+  color: var(--pointers-region-calldata);
+  background: var(--pointers-region-calldata-bg);
+}
+
+.region-returndata .region-location-badge {
+  color: var(--pointers-region-returndata);
+  background: var(--pointers-region-returndata-bg);
+}
+
+.region-code .region-location-badge {
+  color: var(--pointers-region-code);
+  background: var(--pointers-region-code-bg);
+}
+
+.region-transient .region-location-badge {
+  color: var(--pointers-region-transient);
+  background: var(--pointers-region-transient-bg);
+}
+
+.region-details {
+  font-size: 0.75rem;
+  font-family: var(--ifm-font-family-monospace, monospace);
+  color: var(--pointers-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

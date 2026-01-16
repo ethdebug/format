@@ -2,11 +2,13 @@
 sidebar_position: 4
 ---
 
+import { PointerResolver } from "@theme/PointersExample";
+
 # Pointer resolution
 
 Pointer resolution is the process of converting a pointer definition into
-actual byte values from the EVM state. This page will feature an interactive
-widget for exploring resolution step by step.
+actual byte values from the EVM state. This page features an interactive
+widget for exploring resolution.
 
 ## The resolution process
 
@@ -21,53 +23,156 @@ stages:
 4. **Combine results**: For grouped or conditional pointers, assemble the final
    byte sequence
 
+## Interactive exploration
+
+Try the pointer resolution widget below. You can:
+
+- Edit the pointer JSON to define different data locations
+- Modify the machine state (storage, stack, memory)
+- Click "Resolve Pointer" to see the resolved regions and values
+
+<PointerResolver
+  initialPointer={{
+    "group": [
+      {
+        "name": "base",
+        "location": "storage",
+        "slot": 3
+      },
+      {
+        "name": "element",
+        "location": "storage",
+        "slot": {
+          "$sum": [
+            { "$keccak256": [{ ".slot": "base" }] },
+            2
+          ]
+        }
+      }
+    ]
+  }}
+  initialState={{
+    storage: {
+      "0x03": "0x0000000000000000000000000000000000000000000000000000000000000005"
+    }
+  }}
+  showPointerInput={true}
+  showStateEditor={true}
+/>
+
 ## Example walkthrough
 
-Consider resolving a pointer to a dynamic array element:
+The default pointer above resolves a dynamic array element using a `group`:
 
 ```json
 {
-  "define": {
-    "name": "base",
-    "location": "storage",
-    "slot": 3
-  },
-  "in": {
-    "location": "storage",
-    "slot": {
-      "$sum": [
-        { "$keccak256": [{ ".slot": "base" }] },
-        2
-      ]
+  "group": [
+    {
+      "name": "base",
+      "location": "storage",
+      "slot": 3
+    },
+    {
+      "name": "element",
+      "location": "storage",
+      "slot": {
+        "$sum": [
+          { "$keccak256": [{ ".slot": "base" }] },
+          2
+        ]
+      }
     }
-  }
+  ]
 }
 ```
 
-**Step 1**: Define the base region (slot 3)
+**Step 1**: The first region named "base" reads storage slot 3
 
-**Step 2**: Evaluate `.slot` lookup → 3
+**Step 2**: The second region uses `.slot` to reference the slot value (3) from "base"
 
-**Step 3**: Compute `$keccak256([3])` → `0xc2575...` (the data slot)
+**Step 3**: Compute `$keccak256([3])` — hash the slot to get the data area base
 
-**Step 4**: Add index 2 → `0xc2575... + 2`
+**Step 4**: Add index 2 to get the third element's slot
 
-**Step 5**: Read 32 bytes from that storage slot
+**Step 5**: Read 32 bytes from the computed storage slot
 
-## Interactive exploration
+### Try these examples
 
-:::note Coming soon
-An interactive pointer resolution widget will be added here, allowing you to:
+**Simple storage variable:**
+```json
+{
+  "location": "storage",
+  "slot": 0
+}
+```
 
-- Input a pointer definition
-- Provide sample EVM state (storage, memory, stack values)
-- Step through the resolution process
-- See intermediate values at each stage
-- View the final resolved bytes
+**Stack value:**
+```json
+{
+  "location": "stack",
+  "slot": 0
+}
+```
+(Add a stack entry in the state editor to see this work)
 
-This widget will help you understand how pointers work in practice and debug
-pointer definitions.
-:::
+**Memory region:**
+```json
+{
+  "location": "memory",
+  "offset": 0,
+  "length": 32
+}
+```
+(Add memory contents in the state editor)
+
+## Resolution mechanics
+
+### Expression evaluation
+
+Expressions like `$sum`, `$keccak256`, and variable references are evaluated
+against the current machine state. The expression language is compositional:
+
+```json
+{
+  "$sum": [
+    { "$keccak256": [{ "$wordsized": 0 }] },
+    { "$product": [32, 5] }
+  ]
+}
+```
+
+This computes: `keccak256(pad32(0)) + (32 * 5)`
+
+### Named regions
+
+Use `group` to create named regions that can be referenced by later regions:
+
+```json
+{
+  "group": [
+    { "name": "base", "location": "storage", "slot": 0 },
+    {
+      "location": "storage",
+      "slot": { "$keccak256": [{ ".slot": "base" }] }
+    }
+  ]
+}
+```
+
+The `.slot` lookup reads the slot field from the named "base" region.
+
+### Multiple regions
+
+Pointers can yield multiple regions using `group` or `list`:
+
+```json
+{
+  "group": [
+    { "name": "length", "location": "storage", "slot": 0 },
+    { "name": "data", "location": "storage", "slot": 1 }
+  ]
+}
+```
 
 ## Implementation resources
 
