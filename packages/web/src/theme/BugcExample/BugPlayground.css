@@ -95,7 +95,9 @@
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
-  transition: color 0.2s, background 0.2s;
+  transition:
+    color 0.2s,
+    background 0.2s;
 }
 
 .bug-playground-tab:hover {

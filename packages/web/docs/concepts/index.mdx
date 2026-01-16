@@ -19,6 +19,7 @@ ethdebug/format consists of three main kinds of information:
 how to interpret raw bytes as meaningful values.
 
 For example, the same 32 bytes could be:
+
 - A `uint256` representing a token balance
 - An `address` padded to 32 bytes
 - Part of a `bytes` dynamic byte array
@@ -35,11 +36,13 @@ correctly.
 EVM state.
 
 Simple pointers specify static locations:
+
 - "Storage slot 0"
 - "Memory offset 0x80"
 - "Stack position 2"
 
 Complex pointers describe dynamic locations:
+
 - "Storage slot `keccak256(key, baseSlot)`" for mapping values
 - "Memory at the offset stored in stack position 1" for dynamic references
 
@@ -53,6 +56,7 @@ Pointers can include expressions that compute locations based on runtime state.
 at each point in execution.
 
 Programs answer questions like:
+
 - What source code corresponds to this bytecode instruction?
 - What variables are in scope right now?
 - What function are we in?

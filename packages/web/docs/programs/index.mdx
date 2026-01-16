@@ -15,6 +15,7 @@ contract's runtime code (executed when called) or its creation code (executed
 during deployment).
 
 Each program contains:
+
 - **Contract metadata**: which contract this bytecode belongs to
 - **Instruction list**: one entry per bytecode instruction, in order
 
@@ -29,6 +30,7 @@ provides:
   executes
 
 Context information may include:
+
 - **Source ranges**: which lines of source code this instruction relates to
 - **Variables**: what variables are in scope and where their values live
 - **Control flow hints**: whether this instruction is part of a function call,
@@ -116,13 +118,15 @@ runtime.
         <h3>Instructions</h3>
       </div>
       <div className="card__body">
-        <p>
-          How instruction records map bytecode to source.
-        </p>
+        <p>How instruction records map bytecode to source.</p>
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="./instructions">Learn more →</a>
+        <a
+          className="button button--secondary button--block"
+          href="./instructions"
+        >
+          Learn more →
+        </a>
       </div>
     </div>
   </div>
@@ -132,13 +136,15 @@ runtime.
         <h3>Variables</h3>
       </div>
       <div className="card__body">
-        <p>
-          Connecting identifiers to runtime locations.
-        </p>
+        <p>Connecting identifiers to runtime locations.</p>
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="./variables">Learn more →</a>
+        <a
+          className="button button--secondary button--block"
+          href="./variables"
+        >
+          Learn more →
+        </a>
       </div>
     </div>
   </div>
@@ -151,13 +157,12 @@ runtime.
         <h3>Tracing execution</h3>
       </div>
       <div className="card__body">
-        <p>
-          Using programs to inspect variables during execution.
-        </p>
+        <p>Using programs to inspect variables during execution.</p>
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="./tracing">Learn more →</a>
+        <a className="button button--secondary button--block" href="./tracing">
+          Learn more →
+        </a>
       </div>
     </div>
   </div>
@@ -167,13 +172,15 @@ runtime.
         <h3>Full specification</h3>
       </div>
       <div className="card__body">
-        <p>
-          Complete JSON schemas for programs, instructions, and contexts.
-        </p>
+        <p>Complete JSON schemas for programs, instructions, and contexts.</p>
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="/spec/program">View spec →</a>
+        <a
+          className="button button--secondary button--block"
+          href="/spec/program"
+        >
+          View spec →
+        </a>
       </div>
     </div>
   </div>

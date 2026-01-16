@@ -14,12 +14,14 @@ ethdebug/format pointers.
 transaction boundaries and is the primary place contracts store their state.
 
 Key characteristics:
+
 - **Persistent** — Values remain until explicitly changed
 - **Slot-based** — Organized into 32-byte slots numbered from 0
 - **Expensive** — Reading and writing storage costs significant gas
 - **Contract-specific** — Each contract has its own storage space
 
 Storage is where you find:
+
 - Contract state variables
 - Mapping contents (at computed slot locations)
 - Dynamic array contents (at computed slot locations)
@@ -32,12 +34,14 @@ In ethdebug/format, storage locations use `"location": "storage"`.
 execution. It's cleared between calls.
 
 Key characteristics:
+
 - **Temporary** — Cleared after each external call returns
 - **Byte-addressable** — Accessed by byte offset, not slots
 - **Linear** — Grows as needed, starting from offset 0
 - **Cheaper than storage** — But costs gas to expand
 
 Memory is where you find:
+
 - Function arguments for external calls
 - Return data being prepared
 - Temporary variables and intermediate values
@@ -51,12 +55,14 @@ In ethdebug/format, memory locations use `"location": "memory"`.
 intermediate results.
 
 Key characteristics:
+
 - **256-bit words** — Each stack item is 32 bytes
 - **Limited depth** — Maximum 1024 items
 - **LIFO** — Last in, first out access pattern
 - **Ephemeral** — Contents change constantly during execution
 
 The stack is where you find:
+
 - Function arguments (for internal calls)
 - Local variables (in some cases)
 - Intermediate computation results
@@ -69,12 +75,14 @@ In ethdebug/format, stack locations use `"location": "stack"`.
 **Calldata** is the read-only input data sent to a contract when it's called.
 
 Key characteristics:
+
 - **Read-only** — Cannot be modified during execution
 - **Byte-addressable** — Accessed by byte offset
 - **Transaction-specific** — Contains the call's input parameters
 - **Cheap to read** — Cheaper than memory or storage reads
 
 Calldata is where you find:
+
 - Function selector (first 4 bytes)
 - ABI-encoded function arguments
 
@@ -85,12 +93,14 @@ In ethdebug/format, calldata locations use `"location": "calldata"`.
 **Returndata** is the output from the most recent external call.
 
 Key characteristics:
+
 - **Read-only** — Set by called contract, read by caller
 - **Replaced on each call** — Each external call overwrites previous
   returndata
 - **Byte-addressable** — Accessed by byte offset
 
 Returndata is where you find:
+
 - Return values from external function calls
 - Revert reasons (when calls fail)
 
@@ -102,10 +112,12 @@ In ethdebug/format, returndata locations use `"location": "returndata"`.
 in the bytecode.
 
 Key characteristics:
+
 - **Immutable** — Cannot change after deployment
 - **Byte-addressable** — Accessed by byte offset
 
 Code is where you find:
+
 - Immutable variables (in some compiler implementations)
 - Embedded constants
 
@@ -117,6 +129,7 @@ In ethdebug/format, code locations use `"location": "code"`.
 but is cleared afterward.
 
 Key characteristics:
+
 - **Transaction-scoped** — Persists across calls within a transaction
 - **Cleared after transaction** — Does not persist to the next transaction
 - **Slot-based** — Like storage, organized into 32-byte slots
@@ -127,15 +140,15 @@ In ethdebug/format, transient storage locations use
 
 ## Summary
 
-| Location | Persistence | Addressing | Primary use |
-|----------|-------------|------------|-------------|
-| Storage | Permanent | 32-byte slots | Contract state |
-| Memory | Single call | Byte offset | Temporary data |
-| Stack | Instruction-level | Position index | Computation |
-| Calldata | Single call | Byte offset | Input parameters |
-| Returndata | Until next call | Byte offset | Call results |
-| Code | Permanent | Byte offset | Bytecode/immutables |
-| Transient | Single transaction | 32-byte slots | Tx-scoped state |
+| Location   | Persistence        | Addressing     | Primary use         |
+| ---------- | ------------------ | -------------- | ------------------- |
+| Storage    | Permanent          | 32-byte slots  | Contract state      |
+| Memory     | Single call        | Byte offset    | Temporary data      |
+| Stack      | Instruction-level  | Position index | Computation         |
+| Calldata   | Single call        | Byte offset    | Input parameters    |
+| Returndata | Until next call    | Byte offset    | Call results        |
+| Code       | Permanent          | Byte offset    | Bytecode/immutables |
+| Transient  | Single transaction | 32-byte slots  | Tx-scoped state     |
 
 ## Next steps
 

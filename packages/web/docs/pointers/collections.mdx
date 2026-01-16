@@ -4,9 +4,9 @@ sidebar_position: 4
 
 import { PointerPlayground, PointerExample } from "@theme/PointersExample";
 
-<PointerPlayground>
-
 # Collections
+
+<PointerPlayground>
 
 While [regions](./regions) describe single contiguous byte ranges, **collections**
 aggregate multiple pointers together. Collections handle cases where data
@@ -21,14 +21,14 @@ pointers or generate pointers based on runtime values.
 
 Collections provide six patterns for composing pointers:
 
-| Collection | Purpose |
-|------------|---------|
-| `group` | Combine multiple pointers into one |
-| `list` | Generate pointers for indexed sequences |
+| Collection    | Purpose                                      |
+| ------------- | -------------------------------------------- |
+| `group`       | Combine multiple pointers into one           |
+| `list`        | Generate pointers for indexed sequences      |
 | `conditional` | Choose between pointers based on a condition |
-| `scope` | Define variables for use in nested pointers |
-| `reference` | Invoke reusable pointer templates |
-| `templates` | Define inline templates for local reuse |
+| `scope`       | Define variables for use in nested pointers  |
+| `reference`   | Invoke reusable pointer templates            |
+| `templates`   | Define inline templates for local reuse      |
 
 Click **"▶ Try it"** on any example to load it into the Pointer Playground
 drawer at the bottom of the screen.
@@ -43,14 +43,16 @@ pointer in the group can have a name for identification.
   pointer={{
     group: [
       { name: "len", location: "storage", slot: 0 },
-      { name: "data", location: "storage", slot: 1 }
-    ]
+      { name: "data", location: "storage", slot: 1 },
+    ],
   }}
   state={{
     storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000005",
-      "0x01": "0x48656c6c6f000000000000000000000000000000000000000000000000000000"
-    }
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000005",
+      "0x01":
+        "0x48656c6c6f000000000000000000000000000000000000000000000000000000",
+    },
   }}
 />
 
@@ -71,16 +73,19 @@ handles dynamic arrays and other indexed collections.
       is: {
         name: "element",
         location: "storage",
-        slot: { $sum: [10, "i"] }
-      }
-    }
+        slot: { $sum: [10, "i"] },
+      },
+    },
   }}
   state={{
     storage: {
-      "0x0a": "0x0000000000000000000000000000000000000000000000000000000000000001",
-      "0x0b": "0x0000000000000000000000000000000000000000000000000000000000000002",
-      "0x0c": "0x0000000000000000000000000000000000000000000000000000000000000003"
-    }
+      "0x0a":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x0b":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x0c":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+    },
   }}
 />
 
@@ -104,28 +109,31 @@ When the count comes from storage:
           is: {
             name: "element",
             location: "storage",
-            slot: { $sum: [1, "i"] }
-          }
-        }
-      }
-    ]
+            slot: { $sum: [1, "i"] },
+          },
+        },
+      },
+    ],
   }}
   state={{
     storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000002",
-      "0x01": "0x000000000000000000000000000000000000000000000000000000000000000a",
-      "0x02": "0x0000000000000000000000000000000000000000000000000000000000000014"
-    }
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x01":
+        "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x02":
+        "0x0000000000000000000000000000000000000000000000000000000000000014",
+    },
   }}
 />
 
 ### List properties
 
-| Property | Description |
-|----------|-------------|
-| `count` | Expression evaluating to the number of items |
-| `each` | Variable name for the current index (starting at 0) |
-| `is` | Pointer template evaluated for each index |
+| Property | Description                                         |
+| -------- | --------------------------------------------------- |
+| `count`  | Expression evaluating to the number of items        |
+| `each`   | Variable name for the current index (starting at 0) |
+| `is`     | Pointer template evaluated for each index           |
 
 ## Conditional
 
@@ -133,58 +141,37 @@ A **conditional** selects between pointers based on whether an expression
 evaluates to a non-zero value.
 
 <PointerExample
-  title="Conditional (true branch)"
+  title="Conditional pointer"
   pointer={{
     group: [
       { name: "flag", location: "storage", slot: 0 },
       {
         if: { $read: "flag" },
         then: { name: "whenTrue", location: "storage", slot: 1 },
-        else: { name: "whenFalse", location: "storage", slot: 2 }
-      }
-    ]
+        else: { name: "whenFalse", location: "storage", slot: 2 },
+      },
+    ],
   }}
   state={{
     storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000001",
-      "0x01": "0x000000000000000000000000000000000000000000000000000000000000002a",
-      "0x02": "0x00000000000000000000000000000000000000000000000000000000000000ff"
-    }
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x01":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+      "0x02":
+        "0x00000000000000000000000000000000000000000000000000000000000000ff",
+    },
   }}
-  description="Condition is non-zero, so 'then' branch is taken"
-/>
-
-Try changing storage slot 0 to `0x00` to see the `else` branch:
-
-<PointerExample
-  title="Conditional (false branch)"
-  pointer={{
-    group: [
-      { name: "flag", location: "storage", slot: 0 },
-      {
-        if: { $read: "flag" },
-        then: { name: "whenTrue", location: "storage", slot: 1 },
-        else: { name: "whenFalse", location: "storage", slot: 2 }
-      }
-    ]
-  }}
-  state={{
-    storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x01": "0x000000000000000000000000000000000000000000000000000000000000002a",
-      "0x02": "0x00000000000000000000000000000000000000000000000000000000000000ff"
-    }
-  }}
-  description="Condition is zero, so 'else' branch is taken"
+  description="Click 'Try it' and change slot 0 to 0x00 to see the 'else' branch"
 />
 
 ### Conditional properties
 
-| Property | Description |
-|----------|-------------|
-| `if` | Expression to evaluate (non-zero = true) |
-| `then` | Pointer to use when condition is true |
-| `else` | Optional pointer when condition is false |
+| Property | Description                              |
+| -------- | ---------------------------------------- |
+| `if`     | Expression to evaluate (non-zero = true) |
+| `then`   | Pointer to use when condition is true    |
+| `else`   | Optional pointer when condition is false |
 
 ## Scope
 
@@ -196,54 +183,33 @@ are evaluated in order, so later variables can reference earlier ones.
   pointer={{
     define: {
       baseSlot: 3,
-      offset: 2
+      offset: 2,
     },
     in: {
       name: "result",
       location: "storage",
-      slot: { $sum: ["baseSlot", "offset"] }
-    }
+      slot: { $sum: ["baseSlot", "offset"] },
+    },
   }}
   state={{
     storage: {
-      "0x05": "0x0000000000000000000000000000000000000000000000000000000000000064"
-    }
+      "0x05":
+        "0x0000000000000000000000000000000000000000000000000000000000000064",
+    },
   }}
   description="Computes slot 3 + 2 = 5"
 />
 
-Scopes help break complex pointer definitions into readable steps.
-
-### Scope with keccak256
-
-<PointerExample
-  title="Array element via hash"
-  pointer={{
-    define: {
-      arraySlot: 0,
-      dataStart: { $keccak256: [{ $wordsized: "arraySlot" }] }
-    },
-    in: {
-      name: "element0",
-      location: "storage",
-      slot: "dataStart"
-    }
-  }}
-  state={{
-    storage: {
-      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563":
-        "0x00000000000000000000000000000000000000000000000000000000000003e8"
-    }
-  }}
-  description="Computes keccak256(0) for Solidity dynamic array data location"
-/>
+Scopes help break complex pointer definitions into readable steps. For examples
+combining scopes with keccak256 for storage slot computation, see the
+[expressions documentation](./expressions#computing-storage-slots-with-keccak256).
 
 ### Scope properties
 
-| Property | Description |
-|----------|-------------|
-| `define` | Object mapping variable names to expressions |
-| `in` | Pointer where defined variables are available |
+| Property | Description                                   |
+| -------- | --------------------------------------------- |
+| `define` | Object mapping variable names to expressions  |
+| `in`     | Pointer where defined variables are available |
 
 ## Reference and Templates
 
@@ -256,27 +222,29 @@ them inline. These work together for reusable pointer patterns.
     templates: {
       "read-slot": {
         expect: ["n"],
-        for: { name: "slot", location: "storage", slot: "n" }
-      }
+        for: { name: "slot", location: "storage", slot: "n" },
+      },
     },
     in: {
       group: [
         {
           define: { n: 0 },
-          in: { template: "read-slot" }
+          in: { template: "read-slot" },
         },
         {
           define: { n: 1 },
-          in: { template: "read-slot" }
-        }
-      ]
-    }
+          in: { template: "read-slot" },
+        },
+      ],
+    },
   }}
   state={{
     storage: {
-      "0x00": "0x000000000000000000000000000000000000000000000000000000000000000a",
-      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000014"
-    }
+      "0x00":
+        "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000014",
+    },
   }}
   description="Defines a template and uses it twice"
 />
@@ -285,17 +253,17 @@ them inline. These work together for reusable pointer patterns.
 
 Each template in the `templates` object has:
 
-| Property | Description |
-|----------|-------------|
+| Property | Description                      |
+| -------- | -------------------------------- |
 | `expect` | Array of required variable names |
-| `for` | The pointer template body |
+| `for`    | The pointer template body        |
 
 ### Reference properties
 
-| Property | Description |
-|----------|-------------|
-| `template` | Name of the template to invoke |
-| `yields` | Optional object mapping template region names to new names |
+| Property   | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| `template` | Name of the template to invoke                             |
+| `yields`   | Optional object mapping template region names to new names |
 
 ## Nesting collections
 
@@ -310,7 +278,7 @@ used throughout nested collections.
       { name: "lengthSlot", location: "storage", slot: 0 },
       {
         define: {
-          len: { $read: "lengthSlot" }
+          len: { $read: "lengthSlot" },
         },
         in: {
           if: "len",
@@ -321,21 +289,25 @@ used throughout nested collections.
               is: {
                 name: "item",
                 location: "storage",
-                slot: { $sum: [1, "i"] }
-              }
-            }
-          }
-        }
-      }
-    ]
+                slot: { $sum: [1, "i"] },
+              },
+            },
+          },
+        },
+      },
+    ],
   }}
   state={{
     storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000003",
-      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000001",
-      "0x02": "0x0000000000000000000000000000000000000000000000000000000000000002",
-      "0x03": "0x0000000000000000000000000000000000000000000000000000000000000003"
-    }
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x02":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x03":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+    },
   }}
   description="Reads length, checks if non-zero, then generates that many pointers"
 />
@@ -354,15 +326,17 @@ and `.length` syntax in expressions.
       {
         name: "body",
         location: "storage",
-        slot: { $sum: [{ ".slot": "header" }, 1] }
-      }
-    ]
+        slot: { $sum: [{ ".slot": "header" }, 1] },
+      },
+    ],
   }}
   state={{
     storage: {
-      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000010",
-      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000020"
-    }
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000010",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000020",
+    },
   }}
   description="Second region's slot is computed from first region's slot (0 + 1 = 1)"
 />
@@ -371,7 +345,6 @@ and `.length` syntax in expressions.
 
 - [Regions](./regions) for simple pointer definitions
 - [Expressions](./expressions) for dynamic value computation
-- [Resolution](./resolution) to try more examples interactively
 - [Pointer specification](/spec/pointer/collection) for formal definitions
 
 </PointerPlayground>

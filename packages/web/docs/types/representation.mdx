@@ -37,6 +37,7 @@ Memory: |---------------- uint128 a (padded) ----------------|
 ### Why this matters for debugging
 
 A debugger reading a `uint128` needs to know:
+
 - In storage: read 16 bytes from the correct offset within a slot
 - In memory: read 32 bytes, then interpret only the relevant portion
 

@@ -68,10 +68,7 @@ For a dynamic array where the length is at slot 2 and elements start at
   "from": {
     "location": "storage",
     "slot": {
-      "$sum": [
-        { "keccak256": ["0x0000...0002"] },
-        "$i"
-      ]
+      "$sum": [{ "keccak256": ["0x0000...0002"] }, "$i"]
     }
   }
 }
@@ -102,8 +99,10 @@ Most compilers can add ethdebug/format support incrementally:
         Detailed guidance on emitting ethdebug/format from your compiler.
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="/docs/implementation-guides/compiler">
+        <a
+          className="button button--secondary button--block"
+          href="/docs/implementation-guides/compiler"
+        >
           Compiler guides →
         </a>
       </div>
@@ -118,8 +117,10 @@ Most compilers can add ethdebug/format support incrementally:
         Formal schema definitions for all ethdebug/format structures.
       </div>
       <div className="card__footer">
-        <a className="button button--secondary button--block"
-           href="/spec/overview">
+        <a
+          className="button button--secondary button--block"
+          href="/spec/overview"
+        >
           Read the spec →
         </a>
       </div>

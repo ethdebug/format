@@ -197,10 +197,21 @@ Each bytecode instruction includes context with:
   "operation": { "mnemonic": "SLOAD" },
   "context": {
     "gather": [
-      { "code": { "source": { "id": "main" }, "range": { "offset": 120, "length": 5 } } },
-      { "variables": [
-        { "identifier": "count", "type": { "kind": "uint", "bits": 256 }, "pointer": { "location": "storage", "slot": 0 } }
-      ] }
+      {
+        "code": {
+          "source": { "id": "main" },
+          "range": { "offset": 120, "length": 5 }
+        }
+      },
+      {
+        "variables": [
+          {
+            "identifier": "count",
+            "type": { "kind": "uint", "bits": 256 },
+            "pointer": { "location": "storage", "slot": 0 }
+          }
+        ]
+      }
     ]
   }
 }
@@ -217,7 +228,7 @@ class ProgramBuilder {
   addInstruction(
     offset: number,
     operation: Program.Instruction.Operation,
-    context?: Program.Context
+    context?: Program.Context,
   ) {
     this.instructions.push({ offset, operation, context });
   }
@@ -239,7 +250,7 @@ execution point.
 ```typescript title="packages/bugc/src/irgen/debug/variables.ts"
 export function collectVariablesWithLocations(
   state: State,
-  sourceId: string
+  sourceId: string,
 ): VariableInfo[] {
   const variables: VariableInfo[] = [];
 
@@ -252,10 +263,12 @@ export function collectVariablesWithLocations(
       identifier: storageDecl.name,
       type: convertBugType(bugType),
       pointer,
-      declaration: storageDecl.loc ? {
-        source: { id: sourceId },
-        range: storageDecl.loc
-      } : undefined
+      declaration: storageDecl.loc
+        ? {
+            source: { id: sourceId },
+            range: storageDecl.loc,
+          }
+        : undefined,
     });
   }
 
@@ -286,14 +299,16 @@ test("generates correct storage pointer", () => {
 
   // Find the SLOAD instruction
   const sload = program.instructions.find(
-    i => i.operation?.mnemonic === "SLOAD"
+    (i) => i.operation?.mnemonic === "SLOAD",
   );
 
   expect(sload.context).toMatchObject({
-    variables: [{
-      identifier: "value",
-      pointer: { location: "storage", slot: 0 }
-    }]
+    variables: [
+      {
+        identifier: "value",
+        pointer: { location: "storage", slot: 0 },
+      },
+    ],
   });
 });
 ```
