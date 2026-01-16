@@ -1,0 +1,244 @@
+---
+sidebar_position: 4
+---
+
+# Collections
+
+While [regions](./regions) describe single contiguous byte ranges, **collections**
+aggregate multiple pointers together. Collections handle cases where data
+structures span multiple locations or have dynamic configurations.
+
+## Why collections?
+
+Consider a Solidity struct with multiple fields, or a dynamic array whose
+length isn't known at compile time. These require more than pointing to a
+single memory location—they need to describe relationships between multiple
+pointers or generate pointers based on runtime values.
+
+Collections provide six patterns for composing pointers:
+
+| Collection | Purpose |
+|------------|---------|
+| `group` | Combine multiple pointers into one |
+| `list` | Generate pointers for indexed sequences |
+| `conditional` | Choose between pointers based on a condition |
+| `scope` | Define variables for use in nested pointers |
+| `reference` | Invoke reusable pointer templates |
+| `templates` | Define inline templates for local reuse |
+
+## Group
+
+A **group** combines multiple pointers into a single composite pointer. Each
+pointer in the group can have a name for identification.
+
+```json
+{
+  "group": [
+    { "name": "length", "location": "storage", "slot": 0 },
+    { "name": "data", "location": "storage", "slot": 1 }
+  ]
+}
+```
+
+Groups are useful for structs and other compound data types where multiple
+fields need to be accessed together.
+
+## List
+
+A **list** generates a sequence of pointers based on a count expression. This
+handles dynamic arrays and other indexed collections.
+
+```json
+{
+  "list": {
+    "count": { "$read": { "location": "storage", "slot": 0 } },
+    "each": "i",
+    "is": {
+      "location": "storage",
+      "slot": {
+        "$sum": [
+          { "$keccak256": [{ "$wordsized": 0 }] },
+          "i"
+        ]
+      }
+    }
+  }
+}
+```
+
+The list evaluates `count` to determine how many pointers to generate, then
+for each index (bound to the variable named by `each`), it evaluates the `is`
+pointer template.
+
+### List properties
+
+| Property | Description |
+|----------|-------------|
+| `count` | Expression evaluating to the number of items |
+| `each` | Variable name for the current index (starting at 0) |
+| `is` | Pointer template evaluated for each index |
+
+## Conditional
+
+A **conditional** selects between pointers based on whether an expression
+evaluates to a non-zero value.
+
+```json
+{
+  "if": { "$read": { "location": "storage", "slot": 5 } },
+  "then": { "location": "storage", "slot": 6 },
+  "else": { "location": "storage", "slot": 7 }
+}
+```
+
+The `else` branch is optional. If omitted and the condition is false, the
+conditional yields no regions.
+
+### Conditional properties
+
+| Property | Description |
+|----------|-------------|
+| `if` | Expression to evaluate (non-zero = true) |
+| `then` | Pointer to use when condition is true |
+| `else` | Optional pointer when condition is false |
+
+## Scope
+
+A **scope** defines variables that can be used in a nested pointer. Variables
+are evaluated in order, so later variables can reference earlier ones.
+
+```json
+{
+  "define": {
+    "baseSlot": 3,
+    "arrayStart": { "$keccak256": [{ "$wordsized": "baseSlot" }] }
+  },
+  "in": {
+    "location": "storage",
+    "slot": { "$sum": ["arrayStart", 5] }
+  }
+}
+```
+
+Scopes help break complex pointer definitions into readable steps.
+
+### Scope properties
+
+| Property | Description |
+|----------|-------------|
+| `define` | Object mapping variable names to expressions |
+| `in` | Pointer where defined variables are available |
+
+## Reference
+
+A **reference** invokes a named pointer template. Templates can be defined
+elsewhere and reused across multiple pointers.
+
+```json
+{
+  "template": "array-element",
+  "yields": {
+    "element": "first-item"
+  }
+}
+```
+
+The optional `yields` property renames regions produced by the template,
+allowing the same template to be used in different contexts.
+
+### Reference properties
+
+| Property | Description |
+|----------|-------------|
+| `template` | Name of the template to invoke |
+| `yields` | Optional object mapping template region names to new names |
+
+## Templates
+
+A **templates** collection defines pointer templates inline, making them
+available within a nested pointer.
+
+```json
+{
+  "templates": {
+    "slot-reader": {
+      "expect": ["n"],
+      "for": { "location": "storage", "slot": "n" }
+    }
+  },
+  "in": {
+    "group": [
+      { "template": "slot-reader", "n": 0 },
+      { "template": "slot-reader", "n": 1 }
+    ]
+  }
+}
+```
+
+Templates follow a pattern similar to `scope`, but define reusable pointer
+patterns rather than variable values.
+
+### Template definition
+
+Each template in the `templates` object has:
+
+| Property | Description |
+|----------|-------------|
+| `expect` | Array of required variable names |
+| `for` | The pointer template body |
+
+## Nesting collections
+
+Collections can be nested to build complex pointer structures. A group might
+contain lists, conditionals might wrap groups, and scopes can define variables
+used throughout nested collections.
+
+```json
+{
+  "define": {
+    "length": { "$read": { "location": "storage", "slot": 0 } }
+  },
+  "in": {
+    "if": { "$difference": ["length", 0] },
+    "then": {
+      "list": {
+        "count": "length",
+        "each": "i",
+        "is": {
+          "location": "storage",
+          "slot": { "$sum": [1, "i"] }
+        }
+      }
+    }
+  }
+}
+```
+
+This example reads an array length, checks if it's non-zero, then generates
+pointers for each element.
+
+## Named regions in collections
+
+Pointers within collections can include a `name` property. Named regions are
+tracked during resolution and can be referenced using the `.slot`, `.offset`,
+and `.length` syntax in expressions.
+
+```json
+{
+  "group": [
+    { "name": "header", "location": "storage", "slot": 0 },
+    {
+      "name": "body",
+      "location": "storage",
+      "slot": { "$sum": [{ ".slot": "header" }, 1] }
+    }
+  ]
+}
+```
+
+## Learn more
+
+- [Regions](./regions) for simple pointer definitions
+- [Expressions](./expressions) for dynamic value computation
+- [Resolution](./resolution) to try collections interactively
+- [Pointer specification](/spec/pointer/collection) for formal definitions
