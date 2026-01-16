@@ -1,21 +1,84 @@
 ---
 sidebar_position: 1
+sidebar_label: Overview
 ---
 
 # Concepts
 
-Core concepts behind ethdebug/format.
+This section introduces the core concepts behind ethdebug/format. Understanding
+these mental models will help you work with the format effectively, whether
+you're consuming it in a debugger or producing it from a compiler.
 
-:::note[Coming soon]
-This section is under construction. It will explain the mental models
-underlying the format.
-:::
+## The main components
 
-## Overview
+ethdebug/format consists of three main kinds of information:
 
-The ethdebug/format provides structured debug information for EVM bytecode.
-It consists of several main components:
+### Types
 
-- **Types** — Describe the structure of data
-- **Pointers** — Describe where data lives at runtime
-- **Programs** — Describe what's in scope at each bytecode instruction
+**Types** describe what kind of data you're looking at. They tell a debugger
+how to interpret raw bytes as meaningful values.
+
+For example, the same 32 bytes could be:
+- A `uint256` representing a token balance
+- An `address` padded to 32 bytes
+- Part of a `bytes` dynamic byte array
+- Two packed `uint128` values
+
+Type definitions give debuggers the information they need to decode bytes
+correctly.
+
+**[Learn more about types →](/docs/types)**
+
+### Pointers
+
+**Pointers** describe where data lives. They're recipes for finding bytes in
+EVM state.
+
+Simple pointers specify static locations:
+- "Storage slot 0"
+- "Memory offset 0x80"
+- "Stack position 2"
+
+Complex pointers describe dynamic locations:
+- "Storage slot `keccak256(key, baseSlot)`" for mapping values
+- "Memory at the offset stored in stack position 1" for dynamic references
+
+Pointers can include expressions that compute locations based on runtime state.
+
+**[Learn more about pointers →](/docs/pointers)**
+
+### Programs
+
+**Programs** describe runtime context. They tell a debugger what's happening
+at each point in execution.
+
+Programs answer questions like:
+- What source code corresponds to this bytecode instruction?
+- What variables are in scope right now?
+- What function are we in?
+
+This information enables source-level debugging of optimized bytecode.
+
+**[Learn more about programs →](/docs/programs)**
+
+## How they work together
+
+These components combine to enable rich debugging:
+
+1. A debugger reads **program** information to know which variables are in
+   scope at the current instruction
+2. Each variable has a **type** that describes its structure
+3. Each variable has a **pointer** that describes where to find its value
+4. The debugger resolves the pointer against current EVM state to get raw bytes
+5. The debugger decodes the bytes using the type definition
+6. The user sees meaningful variable values
+
+## Next steps
+
+- **[Data locations](/docs/concepts/data-locations)** — Understand where data
+  can live in the EVM
+- **[Types deep dive](/docs/types)** — Full documentation on type definitions
+- **[Pointers deep dive](/docs/pointers)** — Full documentation on pointer
+  definitions
+- **[Programs deep dive](/docs/programs)** — Full documentation on program
+  annotations

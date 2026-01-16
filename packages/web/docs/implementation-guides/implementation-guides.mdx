@@ -7,52 +7,47 @@ pagination_next: null
 
 # Implementation guides
 
-This section of these docs serves to provide resources that guide readers who
-are looking to implement one or more components of **ethdebug/format**.
-Because of the distinct concerns involved in implementing this format on the
-compilation side vs. the concerns involved on the debugging side, this page
-lists and categorizes the available guides into the appropriate heading.
+These guides help you implement ethdebug/format support in your project.
+Choose the section that matches what you're building.
 
 ## For debuggers
 
+Guides for consuming ethdebug/format data in debuggers, tracers, and analysis
+tools.
+
 <dl>
-<dt>**Guide: [Dereferencing pointers](/docs/implementation-guides/pointers)**</dt>
+<dt>**[Dereferencing pointers](/docs/implementation-guides/pointers)**</dt>
 <dd>
-This guide provides readers with a tour of the **@ethdebug/pointers**
-TypeScript reference implementation, showing example concrete logic for how a
-debugger might process **ethdebug/format** pointers.
+A detailed walkthrough of the **@ethdebug/pointers** TypeScript reference
+implementation, showing how to resolve pointers to concrete values.
 
-For an introduction to **ethdebug/format** pointers, please see
-the Pointer specification's [Overview](/spec/pointer/overview) and
-[Key&nbsp;concepts](/spec/pointer/concepts) pages.
-
+For background on pointer concepts, see
+the [Pointers documentation](/docs/pointers) and the
+[Pointer specification](/spec/pointer/overview).
 </dd>
 
 <dt>**Other guides**</dt>
 <dd>
-  _Guides for other aspects of debugger-side **ethdebug/format** implementation
-  are planned and still need to be written._
+  _Additional debugger implementation guides are planned._
 </dd>
-
 </dl>
 
 ## For compilers
 
+Guides for emitting ethdebug/format data from compilers and toolchains.
+
 <dl>
-  <dt>**No availble guides yet**</dt>
-  <dd>
-    _Guides for implementing **ethdebug/format** support inside a compiler are
-    planned and still need to be written._
-  </dd>
+<dt>**[Compiler guides](/docs/implementation-guides/compiler)**</dt>
+<dd>
+Guidance on integrating ethdebug/format output into your compiler, including
+what to emit and when.
+</dd>
 </dl>
 
-:::tip[Work in progress]
+:::tip[Contributing]
 
-Sadly, things are looking a little scarce right now. Please stay tuned as work
-on this effort progresses.
-
-**Interested in helping out?** If you'd like to help with writing initial
-reference implementations for one or more schemas, please reach out in our
-[Matrix.chat](https://matrix.to/#/#ethdebug:matrix.org).
+Interested in helping improve these guides? Contributions are welcome!
+Reach out in our [Matrix.chat](https://matrix.to/#/#ethdebug:matrix.org)
+or open an issue on [GitHub](https://github.com/ethdebug/format).
 
 :::

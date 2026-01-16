@@ -1,0 +1,136 @@
+---
+sidebar_position: 3
+---
+
+# For compiler authors
+
+You're building a compiler or toolchain that produces EVM bytecode. Here's how
+to emit ethdebug/format data so debuggers can provide rich debugging
+experiences for your users.
+
+## What you need to emit
+
+ethdebug/format defines several kinds of debug information:
+
+- **Type information** — Describe the types in your language so debuggers can
+  decode raw bytes into meaningful values
+- **Pointer information** — Describe where variables are stored at runtime,
+  including dynamic locations computed from other values
+- **Program information** — Describe what's in scope at each bytecode
+  instruction, mapping bytecode back to source code
+
+## Quick example: Describing a type
+
+Here's how to describe a simple `uint256`:
+
+```json
+{
+  "kind": "uint",
+  "bits": 256
+}
+```
+
+A storage mapping from addresses to balances:
+
+```json
+{
+  "kind": "mapping",
+  "key": { "kind": "address" },
+  "value": { "kind": "uint", "bits": 256 }
+}
+```
+
+## Quick example: Describing a storage variable
+
+A pointer tells debuggers where to find a variable's value. For a `uint256`
+at storage slot 0:
+
+```json
+{
+  "location": "storage",
+  "slot": "0x0",
+  "length": 32
+}
+```
+
+For a dynamic array where the length is at slot 2 and elements start at
+`keccak256(2)`:
+
+```json
+{
+  "collection": "list",
+  "count": {
+    "location": "storage",
+    "slot": "0x2",
+    "length": 32
+  },
+  "each": "i",
+  "from": {
+    "location": "storage",
+    "slot": {
+      "$sum": [
+        { "keccak256": ["0x0000...0002"] },
+        "$i"
+      ]
+    }
+  }
+}
+```
+
+## Integration approach
+
+Most compilers can add ethdebug/format support incrementally:
+
+1. **Start with types** — Emit type definitions for your language's data
+   structures. This is often the easiest starting point.
+2. **Add storage pointers** — Describe where storage variables live. Many
+   variables have static locations that are simple to emit.
+3. **Add memory/stack pointers** — Describe temporary values. These often
+   require tracking allocation during code generation.
+4. **Add program information** — Emit source mappings and scope information.
+   This typically requires the most compiler changes.
+
+## Go deeper
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Compiler implementation guide</h4>
+      </div>
+      <div className="card__body">
+        Detailed guidance on emitting ethdebug/format from your compiler.
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="/docs/implementation-guides/compiler">
+          Compiler guides →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Specification</h4>
+      </div>
+      <div className="card__body">
+        Formal schema definitions for all ethdebug/format structures.
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block"
+           href="/spec">
+          Read the spec →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+### Explore by topic
+
+- **[Types](/docs/types)** — Full documentation on type representations
+- **[Pointers](/docs/pointers)** — Full documentation on pointer definitions
+- **[Programs](/docs/programs)** — Full documentation on program annotations
+- **[BUG Playground](/docs/examples/bug-playground)** — See a working
+  compiler that emits ethdebug/format

@@ -1,17 +1,67 @@
 ---
 sidebar_position: 1
+sidebar_label: Overview
 ---
 
-# Getting Started
+# Getting started
 
-Choose your path to learn about ethdebug/format.
-
-:::note[Coming soon]
-This section is under construction. Check back soon for getting started guides
-tailored to your needs.
-:::
+Welcome to ethdebug/format! This section helps you get started based on what
+you're building.
 
 ## Choose your path
 
-- **Building a debugger?** Learn how to consume ethdebug/format data.
-- **Building a compiler?** Learn how to emit ethdebug/format data.
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>For debugger authors</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          You're building a debugger, transaction tracer, or other tool that
+          needs to understand smart contract execution.
+        </p>
+        <p>
+          Learn how to <strong>consume</strong> ethdebug/format data to decode
+          variables, resolve pointers, and map bytecode back to source.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--primary button--block"
+           href="/docs/getting-started/for-debugger-authors">
+          Get started →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>For compiler authors</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          You're building a compiler or toolchain that produces EVM bytecode.
+        </p>
+        <p>
+          Learn how to <strong>emit</strong> ethdebug/format data alongside
+          your bytecode so debuggers can provide rich debugging experiences.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--primary button--block"
+           href="/docs/getting-started/for-compiler-authors">
+          Get started →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+## Other starting points
+
+- **[Concepts](/docs/concepts)** — Understand the mental models behind the
+  format
+- **[Examples](/docs/examples)** — See the format in action with interactive
+  demos
+- **[Specification](/spec)** — Read the formal schema definitions
