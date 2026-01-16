@@ -2,6 +2,10 @@
 sidebar_position: 3
 ---
 
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+<PointerPlayground>
+
 # Expressions
 
 Static offsets work for simple variables, but most interesting data has
@@ -18,18 +22,30 @@ depends on:
 
 A static pointer can't capture this. Expressions can:
 
-```json
-{
-  "location": "memory",
-  "offset": {
-    "$sum": [
-      { "$read": "array-start" },
-      { "$product": ["index", 32] }
+<PointerExample
+  title="Array element access"
+  pointer={{
+    group: [
+      { name: "array-start", location: "memory", offset: 0, length: 32 },
+      {
+        define: { index: 2 },
+        in: {
+          name: "element",
+          location: "memory",
+          offset: {
+            $sum: [
+              { $read: "array-start" },
+              { $product: ["index", 32] }
+            ]
+          },
+          length: 32
+        }
+      }
     ]
-  },
-  "length": 32
-}
-```
+  }}
+  state={{ memory: "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003" }}
+  description="Computes offset: array-start value (0x40) + index (2) × 32 = 0x80"
+/>
 
 ## Arithmetic expressions
 
@@ -39,51 +55,56 @@ Basic math operations for computing addresses:
 
 Adds all values in an array:
 
-```json
-{ "$sum": [100, 32, 4] }
-```
-
-Result: `136`
+<PointerExample
+  title="$sum expression"
+  pointer={{ location: "storage", slot: { $sum: [100, 32, 4] } }}
+  state={{ storage: { "0x88": "0x000000000000000000000000000000000000000000000000000000000000002a" } }}
+  description="Computes slot: 100 + 32 + 4 = 136 (0x88)"
+/>
 
 ### `$difference` — Subtraction
 
 Subtracts the second value from the first (saturates at zero):
 
-```json
-{ "$difference": [100, 32] }
-```
-
-Result: `68`
+<PointerExample
+  title="$difference expression"
+  pointer={{ location: "storage", slot: { $difference: [100, 32] } }}
+  state={{ storage: { "0x44": "0x000000000000000000000000000000000000000000000000000000000000002a" } }}
+  description="Computes slot: 100 - 32 = 68 (0x44)"
+/>
 
 ### `$product` — Multiplication
 
 Multiplies all values in an array:
 
-```json
-{ "$product": [32, 10] }
-```
-
-Result: `320`
+<PointerExample
+  title="$product expression"
+  pointer={{ location: "memory", offset: { $product: [32, 10] }, length: 32 }}
+  state={{ memory: "0x" + "00".repeat(320) + "000000000000000000000000000000000000000000000000000000000000002a" }}
+  description="Computes offset: 32 × 10 = 320 (0x140)"
+/>
 
 ### `$quotient` — Division
 
 Integer division of first value by second:
 
-```json
-{ "$quotient": [100, 32] }
-```
-
-Result: `3`
+<PointerExample
+  title="$quotient expression"
+  pointer={{ location: "storage", slot: { $quotient: [100, 32] } }}
+  state={{ storage: { "0x03": "0x000000000000000000000000000000000000000000000000000000000000002a" } }}
+  description="Computes slot: 100 ÷ 32 = 3"
+/>
 
 ### `$remainder` — Modulo
 
 Remainder after division:
 
-```json
-{ "$remainder": [100, 32] }
-```
-
-Result: `4`
+<PointerExample
+  title="$remainder expression"
+  pointer={{ location: "storage", slot: { $remainder: [100, 32] } }}
+  state={{ storage: { "0x04": "0x000000000000000000000000000000000000000000000000000000000000002a" } }}
+  description="Computes slot: 100 mod 32 = 4"
+/>
 
 ## Reading values
 
@@ -91,24 +112,27 @@ Result: `4`
 
 Reads the bytes from a previously defined region:
 
-```json
-{
-  "define": {
-    "name": "array-length-slot",
-    "location": "storage",
-    "slot": 5
-  },
-  "in": {
-    "location": "storage",
-    "slot": {
-      "$keccak256": [5]
-    },
-    "length": {
-      "$product": [{ "$read": "array-length-slot" }, 32]
+<PointerExample
+  title="$read expression"
+  pointer={{
+    group: [
+      { name: "array-length-slot", location: "storage", slot: 5 },
+      {
+        name: "array-data",
+        location: "storage",
+        slot: { $keccak256: [{ $wordsized: 5 }] },
+        length: { $product: [{ $read: "array-length-slot" }, 32] }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x05": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db0": "0x0000000000000000000000000000000000000000000000000000000000000001"
     }
-  }
-}
-```
+  }}
+  description="Reads array length (3) from slot 5, computes data length as 3 × 32 = 96 bytes"
+/>
 
 The `$read` expression retrieves the actual runtime value stored in the
 `array-length-slot` region—the array's length.
@@ -145,29 +169,22 @@ Returns the slot number for storage/stack/transient regions.
 
 Compute the next element's position from the previous one:
 
-```json
-{
-  "group": [
-    {
-      "name": "element-0",
-      "location": "memory",
-      "offset": "0x80",
-      "length": 32
-    },
-    {
-      "name": "element-1",
-      "location": "memory",
-      "offset": {
-        "$sum": [
-          { ".offset": "element-0" },
-          { ".length": "element-0" }
-        ]
-      },
-      "length": 32
-    }
-  ]
-}
-```
+<PointerExample
+  title="Chaining .offset and .length"
+  pointer={{
+    group: [
+      { name: "element-0", location: "memory", offset: "0x80", length: 32 },
+      {
+        name: "element-1",
+        location: "memory",
+        offset: { $sum: [{ ".offset": "element-0" }, { ".length": "element-0" }] },
+        length: 32
+      }
+    ]
+  }}
+  state={{ memory: "0x" + "00".repeat(128) + "0000000000000000000000000000000000000000000000000000000000000001" + "0000000000000000000000000000000000000000000000000000000000000002" }}
+  description="element-1 offset = 0x80 + 32 = 0xa0"
+/>
 
 ## Computing storage slots with `$keccak256`
 
@@ -177,58 +194,85 @@ Solidity uses keccak256 hashing to compute storage locations for dynamic data.
 
 For a dynamic array at slot `n`, elements start at `keccak256(n)`:
 
-```json
-{
-  "location": "storage",
-  "slot": {
-    "$sum": [
-      { "$keccak256": [5] },
-      "element-index"
-    ]
-  }
-}
-```
-
-This computes: `keccak256(5) + element-index`
+<PointerExample
+  title="Array element slot via keccak256"
+  pointer={{
+    define: { "element-index": 2 },
+    in: {
+      name: "element",
+      location: "storage",
+      slot: {
+        $sum: [
+          { $keccak256: [{ $wordsized: 5 }] },
+          "element-index"
+        ]
+      }
+    }
+  }}
+  state={{
+    storage: {
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2": "0x000000000000000000000000000000000000000000000000000000000000002a"
+    }
+  }}
+  description="Computes: keccak256(5) + 2"
+/>
 
 ### Mapping value slots
 
 For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`:
 
-```json
-{
-  "location": "storage",
-  "slot": {
-    "$keccak256": [
-      { "$read": "key-region" },
-      3
+<PointerExample
+  title="Mapping slot via keccak256"
+  pointer={{
+    group: [
+      { name: "key-region", location: "stack", slot: 0 },
+      {
+        name: "value",
+        location: "storage",
+        slot: { $keccak256: [{ $read: "key-region" }, { $wordsized: 3 }] }
+      }
     ]
-  }
-}
-```
-
-This computes: `keccak256(key, 3)` — the standard Solidity mapping slot.
+  }}
+  state={{
+    stack: ["0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"],
+    storage: {
+      "0x8bd687de tried6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b": "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+    }
+  }}
+  description="Computes: keccak256(key, 3) — standard Solidity mapping slot"
+/>
 
 ### Nested mappings
 
 For `mapping(address => mapping(uint => uint))` at slot 2:
 
-```json
-{
-  "location": "storage",
-  "slot": {
-    "$keccak256": [
-      { "$read": "inner-key" },
+<PointerExample
+  title="Nested mapping slot"
+  pointer={{
+    group: [
+      { name: "outer-key", location: "stack", slot: 0 },
+      { name: "inner-key", location: "stack", slot: 1 },
       {
-        "$keccak256": [
-          { "$read": "outer-key" },
-          2
-        ]
+        name: "value",
+        location: "storage",
+        slot: {
+          $keccak256: [
+            { $read: "inner-key" },
+            { $keccak256: [{ $read: "outer-key" }, { $wordsized: 2 }] }
+          ]
+        }
       }
     ]
-  }
-}
-```
+  }}
+  state={{
+    stack: [
+      "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+      "0x0000000000000000000000000000000000000000000000000000000000000001"
+    ],
+    storage: {}
+  }}
+  description="Computes: keccak256(inner_key, keccak256(outer_key, 2))"
+/>
 
 This computes: `keccak256(inner_key, keccak256(outer_key, 2))`
 
@@ -238,11 +282,15 @@ This computes: `keccak256(inner_key, keccak256(outer_key, 2))`
 
 Joins byte sequences without padding:
 
-```json
-{ "$concat": ["0xdead", "0xbeef"] }
-```
-
-Result: `0xdeadbeef`
+<PointerExample
+  title="$concat expression"
+  pointer={{
+    location: "storage",
+    slot: { $keccak256: [{ $concat: ["0xdead", "0xbeef"] }] }
+  }}
+  state={{ storage: {} }}
+  description="Concatenates 0xdead + 0xbeef = 0xdeadbeef, then hashes"
+/>
 
 Useful for building hash inputs from multiple values.
 
@@ -250,11 +298,15 @@ Useful for building hash inputs from multiple values.
 
 Truncates or pads to exactly N bytes:
 
-```json
-{ "$sized32": "0x1234" }
-```
-
-Result: `0x0000000000000000000000000000000000000000000000000000000000001234`
+<PointerExample
+  title="$sized32 expression"
+  pointer={{
+    location: "storage",
+    slot: { $keccak256: [{ $sized32: "0x1234" }] }
+  }}
+  state={{ storage: {} }}
+  description="Pads 0x1234 to 32 bytes before hashing"
+/>
 
 Pads with zeros on the left; truncates from the left if too long.
 
@@ -262,32 +314,62 @@ Pads with zeros on the left; truncates from the left if too long.
 
 Equivalent to `$sized32` on the EVM:
 
-```json
-{ "$wordsized": { "$read": "some-region" } }
-```
+<PointerExample
+  title="$wordsized expression"
+  pointer={{
+    group: [
+      { name: "some-region", location: "stack", slot: 0 },
+      {
+        name: "result",
+        location: "storage",
+        slot: { $keccak256: [{ $wordsized: { $read: "some-region" } }] }
+      }
+    ]
+  }}
+  state={{
+    stack: ["0x0000000000000000000000000000000000000000000000000000000000000005"]
+  }}
+  description="Reads value from stack, pads to word size, then hashes"
+/>
 
 ## Variables in expressions
 
 Expressions can reference variables by name. These come from list pointer
 contexts:
 
-```json
-{
-  "list": {
-    "count": { "$read": "array-length" },
-    "each": "i",
-    "is": {
-      "location": "storage",
-      "slot": {
-        "$sum": [
-          { "$keccak256": [0] },
-          "i"
-        ]
+<PointerExample
+  title="List variable in expression"
+  pointer={{
+    group: [
+      { name: "array-length", location: "storage", slot: 0 },
+      {
+        list: {
+          count: { $read: "array-length" },
+          each: "i",
+          is: {
+            name: "element",
+            location: "storage",
+            slot: {
+              $sum: [
+                { $keccak256: [{ $wordsized: 0 }] },
+                "i"
+              ]
+            }
+          }
+        }
       }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e565": "0x0000000000000000000000000000000000000000000000000000000000000003"
     }
-  }
-}
-```
+  }}
+  description="Variable 'i' takes values 0, 1, 2 computing each element's slot"
+/>
 
 The variable `"i"` takes values from 0 to count-1, computing each element's
 slot.
@@ -296,24 +378,34 @@ slot.
 
 Reading element `i` from `uint256[] storage arr` at slot 5:
 
-```json
-{
-  "define": {
-    "name": "array-slot",
-    "location": "storage",
-    "slot": 5
-  },
-  "in": {
-    "location": "storage",
-    "slot": {
-      "$sum": [
-        { "$keccak256": [{ ".slot": "array-slot" }] },
-        "element-index"
-      ]
+<PointerExample
+  title="Dynamic array element"
+  pointer={{
+    group: [
+      { name: "array-slot", location: "storage", slot: 5 },
+      {
+        define: { "element-index": 2 },
+        in: {
+          name: "element",
+          location: "storage",
+          slot: {
+            $sum: [
+              { $keccak256: [{ $wordsized: { ".slot": "array-slot" } }] },
+              "element-index"
+            ]
+          }
+        }
+      }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x05": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2": "0x000000000000000000000000000000000000000000000000000000000000002a"
     }
-  }
-}
-```
+  }}
+  description="Computes keccak256(5) + 2 to find element at index 2"
+/>
 
 The pointer:
 1. Defines the array's base slot
@@ -327,3 +419,5 @@ The pointer:
   expression language
 - [Implementation guide](/docs/implementation-guides/pointers/evaluating-expressions)
   for building an expression evaluator
+
+</PointerPlayground>
