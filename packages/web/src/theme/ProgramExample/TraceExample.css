@@ -1,0 +1,92 @@
+/**
+ * Trace Example Card Styles
+ */
+
+.trace-example {
+  margin: 1rem 0;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  background: var(--ifm-background-color);
+  overflow: hidden;
+}
+
+.trace-example-title {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.trace-example-description {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: var(--ifm-color-content-secondary);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.trace-example-content {
+  position: relative;
+}
+
+.trace-example-code {
+  margin: 0;
+}
+
+/* Remove default margins from code block */
+.trace-example-code pre {
+  margin: 0;
+  border-radius: 0;
+}
+
+.trace-example-try-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+  z-index: 5;
+}
+
+.trace-example-try-btn:hover {
+  background: var(--ifm-color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.trace-example-try-btn:active {
+  transform: translateY(0);
+}
+
+.try-btn-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.try-btn-text {
+  font-family: var(--ifm-font-family-base);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .trace-example {
+  border-color: var(--ifm-color-emphasis-400);
+}
+
+[data-theme="dark"] .trace-example-title {
+  border-bottom-color: var(--ifm-color-emphasis-400);
+}
+
+[data-theme="dark"] .trace-example-description {
+  border-bottom-color: var(--ifm-color-emphasis-400);
+}

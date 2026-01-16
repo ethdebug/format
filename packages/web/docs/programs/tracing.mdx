@@ -2,11 +2,15 @@
 sidebar_position: 4
 ---
 
+import { TracePlayground, TraceExample } from "@theme/ProgramExample";
+
 # Tracing execution
 
+<TracePlayground>
+
 Tracing brings together programs, pointers, and types to show what's happening
-at each step of EVM execution. This page explains how to use ethdebug/format
-data for rich debugging experiences.
+at each step of EVM execution. Click **"Try it"** on any example to open the
+Trace Playground, where you can compile and step through real BUG code.
 
 ## What tracing provides
 
@@ -29,29 +33,89 @@ At each instruction in a transaction trace:
    current value
 4. **Decode values**: Use the type information to interpret raw bytes
 
-## Example: Stepping through code
+## Try it yourself
 
-Consider a trace of this simple operation:
+Click **"Try it"** on any example below to load it into the Trace Playground.
+The drawer will open at the bottom of the screen where you can compile the
+code and step through the execution trace.
 
-```
+### Simple counter increment
+
+This example shows a basic counter that increments a storage variable:
+
+<TraceExample
+  title="Counter increment"
+  description="Increments count from 0 to 1, storing the result"
+  source={`name Counter;
+
+storage {
+[0] count: uint256;
+}
+
+create {
+count = 0;
+}
+
+code {
 count = count + 1;
-```
+}`}
+/>
 
-The trace shows these steps:
+### Storage with threshold check
 
-| Step | PC | Opcode | Description |
-|------|----|----|-------------|
-| 1 | 0x10 | PUSH1 0x00 | Push storage slot 0 |
-| 2 | 0x12 | SLOAD | Load `count` from storage |
-| 3 | 0x13 | PUSH1 0x01 | Push constant 1 |
-| 4 | 0x15 | ADD | Add count + 1 |
-| 5 | 0x16 | PUSH1 0x00 | Push storage slot 0 |
-| 6 | 0x18 | SSTORE | Store new value |
+This example demonstrates conditional logic with storage variables:
 
-At step 2, the program annotation tells us:
-- **Source**: The expression `count + 1`
-- **Variable**: `count` is a `uint256` at storage slot 0
-- **Operation**: Loading the current value
+<TraceExample
+  title="Threshold check"
+  description="Increments counter and resets when reaching threshold"
+  source={`name ThresholdCounter;
+
+storage {
+[0] count: uint256;
+[1] threshold: uint256;
+}
+
+create {
+count = 0;
+threshold = 5;
+}
+
+code {
+count = count + 1;
+
+if (count >= threshold) {
+count = 0;
+}
+}`}
+/>
+
+### Multiple storage slots
+
+This example shows working with multiple storage locations:
+
+<TraceExample
+  title="Multiple storage slots"
+  description="Updates multiple storage values in sequence"
+  source={`name MultiSlot;
+
+storage {
+[0] a: uint256;
+[1] b: uint256;
+[2] sum: uint256;
+}
+
+create {
+a = 10;
+b = 20;
+sum = 0;
+}
+
+code {
+sum = a + b;
+a = a + 1;
+b = b + 1;
+}`}
+/>
 
 ## Trace data structure
 
@@ -59,11 +123,11 @@ A trace step captures the EVM state at a single point:
 
 ```typescript
 interface TraceStep {
-  pc: number;           // Program counter
-  opcode: string;       // Mnemonic (SLOAD, ADD, etc.)
-  stack: bigint[];      // Stack contents (top first)
-  memory?: Uint8Array;  // Memory contents
-  storage?: Record<string, string>;  // Changed slots
+  pc: number; // Program counter
+  opcode: string; // Mnemonic (SLOAD, ADD, etc.)
+  stack: bigint[]; // Stack contents (top first)
+  memory?: Uint8Array; // Memory contents
+  storage?: Record<string, string>; // Changed slots
 }
 ```
 
@@ -100,6 +164,7 @@ The program's instruction list maps each PC to its context:
 ```
 
 This tells us:
+
 - The SLOAD at PC 18 corresponds to source at offset 120
 - The variable `count` is in scope
 - We can resolve its value using the pointer
@@ -113,15 +178,6 @@ To show variable values, trace viewers:
 3. **Resolve the pointer** to get concrete byte regions
 4. **Decode using the type** to get the display value
 
-Example resolution for `count`:
-
-```
-Pointer: { location: "storage", slot: 0 }
-Storage at slot 0: 0x0000...002a
-Type: { kind: "uint", bits: 256 }
-Display value: 42
-```
-
 ## Building a trace viewer
 
 The key components for trace integration:
@@ -129,6 +185,7 @@ The key components for trace integration:
 ### 1. Trace source
 
 Get transaction traces from:
+
 - JSON-RPC `debug_traceTransaction`
 - Local simulation (Ganache, Anvil, Hardhat)
 - Historical archive nodes
@@ -136,6 +193,7 @@ Get transaction traces from:
 ### 2. Program loader
 
 Load compiled program data containing:
+
 - Instruction list with contexts
 - Source materials
 - Type definitions
@@ -171,35 +229,12 @@ function decodeValue(bytes: Data, type: Type): string {
 }
 ```
 
-## Interactive demonstration
-
-For a live example of tracing concepts, see the
-[BUG Playground](/docs/examples/bug-playground). While it doesn't show
-runtime traces, it demonstrates:
-
-- How source maps to bytecode
-- How variables are annotated in the program output
-- How debug info is structured
-
-:::note Future widget
-A full interactive trace viewer with step-by-step navigation and variable
-inspection is planned for a future release. The components are available
-in `@ethdebug/programs-react`:
-
-- `TraceProvider` — Context for trace state
-- `TraceControls` — Navigation controls
-- `VariableInspector` — Variable value display
-- `StackInspector` — Stack visualization
-
-See the [implementation guide](/docs/implementation-guides) for details on
-using these components.
-:::
-
 ## Learn more
 
 - [Instructions documentation](./instructions) for understanding instruction
   records
 - [Variables documentation](./variables) for variable structure and lifetime
-- [Pointer resolution](../pointers/resolution) for resolving variable locations
-- [BUG Playground](/docs/examples/bug-playground) for a live example of
-  compilation and debugging
+- [Pointers](../pointers) for resolving variable locations
+- [BUG Playground](/docs/examples/bug-playground) for more interactive examples
+
+</TracePlayground>

@@ -44,3 +44,9 @@ export {
 // Local Docusaurus-specific components
 export * from "./Viewer";
 export * from "./TraceViewer";
+
+// Trace playground components
+export * from "./TracePlaygroundContext";
+export * from "./TracePlayground";
+export * from "./TraceDrawer";
+export * from "./TraceExample";
