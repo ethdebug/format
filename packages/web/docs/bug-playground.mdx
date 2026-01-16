@@ -1,0 +1,40 @@
+---
+sidebar_position: 2
+---
+
+# BUG Playground
+
+BUG is a minimal smart contract language designed for demonstrating and testing
+the ethdebug format. It compiles to EVM bytecode and produces rich debug
+information.
+
+Use the interactive playground below to explore how BUG code compiles to
+intermediate representations and EVM bytecode.
+
+import { BugPlayground } from "@theme/BugcExample";
+
+<BugPlayground height="700px" />
+
+## About BUG
+
+BUG is intentionally minimal—it provides just enough
+language features to demonstrate the debugging challenges that ethdebug
+addresses:
+
+- **Storage variables** with automatic slot allocation
+- **Functions** with parameters and return values
+- **Control flow** (if/else, while loops)
+- **Basic types** (uint256, bool, address, bytes32)
+- **Complex types** (arrays, mappings, structs)
+
+## Compilation Views
+
+The playground shows several stages of compilation:
+
+- **AST** - The abstract syntax tree after parsing
+- **IR** - The intermediate representation used for optimization
+- **CFG** - The control flow graph visualizing program structure
+- **Bytecode** - The final EVM bytecode with debug annotations
+
+Hover over instructions in the IR or Bytecode views to highlight the
+corresponding source code.

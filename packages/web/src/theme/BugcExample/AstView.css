@@ -1,0 +1,21 @@
+/**
+ * Styles for AstView component.
+ */
+
+@import "./variables.css";
+
+.ast-view {
+  height: 100%;
+  overflow: auto;
+}
+
+.ast-json {
+  margin: 0;
+  padding: 1rem;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--bugc-text-code);
+  white-space: pre;
+  overflow: auto;
+}

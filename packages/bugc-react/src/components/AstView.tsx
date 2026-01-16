@@ -4,7 +4,6 @@
 
 import React from "react";
 import type { Ast } from "@ethdebug/bugc";
-import "./AstView.css";
 
 /**
  * Props for AstView component.

@@ -1,0 +1,108 @@
+/**
+ * CSS custom properties for @ethdebug/bugc-react components.
+ *
+ * These variables provide theme-aware styling that integrates with
+ * Docusaurus/Infima theming.
+ */
+
+:root {
+  /* Background colors */
+  --bugc-bg-primary: #ffffff;
+  --bugc-bg-secondary: #f5f6f7;
+  --bugc-bg-code: #f5f6f7;
+  --bugc-bg-hover: rgba(0, 0, 0, 0.05);
+
+  /* Border colors */
+  --bugc-border-primary: #dadde1;
+  --bugc-border-secondary: #eaecef;
+
+  /* Text colors */
+  --bugc-text-primary: #1c1e21;
+  --bugc-text-secondary: #606770;
+  --bugc-text-muted: #898989;
+  --bugc-text-code: #1c1e21;
+
+  /* Syntax highlighting - light theme */
+  --bugc-syntax-keyword: #0550ae;
+  --bugc-syntax-type: #6f42c1;
+  --bugc-syntax-function: #8250df;
+  --bugc-syntax-string: #0a3069;
+  --bugc-syntax-number: #0550ae;
+  --bugc-syntax-comment: #6e7781;
+  --bugc-syntax-opcode: #116329;
+  --bugc-syntax-address: #6e7781;
+  --bugc-syntax-terminator: #cf222e;
+  --bugc-syntax-phi: #0550ae;
+
+  /* Accent colors */
+  --bugc-accent-blue: #0969da;
+  --bugc-accent-blue-bg: rgba(9, 105, 218, 0.1);
+  --bugc-accent-green: #1a7f37;
+  --bugc-accent-green-bg: rgba(26, 127, 55, 0.1);
+  --bugc-accent-red: #cf222e;
+  --bugc-accent-purple: #8250df;
+
+  /* Tooltip */
+  --bugc-tooltip-bg: #ffffff;
+  --bugc-tooltip-border: #dadde1;
+  --bugc-tooltip-shadow: rgba(0, 0, 0, 0.15);
+  --bugc-tooltip-pinned-border: #0969da;
+  --bugc-tooltip-pinned-shadow: rgba(9, 105, 218, 0.2);
+
+  /* CFG specific */
+  --bugc-cfg-node-bg: #ffffff;
+  --bugc-cfg-node-border: #0969da;
+  --bugc-cfg-entry-border: #1a7f37;
+  --bugc-cfg-entry-bg: #dafbe1;
+}
+
+[data-theme="dark"] {
+  /* Background colors */
+  --bugc-bg-primary: #1e1e1e;
+  --bugc-bg-secondary: #2d2d30;
+  --bugc-bg-code: #2d2d30;
+  --bugc-bg-hover: rgba(255, 255, 255, 0.05);
+
+  /* Border colors */
+  --bugc-border-primary: #3e3e42;
+  --bugc-border-secondary: #454545;
+
+  /* Text colors */
+  --bugc-text-primary: #cccccc;
+  --bugc-text-secondary: #969696;
+  --bugc-text-muted: #858585;
+  --bugc-text-code: #d4d4d4;
+
+  /* Syntax highlighting - dark theme */
+  --bugc-syntax-keyword: #569cd6;
+  --bugc-syntax-type: #4ec9b0;
+  --bugc-syntax-function: #dcdcaa;
+  --bugc-syntax-string: #ce9178;
+  --bugc-syntax-number: #b5cea8;
+  --bugc-syntax-comment: #6a9955;
+  --bugc-syntax-opcode: #4ec9b0;
+  --bugc-syntax-address: #858585;
+  --bugc-syntax-terminator: #c586c0;
+  --bugc-syntax-phi: #9cdcfe;
+
+  /* Accent colors */
+  --bugc-accent-blue: #569cd6;
+  --bugc-accent-blue-bg: rgba(86, 156, 214, 0.15);
+  --bugc-accent-green: #4ec9b0;
+  --bugc-accent-green-bg: rgba(78, 201, 176, 0.2);
+  --bugc-accent-red: #f14c4c;
+  --bugc-accent-purple: #c586c0;
+
+  /* Tooltip */
+  --bugc-tooltip-bg: #1e1e1e;
+  --bugc-tooltip-border: #3e3e42;
+  --bugc-tooltip-shadow: rgba(0, 0, 0, 0.4);
+  --bugc-tooltip-pinned-border: #569cd6;
+  --bugc-tooltip-pinned-shadow: rgba(86, 156, 214, 0.3);
+
+  /* CFG specific */
+  --bugc-cfg-node-bg: #2d2d30;
+  --bugc-cfg-node-border: #569cd6;
+  --bugc-cfg-entry-border: #4ec9b0;
+  --bugc-cfg-entry-bg: rgba(78, 201, 176, 0.15);
+}

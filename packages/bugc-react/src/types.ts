@@ -8,14 +8,10 @@ import type { Ast, Ir, Evm } from "@ethdebug/bugc";
  * Represents a source range in the original code.
  */
 export interface SourceRange {
-  /** Starting line (1-indexed) */
-  startLine: number;
-  /** Ending line (1-indexed) */
-  endLine: number;
-  /** Starting column (0-indexed) */
-  startColumn: number;
-  /** Ending column (0-indexed) */
-  endColumn: number;
+  /** Starting byte offset */
+  offset: number;
+  /** Length in bytes */
+  length: number;
 }
 
 /**

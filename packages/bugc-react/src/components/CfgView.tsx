@@ -8,7 +8,6 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from "react";
 import type { Ir } from "@ethdebug/bugc";
-import "./CfgView.css";
 
 /**
  * Props for CfgView component.

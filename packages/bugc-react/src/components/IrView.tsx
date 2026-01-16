@@ -15,7 +15,6 @@ import {
 } from "#utils/irDebugUtils";
 import { useEthdebugTooltip } from "#hooks/useEthdebugTooltip";
 import { EthdebugTooltip } from "./EthdebugTooltip.js";
-import "./IrView.css";
 
 /**
  * Props for IrView component.

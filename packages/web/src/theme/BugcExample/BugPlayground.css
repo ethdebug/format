@@ -1,0 +1,191 @@
+/**
+ * BugPlayground styles for Docusaurus.
+ * Uses Docusaurus/Infima CSS variables for theming.
+ */
+
+.bug-playground {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  background: var(--ifm-background-color);
+}
+
+.bug-playground-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  background: var(--ifm-color-emphasis-100);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.bug-playground-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.bug-playground-opt-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.bug-playground-opt-control select {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--ifm-global-radius);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-size: 0.875rem;
+}
+
+.bug-playground-compile-btn {
+  padding: 0.375rem 1rem;
+  border-radius: var(--ifm-global-radius);
+  border: none;
+  background: var(--ifm-color-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bug-playground-compile-btn:hover:not(:disabled) {
+  background: var(--ifm-color-primary-dark);
+}
+
+.bug-playground-compile-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bug-playground-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bug-playground-editor {
+  border-right: 1px solid var(--ifm-color-emphasis-300);
+  overflow: hidden;
+}
+
+.bug-playground-output {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bug-playground-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+}
+
+.bug-playground-tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--ifm-font-color-secondary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.2s, background 0.2s;
+}
+
+.bug-playground-tab:hover {
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-color-emphasis-200);
+}
+
+.bug-playground-tab.active {
+  color: var(--ifm-color-primary);
+  background: var(--ifm-background-color);
+  border-bottom: 2px solid var(--ifm-color-primary);
+  margin-bottom: -1px;
+}
+
+.bug-playground-tab-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.bug-playground-error {
+  padding: 1rem;
+  background: var(--ifm-color-danger-contrast-background);
+  border: 1px solid var(--ifm-color-danger-dark);
+  border-radius: var(--ifm-global-radius);
+  margin: 1rem;
+}
+
+.bug-playground-error h4 {
+  color: var(--ifm-color-danger-dark);
+  margin: 0 0 0.5rem 0;
+}
+
+.bug-playground-error pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.875rem;
+  color: var(--ifm-color-danger-darkest);
+}
+
+.bug-playground-warnings {
+  padding: 0.75rem 1rem;
+  background: var(--ifm-color-warning-contrast-background);
+  border-top: 1px solid var(--ifm-color-warning-dark);
+}
+
+.bug-playground-warnings h4 {
+  color: var(--ifm-color-warning-darkest);
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.bug-playground-warnings ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.bug-playground-warnings li {
+  font-size: 0.8125rem;
+  color: var(--ifm-color-warning-darkest);
+}
+
+/* Responsive layout for smaller screens */
+@media (max-width: 996px) {
+  .bug-playground-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .bug-playground-editor {
+    border-right: none;
+    border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  }
+}
+
+/* Monaco Editor custom decorations for source highlighting */
+/* Primary location (teal) - first source location */
+.opcode-hover-highlight {
+  background-color: rgba(78, 201, 176, 0.2);
+}
+
+.opcode-hover-highlight-inline {
+  background-color: rgba(78, 201, 176, 0.3);
+}
+
+/* Alternative locations (orange) - deduplicated sources */
+.opcode-hover-highlight-alternative {
+  background-color: rgba(255, 165, 0, 0.2);
+}
+
+.opcode-hover-highlight-alternative-inline {
+  background-color: rgba(255, 165, 0, 0.3);
+}

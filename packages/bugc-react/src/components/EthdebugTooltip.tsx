@@ -4,7 +4,6 @@
 
 import React, { useRef, useEffect } from "react";
 import type { TooltipData } from "#types";
-import "./EthdebugTooltip.css";
 
 /**
  * Props for EthdebugTooltip component.

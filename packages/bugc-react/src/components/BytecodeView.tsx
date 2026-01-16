@@ -8,7 +8,6 @@ import type { BytecodeOutput, SourceRange } from "#types";
 import { extractSourceRange } from "#utils/debugUtils";
 import { useEthdebugTooltip } from "#hooks/useEthdebugTooltip";
 import { EthdebugTooltip } from "./EthdebugTooltip.js";
-import "./BytecodeView.css";
 
 /**
  * Props for BytecodeView component.

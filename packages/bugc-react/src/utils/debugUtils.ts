@@ -29,23 +29,12 @@ export function extractSourceRange(
   if (ctx.code && typeof ctx.code === "object") {
     const code = ctx.code as Record<string, unknown>;
     if (code.range && typeof code.range === "object") {
-      const range = code.range as Record<string, unknown>;
+      const range = code.range as Record<string, number>;
       if (
-        range.start &&
-        range.end &&
-        typeof range.start === "object" &&
-        typeof range.end === "object"
+        typeof range.offset === "number" &&
+        typeof range.length === "number"
       ) {
-        const start = range.start as Record<string, number>;
-        const end = range.end as Record<string, number>;
-        return [
-          {
-            startLine: start.line ?? 1,
-            endLine: end.line ?? 1,
-            startColumn: start.column ?? 0,
-            endColumn: end.column ?? 0,
-          },
-        ];
+        return [{ offset: range.offset, length: range.length }];
       }
     }
   }
