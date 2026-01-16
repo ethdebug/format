@@ -1,0 +1,81 @@
+---
+sidebar_position: 4
+---
+
+# Tracing execution
+
+Tracing brings together programs, pointers, and types to show what's happening
+at each step of EVM execution. This page will feature an interactive widget
+for exploring transaction traces with full variable inspection.
+
+## What tracing provides
+
+With ethdebug/format data, a trace viewer can show:
+
+- **Current source location**: Which line of source code corresponds to the
+  current bytecode instruction
+- **Variables in scope**: What identifiers are valid and their current values
+- **Call context**: Function name, parameters, and return expectations
+- **Data inspection**: Drill into complex types (structs, arrays, mappings)
+
+## The tracing process
+
+At each instruction in a transaction trace:
+
+1. **Look up the program counter**: Find the instruction record for the current
+   PC
+2. **Read the context**: Get variables, source ranges, and other metadata
+3. **Resolve pointers**: For each variable, resolve its pointer to get the
+   current value
+4. **Decode values**: Use the type information to interpret raw bytes
+
+## Example: Stepping through a transfer
+
+Consider tracing a simple ERC-20 transfer:
+
+```
+PC 0x1a4: SLOAD
+  Source: balances[msg.sender]
+  Variables in scope:
+    - sender: 0x1234...abcd (address)
+    - amount: 1000000000000000000 (uint256)
+    - senderBalance: <reading...>
+```
+
+The trace viewer shows:
+- Which storage slot is being loaded
+- The source-level expression being evaluated
+- Related variables and their current values
+
+## Interactive exploration
+
+:::note Coming soon
+An interactive tracing widget will be added here, allowing you to:
+
+- Load a transaction trace
+- Step forward and backward through execution
+- See variables come into and out of scope
+- Inspect complex data structures at each step
+- Navigate between source code and bytecode views
+
+This widget will demonstrate how ethdebug/format enables rich debugging
+experiences.
+:::
+
+## Building a trace viewer
+
+The key components for trace integration:
+
+1. **EVM trace source**: Transaction traces from a node or simulation
+2. **Program data**: The compiled program with instruction records
+3. **Pointer resolver**: Engine to evaluate pointers against EVM state
+4. **Type decoder**: Logic to interpret bytes according to type definitions
+
+## Learn more
+
+- [Instructions documentation](./instructions) for understanding instruction
+  records
+- [Variables documentation](./variables) for variable structure and lifetime
+- [Pointer resolution](../pointers/resolution) for resolving variable locations
+- [BUG Playground](/docs/examples/bug-playground) for a live example of
+  compilation and debugging

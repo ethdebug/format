@@ -1,0 +1,189 @@
+---
+sidebar_position: 4
+---
+
+# Representation
+
+Types in ethdebug/format describe _what_ data is, but compilers must also
+encode _how_ that data is stored as bytes. The same logical type can have
+different byte representations depending on context.
+
+## Encoding contexts
+
+The EVM uses different encoding rules depending on where data lives:
+
+### Storage encoding
+
+Storage packs values tightly to minimize slot usage. Multiple small values
+share a single 32-byte slot:
+
+```
+Slot 0: |-------- uint128 a --------|-------- uint128 b --------|
+         16 bytes                    16 bytes
+```
+
+A `uint128` needs only 16 bytes, so two fit in one slot.
+
+### Memory and calldata encoding
+
+Memory and calldata use ABI encoding rules. Each value occupies a full 32-byte
+word, padded as needed:
+
+```
+Memory: |---------------- uint128 a (padded) ----------------|
+         32 bytes (16 bytes value + 16 bytes zero padding)
+```
+
+### Why this matters for debugging
+
+A debugger reading a `uint128` needs to know:
+- In storage: read 16 bytes from the correct offset within a slot
+- In memory: read 32 bytes, then interpret only the relevant portion
+
+The pointer specifies _where_, the type specifies _what_, and encoding context
+determines _how_ to interpret the bytes.
+
+## Byte ordering
+
+The EVM is big-endian for most purposes:
+
+- **Integers** are stored with the most significant byte first
+- **Addresses** occupy 20 bytes, left-padded with zeros in 32-byte contexts
+- **Fixed-size bytes** (`bytes1` through `bytes32`) are right-padded
+
+For a `uint256` value of `0x1234`:
+
+```
+Storage/Memory: 0x0000...001234
+                ^           ^
+                MSB         LSB (rightmost)
+```
+
+## Packed storage layout
+
+Solidity packs storage variables when possible. Consider this struct:
+
+```solidity
+struct Packed {
+    uint128 a;   // 16 bytes
+    uint64 b;    // 8 bytes
+    uint64 c;    // 8 bytes
+    uint256 d;   // 32 bytes (new slot)
+}
+```
+
+The layout in storage:
+
+```
+Slot 0: | c (8 bytes) | b (8 bytes) | a (16 bytes) |
+        offset 24     offset 16      offset 0
+
+Slot 1: | d (32 bytes)                             |
+        offset 0
+```
+
+Note that `c` is stored at a higher offset than `a` despite appearing later
+in the source. Solidity fills slots from low to high offsets, but struct
+fields are placed in declaration order within that constraint.
+
+## Representing layout in pointers
+
+Pointers capture this layout using offsets within slots:
+
+```json
+{
+  "group": [
+    {
+      "name": "a",
+      "location": "storage",
+      "slot": 0,
+      "offset": 0,
+      "length": 16
+    },
+    {
+      "name": "b",
+      "location": "storage",
+      "slot": 0,
+      "offset": 16,
+      "length": 8
+    },
+    {
+      "name": "c",
+      "location": "storage",
+      "slot": 0,
+      "offset": 24,
+      "length": 8
+    },
+    {
+      "name": "d",
+      "location": "storage",
+      "slot": 1,
+      "offset": 0,
+      "length": 32
+    }
+  ]
+}
+```
+
+The type describes the struct's logical shape; the pointer describes its
+physical layout.
+
+## Dynamic data representation
+
+Dynamic types (dynamic arrays, mappings, strings, bytes) store a fixed-size
+component at their declared slot, with actual data elsewhere:
+
+### Dynamic arrays
+
+The array's slot holds its length. Elements are stored starting at
+`keccak256(slot)`:
+
+```
+Slot 5:              [length]
+Slot keccak256(5):   [element 0]
+Slot keccak256(5)+1: [element 1]
+...
+```
+
+### Mappings
+
+Mapping slots are empty. Values are stored at `keccak256(key, slot)`:
+
+```
+Slot 3:                         (unused)
+Slot keccak256(addr, 3):        [balances[addr]]
+```
+
+### Strings and bytes
+
+Short strings (≤31 bytes) store data and length in a single slot. Long strings
+store length in the base slot and data starting at `keccak256(slot)`.
+
+## Types don't encode layout
+
+A key design principle: ethdebug/format types describe logical structure, not
+physical layout. The same type definition works regardless of encoding context:
+
+```json
+{
+  "kind": "struct",
+  "contains": [
+    { "name": "a", "type": { "kind": "uint", "bits": 128 } },
+    { "name": "b", "type": { "kind": "uint", "bits": 64 } }
+  ]
+}
+```
+
+This struct definition is the same whether `a` and `b` are packed in storage
+or padded in memory. The pointer tells the debugger where each field actually
+lives.
+
+This separation lets compilers describe complex optimizations (reordering,
+packing, splitting across locations) without inventing new type constructs.
+
+## Learn more
+
+- [Regions documentation](../pointers/regions) for addressing within slots
+- [Expressions documentation](../pointers/expressions) for computing dynamic
+  locations
+- [Type specification](/spec/type) for formal type definitions

@@ -1,0 +1,87 @@
+---
+sidebar_position: 4
+---
+
+# Pointer resolution
+
+Pointer resolution is the process of converting a pointer definition into
+actual byte values from the EVM state. This page will feature an interactive
+widget for exploring resolution step by step.
+
+## The resolution process
+
+Given a pointer and the current EVM state, resolution proceeds through several
+stages:
+
+1. **Evaluate expressions**: Compute any dynamic values (`$sum`, `$keccak256`,
+   `$read`, etc.) using the current machine state
+2. **Generate regions**: Produce concrete memory/storage/stack regions with
+   resolved offsets and lengths
+3. **Read bytes**: Fetch the actual bytes from each region
+4. **Combine results**: For grouped or conditional pointers, assemble the final
+   byte sequence
+
+## Example walkthrough
+
+Consider resolving a pointer to a dynamic array element:
+
+```json
+{
+  "define": {
+    "name": "base",
+    "location": "storage",
+    "slot": 3
+  },
+  "in": {
+    "location": "storage",
+    "slot": {
+      "$sum": [
+        { "$keccak256": [{ ".slot": "base" }] },
+        2
+      ]
+    }
+  }
+}
+```
+
+**Step 1**: Define the base region (slot 3)
+
+**Step 2**: Evaluate `.slot` lookup → 3
+
+**Step 3**: Compute `$keccak256([3])` → `0xc2575...` (the data slot)
+
+**Step 4**: Add index 2 → `0xc2575... + 2`
+
+**Step 5**: Read 32 bytes from that storage slot
+
+## Interactive exploration
+
+:::note Coming soon
+An interactive pointer resolution widget will be added here, allowing you to:
+
+- Input a pointer definition
+- Provide sample EVM state (storage, memory, stack values)
+- Step through the resolution process
+- See intermediate values at each stage
+- View the final resolved bytes
+
+This widget will help you understand how pointers work in practice and debug
+pointer definitions.
+:::
+
+## Implementation resources
+
+For details on implementing pointer resolution:
+
+- [Evaluating expressions](/docs/implementation-guides/pointers/evaluating-expressions)
+  covers the expression evaluation algorithm
+- [Dereference logic](/docs/implementation-guides/pointers/dereference-logic)
+  explains the full resolution pipeline
+- [Generating regions](/docs/implementation-guides/pointers/dereference-logic/generating-regions)
+  details how to produce concrete regions from pointer definitions
+
+## Learn more
+
+- [Expressions documentation](./expressions) for the expression language
+- [Regions documentation](./regions) for region structure
+- [Pointer specification](/spec/pointer) for formal definitions

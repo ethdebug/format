@@ -1,0 +1,329 @@
+---
+sidebar_position: 3
+---
+
+# Expressions
+
+Static offsets work for simple variables, but most interesting data has
+locations that depend on runtime values. Expressions let pointers compute
+addresses dynamically.
+
+## Why expressions are needed
+
+Consider reading element `i` from a memory array. The element's location
+depends on:
+- Where the array starts (might come from the free memory pointer)
+- Which element we want (the index `i`)
+- How big each element is (32 bytes for `uint256`)
+
+A static pointer can't capture this. Expressions can:
+
+```json
+{
+  "location": "memory",
+  "offset": {
+    "$sum": [
+      { "$read": "array-start" },
+      { "$product": ["index", 32] }
+    ]
+  },
+  "length": 32
+}
+```
+
+## Arithmetic expressions
+
+Basic math operations for computing addresses:
+
+### `$sum` — Addition
+
+Adds all values in an array:
+
+```json
+{ "$sum": [100, 32, 4] }
+```
+
+Result: `136`
+
+### `$difference` — Subtraction
+
+Subtracts the second value from the first (saturates at zero):
+
+```json
+{ "$difference": [100, 32] }
+```
+
+Result: `68`
+
+### `$product` — Multiplication
+
+Multiplies all values in an array:
+
+```json
+{ "$product": [32, 10] }
+```
+
+Result: `320`
+
+### `$quotient` — Division
+
+Integer division of first value by second:
+
+```json
+{ "$quotient": [100, 32] }
+```
+
+Result: `3`
+
+### `$remainder` — Modulo
+
+Remainder after division:
+
+```json
+{ "$remainder": [100, 32] }
+```
+
+Result: `4`
+
+## Reading values
+
+### `$read` — Read from a named region
+
+Reads the bytes from a previously defined region:
+
+```json
+{
+  "define": {
+    "name": "array-length-slot",
+    "location": "storage",
+    "slot": 5
+  },
+  "in": {
+    "location": "storage",
+    "slot": {
+      "$keccak256": [5]
+    },
+    "length": {
+      "$product": [{ "$read": "array-length-slot" }, 32]
+    }
+  }
+}
+```
+
+The `$read` expression retrieves the actual runtime value stored in the
+`array-length-slot` region—the array's length.
+
+## Region property lookups
+
+Reference properties of named regions with `.property` syntax:
+
+### `.offset` — Region's offset
+
+```json
+{ ".offset": "previous-element" }
+```
+
+Returns the offset of the named region.
+
+### `.length` — Region's length
+
+```json
+{ ".length": "previous-element" }
+```
+
+Returns the length of the named region.
+
+### `.slot` — Region's slot
+
+```json
+{ ".slot": "base-slot" }
+```
+
+Returns the slot number for storage/stack/transient regions.
+
+### Chaining lookups
+
+Compute the next element's position from the previous one:
+
+```json
+{
+  "group": [
+    {
+      "name": "element-0",
+      "location": "memory",
+      "offset": "0x80",
+      "length": 32
+    },
+    {
+      "name": "element-1",
+      "location": "memory",
+      "offset": {
+        "$sum": [
+          { ".offset": "element-0" },
+          { ".length": "element-0" }
+        ]
+      },
+      "length": 32
+    }
+  ]
+}
+```
+
+## Computing storage slots with `$keccak256`
+
+Solidity uses keccak256 hashing to compute storage locations for dynamic data.
+
+### Array element slots
+
+For a dynamic array at slot `n`, elements start at `keccak256(n)`:
+
+```json
+{
+  "location": "storage",
+  "slot": {
+    "$sum": [
+      { "$keccak256": [5] },
+      "element-index"
+    ]
+  }
+}
+```
+
+This computes: `keccak256(5) + element-index`
+
+### Mapping value slots
+
+For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`:
+
+```json
+{
+  "location": "storage",
+  "slot": {
+    "$keccak256": [
+      { "$read": "key-region" },
+      3
+    ]
+  }
+}
+```
+
+This computes: `keccak256(key, 3)` — the standard Solidity mapping slot.
+
+### Nested mappings
+
+For `mapping(address => mapping(uint => uint))` at slot 2:
+
+```json
+{
+  "location": "storage",
+  "slot": {
+    "$keccak256": [
+      { "$read": "inner-key" },
+      {
+        "$keccak256": [
+          { "$read": "outer-key" },
+          2
+        ]
+      }
+    ]
+  }
+}
+```
+
+This computes: `keccak256(inner_key, keccak256(outer_key, 2))`
+
+## Data manipulation
+
+### `$concat` — Concatenate bytes
+
+Joins byte sequences without padding:
+
+```json
+{ "$concat": ["0xdead", "0xbeef"] }
+```
+
+Result: `0xdeadbeef`
+
+Useful for building hash inputs from multiple values.
+
+### `$sized<N>` — Resize to N bytes
+
+Truncates or pads to exactly N bytes:
+
+```json
+{ "$sized32": "0x1234" }
+```
+
+Result: `0x0000000000000000000000000000000000000000000000000000000000001234`
+
+Pads with zeros on the left; truncates from the left if too long.
+
+### `$wordsized` — Resize to word size
+
+Equivalent to `$sized32` on the EVM:
+
+```json
+{ "$wordsized": { "$read": "some-region" } }
+```
+
+## Variables in expressions
+
+Expressions can reference variables by name. These come from list pointer
+contexts:
+
+```json
+{
+  "list": {
+    "count": { "$read": "array-length" },
+    "each": "i",
+    "is": {
+      "location": "storage",
+      "slot": {
+        "$sum": [
+          { "$keccak256": [0] },
+          "i"
+        ]
+      }
+    }
+  }
+}
+```
+
+The variable `"i"` takes values from 0 to count-1, computing each element's
+slot.
+
+## Complete example: Dynamic array element
+
+Reading element `i` from `uint256[] storage arr` at slot 5:
+
+```json
+{
+  "define": {
+    "name": "array-slot",
+    "location": "storage",
+    "slot": 5
+  },
+  "in": {
+    "location": "storage",
+    "slot": {
+      "$sum": [
+        { "$keccak256": [{ ".slot": "array-slot" }] },
+        "element-index"
+      ]
+    }
+  }
+}
+```
+
+The pointer:
+1. Defines the array's base slot
+2. Computes the element's slot: `keccak256(5) + element_index`
+3. Returns that storage location
+
+## Learn more
+
+- [Regions documentation](./regions) for region structure
+- [Expression specification](/spec/pointer/expression) for the complete
+  expression language
+- [Implementation guide](/docs/implementation-guides/pointers/evaluating-expressions)
+  for building an expression evaluator
