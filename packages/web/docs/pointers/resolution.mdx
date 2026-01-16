@@ -2,13 +2,15 @@
 sidebar_position: 4
 ---
 
-import { PointerResolver } from "@theme/PointersExample";
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+<PointerPlayground>
 
 # Pointer resolution
 
 Pointer resolution is the process of converting a pointer definition into
-actual byte values from the EVM state. This page features an interactive
-widget for exploring resolution.
+actual byte values from the EVM state. This page features interactive examples
+you can try in the **Pointer Playground** drawer at the bottom of the screen.
 
 ## The resolution process
 
@@ -23,107 +25,99 @@ stages:
 4. **Combine results**: For grouped or conditional pointers, assemble the final
    byte sequence
 
-## Interactive exploration
+## Try it yourself
 
-Try the pointer resolution widget below. You can:
+Click **"▶ Try it"** on any example below to load it into the Pointer
+Playground. You can then edit the pointer and machine state to explore
+resolution.
 
-- Edit the pointer JSON to define different data locations
-- Modify the machine state (storage, stack, memory)
-- Click "Resolve Pointer" to see the resolved regions and values
+### Simple storage variable
 
-<PointerResolver
-  initialPointer={{
-    "group": [
+Read a single 32-byte slot from storage:
+
+<PointerExample
+  title="Storage slot 0"
+  pointer={{ location: "storage", slot: 0 }}
+  state={{ storage: { "0x00": "0x000000000000000000000000000000000000000000000000000000000000002a" } }}
+/>
+
+### Stack value
+
+Read from the EVM stack (zero-indexed from the top):
+
+<PointerExample
+  title="Stack position 0"
+  pointer={{ location: "stack", slot: 0 }}
+  state={{ stack: ["0x0000000000000000000000000000000000000000000000000000000000000001"] }}
+/>
+
+### Memory region
+
+Read a byte range from memory:
+
+<PointerExample
+  title="Memory bytes 0-32"
+  pointer={{ location: "memory", offset: 0, length: 32 }}
+  state={{ memory: "0x48656c6c6f20576f726c64210000000000000000000000000000000000000000" }}
+/>
+
+### Dynamic array element (with keccak256)
+
+Access an element of a Solidity dynamic array. The array length is stored at
+slot 3, and data starts at `keccak256(3)`:
+
+<PointerExample
+  title="Array element at index 2"
+  pointer={{
+    group: [
+      { name: "base", location: "storage", slot: 3 },
       {
-        "name": "base",
-        "location": "storage",
-        "slot": 3
-      },
-      {
-        "name": "element",
-        "location": "storage",
-        "slot": {
-          "$sum": [
-            { "$keccak256": [{ ".slot": "base" }] },
+        name: "element",
+        location: "storage",
+        slot: {
+          $sum: [
+            { $keccak256: [{ ".slot": "base" }] },
             2
           ]
         }
       }
     ]
   }}
-  initialState={{
+  state={{
     storage: {
       "0x03": "0x0000000000000000000000000000000000000000000000000000000000000005"
     }
   }}
-  showPointerInput={true}
-  showStateEditor={true}
 />
 
-## Example walkthrough
+**How it works:**
+1. The first region "base" reads storage slot 3 (the array length slot)
+2. The second region computes `keccak256(slot 3) + 2` to find element index 2
+3. Both regions are resolved and their values displayed
 
-The default pointer above resolves a dynamic array element using a `group`:
+### Named region references
 
-```json
-{
-  "group": [
-    {
-      "name": "base",
-      "location": "storage",
-      "slot": 3
-    },
-    {
-      "name": "element",
-      "location": "storage",
-      "slot": {
-        "$sum": [
-          { "$keccak256": [{ ".slot": "base" }] },
-          2
-        ]
+Use `.slot`, `.offset`, and `.length` to reference fields from named regions:
+
+<PointerExample
+  title="Reference previous region"
+  pointer={{
+    group: [
+      { name: "first", location: "storage", slot: 0 },
+      {
+        name: "second",
+        location: "storage",
+        slot: { $sum: [{ ".slot": "first" }, 1] }
       }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x01": "0x0000000000000000000000000000000000000000000000000000000000000014"
     }
-  ]
-}
-```
-
-**Step 1**: The first region named "base" reads storage slot 3
-
-**Step 2**: The second region uses `.slot` to reference the slot value (3) from "base"
-
-**Step 3**: Compute `$keccak256([3])` — hash the slot to get the data area base
-
-**Step 4**: Add index 2 to get the third element's slot
-
-**Step 5**: Read 32 bytes from the computed storage slot
-
-### Try these examples
-
-**Simple storage variable:**
-```json
-{
-  "location": "storage",
-  "slot": 0
-}
-```
-
-**Stack value:**
-```json
-{
-  "location": "stack",
-  "slot": 0
-}
-```
-(Add a stack entry in the state editor to see this work)
-
-**Memory region:**
-```json
-{
-  "location": "memory",
-  "offset": 0,
-  "length": 32
-}
-```
-(Add memory contents in the state editor)
+  }}
+/>
 
 ## Resolution mechanics
 
@@ -132,47 +126,40 @@ The default pointer above resolves a dynamic array element using a `group`:
 Expressions like `$sum`, `$keccak256`, and variable references are evaluated
 against the current machine state. The expression language is compositional:
 
-```json
-{
-  "$sum": [
-    { "$keccak256": [{ "$wordsized": 0 }] },
-    { "$product": [32, 5] }
-  ]
-}
-```
-
-This computes: `keccak256(pad32(0)) + (32 * 5)`
-
-### Named regions
-
-Use `group` to create named regions that can be referenced by later regions:
-
-```json
-{
-  "group": [
-    { "name": "base", "location": "storage", "slot": 0 },
-    {
-      "location": "storage",
-      "slot": { "$keccak256": [{ ".slot": "base" }] }
+<PointerExample
+  title="Composed expression"
+  pointer={{
+    location: "storage",
+    slot: {
+      $sum: [
+        { $keccak256: [{ $wordsized: 0 }] },
+        { $product: [32, 5] }
+      ]
     }
-  ]
-}
-```
-
-The `.slot` lookup reads the slot field from the named "base" region.
+  }}
+  state={{}}
+  description="Computes: keccak256(pad32(0)) + (32 * 5)"
+/>
 
 ### Multiple regions
 
 Pointers can yield multiple regions using `group` or `list`:
 
-```json
-{
-  "group": [
-    { "name": "length", "location": "storage", "slot": 0 },
-    { "name": "data", "location": "storage", "slot": 1 }
-  ]
-}
-```
+<PointerExample
+  title="Group of two regions"
+  pointer={{
+    group: [
+      { name: "length", location: "storage", slot: 0 },
+      { name: "data", location: "storage", slot: 1 }
+    ]
+  }}
+  state={{
+    storage: {
+      "0x00": "0x0000000000000000000000000000000000000000000000000000000000000020",
+      "0x01": "0x48656c6c6f000000000000000000000000000000000000000000000000000000"
+    }
+  }}
+/>
 
 ## Implementation resources
 
@@ -190,3 +177,5 @@ For details on implementing pointer resolution:
 - [Expressions documentation](./expressions) for the expression language
 - [Regions documentation](./regions) for region structure
 - [Pointer specification](/spec/pointer) for formal definitions
+
+</PointerPlayground>

@@ -13,6 +13,8 @@ export interface ResolutionVisualizerProps {
   showPointerInput?: boolean;
   /** Whether to show the state editor */
   showStateEditor?: boolean;
+  /** Whether to show the resolve button controls */
+  showControls?: boolean;
   /** Whether to show full hex values */
   showFullValues?: boolean;
 }
@@ -202,6 +204,7 @@ function MemoryEditor({
 export function ResolutionVisualizer({
   showPointerInput = true,
   showStateEditor = true,
+  showControls = true,
   showFullValues = false,
 }: ResolutionVisualizerProps): JSX.Element {
   const {
@@ -280,16 +283,18 @@ export function ResolutionVisualizer({
         )}
       </div>
 
-      <div className="resolution-visualizer-controls">
-        <button
-          className="resolve-button"
-          onClick={() => resolve()}
-          disabled={isResolving || !pointer}
-          type="button"
-        >
-          {isResolving ? "Resolving..." : "Resolve Pointer"}
-        </button>
-      </div>
+      {showControls && (
+        <div className="resolution-visualizer-controls">
+          <button
+            className="resolve-button"
+            onClick={() => resolve()}
+            disabled={isResolving || !pointer}
+            type="button"
+          >
+            {isResolving ? "Resolving..." : "Resolve Pointer"}
+          </button>
+        </div>
+      )}
 
       <div className="resolution-visualizer-output">
         {error && (

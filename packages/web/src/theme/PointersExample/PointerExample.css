@@ -1,0 +1,70 @@
+/**
+ * Pointer Example Styles
+ */
+
+.pointer-example {
+  margin: 1rem 0;
+}
+
+.pointer-example-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--ifm-color-content);
+}
+
+.pointer-example-description {
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 0.5rem;
+}
+
+.pointer-example-content {
+  position: relative;
+}
+
+/* Position the Try It button */
+.pointer-example-try-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  z-index: 1;
+}
+
+.pointer-example-try-btn:hover {
+  background: var(--ifm-color-primary-dark);
+}
+
+.pointer-example-try-btn:active {
+  transform: scale(0.97);
+}
+
+.pointer-example-try-btn.standalone {
+  position: static;
+  margin-top: 0.5rem;
+}
+
+.try-btn-icon {
+  font-size: 10px;
+}
+
+/* Ensure code block has room for button */
+.pointer-example-code {
+  padding-right: 100px !important;
+}
+
+/* Dark mode */
+[data-theme="dark"] .pointer-example-description {
+  color: var(--ifm-color-emphasis-600);
+}
