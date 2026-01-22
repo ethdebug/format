@@ -85,8 +85,6 @@
     "@hyperjump/json-schema": "^1.11.0",
     "@types/node": "^20.0.0",
     "@types/parsimmon": "^1.10.9",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
     "@vitest/coverage-v8": "^2.1.8",
     "@vitest/ui": "^2.1.8",
     "eslint": "^8.0.0",

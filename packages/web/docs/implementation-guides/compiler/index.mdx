@@ -1,0 +1,21 @@
+---
+sidebar_position: 1
+sidebar_label: Compiler Guides
+---
+
+# Compiler Implementation Guides
+
+Guides for implementing ethdebug/format support in compilers.
+
+:::note[Coming soon]
+This section is under construction. It will explain how compilers can emit
+ethdebug/format debug information.
+:::
+
+## Overview
+
+Compilers that want to support ethdebug/format need to:
+
+1. **Emit type information** — Describe the types used in the program
+2. **Emit pointer information** — Describe where variables are stored
+3. **Emit program information** — Describe runtime context at each instruction
