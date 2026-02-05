@@ -2,9 +2,13 @@
 sidebar_position: 4
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
 import { TracePlayground, TraceExample } from "@theme/ProgramExample";
 
 # Tracing execution
+
+<SpecLink schema="ethdebug/format/program" href="/spec/program/overview" />
 
 <TracePlayground>
 
@@ -14,7 +18,7 @@ Trace Playground, where you can compile and step through real BUG code.
 
 ## What tracing provides
 
-With ethdebug/format data, a trace viewer can show:
+With **ethdebug/format** data, a trace viewer can show:
 
 - **Current source location**: Which line of source code corresponds to the
   current bytecode instruction
@@ -137,8 +141,12 @@ Combined with the program annotation, this gives us complete visibility.
 
 The program's instruction list maps each PC to its context:
 
-```json
-{
+<SchemaExample
+  schema="program/instruction"
+  href="/spec/program/instruction"
+  title="Instruction with context"
+>
+  {`{
   "offset": 18,
   "operation": { "mnemonic": "SLOAD" },
   "context": {
@@ -160,8 +168,8 @@ The program's instruction list maps each PC to its context:
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 This tells us:
 

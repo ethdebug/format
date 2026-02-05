@@ -2,9 +2,15 @@
 sidebar_position: 4
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
 import { PointerPlayground, PointerExample } from "@theme/PointersExample";
 
 # Collections
+
+<SpecLink
+  schema="ethdebug/format/pointer/collection"
+  href="/spec/pointer/collection"
+/>
 
 <PointerPlayground>
 
@@ -63,6 +69,13 @@ fields need to be accessed together.
 
 A **list** generates a sequence of pointers based on a count expression. This
 handles dynamic arrays and other indexed collections.
+
+:::tip[Terminology note]
+The `each` property introduces a **pointer variable** — a named binding for use
+in expressions. This is different from **program variables** (source-level
+identifiers with types and pointers). See the
+[glossary](/docs/reference/glossary) for complete definitions.
+:::
 
 <PointerExample
   title="Dynamic array (3 elements)"
@@ -211,7 +224,7 @@ combining scopes with keccak256 for storage slot computation, see the
 | `define` | Object mapping variable names to expressions  |
 | `in`     | Pointer where defined variables are available |
 
-## Reference and Templates
+## Reference and templates
 
 A **reference** invokes a named pointer template, while **templates** defines
 them inline. These work together for reusable pointer patterns.

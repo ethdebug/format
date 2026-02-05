@@ -11,24 +11,30 @@ their contracts are doing at runtime.
 
 ## The problem
 
-When a compiler optimizes source code into EVM bytecode, it transforms the
-original program structure in ways that make debugging difficult. Instructions
-get reordered, variables get eliminated, and the connection between bytecode
-and source code becomes obscured. Without standardized debug information,
-every debugger must reverse-engineer these transformations — or worse, each
-compiler-debugger pair requires custom integration.
+Compilers are relentless optimizers. They inline functions, eliminate dead
+code, reorder instructions, and pack multiple values into single storage
+slots. The resulting bytecode bears little resemblance to the source code
+that produced it.
+
+This creates a fundamental challenge for debugging. When a transaction fails,
+developers need to understand what happened — but the connection between
+bytecode and source has been obscured. Without standardized debug information,
+every debugger must reverse-engineer these transformations on its own, and
+each compiler-debugger pair requires custom integration work.
 
 ## What this format provides
 
-The ethdebug/format specification defines schemas for:
+**ethdebug/format** defines schemas including:
 
 - **Types** — Describe the structure of data (integers, structs, arrays,
-  mappings) so debuggers can decode raw bytes into meaningful values
+  mappings) — what shape it takes and how its parts relate
 - **Pointers** — Describe where data lives at runtime, including dynamic
   locations that depend on execution state
 - **Programs** — Describe the runtime context at each bytecode instruction,
   including which variables are in scope and what source code corresponds
   to each operation
+- **Info schema** — Bundles all debug data for a compilation, including
+  programs, shared types, sources, and compiler metadata
 
 ## Get started
 
@@ -39,7 +45,7 @@ The ethdebug/format specification defines schemas for:
         <h3>Building a debugger?</h3>
       </div>
       <div className="card__body">
-        Learn how to consume ethdebug/format data to build better debugging
+        Learn how to consume **ethdebug/format** data to build better debugging
         tools.
       </div>
       <div className="card__footer">
@@ -58,7 +64,7 @@ The ethdebug/format specification defines schemas for:
         <h3>Building a compiler?</h3>
       </div>
       <div className="card__body">
-        Learn how to emit ethdebug/format data from your compiler.
+        Learn how to emit **ethdebug/format** data from your compiler.
       </div>
       <div className="card__footer">
         <a

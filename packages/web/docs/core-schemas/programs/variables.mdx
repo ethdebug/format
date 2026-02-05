@@ -2,43 +2,71 @@
 sidebar_position: 3
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
 # Variables
+
+<SpecLink
+  schema="ethdebug/format/program/context/variables"
+  href="/spec/program/context/variables"
+/>
 
 Variables connect source-level identifiers to runtime locations. They're the
 key to showing developers meaningful values instead of raw bytes.
+
+:::tip[Terminology note]
+In **ethdebug/format**, "variable" means different things in different contexts:
+
+- **Program variables** (this page): source-level identifiers with types and
+  pointers
+- **Pointer variables**: named bindings for use in expressions (like loop
+  indices in [list collections](/docs/core-schemas/pointers/collections#list))
+
+See the [glossary](/docs/reference/glossary) for complete definitions.
+:::
 
 ## Variable structure
 
 A variable declaration includes three parts:
 
-```json
-{
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+  title="A simple variable"
+>
+  {`{
   "name": "balance",
   "type": { "kind": "uint", "bits": 256 },
   "pointer": {
     "location": "storage",
     "slot": 0
   }
-}
-```
+}`}
+</SchemaExample>
 
 - **`name`**: the identifier from source code
-- **`type`**: how to interpret the bytes (an ethdebug/format type)
-- **`pointer`**: where to find the bytes (an ethdebug/format pointer)
+- **`type`**: the structure of the data (an **ethdebug/format** type)
+- **`pointer`**: where to find the data (an **ethdebug/format** pointer)
 
-## Types tell debuggers how to decode
+## Types describe structure
 
-The `type` field references the type system. A debugger uses this to:
+The `type` field describes what shape the data takes. A debugger uses this to:
 
-1. Know how many bytes to read
-2. Interpret those bytes correctly (signed vs unsigned, struct layout, etc.)
+1. Understand the data's structure (scalar, struct, array, etc.)
+2. Know how to interpret the bytes once located (signed vs unsigned, field
+   order, etc.)
 3. Display the value in a readable format
 
 For complex types, the type definition guides the debugger through nested
 structures:
 
-```json
-{
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+  title="Variable with struct type"
+>
+  {`{
   "name": "user",
   "type": {
     "kind": "struct",
@@ -48,34 +76,41 @@ structures:
     ]
   },
   "pointer": { ... }
-}
-```
+}`}
+</SchemaExample>
 
 ## Pointers tell debuggers where to look
 
 The `pointer` field specifies the data's location. This can be simple:
 
-```json
-{
+<SchemaExample
+  schema="pointer/region/stack"
+  href="/spec/pointer/region/location/stack"
+>
+  {`{
   "pointer": {
     "location": "stack",
     "slot": 0
   }
-}
-```
+}`}
+</SchemaExample>
 
 Or complex, for data spread across multiple locations:
 
-```json
-{
+<SchemaExample
+  schema="pointer/collection/group"
+  href="/spec/pointer/collection/group"
+  title="Struct members in packed storage"
+>
+  {`{
   "pointer": {
     "group": [
       { "name": "id", "location": "storage", "slot": 5 },
       { "name": "active", "location": "storage", "slot": 5, "offset": 31 }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 ## Scope and lifetime
 
@@ -92,7 +127,7 @@ The instruction list captures these transitions. As a debugger steps through
 execution, it accumulates and discards variables based on each instruction's
 context.
 
-## Example: Local variable lifecycle
+## Example: local variable lifecycle
 
 Consider this Solidity snippet:
 
@@ -116,8 +151,12 @@ instructions 50-100 and omitting it afterward.
 
 An instruction's context can declare multiple variables:
 
-```json
-{
+<SchemaExample
+  schema="program/instruction"
+  href="/spec/program/instruction"
+  title="Multiple variables in context"
+>
+  {`{
   "offset": 75,
   "context": {
     "variables": [
@@ -138,11 +177,11 @@ An instruction's context can declare multiple variables:
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 ## Learn more
 
-- [Types documentation](../types) for type representation details
+- [Types documentation](../types) for type structure details
 - [Pointers documentation](../pointers) for location specification
 - [Context schema](/spec/program/context/variables) for the full schema

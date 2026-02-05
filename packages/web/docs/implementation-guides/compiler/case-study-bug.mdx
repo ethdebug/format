@@ -3,9 +3,11 @@ sidebar_position: 2
 sidebar_label: "Case Study: BUG"
 ---
 
-# Case Study: BUG Compiler
+import SchemaExample from "@site/src/components/SchemaExample";
 
-BUG is a small experimental language designed to demonstrate ethdebug/format
+# Case study: BUG compiler
+
+BUG is a small experimental language designed to demonstrate **ethdebug/format**
 integration. This case study explains how BUG implements debug information
 generation, providing a reference for other compiler authors.
 
@@ -14,7 +16,7 @@ See the [BUG Playground](/docs/examples/bug-playground) to experiment with
 BUG and see its debug output.
 :::
 
-## BUG Language Overview
+## BUG language overview
 
 BUG is a minimal smart contract language with:
 
@@ -47,7 +49,7 @@ code {
 }
 ```
 
-## Compilation Pipeline
+## Compilation pipeline
 
 BUG uses a multi-stage compilation pipeline:
 
@@ -62,20 +64,20 @@ Source → AST → IR → EVM Bytecode
 3. **IR generation** — Converts AST to intermediate representation
 4. **EVM code generation** — Produces final bytecode with debug annotations
 
-## Debug Information Strategy
+## Debug information strategy
 
-BUG generates ethdebug/format output alongside bytecode by:
+BUG generates **ethdebug/format** output alongside bytecode by:
 
 1. **Tracking source locations** through all compilation phases
 2. **Preserving type information** from the type checker
 3. **Computing storage layouts** during IR generation
 4. **Emitting program annotations** during code generation
 
-### Key Design Decisions
+### Key design decisions
 
 **Type preservation**: BUG's IR types carry an "origin" field linking back to
-the source-level type. This allows generating rich ethdebug type information
-even after type erasure in the IR.
+the source-level type. This allows generating rich **ethdebug/format** type
+information even after type erasure in the IR.
 
 **Storage analysis**: During IR generation, BUG analyzes storage access
 patterns to determine variable locations. This analysis traces through
@@ -85,9 +87,9 @@ patterns to determine variable locations. This analysis traces through
 instructions with their contexts during code generation, then serializes the
 complete program annotation.
 
-## Type Generation
+## Type generation
 
-BUG converts its type system to ethdebug/format types:
+BUG converts its type system to **ethdebug/format** types:
 
 ```typescript title="packages/bugc/src/irgen/debug/types.ts"
 export function convertBugType(bugType: BugType): Format.Type | undefined {
@@ -117,40 +119,51 @@ The type conversion handles:
 - **Mappings** — Key/value type conversion
 - **Structs** — Field-by-field conversion with names
 
-## Pointer Generation
+## Pointer generation
 
 BUG generates pointers that describe how to locate variables at runtime.
 
-### Storage Variables
+### Storage variables
 
 For simple storage variables, BUG generates direct slot pointers:
 
-```json
-{
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+>
+  {`{
   "location": "storage",
   "slot": 0
-}
-```
+}`}
+</SchemaExample>
 
-### Composite Types
+### Composite types
 
 For structs, BUG generates group pointers with field offsets:
 
-```json
-{
+<SchemaExample
+  schema="pointer/collection/group"
+  href="/spec/pointer/collection/group"
+  title="Struct fields"
+>
+  {`{
   "group": [
     { "name": "field1", "location": "storage", "slot": 0 },
     { "name": "field2", "location": "storage", "slot": 0, "offset": 16 }
   ]
-}
-```
+}`}
+</SchemaExample>
 
-### Dynamic Arrays
+### Dynamic arrays
 
 For dynamic arrays, BUG generates pointers with keccak256 expressions:
 
-```json
-{
+<SchemaExample
+  schema="pointer/collection"
+  href="/spec/pointer/collection"
+  title="Dynamic array"
+>
+  {`{
   "group": [
     { "name": "array-length", "location": "storage", "slot": 0 },
     {
@@ -165,10 +178,10 @@ For dynamic arrays, BUG generates pointers with keccak256 expressions:
       }
     }
   ]
-}
-```
+}`}
+</SchemaExample>
 
-### Storage Analysis
+### Storage analysis
 
 BUG includes a storage analysis pass that traces `compute_slot` instructions
 to reconstruct dynamic storage locations. This handles patterns like:
@@ -179,11 +192,11 @@ compute_slot(array, baseSlot) → keccak256(slot)
 compute_slot(field, baseSlot, offset) → slot + offset
 ```
 
-## Program Annotation
+## Program annotation
 
 BUG emits program annotations that map bytecode to source context.
 
-### Instruction Context
+### Instruction context
 
 Each bytecode instruction includes context with:
 
@@ -191,8 +204,12 @@ Each bytecode instruction includes context with:
 - **Variables** — Variables in scope at this point
 - **Remarks** — Human-readable annotations
 
-```json
-{
+<SchemaExample
+  schema="program/instruction"
+  href="/spec/program/instruction"
+  title="Instruction with context"
+>
+  {`{
   "offset": "0x1a",
   "operation": { "mnemonic": "SLOAD" },
   "context": {
@@ -214,10 +231,10 @@ Each bytecode instruction includes context with:
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
-### Program Builder
+### Program builder
 
 The `ProgramBuilder` class manages instruction accumulation:
 
@@ -241,7 +258,7 @@ class ProgramBuilder {
 }
 ```
 
-## Variable Scoping
+## Variable scoping
 
 BUG includes storage variables in the variables context for every instruction
 that accesses them. This allows debuggers to inspect storage values at any
@@ -276,7 +293,7 @@ export function collectVariablesWithLocations(
 }
 ```
 
-## Testing Strategy
+## Testing strategy
 
 BUG tests debug output in several ways:
 
@@ -313,32 +330,32 @@ test("generates correct storage pointer", () => {
 });
 ```
 
-## Lessons Learned
+## Lessons learned
 
-### Start Simple
+### Start simple
 
 BUG started with just storage variables and elementary types. Complex features
 (arrays, mappings, structs) were added incrementally after the basic
 infrastructure was working.
 
-### Preserve Information Early
+### Preserve information early
 
 Type information is easier to preserve than reconstruct. BUG's IR types carry
 their source-level origin, which simplifies later conversion.
 
-### Test Visually
+### Test visually
 
 The BUG Playground proved invaluable for debugging the debug output. Being able
 to see the generated annotations alongside bytecode helped catch issues that
 unit tests missed.
 
-### Handle Edge Cases Gracefully
+### Handle edge cases gracefully
 
 When storage analysis can't determine a location (e.g., computed slot from
 a non-constant), BUG still generates useful partial information rather than
 failing entirely.
 
-## Future Work
+## Future work
 
 Areas for improvement in BUG's debug support:
 

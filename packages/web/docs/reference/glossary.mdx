@@ -2,12 +2,14 @@
 sidebar_position: 3
 ---
 
+import SchemaExample from "@site/src/components/SchemaExample";
+
 # Glossary
 
-This page defines key terms used throughout the ethdebug/format specification
-and documentation.
+This page defines key terms used throughout the **ethdebug/format**
+specification and documentation.
 
-## Core Concepts
+## Core concepts
 
 ### Pointer
 
@@ -17,7 +19,7 @@ produce concrete byte regions. Unlike static offsets, pointers can include
 dynamic computations (like keccak256 hashing for storage slots) that depend on
 runtime values.
 
-See: [Pointers documentation](/docs/pointers)
+See: [Pointers documentation](/docs/core-schemas/pointers)
 
 ### Region
 
@@ -30,7 +32,7 @@ specifies:
 
 Regions are the concrete output of pointer resolution.
 
-See: [Regions documentation](/docs/pointers/regions)
+See: [Regions documentation](/docs/core-schemas/pointers/regions)
 
 ### Cursor
 
@@ -40,11 +42,12 @@ as a "resolved pointer" that knows how to extract data from the EVM.
 
 ### Type
 
-A structured definition describing how to interpret bytes as meaningful data.
-Types define the semantic meaning of raw bytes, enabling debuggers to display
-values in human-readable form (e.g., showing `0x01` as `true` for a boolean).
+A structured definition describing the shape and structure of data. Types
+specify what kind of value something is (integer, struct, mapping, etc.) and
+how its parts relate. Combined with a pointer that locates the data, types
+enable debuggers to display values in human-readable form.
 
-See: [Types documentation](/docs/types)
+See: [Types documentation](/docs/core-schemas/types)
 
 ### Program
 
@@ -57,9 +60,9 @@ including:
 - Frame information
 - Remarks and annotations
 
-See: [Programs documentation](/docs/programs)
+See: [Programs documentation](/docs/core-schemas/programs)
 
-## EVM Data Locations
+## EVM data locations
 
 ### Storage
 
@@ -113,7 +116,7 @@ The deployed bytecode of a contract. Code:
 - Can be read via CODECOPY/EXTCODECOPY
 - Contains both executable instructions and embedded data
 
-### Transient Storage
+### Transient storage
 
 Temporary storage that persists within a transaction but is cleared at the end.
 Introduced in EIP-1153, transient storage:
@@ -122,7 +125,7 @@ Introduced in EIP-1153, transient storage:
 - Is cleared after each transaction
 - Is cheaper than persistent storage
 
-## Pointer Expressions
+## Pointer expressions
 
 ### Expression
 
@@ -135,22 +138,25 @@ expression types include:
 - **Lookups**: `$offset`, `$length`, `$slot` (reading from defined regions)
 - **References**: `$this`, variables by name
 
-### Variable (in Pointers)
+### Variable (in pointers)
 
 A named binding that can be referenced within a pointer definition. Variables
 allow pointers to name and reuse intermediate computations:
 
-```json
-{
+<SchemaExample
+  schema="pointer/collection/scope"
+  href="/spec/pointer/collection/scope"
+>
+  {`{
   "define": { "name": "baseSlot", "location": "storage", "slot": 0 },
   "in": {
     "location": "storage",
     "slot": { "$keccak256": [{ ".slot": "baseSlot" }] }
   }
-}
-```
+}`}
+</SchemaExample>
 
-## Program Context
+## Program context
 
 ### Context
 
@@ -171,7 +177,7 @@ combine:
 - **Operation**: The opcode and its arguments
 - **Context**: Semantic information about what the instruction does
 
-### Variable (in Programs)
+### Variable (in programs)
 
 A named value in the source program that can be inspected during debugging.
 Program variables have:
@@ -181,7 +187,7 @@ Program variables have:
 - **Type**: How to interpret the value
 - **Pointer**: Where to find the value at runtime
 
-## Execution Tracing
+## Execution tracing
 
 ### Trace
 
@@ -193,7 +199,7 @@ A record of EVM execution showing the state at each step. Traces capture:
 - Memory changes
 - Storage modifications
 
-### Machine State
+### Machine state
 
 A snapshot of all EVM state at a specific execution point. Machine state
 includes the current values of:
@@ -213,7 +219,7 @@ includes the current values of:
 Original source code associated with a compiled program. Sources are referenced
 by ID and contain the raw text content.
 
-### Source Range
+### Source range
 
 A reference to a specific portion of source code, defined by:
 

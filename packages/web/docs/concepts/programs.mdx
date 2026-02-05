@@ -1,0 +1,180 @@
+---
+sidebar_position: 5
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Programs
+
+<SpecLink schema="ethdebug/format/program" href="/spec/program/overview" />
+
+This page explains the mental model behind **ethdebug/format** program
+representations. For reference documentation on instructions, variables, and
+tracing, see the [Programs reference](/docs/core-schemas/programs).
+
+## Programs map bytecode to high-level context
+
+When a compiler transforms source code into bytecode, it creates a gap between
+what developers wrote and what actually executes. A **program** bridges this
+gap by providing high-level context for each bytecode instruction.
+
+Programs enable debuggers to answer:
+
+- What source code corresponds to this instruction?
+- What variables are in scope right now?
+- What function are we in?
+- Should this instruction be treated as "stepping into" a call?
+
+## Programs correspond to bytecode
+
+Each program is associated with a specific piece of bytecode:
+
+- **Call bytecode** — executed when a contract receives a message
+- **Create bytecode** — executed during contract deployment
+
+The same contract typically has both: create bytecode runs once during
+deployment, call bytecode runs whenever the contract is invoked afterward.
+
+Think of it as: "you have this bytecode → here's its program." A program
+references the compilation that produced the bytecode, linking back to
+source files and compiler metadata through the
+[info/resources](/docs/core-schemas/info/resources) schema.
+
+## Instruction listings
+
+Programs contain a sequential list of **instructions**, one for each machine
+instruction in the bytecode. Each instruction specifies:
+
+- **offset** — the byte position in the bytecode (equal to the program counter
+  on non-EOF EVMs)
+- **context** — high-level information about this point in execution
+
+Instructions are ordered to match the bytecode, enabling fast lookup by offset.
+Not every byte offset has an entry — only positions where opcodes begin.
+
+<SchemaExample
+  schema="program"
+  href="/spec/program/overview"
+  title="Instruction list"
+>
+  {`{
+  "instructions": [
+    { "offset": 0, "context": { /* ... */ } },
+    { "offset": 1, "context": { /* ... */ } },
+    { "offset": 4, "context": { /* ... */ } }
+  ]
+}`}
+</SchemaExample>
+
+## Context information
+
+Each instruction's **context** describes what's true at that point in
+execution. Context information may include:
+
+### Source ranges
+
+Which source code relates to this instruction:
+
+<SchemaExample schema="program/context/code" href="/spec/program/context/code">
+  {`{
+  "code": {
+    "source": { "id": "source-1" },
+    "range": { "offset": 150, "length": 25 }
+  }
+}`}
+</SchemaExample>
+
+### Variables
+
+What variables are in scope and where to find their values:
+
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+>
+  {`{
+  "variables": [
+    {
+      "identifier": { "name": "balance" },
+      "type": { "kind": "uint", "bits": 256 },
+      "pointer": { "location": "storage", "slot": 0 }
+    }
+  ]
+}`}
+</SchemaExample>
+
+Each variable has an identifier, a type, and a pointer. The pointer tells the
+debugger where to find the variable's current value.
+
+### Control flow hints
+
+Information about stepping behavior:
+
+<SchemaExample
+  schema="program/context/frame"
+  href="/spec/program/context/frame"
+>
+  {`{
+  "frame": {
+    "step-in": true
+  }
+}`}
+</SchemaExample>
+
+This tells debuggers whether an instruction represents entering or leaving a
+function call.
+
+## Context is valid after instruction execution
+
+An instruction's context describes the state that exists **after** that
+instruction completes. This timing is important:
+
+- Before the instruction runs, the previous context applies
+- After the instruction runs, this context applies
+
+For example, if an instruction stores a value in a variable, the variable's
+pointer in that instruction's context points to where the value now lives.
+
+## Contexts as state transitions
+
+A debugger maintains a model of the high-level program state as it steps
+through execution. Each context encountered serves as a state transition:
+
+1. Debugger observes the program counter
+2. Looks up the instruction at that offset
+3. Reads the context to learn what changed
+4. Updates its high-level state model
+5. Continues to the next instruction
+
+Contexts can be composed using:
+
+- **gather** — combine multiple context pieces together
+- **pick** — choose a context based on a runtime condition
+- **remark** — add metadata without changing scope
+
+This composition enables describing complex scenarios like conditional variable
+assignments or function inlining.
+
+## What tracing enables
+
+By following contexts through execution, debuggers can provide:
+
+1. **Source mapping** — show the current line in source code
+2. **Variable inspection** — display current values of in-scope variables
+3. **Call stacks** — reconstruct function call history
+4. **Data structure visualization** — present arrays and mappings meaningfully
+5. **Control flow insight** — indicate loop iterations, function boundaries
+
+The program schema provides the compile-time guarantees that make runtime
+debugging possible.
+
+## Next steps
+
+- **[Instructions](/docs/core-schemas/programs/instructions)** — Reference for instruction
+  structure
+- **[Variables](/docs/core-schemas/programs/variables)** — Reference for variable
+  definitions
+- **[Tracing](/docs/core-schemas/programs/tracing)** — Guide to using programs during
+  execution
+- **[Program specification](/spec/program)** — Formal schema definitions

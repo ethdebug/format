@@ -2,9 +2,16 @@
 sidebar_position: 3
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
 import { PointerPlayground, PointerExample } from "@theme/PointersExample";
 
 # Expressions
+
+<SpecLink
+  schema="ethdebug/format/pointer/expression"
+  href="/spec/pointer/expression"
+/>
 
 <PointerPlayground>
 
@@ -171,25 +178,25 @@ Reference properties of named regions with `.property` syntax:
 
 ### `.offset` — Region's offset
 
-```json
-{ ".offset": "previous-element" }
-```
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".offset": "previous-element" }`}
+</SchemaExample>
 
 Returns the offset of the named region.
 
 ### `.length` — Region's length
 
-```json
-{ ".length": "previous-element" }
-```
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".length": "previous-element" }`}
+</SchemaExample>
 
 Returns the length of the named region.
 
 ### `.slot` — Region's slot
 
-```json
-{ ".slot": "base-slot" }
-```
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".slot": "base-slot" }`}
+</SchemaExample>
 
 Returns the slot number for storage/stack/transient regions.
 
@@ -272,7 +279,7 @@ For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`:
       "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
     ],
     storage: {
-      "0x8bd687de tried6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b":
+      "0x8bd687de6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b":
         "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
     },
   }}
@@ -331,7 +338,7 @@ Joins byte sequences without padding:
 
 Useful for building hash inputs from multiple values.
 
-### `$sized<N>` — Resize to N bytes
+### `$sized<N>` — resize to N bytes
 
 Truncates or pads to exactly N bytes:
 
@@ -414,7 +421,7 @@ contexts:
 The variable `"i"` takes values from 0 to count-1, computing each element's
 slot.
 
-## Complete example: Dynamic array element
+## Complete example: dynamic array element
 
 Reading element `i` from `uint256[] storage arr` at slot 5:
 

@@ -1,0 +1,60 @@
+.container {
+  margin-bottom: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 0.8125rem;
+}
+
+.title {
+  font-weight: 500;
+  color: var(--ifm-font-color-base);
+}
+
+.schemaLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.schemaLink:hover {
+  text-decoration: none;
+}
+
+.schemaLink:hover .schemaName {
+  text-decoration: underline;
+}
+
+.schemaLabel {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.8125rem;
+}
+
+.schemaName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--ifm-color-primary);
+}
+
+/* Remove the top border radius from the code block */
+.container :global(.theme-code-block) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* Dark mode */
+[data-theme="dark"] .header {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-emphasis-300);
+}

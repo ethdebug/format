@@ -2,7 +2,15 @@
 sidebar_position: 2
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
 # Instructions
+
+<SpecLink
+  schema="ethdebug/format/program/instruction"
+  href="/spec/program/instruction"
+/>
 
 Each instruction record in a program corresponds to one EVM opcode in the
 bytecode. Instructions carry the context information that debuggers need.
@@ -11,12 +19,12 @@ bytecode. Instructions carry the context information that debuggers need.
 
 An instruction has two required fields:
 
-```json
-{
+<SchemaExample schema="program/instruction" href="/spec/program/instruction">
+  {`{
   "offset": 42,
   "context": { ... }
-}
-```
+}`}
+</SchemaExample>
 
 - **`offset`**: byte position in the bytecode (the program counter value when
   this instruction executes)
@@ -30,8 +38,12 @@ The `context` field can take several forms:
 
 Maps the instruction to source code:
 
-```json
-{
+<SchemaExample
+  schema="program/context/code"
+  href="/spec/program/context/code"
+  title="Source mapping"
+>
+  {`{
   "offset": 42,
   "context": {
     "code": {
@@ -44,8 +56,8 @@ Maps the instruction to source code:
       }
     }
   }
-}
-```
+}`}
+</SchemaExample>
 
 The `source` field references a source file by ID and specifies the exact
 character range.
@@ -54,8 +66,12 @@ character range.
 
 Declares variables that are in scope:
 
-```json
-{
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+  title="Variable declaration"
+>
+  {`{
   "offset": 100,
   "context": {
     "variables": [
@@ -69,27 +85,30 @@ Declares variables that are in scope:
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 Each variable includes:
 
 - `name`: the identifier from source code
-- `type`: an ethdebug/format type reference
+- `type`: an **ethdebug/format** type reference
 - `pointer`: where to find the variable's value
 
 ### Frame context
 
 Indicates call stack changes:
 
-```json
-{
+<SchemaExample
+  schema="program/context/frame"
+  href="/spec/program/context/frame"
+>
+  {`{
   "offset": 200,
   "context": {
     "frame": "step-in"
   }
-}
-```
+}`}
+</SchemaExample>
 
 Frame values include:
 
@@ -102,8 +121,12 @@ Frame values include:
 
 Combine multiple contexts (like nested scopes):
 
-```json
-{
+<SchemaExample
+  schema="program/context/gather"
+  href="/spec/program/context"
+  title="Combining contexts"
+>
+  {`{
   "offset": 150,
   "context": {
     "gather": [
@@ -119,15 +142,19 @@ Combine multiple contexts (like nested scopes):
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 ### Pick
 
 Choose between contexts based on runtime conditions:
 
-```json
-{
+<SchemaExample
+  schema="program/context/pick"
+  href="/spec/program/context"
+  title="Conditional context"
+>
+  {`{
   "offset": 175,
   "context": {
     "pick": [
@@ -146,8 +173,8 @@ Choose between contexts based on runtime conditions:
       }
     ]
   }
-}
-```
+}`}
+</SchemaExample>
 
 The debugger evaluates guards at runtime and uses the first matching context.
 A context without a guard acts as the default.
@@ -156,14 +183,14 @@ A context without a guard acts as the default.
 
 Add metadata without affecting scope:
 
-```json
-{
+<SchemaExample schema="program/context/remark" href="/spec/program/context">
+  {`{
   "offset": 180,
   "context": {
     "remark": "loop iteration boundary"
   }
-}
-```
+}`}
+</SchemaExample>
 
 ## Instruction ordering
 

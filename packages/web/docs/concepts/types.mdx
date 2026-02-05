@@ -1,0 +1,212 @@
+---
+sidebar_position: 3
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Types
+
+<SpecLink schema="ethdebug/format/type" href="/spec/type/overview" />
+
+This page explains the mental model behind **ethdebug/format** type
+representations. For reference documentation on specific type kinds, see the
+[Types reference](/docs/core-schemas/types).
+
+## Types describe structure, not location
+
+A type definition tells you what shape data takes — not where that data lives.
+For example, a type might say "this is an array of uint256 values" without
+specifying whether those values are in storage, memory, or calldata.
+
+This separation is intentional:
+
+- **Types** describe the logical structure (what the data means)
+- **Pointers** describe the physical location (where to find the bytes)
+
+Together, they enable a debugger to find bytes (via the pointer) and interpret
+them correctly (via the type). The same type definition can be used regardless
+of where the data happens to be stored.
+
+## All types have a `kind` field
+
+Every type representation is a JSON object with a `kind` field that identifies
+what kind of type it is:
+
+<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
+  {`{
+  "kind": "uint",
+  "bits": 256
+}`}
+</SchemaExample>
+
+<SchemaExample schema="type/elementary/bool" href="/spec/type/elementary/bool">
+  {`{
+  "kind": "bool"
+}`}
+</SchemaExample>
+
+The `kind` field serves as a discriminator, telling parsers which schema to use
+for validation and how to interpret the rest of the object.
+
+## Known vs. unknown kinds
+
+**ethdebug/format** defines specific schemas for known type kinds. These
+correspond to reserved string values for `kind`:
+
+- Elementary types: `uint`, `int`, `bool`, `address`, `bytes`, `string`,
+  `fixed`, `ufixed`, `enum`, `contract`
+- Complex types: `array`, `struct`, `mapping`, `tuple`, `alias`, `function`
+
+Type representations **should** use the specific schema when representing a
+known type. They **must not** reuse reserved `kind` values for other purposes.
+
+For custom types or types not covered by the format, you **may** use other
+`kind` values with associated external schemas. This extensibility allows the
+format to support new languages and type systems.
+
+## The base type schema
+
+All type representations — both known and unknown kinds — must conform to the
+[base type schema](/spec/type/base). This ensures a minimum level of structure
+even for custom types.
+
+Known types have specific subschemas that extend the base with additional
+required fields. Unknown types must still satisfy the base constraints plus
+any additional requirements for unknown types.
+
+## Elementary vs. complex types
+
+Types fall into one of two classes:
+
+**Elementary types** don't contain other types. They represent atomic values:
+
+- `uint256` — an unsigned integer
+- `address` — a 20-byte account identifier
+- `bool` — true or false
+
+**Complex types** compose one or more other types:
+
+- `uint256[]` — an array containing uint256 elements
+- A struct with multiple member types
+- A mapping from one type to another
+
+This distinction is expressed through the presence or absence of a `contains`
+field. Complex types always have `contains`; elementary types never do.
+
+## The `contains` field for complex types
+
+Complex types use `contains` to specify what types they compose. This field is
+polymorphic — it takes one of three forms depending on the type kind:
+
+### Single type (e.g., arrays)
+
+Arrays compose exactly one element type:
+
+<SchemaExample schema="type/complex/array" href="/spec/type/complex/array">
+  {`{
+  "kind": "array",
+  "contains": {
+    "type": {
+      "kind": "uint",
+      "bits": 256
+    }
+  }
+}`}
+</SchemaExample>
+
+### Ordered list (e.g., structs)
+
+Structs compose an ordered list of named members:
+
+<SchemaExample schema="type/complex/struct" href="/spec/type/complex/struct">
+  {`{
+  "kind": "struct",
+  "contains": [
+    {
+      "name": "balance",
+      "type": { "kind": "uint", "bits": 256 }
+    },
+    {
+      "name": "owner",
+      "type": { "kind": "address" }
+    }
+  ]
+}`}
+</SchemaExample>
+
+Member order matters — it typically matches declaration order and affects
+storage layout.
+
+### Object mapping (e.g., mappings)
+
+Mappings compose a key type and a value type:
+
+<SchemaExample schema="type/complex/mapping" href="/spec/type/complex/mapping">
+  {`{
+  "kind": "mapping",
+  "contains": {
+    "key": { "type": { "kind": "address" } },
+    "value": { "type": { "kind": "uint", "bits": 256 } }
+  }
+}`}
+</SchemaExample>
+
+## Type wrappers and references
+
+Notice how types in `contains` are wrapped in `{ "type": ... }` objects. These
+**type wrappers** serve two purposes:
+
+1. They allow additional properties alongside the type (like `"name"` for
+   struct members)
+2. They enable type references
+
+Instead of duplicating a type definition, you can reference it by ID:
+
+<SchemaExample schema="type/reference" href="/spec/type/base">
+  {`{
+  "type": {
+    "id": "some-opaque-id"
+  }
+}`}
+</SchemaExample>
+
+IDs can be strings or numbers. This enables:
+
+- Avoiding duplication when the same type appears multiple times
+- Representing recursive types (a type that contains itself)
+- Sharing types across multiple pointers or programs
+
+## Types with definitions
+
+Some types originate from source code definitions — structs, enums, and type
+aliases are explicitly defined by developers. These types may include a
+`definition` field specifying the type's name and source location:
+
+<SchemaExample
+  schema="type/elementary/enum"
+  href="/spec/type/elementary/enum"
+  title="Enum with source location"
+>
+  {`{
+  "kind": "enum",
+  "definition": {
+    "name": "Status",
+    "source": {
+      "id": "source-id",
+      "range": { "offset": 100, "length": 45 }
+    }
+  },
+  "values": ["Pending", "Active", "Completed"]
+}`}
+</SchemaExample>
+
+The `definition` field is optional even for these types, but when present it
+enables debuggers to display the type's declared name and navigate to its
+definition in source code.
+
+## Next steps
+
+- **[Elementary types](/docs/core-schemas/types/elementary)** — Reference for atomic types
+- **[Composite types](/docs/core-schemas/types/composite)** — Reference for complex types
+- **[Type specification](/spec/type)** — Formal schema definitions

@@ -2,62 +2,79 @@
 sidebar_position: 2
 ---
 
+import SchemaExample from "@site/src/components/SchemaExample";
+
 # For debugger authors
 
 You're building a debugger, transaction tracer, or analysis tool. Here's how
-ethdebug/format helps you understand smart contract execution.
+**ethdebug/format** helps you understand smart contract execution.
 
 ## What the format gives you
 
-With ethdebug/format data, your debugger can:
+With **ethdebug/format** data, your debugger can:
 
-- **Decode raw bytes into meaningful values** — Know that 32 bytes at a
-  storage slot represent a `uint256` balance or a `mapping(address => uint)`
-- **Find variable values at runtime** — Resolve pointers to locate data in
+- **Locate variable values at runtime** — Resolve pointers to find data in
   storage, memory, or the stack, even when locations are computed dynamically
+- **Interpret bytes as meaningful values** — Use type definitions to
+  understand what shape the data takes (struct fields, array elements, etc.)
 - **Map bytecode to source** — Show users which line of source code
   corresponds to the current instruction
 - **Display variables in scope** — Know which variables exist at each point
   in execution
 
-## Quick example: Reading a type
+## Quick example: reading a type
 
-Type information tells you how to interpret bytes. Here's what a simple
-`uint256` type looks like in ethdebug/format:
+Type information describes the structure of data. Here's what a simple
+`uint256` type looks like in **ethdebug/format**:
 
-```json
-{
+<SchemaExample
+  schema="type/elementary/uint"
+  href="/spec/type/elementary/uint"
+  title="A uint256 type"
+>
+  {`{
   "kind": "uint",
   "bits": 256
-}
-```
+}`}
+</SchemaExample>
 
 And a more complex struct:
 
-```json
-{
+<SchemaExample
+  schema="type/complex/struct"
+  href="/spec/type/complex/struct"
+  title="A struct type with two int256 fields"
+>
+  {`{
   "kind": "struct",
-  "name": "Position",
-  "members": [
+  "definition": {
+    "name": "Position"
+  },
+  "contains": [
     { "name": "x", "type": { "kind": "int", "bits": 256 } },
     { "name": "y", "type": { "kind": "int", "bits": 256 } }
   ]
-}
-```
+}`}
+</SchemaExample>
 
-Your debugger reads these definitions and uses them to decode raw bytes from
-EVM state into values users can understand.
+Your debugger reads these definitions to understand the structure of data.
+Combined with a pointer that locates the bytes, types enable presenting
+meaningful values to users.
 
-## Quick example: Resolving a pointer
+## Quick example: resolving a pointer
 
 Pointers describe where data lives. A simple storage variable pointer:
 
-```json
-{
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="A simple storage pointer"
+>
+  {`{
   "location": "storage",
   "slot": "0x0"
-}
-```
+}`}
+</SchemaExample>
 
 This says: "read from storage slot 0." But pointers can express complex,
 dynamic locations too — like array elements or mapping values whose locations
@@ -65,11 +82,13 @@ depend on runtime state.
 
 ## What you need to implement
 
-To consume ethdebug/format, your debugger needs:
+To consume **ethdebug/format**, your debugger needs:
 
-1. **Schema parsing** — Load and validate ethdebug/format JSON
-2. **Type decoding** — Convert bytes to values based on type definitions
-3. **Pointer resolution** — Evaluate pointer expressions against EVM state
+1. **Schema parsing** — Load and validate **ethdebug/format** JSON
+2. **Pointer resolution** — Evaluate pointer expressions against EVM state to
+   locate bytes
+3. **Type interpretation** — Use type definitions to understand the structure
+   of located data
 4. **Program interpretation** — Track context as execution progresses
 
 ## Go deeper
@@ -115,7 +134,8 @@ To consume ethdebug/format, your debugger needs:
 
 ### Explore by topic
 
-- **[Types](/docs/types)** — How the format describes data structures
-- **[Pointers](/docs/pointers)** — How the format describes data locations
-- **[Programs](/docs/programs)** — How the format describes runtime context
+- **[Types](/docs/core-schemas/types)** — How the format describes data structures
+- **[Pointers](/docs/core-schemas/pointers)** — How the format describes data locations
+- **[Programs](/docs/core-schemas/programs)** — How the format describes runtime context
+- **[Info schema](/docs/core-schemas/info)** — How the format bundles everything together
 - **[Specification](/spec/overview)** — Formal schema definitions

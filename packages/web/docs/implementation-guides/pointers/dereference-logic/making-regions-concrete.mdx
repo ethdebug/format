@@ -3,6 +3,7 @@ sidebar_position: 3
 ---
 
 import CodeListing from "@site/src/components/CodeListing";
+import SchemaExample from "@site/src/components/SchemaExample";
 
 # Making regions concrete
 
@@ -41,15 +42,19 @@ cycles and determine the evaluation order for each property based on which
 property references which other property. That is, a robust implementation
 might take this pointer:
 
-```json
-{
+<SchemaExample
+  schema="pointer/region/memory"
+  href="/spec/pointer/region/location/memory"
+  title="Self-referential $this"
+>
+  {`{
   "location": "memory",
   "offset": {
     "$sum": [0x60, { ".length": "$this" }]
   },
   "length": "$wordsize"
-}
-```
+}`}
+</SchemaExample>
 
 ... and detect that it must evaluate `length` before evaluating `offset`.
 

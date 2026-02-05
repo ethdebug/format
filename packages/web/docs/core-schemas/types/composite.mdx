@@ -2,7 +2,15 @@
 sidebar_position: 3
 ---
 
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
 # Composite types
+
+<SpecLink
+  schema="ethdebug/format/type/complex"
+  href="/spec/category/complex-types"
+/>
 
 Composite types (also called complex types) contain other types. They use the
 `contains` field to express this composition.
@@ -13,28 +21,28 @@ Arrays represent ordered collections of a single element type.
 
 ### Dynamic arrays
 
-```json
-{
+<SchemaExample schema="type/complex/array" href="/spec/type/complex/array">
+  {`{
   "kind": "array",
   "contains": {
     "type": { "kind": "uint", "bits": 256 }
   }
-}
-```
+}`}
+</SchemaExample>
 
 This represents `uint256[]`—an array of any length.
 
 ### Fixed-size arrays
 
-```json
-{
+<SchemaExample schema="type/complex/array" href="/spec/type/complex/array">
+  {`{
   "kind": "array",
   "count": 10,
   "contains": {
     "type": { "kind": "address" }
   }
-}
-```
+}`}
+</SchemaExample>
 
 This represents `address[10]`—exactly 10 addresses.
 
@@ -42,8 +50,8 @@ This represents `address[10]`—exactly 10 addresses.
 
 Structs group named members of potentially different types:
 
-```json
-{
+<SchemaExample schema="type/complex/struct" href="/spec/type/complex/struct">
+  {`{
   "kind": "struct",
   "definition": {
     "name": "User"
@@ -62,8 +70,8 @@ Structs group named members of potentially different types:
       "type": { "kind": "bool" }
     }
   ]
-}
-```
+}`}
+</SchemaExample>
 
 The `contains` field is an ordered list. Each element includes:
 
@@ -74,8 +82,8 @@ The `contains` field is an ordered list. Each element includes:
 
 Mappings represent key-value associations:
 
-```json
-{
+<SchemaExample schema="type/complex/mapping" href="/spec/type/complex/mapping">
+  {`{
   "kind": "mapping",
   "contains": {
     "key": {
@@ -85,8 +93,8 @@ Mappings represent key-value associations:
       "type": { "kind": "uint", "bits": 256 }
     }
   }
-}
-```
+}`}
+</SchemaExample>
 
 This represents `mapping(address => uint256)`.
 
@@ -94,8 +102,12 @@ This represents `mapping(address => uint256)`.
 
 Mappings can nest by using another mapping as the value type:
 
-```json
-{
+<SchemaExample
+  schema="type/complex/mapping"
+  href="/spec/type/complex/mapping"
+  title="Nested mapping (e.g., ERC-20 allowances)"
+>
+  {`{
   "kind": "mapping",
   "contains": {
     "key": {
@@ -111,8 +123,8 @@ Mappings can nest by using another mapping as the value type:
       }
     }
   }
-}
-```
+}`}
+</SchemaExample>
 
 This represents `mapping(address => mapping(address => uint256))`, commonly
 used for ERC-20 allowances.
@@ -121,16 +133,16 @@ used for ERC-20 allowances.
 
 Tuples represent ordered, unnamed sequences:
 
-```json
-{
+<SchemaExample schema="type/complex/tuple" href="/spec/type/complex/tuple">
+  {`{
   "kind": "tuple",
   "contains": [
     { "type": { "kind": "uint", "bits": 256 } },
     { "type": { "kind": "address" } },
     { "type": { "kind": "bool" } }
   ]
-}
-```
+}`}
+</SchemaExample>
 
 Unlike structs, tuple elements don't have names. Tuples commonly appear in
 function return types and event parameters.
@@ -139,8 +151,8 @@ function return types and event parameters.
 
 Aliases give names to other types:
 
-```json
-{
+<SchemaExample schema="type/complex/alias" href="/spec/type/complex/alias">
+  {`{
   "kind": "alias",
   "definition": {
     "name": "TokenId"
@@ -148,8 +160,8 @@ Aliases give names to other types:
   "contains": {
     "type": { "kind": "uint", "bits": 256 }
   }
-}
-```
+}`}
+</SchemaExample>
 
 This represents a user-defined type like Solidity's `type TokenId is uint256`.
 
@@ -157,8 +169,11 @@ This represents a user-defined type like Solidity's `type TokenId is uint256`.
 
 Function types represent callable references:
 
-```json
-{
+<SchemaExample
+  schema="type/complex/function"
+  href="/spec/type/complex/function"
+>
+  {`{
   "kind": "function",
   "contains": {
     "parameters": {
@@ -174,15 +189,19 @@ Function types represent callable references:
       "type": { "kind": "bool" }
     }
   }
-}
-```
+}`}
+</SchemaExample>
 
 ## Using type references
 
 For deeply nested or repeated types, use references to avoid duplication:
 
-```json
-{
+<SchemaExample
+  schema="type/complex/struct"
+  href="/spec/type/complex/struct"
+  title="Struct with type references"
+>
+  {`{
   "kind": "struct",
   "definition": { "name": "Order" },
   "contains": [
@@ -195,8 +214,8 @@ For deeply nested or repeated types, use references to avoid duplication:
       "type": { "id": "user-type-id" }
     }
   ]
-}
-```
+}`}
+</SchemaExample>
 
 Both `maker` and `taker` reference the same `User` type by ID rather than
 repeating the full definition.

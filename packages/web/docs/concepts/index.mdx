@@ -5,30 +5,32 @@ sidebar_label: Overview
 
 # Concepts
 
-This section introduces the core concepts behind ethdebug/format. Understanding
-these mental models will help you work with the format effectively, whether
-you're consuming it in a debugger or producing it from a compiler.
+This section introduces the core concepts behind **ethdebug/format**.
+Understanding these mental models will help you work with the format
+effectively, whether you're consuming it in a debugger or producing it from a
+compiler.
 
 ## The main components
 
-ethdebug/format consists of three main kinds of information:
+**ethdebug/format** consists of four main kinds of information:
 
 ### Types
 
-**Types** describe what kind of data you're looking at. They tell a debugger
-how to interpret raw bytes as meaningful values.
+**Types** describe the structure of data — its shape, not its location. They
+specify what kind of value you're looking at and how its parts relate.
 
-For example, the same 32 bytes could be:
+For example, a type might describe:
 
-- A `uint256` representing a token balance
-- An `address` padded to 32 bytes
-- Part of a `bytes` dynamic byte array
-- Two packed `uint128` values
+- A `uint256` (256-bit unsigned integer)
+- An `address` (20-byte account identifier)
+- A `struct` with named fields in a specific order
+- A `mapping` from keys to values
 
-Type definitions give debuggers the information they need to decode bytes
-correctly.
+Types don't say where data lives or how to find it. That's what pointers do.
+Together, a type and pointer give debuggers everything needed to locate bytes
+and interpret them as meaningful values.
 
-**[Learn more about types →](/docs/types)**
+**[Learn more about types →](/docs/core-schemas/types)**
 
 ### Pointers
 
@@ -48,7 +50,7 @@ Complex pointers describe dynamic locations:
 
 Pointers can include expressions that compute locations based on runtime state.
 
-**[Learn more about pointers →](/docs/pointers)**
+**[Learn more about pointers →](/docs/core-schemas/pointers)**
 
 ### Programs
 
@@ -63,7 +65,22 @@ Programs answer questions like:
 
 This information enables source-level debugging of optimized bytecode.
 
-**[Learn more about programs →](/docs/programs)**
+**[Learn more about programs →](/docs/core-schemas/programs)**
+
+### Info
+
+The **info schema** bundles all the pieces together. It's the top-level
+container that compilers actually emit, containing references to programs,
+types, and shared resources.
+
+An info object provides:
+
+- The compiled programs for each bytecode artifact
+- Shared type definitions referenced across programs
+- Source file content or references
+- Compilation metadata (compiler version, settings)
+
+**[Learn more about the info schema →](/docs/core-schemas/info)**
 
 ## How they work together
 
@@ -79,10 +96,22 @@ These components combine to enable rich debugging:
 
 ## Next steps
 
-- **[Data locations](/docs/concepts/data-locations)** — Understand where data
-  can live in the EVM
-- **[Types deep dive](/docs/types)** — Full documentation on type definitions
-- **[Pointers deep dive](/docs/pointers)** — Full documentation on pointer
+Dive deeper into each component:
+
+- **[Types concepts](/docs/concepts/types)** — Mental model for type
+  representations
+- **[Pointers concepts](/docs/concepts/pointers)** — Mental model for pointer
+  representations (includes EVM data locations)
+- **[Programs concepts](/docs/concepts/programs)** — Mental model for program
+  representations
+- **[Info schema concepts](/docs/concepts/info)** — Mental model for bundling
+  debug data
+
+Or jump to the reference documentation:
+
+- **[Types reference](/docs/core-schemas/types)** — Full documentation on type definitions
+- **[Pointers reference](/docs/core-schemas/pointers)** — Full documentation on pointer
   definitions
-- **[Programs deep dive](/docs/programs)** — Full documentation on program
+- **[Programs reference](/docs/core-schemas/programs)** — Full documentation on program
   annotations
+- **[Info schema reference](/docs/core-schemas/info)** — Full documentation on info objects
