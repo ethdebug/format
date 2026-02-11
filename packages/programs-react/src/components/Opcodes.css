@@ -1,0 +1,37 @@
+dl.opcodes {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  margin: 0;
+  padding: 0;
+  align-items: justify;
+}
+
+dl.opcodes dt {
+  grid-column-start: 1;
+  border-radius: var(--ifm-global-radius, 4px);
+  padding: 5px 10px;
+  margin: 0px;
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+  cursor: pointer;
+}
+
+dl.opcodes dt,
+dl.opcodes dt + dd {
+  margin-top: 5px;
+  border-bottom: 1px solid var(--ifm-color-primary-light, #4dabf7);
+}
+
+dl.opcodes dd {
+  grid-column-start: 2;
+  margin: 0px;
+  padding: 5px 5px;
+}
+
+dl.opcodes dt.active {
+  background-color: var(--ifm-color-primary-lighter, #74c0fc);
+}
+
+dl.opcodes dt:not(.active):hover {
+  background-color: var(--ifm-hover-overlay, rgba(0, 0, 0, 0.05));
+}

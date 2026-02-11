@@ -1,0 +1,165 @@
+---
+sidebar_position: 2
+pagination_next: examples/index
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Resources
+
+<SpecLink schema="ethdebug/format/info/resources" href="/spec/info/resources" />
+
+The **ethdebug/format/info/resources** schema represents compilation-level
+shared data — information that multiple programs within a compilation might
+reference.
+
+## What resources contains
+
+Resources provide a way to avoid duplication by centralizing:
+
+- **Sources** — original source file content or references
+- **Compilations** — compiler invocation metadata
+- **Shared types** — type definitions used by multiple programs
+
+## Sources
+
+Sources represent the original source files that were compiled. Each source has
+an identifier and either contains the full content or references an external
+location:
+
+<SchemaExample
+  schema="materials/source"
+  href="/spec/materials/source"
+  title="Source files"
+>
+  {`{
+  "sources": [
+    {
+      "id": "source-1",
+      "path": "contracts/Token.sol",
+      "contents": "// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\n..."
+    },
+    {
+      "id": "source-2",
+      "path": "contracts/Utils.sol"
+    }
+  ]
+}`}
+</SchemaExample>
+
+Sources can include:
+
+- **path** — file path (relative or absolute)
+- **contents** — the actual source code text
+- **contentHash** — hash of the contents for verification
+
+When `contents` is omitted, tools must retrieve the source from the file system
+or another source.
+
+## Source ranges
+
+Throughout **ethdebug/format**, source locations are specified as ranges within
+a source file:
+
+<SchemaExample
+  schema="materials/source-range"
+  href="/spec/materials/source-range"
+  title="Source range"
+>
+  {`{
+  "source": { "id": "source-1" },
+  "range": {
+    "offset": 150,
+    "length": 25
+  }
+}`}
+</SchemaExample>
+
+This identifies bytes 150-174 in the source with id "source-1". Ranges use byte
+offsets, not line/column positions.
+
+## Compilations
+
+Compilation metadata captures information about how the code was compiled:
+
+<SchemaExample
+  schema="materials/compilation"
+  href="/spec/materials/compilation"
+  title="Compilation metadata"
+>
+  {`{
+  "compilations": [
+    {
+      "id": "compilation-1",
+      "compiler": {
+        "name": "solc",
+        "version": "0.8.20"
+      },
+      "sources": ["source-1", "source-2"],
+      "settings": { /* compiler settings */ }
+    }
+  ]
+}`}
+</SchemaExample>
+
+Programs reference their compilation, allowing debuggers to understand the
+build context.
+
+## Shared types
+
+Type definitions that appear in multiple programs can be defined once in
+resources and referenced by ID:
+
+<SchemaExample
+  schema="type"
+  href="/spec/type/overview"
+  title="Shared type definitions"
+>
+  {`{
+  "types": [
+    {
+      "id": "type-balance",
+      "kind": "uint",
+      "bits": 256
+    },
+    {
+      "id": "type-user",
+      "kind": "struct",
+      "definition": { "name": "User" },
+      "contains": [
+        { "name": "balance", "type": { "id": "type-balance" } },
+        { "name": "active", "type": { "kind": "bool" } }
+      ]
+    }
+  ]
+}`}
+</SchemaExample>
+
+Programs then reference these types by ID rather than duplicating the full
+definition.
+
+## Info vs. resources
+
+The key distinction:
+
+- **info** — complete standalone representation with full metadata
+- **info/resources** — debug data without duplicating existing compiler output
+
+Since compilers typically already produce structured JSON with compilation
+metadata, they can emit resources objects and let tooling combine them into
+full info objects.
+
+## Related schemas
+
+Resources builds on schemas from the **ethdebug/format/materials** namespace:
+
+- **[Source](/spec/materials/source)** — individual source file representation
+- **[Source range](/spec/materials/source-range)** — location within a source
+- **[Compilation](/spec/materials/compilation)** — compiler invocation details
+- **[Identifiers](/spec/materials/id)** — ID and reference patterns
+
+## Specification
+
+For the formal schema definition, see the
+[info/resources specification](/spec/info/resources).

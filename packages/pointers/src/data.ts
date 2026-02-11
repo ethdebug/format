@@ -2,12 +2,9 @@ import { toHex } from "ethereum-cryptography/utils";
 
 import type * as Util from "util";
 
-let util: typeof Util | undefined;
-try {
-  util = await import("util");
-} catch {
-  // util is not available in browser environments
-}
+// Symbol for custom inspect (Node.js util.inspect.custom)
+// We use a well-known symbol value to avoid top-level await issues
+const customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
 
 export class Data extends Uint8Array {
   static zero(): Data {
@@ -111,9 +108,7 @@ export class Data extends Uint8Array {
     return `Data[${options.stylize(this.toHex(), "number")}]`;
   }
 
-  [util && "inspect" in util && typeof util.inspect === "object"
-    ? util.inspect.custom
-    : "_inspect"](
+  [customInspectSymbol](
     depth: number,
     options: Util.InspectOptionsStylized,
     inspect: typeof Util.inspect,

@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc --build packages/format packages/pointers packages/bugc",
+    "build": "tsc --build packages/format packages/pointers packages/evm packages/bugc packages/programs-react packages/pointers-react",
     "bundle": "tsx ./bin/bundle-schema.ts",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -15,21 +15,25 @@
     "prepare": "husky",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@typescript-eslint/eslint-plugin": "^8.21.0",
     "@typescript-eslint/parser": "^8.21.0",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "concurrently": "^8.2.2",
-    "eslint": "^8.57.1",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.0.0",
     "husky": "^9.1.7",
     "lerna": "^8.2.4",
     "lint-staged": "^15.4.1",
     "prettier": "^3.4.2",
     "tsx": "^4.21.0",
+    "typescript-eslint": "^8.53.0",
     "vitest": "^3.2.4"
   },
   "lint-staged": {

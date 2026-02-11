@@ -75,3 +75,38 @@
   text-decoration: underline !important;
   background-color: inherit !important;
 }
+
+/* Fix CTA card spacing issues */
+.card__body p:last-child {
+  margin-bottom: 0;
+}
+
+.card__footer p {
+  margin: 0;
+}
+
+.card__footer .button--block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Equal height cards in a row */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.row > [class*="col--"] {
+  display: flex;
+}
+
+.row > [class*="col--"] > .card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.card__body {
+  flex-grow: 1;
+}

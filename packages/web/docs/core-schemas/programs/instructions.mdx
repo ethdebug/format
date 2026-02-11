@@ -1,0 +1,209 @@
+---
+sidebar_position: 2
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Instructions
+
+<SpecLink
+  schema="ethdebug/format/program/instruction"
+  href="/spec/program/instruction"
+/>
+
+Each instruction record in a program corresponds to one EVM opcode in the
+bytecode. Instructions carry the context information that debuggers need.
+
+## Structure
+
+An instruction has two required fields:
+
+<SchemaExample schema="program/instruction" href="/spec/program/instruction">
+  {`{
+  "offset": 42,
+  "context": { ... }
+}`}
+</SchemaExample>
+
+- **`offset`**: byte position in the bytecode (the program counter value when
+  this instruction executes)
+- **`context`**: high-level information valid after this instruction
+
+## Context types
+
+The `context` field can take several forms:
+
+### Code context
+
+Maps the instruction to source code:
+
+<SchemaExample
+  schema="program/context/code"
+  href="/spec/program/context/code"
+  title="Source mapping"
+>
+  {`{
+  "offset": 42,
+  "context": {
+    "code": {
+      "source": {
+        "id": 0,
+        "range": {
+          "start": { "line": 10, "column": 4 },
+          "end": { "line": 10, "column": 20 }
+        }
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+The `source` field references a source file by ID and specifies the exact
+character range.
+
+### Variables context
+
+Declares variables that are in scope:
+
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+  title="Variable declaration"
+>
+  {`{
+  "offset": 100,
+  "context": {
+    "variables": [
+      {
+        "name": "amount",
+        "type": { "kind": "uint", "bits": 256 },
+        "pointer": {
+          "location": "stack",
+          "slot": 0
+        }
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+Each variable includes:
+
+- `name`: the identifier from source code
+- `type`: an **ethdebug/format** type reference
+- `pointer`: where to find the variable's value
+
+### Frame context
+
+Indicates call stack changes:
+
+<SchemaExample
+  schema="program/context/frame"
+  href="/spec/program/context/frame"
+>
+  {`{
+  "offset": 200,
+  "context": {
+    "frame": "step-in"
+  }
+}`}
+</SchemaExample>
+
+Frame values include:
+
+- `"step-in"`: entering a function
+- `"step-out"`: returning from a function
+
+## Composing contexts
+
+### Gather
+
+Combine multiple contexts (like nested scopes):
+
+<SchemaExample
+  schema="program/context/gather"
+  href="/spec/program/context"
+  title="Combining contexts"
+>
+  {`{
+  "offset": 150,
+  "context": {
+    "gather": [
+      {
+        "code": {
+          "source": { "id": 0, "range": { ... } }
+        }
+      },
+      {
+        "variables": [
+          { "name": "x", "type": { ... }, "pointer": { ... } }
+        ]
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+### Pick
+
+Choose between contexts based on runtime conditions:
+
+<SchemaExample
+  schema="program/context/pick"
+  href="/spec/program/context"
+  title="Conditional context"
+>
+  {`{
+  "offset": 175,
+  "context": {
+    "pick": [
+      {
+        "guard": { "$read": "condition-flag" },
+        "context": {
+          "variables": [
+            { "name": "result", "type": { ... }, "pointer": { ... } }
+          ]
+        }
+      },
+      {
+        "context": {
+          "variables": []
+        }
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+The debugger evaluates guards at runtime and uses the first matching context.
+A context without a guard acts as the default.
+
+### Remark
+
+Add metadata without affecting scope:
+
+<SchemaExample schema="program/context/remark" href="/spec/program/context">
+  {`{
+  "offset": 180,
+  "context": {
+    "remark": "loop iteration boundary"
+  }
+}`}
+</SchemaExample>
+
+## Instruction ordering
+
+Instructions must be listed in bytecode order, matching the sequence of
+opcodes. The list is indexed by offset, so debuggers can quickly find the
+instruction for any program counter value.
+
+Not every byte offset needs an instruction—only positions where opcodes begin.
+Push data, for instance, doesn't get its own instruction entry.
+
+## Learn more
+
+For complete schemas, see:
+
+- [Instruction schema](/spec/program/instruction)
+- [Context schema](/spec/program/context)

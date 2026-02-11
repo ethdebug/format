@@ -1,10 +1,12 @@
 import React from "react";
 import Admonition from "@theme/Admonition";
 import Link from "@docusaurus/Link";
-import { useProgramExampleContext } from "./ProgramExampleContext";
+import {
+  useProgramExampleContext,
+  ShikiCodeBlock,
+} from "@ethdebug/programs-react";
 
 import { Program } from "@ethdebug/format";
-import { ShikiCodeBlock } from "@theme/ShikiCodeBlock";
 
 export function Variables(): JSX.Element {
   const { highlightedInstruction } = useProgramExampleContext();

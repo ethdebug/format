@@ -1,0 +1,147 @@
+/**
+ * Styles for IrView component.
+ */
+
+@import "./variables.css";
+
+.ir-view {
+  height: 100%;
+  overflow: auto;
+}
+
+.ir-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--bugc-bg-secondary);
+  border-bottom: 1px solid var(--bugc-border-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.ir-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--bugc-text-primary);
+}
+
+.ir-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.813rem;
+  color: var(--bugc-text-secondary);
+}
+
+.ir-content {
+  padding: 1rem;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--bugc-text-primary);
+}
+
+.section-label {
+  color: var(--bugc-syntax-comment);
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.938rem;
+}
+
+.section-label:first-child {
+  margin-top: 0;
+}
+
+.ir-function {
+  margin-bottom: 2rem;
+}
+
+.function-header h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--bugc-syntax-function);
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.ir-block {
+  margin-bottom: 1rem;
+  padding-left: 1rem;
+}
+
+.block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--bugc-syntax-type);
+}
+
+.entry-badge {
+  background-color: var(--bugc-accent-green-bg);
+  color: var(--bugc-accent-green);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-size: 0.688rem;
+  font-weight: bold;
+}
+
+.block-body {
+  padding-left: 1rem;
+}
+
+.ir-instruction,
+.ir-terminator,
+.ir-phi {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.125rem 0;
+  line-height: 1.6;
+}
+
+.ir-instruction:hover,
+.ir-terminator:hover,
+.ir-phi:hover {
+  background-color: var(--bugc-bg-hover);
+}
+
+.instruction-operation,
+.terminator-operation,
+.phi-operation {
+  flex: 1;
+}
+
+.ir-terminator {
+  color: var(--bugc-syntax-terminator);
+  font-weight: 500;
+}
+
+.ir-phi {
+  color: var(--bugc-syntax-phi);
+  font-style: italic;
+}
+
+.hoverable-part {
+  display: inline;
+  transition: background-color 0.15s ease;
+}
+
+.hoverable-part.has-debug {
+  cursor: pointer;
+  border-bottom: 1px dotted var(--bugc-accent-blue);
+  border-bottom-color: rgba(86, 156, 214, 0.4);
+}
+
+.hoverable-part.has-debug:hover {
+  background-color: var(--bugc-accent-blue-bg);
+  border-bottom-color: var(--bugc-accent-blue);
+}
+
+.debug-info-icon.inline {
+  display: inline;
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  vertical-align: super;
+}

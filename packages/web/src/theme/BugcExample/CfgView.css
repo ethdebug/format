@@ -1,0 +1,206 @@
+/**
+ * Styles for CfgView component.
+ */
+
+@import "./variables.css";
+
+.cfg-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.cfg-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--bugc-border-primary);
+  background: var(--bugc-bg-secondary);
+}
+
+.cfg-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--bugc-text-primary);
+}
+
+.cfg-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.cfg-graph {
+  flex: 1;
+  position: relative;
+}
+
+.cfg-sidebar {
+  width: 400px;
+  border-left: 1px solid var(--bugc-border-primary);
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--bugc-bg-secondary);
+  color: var(--bugc-text-primary);
+}
+
+.cfg-sidebar h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--bugc-text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cfg-sidebar h5 {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--bugc-text-secondary);
+}
+
+.cfg-sidebar-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--bugc-text-secondary);
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.cfg-sidebar-close:hover {
+  background-color: var(--bugc-bg-hover);
+  color: var(--bugc-text-primary);
+}
+
+/* Custom node styles */
+.cfg-node {
+  background: var(--bugc-cfg-node-bg);
+  border: 2px solid var(--bugc-cfg-node-border);
+  border-radius: 8px;
+  padding: 10px 15px;
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cfg-node.entry {
+  border-color: var(--bugc-cfg-entry-border);
+  background: var(--bugc-cfg-entry-bg);
+}
+
+.cfg-node.selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.3);
+}
+
+.cfg-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cfg-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cfg-node-header strong {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+}
+
+.cfg-view .entry-badge {
+  background: var(--bugc-accent-green);
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cfg-node-stats {
+  font-size: 12px;
+  color: var(--bugc-text-secondary);
+}
+
+/* Instruction display */
+.block-instructions {
+  margin-top: 1rem;
+}
+
+.instruction-list {
+  background: var(--bugc-bg-primary);
+  border: 1px solid var(--bugc-border-primary);
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  color: var(--bugc-text-primary);
+}
+
+.cfg-view .instruction {
+  margin: 0.25rem 0;
+  padding: 0.125rem 0;
+}
+
+.cfg-view .instruction.terminator {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--bugc-border-primary);
+  color: var(--bugc-accent-red);
+  font-weight: bold;
+}
+
+/* React Flow overrides */
+.cfg-view .react-flow__attribution {
+  display: none;
+}
+
+.cfg-view .react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.cfg-view .react-flow__edge-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cfg-view .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: var(--bugc-cfg-node-border);
+  border: 2px solid var(--bugc-bg-primary);
+}
+
+.cfg-view .react-flow__handle-top {
+  top: -4px;
+}
+
+.cfg-view .react-flow__handle-bottom {
+  bottom: -4px;
+}
+
+.cfg-view .react-flow__handle-left {
+  left: -4px;
+}
+
+.cfg-view .react-flow__handle-right {
+  right: -4px;
+}
+
+/* React Flow background in light/dark mode */
+.cfg-view .react-flow__background {
+  background-color: var(--bugc-bg-primary);
+}

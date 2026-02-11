@@ -1,0 +1,60 @@
+---
+sidebar_position: 1
+---
+
+# Goals
+
+## Create a universal format
+
+Smart contract languages have evolved independently, each with its own
+debugging requirements. This fragmentation makes universal tooling challenging
+if not impossible.
+
+**ethdebug/format** seeks to establish a common language for debug
+information across all smart contract languages. By defining comprehensive yet
+flexible schemas, **ethdebug/format** aims to bridge the gap between
+different compilers, languages, and tools while respecting the unique
+characteristics of each. The goal is to create a foundation that works equally
+well for Solidity, Vyper, Fe, and any future smart contract language.
+
+## Enable real-life debugging
+
+The blockchain doesn't forget. Once deployed, contracts are immutable; their
+behavior must be understood as-is. Production smart contracts manage billions
+in assets, yet debugging them in the wild remains a significant challenge.
+
+The format aims to make mainnet debugging not just possible, but practical
+&ndash; allowing developers to understand contract behavior without requiring
+special debug builds. This goal recognizes that the most critical debugging
+needs occur not in development, but in production where contracts are already
+deployed and immutable.
+
+## Optimize for adoption
+
+A debug format is only as valuable as its adoption. The path to widespread use
+requires careful attention to the needs of implementers and users alike.
+
+To this end, this project prioritizes:
+
+- Clear, comprehensive documentation with practical examples
+- Reference implementations that demonstrate viability
+- Designs that respect existing compiler architectures
+- Low barriers to entry for tool creators
+- Emphasis on incremental adoption paths
+
+## Reduce the cost to understand the blockchain
+
+Every deployed contract represents someone's original intent, but that intent
+gets buried under layers of optimization and compilation. Reading the
+blockchain shouldn't require manually working backwards through those layers.
+
+Understanding deployed smart contracts should not require specialized
+knowledge or difficult-to-use tools. This project seeks to lower both the
+technical and cognitive barriers to smart contract comprehension, making the
+blockchain more accessible to developers, auditors, and users alike. The goal
+is to reveal the original programmer's mental model directly from deployed
+code - translating low-level EVM operations back into the high-level concepts
+and data structures the developer worked with. By preserving crucial debug
+information in a standardized way, contract behavior becomes more transparent
+and easier to reason about, regardless of how optimized or complex the
+deployed code may be.
