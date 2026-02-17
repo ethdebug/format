@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">Concepts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Concepts | ethdebug format"><meta data-rh="true" name="description" content="This section introduces the core concepts behind ethdebug/format."><meta data-rh="true" property="og:description" content="This section introduces the core concepts behind ethdebug/format."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-168/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Concepts","item":"https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-168/assets/css/styles.41f0eeb0.css">
-<script src="/format/pr-preview/pr-168/assets/js/runtime~main.dd3d67da.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-168/assets/js/main.fddd8bdd.js" defer="defer"></script>
+<title data-rh="true">Concepts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Concepts | ethdebug format"><meta data-rh="true" name="description" content="This section introduces the core concepts behind ethdebug/format."><meta data-rh="true" property="og:description" content="This section introduces the core concepts behind ethdebug/format."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-168/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Concepts","item":"https://ethdebug.github.io/format/pr-preview/pr-168/docs/concepts/"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-168/assets/css/styles.d11ef8dc.css">
+<script src="/format/pr-preview/pr-168/assets/js/runtime~main.1242cd3e.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-168/assets/js/main.b6d94e9b.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -31,7 +31,7 @@ specify what kind of value you&#x27;re looking at and how its parts relate.</p>
 <p>Types don&#x27;t say where data lives or how to find it. That&#x27;s what pointers do.
 Together, a type and pointer give debuggers everything needed to locate bytes
 and interpret them as meaningful values.</p>
-<p><strong><a class="" href="/format/pr-preview/pr-168/docs/core-schemas/types">Learn more about types →</a></strong></p>
+<p><strong><a class="" href="/format/pr-preview/pr-168/docs/concepts/types">Learn more about types →</a></strong></p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="pointers">Pointers<a href="#pointers" class="hash-link" aria-label="Direct link to Pointers" title="Direct link to Pointers" translate="no">​</a></h3>
 <p><strong>Pointers</strong> describe where data lives. They&#x27;re recipes for finding bytes in
 EVM state.</p>
@@ -47,7 +47,7 @@ EVM state.</p>
 <li class="">&quot;Memory at the offset stored in stack position 1&quot; for dynamic references</li>
 </ul>
 <p>Pointers can include expressions that compute locations based on runtime state.</p>
-<p><strong><a class="" href="/format/pr-preview/pr-168/docs/core-schemas/pointers">Learn more about pointers →</a></strong></p>
+<p><strong><a class="" href="/format/pr-preview/pr-168/docs/concepts/pointers">Learn more about pointers →</a></strong></p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="programs">Programs<a href="#programs" class="hash-link" aria-label="Direct link to Programs" title="Direct link to Programs" translate="no">​</a></h3>
 <p><strong>Programs</strong> describe runtime context. They tell a debugger what&#x27;s happening
 at each point in execution.</p>
@@ -58,7 +58,7 @@ at each point in execution.</p>
 <li class="">What function are we in?</li>
 </ul>
 <p>This information enables source-level debugging of optimized bytecode.</p>
-<p><strong><a class="" href="/format/pr-preview/pr-168/docs/core-schemas/programs">Learn more about programs →</a></strong></p>
+<p><strong><a class="" href="/format/pr-preview/pr-168/docs/concepts/programs">Learn more about programs →</a></strong></p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="info">Info<a href="#info" class="hash-link" aria-label="Direct link to Info" title="Direct link to Info" translate="no">​</a></h3>
 <p>The <strong>info schema</strong> bundles all the pieces together. It&#x27;s the top-level
 container that compilers actually emit, containing references to programs,
@@ -70,7 +70,7 @@ types, and shared resources.</p>
 <li class="">Source file content or references</li>
 <li class="">Compilation metadata (compiler version, settings)</li>
 </ul>
-<p><strong><a class="" href="/format/pr-preview/pr-168/docs/core-schemas/info">Learn more about the info schema →</a></strong></p>
+<p><strong><a class="" href="/format/pr-preview/pr-168/docs/concepts/info">Learn more about the info schema →</a></strong></p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="how-they-work-together">How they work together<a href="#how-they-work-together" class="hash-link" aria-label="Direct link to How they work together" title="Direct link to How they work together" translate="no">​</a></h2>
 <p>These components combine to enable rich debugging:</p>
 <ol>
