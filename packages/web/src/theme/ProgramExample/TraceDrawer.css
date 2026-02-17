@@ -43,15 +43,6 @@
   cursor: not-allowed;
 }
 
-.compile-btn {
-  background: var(--ifm-color-emphasis-200);
-  color: var(--ifm-color-content);
-}
-
-.compile-btn:hover:not(:disabled) {
-  background: var(--ifm-color-emphasis-300);
-}
-
 .trace-btn {
   background: var(--ifm-color-primary);
   color: white;

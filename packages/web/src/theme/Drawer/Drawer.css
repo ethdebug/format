@@ -11,10 +11,15 @@
   left: 0;
   right: 0;
   z-index: 100;
+  background: #1b1b1d; /* Solid fallback */
   background: var(--ifm-background-color);
   border-top: 1px solid var(--ifm-color-emphasis-300);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease-out;
+}
+
+html[data-theme="light"] .drawer {
+  background: #ffffff;
 }
 
 .drawer.closed {
@@ -130,7 +135,12 @@
 .drawer-content {
   flex: 1;
   overflow: hidden;
+  background: #1b1b1d;
   background: var(--ifm-background-color);
+}
+
+html[data-theme="light"] .drawer-content {
+  background: #ffffff;
 }
 
 /* Mobile: full screen */

@@ -53,15 +53,15 @@ This example shows a basic counter that increments a storage variable:
   source={`name Counter;
 
 storage {
-[0] count: uint256;
+  [0] count: uint256;
 }
 
 create {
-count = 0;
+  count = 0;
 }
 
 code {
-count = count + 1;
+  count = count + 1;
 }`}
 />
 
@@ -75,21 +75,21 @@ This example demonstrates conditional logic with storage variables:
   source={`name ThresholdCounter;
 
 storage {
-[0] count: uint256;
-[1] threshold: uint256;
+  [0] count: uint256;
+  [1] threshold: uint256;
 }
 
 create {
-count = 0;
-threshold = 5;
+  count = 0;
+  threshold = 5;
 }
 
 code {
-count = count + 1;
+  count = count + 1;
 
-if (count >= threshold) {
-count = 0;
-}
+  if (count >= threshold) {
+    count = 0;
+  }
 }`}
 />
 
@@ -103,21 +103,21 @@ This example shows working with multiple storage locations:
   source={`name MultiSlot;
 
 storage {
-[0] a: uint256;
-[1] b: uint256;
-[2] sum: uint256;
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] sum: uint256;
 }
 
 create {
-a = 10;
-b = 20;
-sum = 0;
+  a = 10;
+  b = 20;
+  sum = 0;
 }
 
 code {
-sum = a + b;
-a = a + 1;
-b = b + 1;
+  sum = a + b;
+  a = a + 1;
+  b = b + 1;
 }`}
 />
 

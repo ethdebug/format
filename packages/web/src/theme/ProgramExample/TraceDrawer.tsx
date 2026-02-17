@@ -85,37 +85,22 @@ function TraceDrawerContent(): JSX.Element {
     return extractVariables(instruction.debug.context);
   }, [trace, currentStep, pcToInstruction]);
 
-  // Sync source from context when example changes
-  useEffect(() => {
-    if (example?.source) {
-      setLocalSource(example.source);
-      // Reset state when loading new example
-      setCompileResult(null);
-      setTrace([]);
-      setCurrentStep(0);
-      setTraceError(null);
-      setStorage({});
-    }
-  }, [example]);
-
-  const handleSourceChange = useCallback(
-    (newSource: string) => {
-      setLocalSource(newSource);
-      setSource(newSource);
-    },
-    [setSource],
-  );
-
-  const handleCompile = useCallback(async () => {
+  // Compile source and run trace in one shot.
+  // Takes source directly to avoid stale-state issues.
+  const compileAndTrace = useCallback(async (sourceCode: string) => {
     setIsCompiling(true);
     setCompileResult(null);
     setTrace([]);
+    setCurrentStep(0);
     setTraceError(null);
+    setStorage({});
+
+    let bytecode: BytecodeOutput | undefined;
 
     try {
       const result = await bugCompile({
         to: "bytecode",
-        source,
+        source: sourceCode,
         optimizer: { level: 0 },
       });
 
@@ -125,47 +110,41 @@ function TraceDrawerContent(): JSX.Element {
           success: false,
           error: errors[0]?.message || "Compilation failed",
         });
-      } else {
-        setCompileResult({
-          success: true,
-          bytecode: {
-            runtime: result.value.bytecode.runtime,
-            create: result.value.bytecode.create,
-            runtimeInstructions: result.value.bytecode.runtimeInstructions,
-            createInstructions: result.value.bytecode.createInstructions,
-          },
-        });
+        return;
       }
+
+      bytecode = {
+        runtime: result.value.bytecode.runtime,
+        create: result.value.bytecode.create,
+        runtimeInstructions: result.value.bytecode.runtimeInstructions,
+        createInstructions: result.value.bytecode.createInstructions,
+      };
+
+      setCompileResult({ success: true, bytecode });
     } catch (e) {
       setCompileResult({
         success: false,
         error: e instanceof Error ? e.message : String(e),
       });
+      return;
     } finally {
       setIsCompiling(false);
     }
-  }, [source]);
 
-  const handleTrace = useCallback(async () => {
-    if (!compileResult?.bytecode) return;
+    if (!bytecode) return;
 
     setIsTracing(true);
-    setTraceError(null);
-    setTrace([]);
-    setStorage({});
 
     try {
       const executor = new Executor();
 
-      // Deploy using create bytecode
-      if (compileResult.bytecode.create) {
-        const createHex = Array.from(compileResult.bytecode.create)
+      if (bytecode.create) {
+        const createHex = Array.from(bytecode.create)
           .map((b) => b.toString(16).padStart(2, "0"))
           .join("");
         await executor.deploy(createHex);
       }
 
-      // Execute runtime bytecode with trace collection
       const [handler, getTrace] = createTraceCollector();
       await executor.execute({}, handler);
 
@@ -173,7 +152,6 @@ function TraceDrawerContent(): JSX.Element {
       setTrace(collectedTrace.steps);
       setCurrentStep(0);
 
-      // Read storage after execution
       const storageEntries: Record<string, string> = {};
       for (let i = 0n; i < 16n; i++) {
         const value = await executor.getStorage(i);
@@ -188,7 +166,27 @@ function TraceDrawerContent(): JSX.Element {
     } finally {
       setIsTracing(false);
     }
-  }, [compileResult]);
+  }, []);
+
+  // Auto compile+trace when a new example is loaded
+  useEffect(() => {
+    if (example?.source) {
+      setLocalSource(example.source);
+      compileAndTrace(example.source);
+    }
+  }, [example, compileAndTrace]);
+
+  const handleSourceChange = useCallback(
+    (newSource: string) => {
+      setLocalSource(newSource);
+      setSource(newSource);
+    },
+    [setSource],
+  );
+
+  const handleCompileAndTrace = useCallback(() => {
+    compileAndTrace(source);
+  }, [source, compileAndTrace]);
 
   const stepForward = () => {
     setCurrentStep((prev) => Math.min(prev + 1, trace.length - 1));
@@ -203,27 +201,21 @@ function TraceDrawerContent(): JSX.Element {
 
   const currentTraceStep = trace[currentStep];
   const hasTrace = trace.length > 0;
-  const canTrace = compileResult?.success && compileResult.bytecode;
+  const isBusy = isCompiling || isTracing;
 
   const headerActions = (
-    <>
-      <button
-        className="trace-drawer-btn compile-btn"
-        onClick={handleCompile}
-        disabled={isCompiling || !source.trim()}
-        type="button"
-      >
-        {isCompiling ? "Compiling..." : "Compile"}
-      </button>
-      <button
-        className="trace-drawer-btn trace-btn"
-        onClick={handleTrace}
-        disabled={isTracing || !canTrace}
-        type="button"
-      >
-        {isTracing ? "Tracing..." : "Run Trace"}
-      </button>
-    </>
+    <button
+      className="trace-drawer-btn trace-btn"
+      onClick={handleCompileAndTrace}
+      disabled={isBusy || !source.trim()}
+      type="button"
+    >
+      {isCompiling
+        ? "Compiling..."
+        : isTracing
+          ? "Running..."
+          : "Compile & Run"}
+    </button>
   );
 
   return (
@@ -260,15 +252,9 @@ function TraceDrawerContent(): JSX.Element {
             </div>
           )}
 
-          {!hasTrace && canTrace && (
+          {!hasTrace && isBusy && (
             <div className="trace-drawer-placeholder">
-              Click <strong>Run Trace</strong> to execute the bytecode
-            </div>
-          )}
-
-          {!canTrace && !compileResult?.error && (
-            <div className="trace-drawer-placeholder">
-              Click <strong>Compile</strong> to compile the BUG code
+              {isCompiling ? "Compiling..." : "Running trace..."}
             </div>
           )}
 
