@@ -7,15 +7,52 @@ sidebar_label: Compiler Guides
 
 Guides for implementing **ethdebug/format** support in compilers.
 
-:::note[Coming soon]
-This section is under construction. It will explain how compilers can emit
-**ethdebug/format** debug information.
-:::
-
 ## Overview
 
-Compilers that want to support **ethdebug/format** need to:
+Compilers that want to support **ethdebug/format** need to emit
+several kinds of debug information alongside bytecode:
 
-1. **Emit type information** — Describe the types used in the program
-2. **Emit pointer information** — Describe where variables are stored
-3. **Emit program information** — Describe runtime context at each instruction
+1. **Type information** — Describe the types used in the program
+   (see [Types](/docs/concepts/types))
+2. **Pointer information** — Describe where variables are stored at
+   runtime (see [Pointers](/docs/concepts/pointers))
+3. **Program information** — Map each bytecode instruction back to
+   source-level context (see [Programs](/docs/concepts/programs))
+4. **Info/resources** — Bundle everything together with compilation
+   metadata (see [Info](/docs/concepts/info))
+
+## Recommended approach
+
+Most compilers can add support incrementally:
+
+1. **Start with types.** Converting your compiler's internal type
+   representations to **ethdebug/format** types is usually the most
+   straightforward step.
+2. **Add storage pointers.** Many storage variables have statically
+   known locations, making them a natural next step.
+3. **Add memory/stack pointers.** These often require tracking
+   allocations during code generation.
+4. **Add program annotations.** Source mappings and variable scoping
+   at each instruction typically requires the deepest compiler
+   integration.
+
+## Output structure
+
+Compilers should emit an
+[**ethdebug/format/info/resources**](/docs/core-schemas/info/resources)
+object containing shared resources (`compilation`, `types`,
+`pointers`), plus individual
+[**program**](/docs/core-schemas/programs) objects alongside each
+bytecode artifact. See the
+[Info concepts page](/docs/concepts/info) for a sketch of how this
+fits into compiler JSON output.
+
+## Case study
+
+The BUG compiler is a small reference implementation that
+demonstrates the full integration:
+
+- **[Case Study: BUG](./case-study-bug)** — Walkthrough of how the
+  BUG compiler generates types, pointers, and program annotations
+- **[BUG Playground](/docs/examples/bug-playground)** — Interactive
+  demo where you can compile BUG code and inspect the debug output

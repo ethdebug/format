@@ -37,6 +37,29 @@ optional:
 - **`context`**: high-level information valid after this instruction
   (defaults to `{}` when omitted)
 
+## Operation
+
+The optional `operation` field describes the machine-level operation:
+
+<SchemaExample
+  schema="program/instruction"
+  href="/spec/program/instruction"
+  title="Instruction with operation"
+>
+  {`{
+  "offset": 0,
+  "operation": {
+    "mnemonic": "PUSH1",
+    "arguments": ["0x60"]
+  }
+}`}
+</SchemaExample>
+
+- **`mnemonic`** (required): the opcode name (e.g., `"PUSH1"`,
+  `"SSTORE"`, `"ADD"`)
+- **`arguments`** (optional): immediate values passed to the opcode
+  (relevant for `PUSH` instructions)
+
 ## Context types
 
 The `context` field can take several forms:
@@ -139,12 +162,17 @@ Combine multiple contexts (like nested scopes):
     "gather": [
       {
         "code": {
-          "source": { "id": 0, "range": { ... } }
+          "source": { "id": 0 },
+          "range": { "offset": 200, "length": 12 }
         }
       },
       {
         "variables": [
-          { "identifier": "x", "type": { ... }, "pointer": { ... } }
+          {
+            "identifier": "x",
+            "type": { "kind": "uint", "bits": 256 },
+            "pointer": { "location": "stack", "slot": 0 }
+          }
         ]
       }
     ]
