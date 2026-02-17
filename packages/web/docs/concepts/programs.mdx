@@ -96,7 +96,7 @@ What variables are in scope and where to find their values:
   {`{
   "variables": [
     {
-      "identifier": { "name": "balance" },
+      "identifier": "balance",
       "type": { "kind": "uint", "bits": 256 },
       "pointer": { "location": "storage", "slot": 0 }
     }
@@ -107,23 +107,24 @@ What variables are in scope and where to find their values:
 Each variable has an identifier, a type, and a pointer. The pointer tells the
 debugger where to find the variable's current value.
 
-### Control flow hints
+### Compilation frame
 
-Information about stepping behavior:
+Specifies which compilation frame the context applies to. This
+supports compilers with distinct stages (e.g., source language vs.
+intermediate representation):
 
 <SchemaExample
   schema="program/context/frame"
   href="/spec/program/context/frame"
 >
   {`{
-  "frame": {
-    "step-in": true
-  }
+  "frame": "source"
 }`}
 </SchemaExample>
 
-This tells debuggers whether an instruction represents entering or leaving a
-function call.
+The `frame` value is a string naming the relevant compilation frame
+(e.g., `"source"`, `"ir"`), allowing the same instruction to carry
+context for different compiler stages.
 
 ## Context is valid after instruction execution
 

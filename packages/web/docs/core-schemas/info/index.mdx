@@ -37,13 +37,20 @@ An info object at minimum includes:
 >
   {`{
   "$schema": "https://ethdebug.github.io/format/schema/info.json",
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": { "name": "solc", "version": "0.8.20" },
+    "sources": [
+      { "id": "source-1", "path": "contracts/Token.sol",
+        "contents": "// ..." }
+    ]
+  },
   "programs": [
     { /* program for create bytecode */ },
     { /* program for call bytecode */ }
   ],
-  "sources": [
-    { "id": "source-1", "path": "contracts/Token.sol" }
-  ]
+  "types": {},
+  "pointers": {}
 }`}
 </SchemaExample>
 

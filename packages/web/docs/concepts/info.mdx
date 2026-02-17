@@ -25,10 +25,13 @@ for that compilation.
 
 An **ethdebug/format/info** object includes:
 
-- **Programs** — one for each bytecode artifact (create and call bytecode)
+- **Compilation** — compiler metadata and source files (singular)
+- **Programs** — one for each bytecode artifact (create and call
+  bytecode)
 - **Shared types** — type definitions referenced across programs
-- **Sources** — original source files (content or references)
-- **Compilation metadata** — compiler version, settings, and other details
+  (object keyed by name)
+- **Shared pointers** — pointer templates referenced across programs
+  (object keyed by name)
 
 This bundling avoids duplication — when multiple programs reference the same
 type definition or source file, the info object contains it once with
@@ -63,13 +66,49 @@ The format anticipates this workflow:
    output
 3. **Tools consume info objects** — use the complete standalone representation
 
-For example, the Solidity compiler might emit info/resources objects as part
-of its standard JSON output. A separate tool (perhaps `solc-dbg` or similar)
-would then combine these with the rest of solc's output to produce full
-**ethdebug/format/info** objects.
+To illustrate, consider how this might look inside solc's standard
+JSON output. The shared resources (compilation metadata, types,
+pointer templates) live at the top level, while each program sits
+alongside the bytecode it describes:
 
-The format recommends that compilers ensure tooling exists to create full info
-objects, whether through custom compilation modes or companion tools.
+```
+{
+  "ethdebug": {
+    "resources": {
+      "compilation": { ... },
+      "types": { ... },
+      "pointers": { ... }
+    }
+  },
+
+  "contracts": {
+    "Token.sol": {
+      "Token": {
+        "abi": [ ... ],
+        "evm": {
+          "bytecode": {
+            "object": "6080...",
+            "ethdebug": { "program": { ... } }
+          },
+          "deployedBytecode": {
+            "object": "6080...",
+            "ethdebug": { "program": { ... } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+A companion tool (or solc itself, via a flag or other operating
+mode) would then gather these pieces — the top-level resources plus
+each per-bytecode program — into complete **ethdebug/format/info**
+objects for debugger consumption.
+
+The format recommends that compilers ensure tooling exists to create
+full info objects, whether through custom compilation modes or
+companion tools.
 
 ## Relationship to other schemas
 
@@ -77,6 +116,10 @@ The info schema connects everything:
 
 ```
 info
+├── compilation (singular object)
+│   ├── compiler
+│   ├── sources[]
+│   └── settings
 ├── programs[]
 │   ├── instructions[]
 │   │   └── context
@@ -85,15 +128,16 @@ info
 │   │       │   └── pointer
 │   │       └── code (source range)
 │   └── compilation reference
-├── sources[]
-├── compilations[]
-└── types[] (shared definitions)
+├── types{} (shared definitions, keyed by name)
+└── pointers{} (shared pointer templates, keyed by name)
 ```
 
+- **Info objects** contain a **compilation** — metadata and sources
 - **Info objects** reference **programs** — one per bytecode
 - **Programs** reference **types** and **pointers** for variables
 - **Programs** reference **sources** via source ranges in contexts
-- **Types** can reference other **types** by ID (for shared definitions)
+- **Types** can reference other **types** by ID
+- **Pointers** provide reusable pointer templates
 
 ## When to use which schema
 

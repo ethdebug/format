@@ -28,7 +28,7 @@ See the [glossary](/docs/reference/glossary) for complete definitions.
 
 ## Variable structure
 
-A variable declaration includes three parts:
+A variable has up to four optional fields (at least one required):
 
 <SchemaExample
   schema="program/context/variables"
@@ -36,7 +36,7 @@ A variable declaration includes three parts:
   title="A simple variable"
 >
   {`{
-  "name": "balance",
+  "identifier": "balance",
   "type": { "kind": "uint", "bits": 256 },
   "pointer": {
     "location": "storage",
@@ -45,7 +45,8 @@ A variable declaration includes three parts:
 }`}
 </SchemaExample>
 
-- **`name`**: the identifier from source code
+- **`identifier`**: the variable name from source code
+- **`declaration`**: source range where the variable was declared
 - **`type`**: the structure of the data (an **ethdebug/format** type)
 - **`pointer`**: where to find the data (an **ethdebug/format** pointer)
 
@@ -67,7 +68,7 @@ structures:
   title="Variable with struct type"
 >
   {`{
-  "name": "user",
+  "identifier": "user",
   "type": {
     "kind": "struct",
     "contains": [
@@ -161,17 +162,17 @@ An instruction's context can declare multiple variables:
   "context": {
     "variables": [
       {
-        "name": "sender",
+        "identifier": "sender",
         "type": { "kind": "address" },
         "pointer": { "location": "stack", "slot": 2 }
       },
       {
-        "name": "value",
+        "identifier": "value",
         "type": { "kind": "uint", "bits": 256 },
         "pointer": { "location": "stack", "slot": 1 }
       },
       {
-        "name": "success",
+        "identifier": "success",
         "type": { "kind": "bool" },
         "pointer": { "location": "stack", "slot": 0 }
       }

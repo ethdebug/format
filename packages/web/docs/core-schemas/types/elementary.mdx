@@ -194,11 +194,11 @@ include a `definition` field:
   "kind": "enum",
   "definition": {
     "name": "OrderStatus",
-    "source": {
-      "id": 42,
+    "location": {
+      "source": { "id": 42 },
       "range": {
-        "start": { "line": 10, "column": 0 },
-        "end": { "line": 15, "column": 1 }
+        "offset": 150,
+        "length": 85
       }
     }
   },
@@ -209,7 +209,7 @@ include a `definition` field:
 The `definition` field can include:
 
 - `name`: The identifier used in source code
-- `source`: A reference to where the type is defined
+- `location`: A source range where the type is defined
 
 ## Learn more
 

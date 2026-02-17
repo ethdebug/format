@@ -18,44 +18,51 @@ reference.
 
 Resources provide a way to avoid duplication by centralizing:
 
-- **Sources** — original source file content or references
-- **Compilations** — compiler invocation metadata
+- **Compilation** — compiler invocation metadata and source files
 - **Shared types** — type definitions used by multiple programs
+  (keyed by name)
+- **Shared pointers** — pointer templates used by multiple programs
+  (keyed by name)
 
 ## Sources
 
-Sources represent the original source files that were compiled. Each source has
-an identifier and either contains the full content or references an external
-location:
+Sources are part of the `compilation` object (not a separate
+top-level field). Each source has an identifier, path, and required
+`contents`:
 
 <SchemaExample
   schema="materials/source"
   href="/spec/materials/source"
-  title="Source files"
+  title="Source files (inside compilation)"
 >
   {`{
-  "sources": [
-    {
-      "id": "source-1",
-      "path": "contracts/Token.sol",
-      "contents": "// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\n..."
-    },
-    {
-      "id": "source-2",
-      "path": "contracts/Utils.sol"
-    }
-  ]
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": { "name": "solc", "version": "0.8.20" },
+    "sources": [
+      {
+        "id": "source-1",
+        "path": "contracts/Token.sol",
+        "language": "solidity",
+        "contents": "// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\n..."
+      },
+      {
+        "id": "source-2",
+        "path": "contracts/Utils.sol",
+        "language": "solidity",
+        "contents": "// SPDX-License-Identifier: MIT\\n..."
+      }
+    ]
+  }
 }`}
 </SchemaExample>
 
-Sources can include:
+Sources include:
 
+- **id** — identifier for cross-referencing
 - **path** — file path (relative or absolute)
-- **contents** — the actual source code text
-- **contentHash** — hash of the contents for verification
-
-When `contents` is omitted, tools must retrieve the source from the file system
-or another source.
+- **language** — source language
+- **contents** — the actual source code text (required)
 
 ## Source ranges
 
@@ -79,9 +86,10 @@ a source file:
 This identifies bytes 150-174 in the source with id "source-1". Ranges use byte
 offsets, not line/column positions.
 
-## Compilations
+## Compilation
 
-Compilation metadata captures information about how the code was compiled:
+The `compilation` field (singular) captures information about how the
+code was compiled:
 
 <SchemaExample
   schema="materials/compilation"
@@ -89,55 +97,62 @@ Compilation metadata captures information about how the code was compiled:
   title="Compilation metadata"
 >
   {`{
-  "compilations": [
-    {
-      "id": "compilation-1",
-      "compiler": {
-        "name": "solc",
-        "version": "0.8.20"
-      },
-      "sources": ["source-1", "source-2"],
-      "settings": { /* compiler settings */ }
-    }
-  ]
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": {
+      "name": "solc",
+      "version": "0.8.20"
+    },
+    "sources": [
+      {
+        "id": "source-1",
+        "path": "contracts/Token.sol",
+        "language": "solidity",
+        "contents": "// ..."
+      }
+    ],
+    "settings": { }
+  }
 }`}
 </SchemaExample>
 
-Programs reference their compilation, allowing debuggers to understand the
-build context.
+Programs reference their compilation, allowing debuggers to
+understand the build context.
 
 ## Shared types
 
-Type definitions that appear in multiple programs can be defined once in
-resources and referenced by ID:
+Type definitions that appear in multiple programs can be defined once
+in resources and referenced by name. The `types` field is an object
+keyed by name:
 
 <SchemaExample
-  schema="type"
-  href="/spec/type/overview"
+  schema="info/resources"
+  href="/spec/info/resources"
   title="Shared type definitions"
 >
   {`{
-  "types": [
-    {
-      "id": "type-balance",
-      "kind": "uint",
-      "bits": 256
-    },
-    {
-      "id": "type-user",
+  "types": {
+    "struct__Coordinate": {
       "kind": "struct",
-      "definition": { "name": "User" },
       "contains": [
-        { "name": "balance", "type": { "id": "type-balance" } },
-        { "name": "active", "type": { "kind": "bool" } }
-      ]
+        { "name": "x", "type": { "kind": "uint", "bits": 128 } },
+        { "name": "y", "type": { "kind": "uint", "bits": 128 } }
+      ],
+      "definition": {
+        "name": "Coordinate",
+        "location": {
+          "source": { "id": 5 },
+          "range": { "offset": 18, "length": 55 }
+        }
+      }
     }
-  ]
+  },
+  "pointers": {}
 }`}
 </SchemaExample>
 
-Programs then reference these types by ID rather than duplicating the full
-definition.
+Programs then reference these types by name rather than duplicating
+the full definition.
 
 ## Info vs. resources
 

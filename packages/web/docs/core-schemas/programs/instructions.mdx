@@ -17,18 +17,25 @@ bytecode. Instructions carry the context information that debuggers need.
 
 ## Structure
 
-An instruction has two required fields:
+An instruction requires only `offset`; `operation` and `context` are
+optional:
 
 <SchemaExample schema="program/instruction" href="/spec/program/instruction">
   {`{
   "offset": 42,
-  "context": { ... }
+  "operation": {
+    "mnemonic": "SSTORE"
+  },
+  "context": { }
 }`}
 </SchemaExample>
 
-- **`offset`**: byte position in the bytecode (the program counter value when
-  this instruction executes)
+- **`offset`**: byte position in the bytecode (the program counter
+  value when this instruction executes)
+- **`operation`**: machine operation info — includes `mnemonic`
+  (required) and optional `arguments` (immediate values)
 - **`context`**: high-level information valid after this instruction
+  (defaults to `{}` when omitted)
 
 ## Context types
 
@@ -47,12 +54,10 @@ Maps the instruction to source code:
   "offset": 42,
   "context": {
     "code": {
-      "source": {
-        "id": 0,
-        "range": {
-          "start": { "line": 10, "column": 4 },
-          "end": { "line": 10, "column": 20 }
-        }
+      "source": { "id": 0 },
+      "range": {
+        "offset": 150,
+        "length": 16
       }
     }
   }
@@ -76,7 +81,7 @@ Declares variables that are in scope:
   "context": {
     "variables": [
       {
-        "name": "amount",
+        "identifier": "amount",
         "type": { "kind": "uint", "bits": 256 },
         "pointer": {
           "location": "stack",
@@ -90,13 +95,15 @@ Declares variables that are in scope:
 
 Each variable includes:
 
-- `name`: the identifier from source code
+- `identifier`: the variable name from source code
 - `type`: an **ethdebug/format** type reference
 - `pointer`: where to find the variable's value
 
 ### Frame context
 
-Indicates call stack changes:
+Indicates which compilation frame the context applies to. This is
+useful for compilers with distinct frontend/backend stages (e.g.,
+source language vs. intermediate representation):
 
 <SchemaExample
   schema="program/context/frame"
@@ -105,15 +112,15 @@ Indicates call stack changes:
   {`{
   "offset": 200,
   "context": {
-    "frame": "step-in"
+    "frame": "ir"
   }
 }`}
 </SchemaExample>
 
-Frame values include:
+The `frame` value is a string naming the compilation frame, e.g.:
 
-- `"step-in"`: entering a function
-- `"step-out"`: returning from a function
+- `"source"`: the original source language
+- `"ir"`: an intermediate representation
 
 ## Composing contexts
 
@@ -137,7 +144,7 @@ Combine multiple contexts (like nested scopes):
       },
       {
         "variables": [
-          { "name": "x", "type": { ... }, "pointer": { ... } }
+          { "identifier": "x", "type": { ... }, "pointer": { ... } }
         ]
       }
     ]
@@ -147,28 +154,28 @@ Combine multiple contexts (like nested scopes):
 
 ### Pick
 
-Choose between contexts based on runtime conditions:
+Indicate that one of several possible contexts is true, possibly
+requiring additional information to disambiguate:
 
 <SchemaExample
   schema="program/context/pick"
   href="/spec/program/context"
-  title="Conditional context"
+  title="Pick between contexts"
 >
   {`{
   "offset": 175,
   "context": {
     "pick": [
       {
-        "guard": { "$read": "condition-flag" },
-        "context": {
-          "variables": [
-            { "name": "result", "type": { ... }, "pointer": { ... } }
-          ]
+        "code": {
+          "source": { "id": 5 },
+          "range": { "offset": 68, "length": 16 }
         }
       },
       {
-        "context": {
-          "variables": []
+        "code": {
+          "source": { "id": 5 },
+          "range": { "offset": 132, "length": 16 }
         }
       }
     ]
@@ -176,8 +183,8 @@ Choose between contexts based on runtime conditions:
 }`}
 </SchemaExample>
 
-The debugger evaluates guards at runtime and uses the first matching context.
-A context without a guard acts as the default.
+Each item in the `pick` array is a full context object. The debugger
+may need runtime information to determine which context applies.
 
 ### Remark
 
