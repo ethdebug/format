@@ -175,6 +175,7 @@ Function types represent callable references:
 >
   {`{
   "kind": "function",
+  "internal": true,
   "contains": {
     "parameters": {
       "type": {
@@ -191,6 +192,11 @@ Function types represent callable references:
   }
 }`}
 </SchemaExample>
+
+Function types must specify either `"internal": true` or
+`"external": true`. Internal functions are called within the
+language's own semantics; external functions are called via EVM
+contract call semantics (e.g., the Solidity ABI).
 
 ## Using type references
 

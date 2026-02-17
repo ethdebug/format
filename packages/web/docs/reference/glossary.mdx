@@ -135,7 +135,7 @@ expression types include:
 
 - **Arithmetic**: `$sum`, `$difference`, `$product`, `$quotient`, `$remainder`
 - **Hashing**: `$keccak256` (for computing storage slots)
-- **Lookups**: `$offset`, `$length`, `$slot` (reading from defined regions)
+- **Lookups**: `.offset`, `.length`, `.slot` (reading from defined regions)
 - **References**: `$this`, variables by name
 
 ### Variable (in pointers)
@@ -148,10 +148,10 @@ allow pointers to name and reuse intermediate computations:
   href="/spec/pointer/collection/scope"
 >
   {`{
-  "define": { "name": "baseSlot", "location": "storage", "slot": 0 },
+  "define": { "baseSlot": 3 },
   "in": {
     "location": "storage",
-    "slot": { "$keccak256": [{ ".slot": "baseSlot" }] }
+    "slot": { "$sum": ["baseSlot", 1] }
   }
 }`}
 </SchemaExample>

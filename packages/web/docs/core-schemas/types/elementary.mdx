@@ -70,8 +70,17 @@ Addresses represent 20-byte Ethereum addresses:
   {`{ "kind": "address" }`}
 </SchemaExample>
 
-In Solidity, `address payable` is a distinct type but uses the same
-representation—the distinction is semantic rather than structural.
+In Solidity, `address payable` is distinguished by the `payable`
+field:
+
+<SchemaExample
+  schema="type/elementary/address"
+  href="/spec/type/elementary/address"
+>
+  {`{ "kind": "address", "payable": true }`}
+</SchemaExample>
+
+When `payable` is omitted, the address's payability is unknown.
 
 ## Boolean type
 

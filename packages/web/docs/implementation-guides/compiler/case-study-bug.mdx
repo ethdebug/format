@@ -104,7 +104,7 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
     return {
       kind: "array",
       contains: { type: elementType },
-      ...(bugType.size !== undefined && { length: bugType.size }),
+      ...(bugType.size !== undefined && { count: bugType.size }),
     };
   }
 
@@ -115,7 +115,7 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
 The type conversion handles:
 
 - **Elementary types** — Direct mapping (`uint256` → `{kind: "uint", bits: 256}`)
-- **Arrays** — Recursive conversion with optional length
+- **Arrays** — Recursive conversion with optional count
 - **Mappings** — Key/value type conversion
 - **Structs** — Field-by-field conversion with names
 
