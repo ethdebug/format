@@ -1,0 +1,141 @@
+---
+sidebar_position: 2
+---
+
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# For debugger authors
+
+You're building a debugger, transaction tracer, or analysis tool. Here's how
+**ethdebug/format** helps you understand smart contract execution.
+
+## What the format gives you
+
+With **ethdebug/format** data, your debugger can:
+
+- **Locate variable values at runtime** — Resolve pointers to find data in
+  storage, memory, or the stack, even when locations are computed dynamically
+- **Interpret bytes as meaningful values** — Use type definitions to
+  understand what shape the data takes (struct fields, array elements, etc.)
+- **Map bytecode to source** — Show users which line of source code
+  corresponds to the current instruction
+- **Display variables in scope** — Know which variables exist at each point
+  in execution
+
+## Quick example: reading a type
+
+Type information describes the structure of data. Here's what a simple
+`uint256` type looks like in **ethdebug/format**:
+
+<SchemaExample
+  schema="type/elementary/uint"
+  href="/spec/type/elementary/uint"
+  title="A uint256 type"
+>
+  {`{
+  "kind": "uint",
+  "bits": 256
+}`}
+</SchemaExample>
+
+And a more complex struct:
+
+<SchemaExample
+  schema="type/complex/struct"
+  href="/spec/type/complex/struct"
+  title="A struct type with two int256 fields"
+>
+  {`{
+  "kind": "struct",
+  "definition": {
+    "name": "Position"
+  },
+  "contains": [
+    { "name": "x", "type": { "kind": "int", "bits": 256 } },
+    { "name": "y", "type": { "kind": "int", "bits": 256 } }
+  ]
+}`}
+</SchemaExample>
+
+Your debugger reads these definitions to understand the structure of data.
+Combined with a pointer that locates the bytes, types enable presenting
+meaningful values to users.
+
+## Quick example: resolving a pointer
+
+Pointers describe where data lives. A simple storage variable pointer:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="A simple storage pointer"
+>
+  {`{
+  "location": "storage",
+  "slot": "0x0"
+}`}
+</SchemaExample>
+
+This says: "read from storage slot 0." But pointers can express complex,
+dynamic locations too — like array elements or mapping values whose locations
+depend on runtime state.
+
+## What you need to implement
+
+To consume **ethdebug/format**, your debugger needs:
+
+1. **Schema parsing** — Load and validate **ethdebug/format** JSON
+2. **Pointer resolution** — Evaluate pointer expressions against EVM state to
+   locate bytes
+3. **Type interpretation** — Use type definitions to understand the structure
+   of located data
+4. **Program interpretation** — Track context as execution progresses
+
+## Go deeper
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Understand the concepts</h4>
+      </div>
+      <div className="card__body">
+        Learn the mental models behind types, pointers, and programs.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="/docs/concepts"
+        >
+          Concepts →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Implementation guide</h4>
+      </div>
+      <div className="card__body">
+        Walk through a reference implementation of pointer dereferencing.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="/docs/implementation-guides/pointers"
+        >
+          Dereferencing pointers →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+### Explore by topic
+
+- **[Types](/docs/core-schemas/types)** — How the format describes data structures
+- **[Pointers](/docs/core-schemas/pointers)** — How the format describes data locations
+- **[Programs](/docs/core-schemas/programs)** — How the format describes runtime context
+- **[Info schema](/docs/core-schemas/info)** — How the format bundles everything together
+- **[Specification](/spec/overview)** — Formal schema definitions

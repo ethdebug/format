@@ -1,0 +1,473 @@
+---
+sidebar_position: 3
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+# Expressions
+
+<SpecLink
+  schema="ethdebug/format/pointer/expression"
+  href="/spec/pointer/expression"
+/>
+
+<PointerPlayground>
+
+Static offsets work for simple variables, but most interesting data has
+locations that depend on runtime values. Expressions let pointers compute
+addresses dynamically.
+
+## Why expressions are needed
+
+Consider reading element `i` from a memory array. The element's location
+depends on:
+
+- Where the array starts (might come from the free memory pointer)
+- Which element we want (the index `i`)
+- How big each element is (32 bytes for `uint256`)
+
+A static pointer can't capture this. Expressions can:
+
+<PointerExample
+  title="Array element access"
+  pointer={{
+    group: [
+      { name: "array-start", location: "memory", offset: 0, length: 32 },
+      {
+        define: { index: 2 },
+        in: {
+          name: "element",
+          location: "memory",
+          offset: {
+            $sum: [{ $read: "array-start" }, { $product: ["index", 32] }],
+          },
+          length: 32,
+        },
+      },
+    ],
+  }}
+  state={{
+    memory:
+      "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003",
+  }}
+  description="Computes offset: array-start value (0x40) + index (2) × 32 = 0x80"
+/>
+
+## Arithmetic expressions
+
+Basic math operations for computing addresses:
+
+### `$sum` — Addition
+
+Adds all values in an array:
+
+<PointerExample
+  title="$sum expression"
+  pointer={{ location: "storage", slot: { $sum: [100, 32, 4] } }}
+  state={{
+    storage: {
+      "0x88":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes slot: 100 + 32 + 4 = 136 (0x88)"
+/>
+
+### `$difference` — Subtraction
+
+Subtracts the second value from the first (saturates at zero):
+
+<PointerExample
+  title="$difference expression"
+  pointer={{ location: "storage", slot: { $difference: [100, 32] } }}
+  state={{
+    storage: {
+      "0x44":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes slot: 100 - 32 = 68 (0x44)"
+/>
+
+### `$product` — Multiplication
+
+Multiplies all values in an array:
+
+<PointerExample
+  title="$product expression"
+  pointer={{ location: "memory", offset: { $product: [32, 10] }, length: 32 }}
+  state={{
+    memory:
+      "0x" +
+      "00".repeat(320) +
+      "000000000000000000000000000000000000000000000000000000000000002a",
+  }}
+  description="Computes offset: 32 × 10 = 320 (0x140)"
+/>
+
+### `$quotient` — Division
+
+Integer division of first value by second:
+
+<PointerExample
+  title="$quotient expression"
+  pointer={{ location: "storage", slot: { $quotient: [100, 32] } }}
+  state={{
+    storage: {
+      "0x03":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes slot: 100 ÷ 32 = 3"
+/>
+
+### `$remainder` — Modulo
+
+Remainder after division:
+
+<PointerExample
+  title="$remainder expression"
+  pointer={{ location: "storage", slot: { $remainder: [100, 32] } }}
+  state={{
+    storage: {
+      "0x04":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes slot: 100 mod 32 = 4"
+/>
+
+## Reading values
+
+### `$read` — Read from a named region
+
+Reads the bytes from a previously defined region:
+
+<PointerExample
+  title="$read expression"
+  pointer={{
+    group: [
+      { name: "array-length-slot", location: "storage", slot: 5 },
+      {
+        name: "array-data",
+        location: "storage",
+        slot: { $keccak256: [{ $wordsized: 5 }] },
+        length: { $product: [{ $read: "array-length-slot" }, 32] },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x05":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db0":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+    },
+  }}
+  description="Reads array length (3) from slot 5, computes data length as 3 × 32 = 96 bytes"
+/>
+
+The `$read` expression retrieves the actual runtime value stored in the
+`array-length-slot` region—the array's length.
+
+## Region property lookups
+
+Reference properties of named regions with `.property` syntax:
+
+### `.offset` — Region's offset
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".offset": "previous-element" }`}
+</SchemaExample>
+
+Returns the offset of the named region.
+
+### `.length` — Region's length
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".length": "previous-element" }`}
+</SchemaExample>
+
+Returns the length of the named region.
+
+### `.slot` — Region's slot
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ ".slot": "base-slot" }`}
+</SchemaExample>
+
+Returns the slot number for storage/stack/transient regions.
+
+### Chaining lookups
+
+Compute the next element's position from the previous one:
+
+<PointerExample
+  title="Chaining .offset and .length"
+  pointer={{
+    group: [
+      { name: "element-0", location: "memory", offset: "0x80", length: 32 },
+      {
+        name: "element-1",
+        location: "memory",
+        offset: {
+          $sum: [{ ".offset": "element-0" }, { ".length": "element-0" }],
+        },
+        length: 32,
+      },
+    ],
+  }}
+  state={{
+    memory:
+      "0x" +
+      "00".repeat(128) +
+      "0000000000000000000000000000000000000000000000000000000000000001" +
+      "0000000000000000000000000000000000000000000000000000000000000002",
+  }}
+  description="element-1 offset = 0x80 + 32 = 0xa0"
+/>
+
+## Computing storage slots with `$keccak256`
+
+Solidity uses keccak256 hashing to compute storage locations for dynamic data.
+
+### Array element slots
+
+For a dynamic array at slot `n`, elements start at `keccak256(n)`:
+
+<PointerExample
+  title="Array element slot via keccak256"
+  pointer={{
+    define: { "element-index": 2 },
+    in: {
+      name: "element",
+      location: "storage",
+      slot: {
+        $sum: [{ $keccak256: [{ $wordsized: 5 }] }, "element-index"],
+      },
+    },
+  }}
+  state={{
+    storage: {
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes: keccak256(5) + 2"
+/>
+
+### Mapping value slots
+
+For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`:
+
+<PointerExample
+  title="Mapping slot via keccak256"
+  pointer={{
+    group: [
+      { name: "key-region", location: "stack", slot: 0 },
+      {
+        name: "value",
+        location: "storage",
+        slot: { $keccak256: [{ $read: "key-region" }, { $wordsized: 3 }] },
+      },
+    ],
+  }}
+  state={{
+    stack: [
+      "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+    ],
+    storage: {
+      "0x8bd687de6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b":
+        "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    },
+  }}
+  description="Computes: keccak256(key, 3) — standard Solidity mapping slot"
+/>
+
+### Nested mappings
+
+For `mapping(address => mapping(uint => uint))` at slot 2:
+
+<PointerExample
+  title="Nested mapping slot"
+  pointer={{
+    group: [
+      { name: "outer-key", location: "stack", slot: 0 },
+      { name: "inner-key", location: "stack", slot: 1 },
+      {
+        name: "value",
+        location: "storage",
+        slot: {
+          $keccak256: [
+            { $read: "inner-key" },
+            { $keccak256: [{ $read: "outer-key" }, { $wordsized: 2 }] },
+          ],
+        },
+      },
+    ],
+  }}
+  state={{
+    stack: [
+      "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+      "0x0000000000000000000000000000000000000000000000000000000000000001",
+    ],
+    storage: {},
+  }}
+  description="Computes: keccak256(inner_key, keccak256(outer_key, 2))"
+/>
+
+This computes: `keccak256(inner_key, keccak256(outer_key, 2))`
+
+## Data manipulation
+
+### `$concat` — Concatenate bytes
+
+Joins byte sequences without padding:
+
+<PointerExample
+  title="$concat expression"
+  pointer={{
+    location: "storage",
+    slot: { $keccak256: [{ $concat: ["0xdead", "0xbeef"] }] },
+  }}
+  state={{ storage: {} }}
+  description="Concatenates 0xdead + 0xbeef = 0xdeadbeef, then hashes"
+/>
+
+Useful for building hash inputs from multiple values.
+
+### `$sized<N>` — resize to N bytes
+
+Truncates or pads to exactly N bytes:
+
+<PointerExample
+  title="$sized32 expression"
+  pointer={{
+    location: "storage",
+    slot: { $keccak256: [{ $sized32: "0x1234" }] },
+  }}
+  state={{ storage: {} }}
+  description="Pads 0x1234 to 32 bytes before hashing"
+/>
+
+Pads with zeros on the left; truncates from the left if too long.
+
+### `$wordsized` — Resize to word size
+
+Equivalent to `$sized32` on the EVM:
+
+<PointerExample
+  title="$wordsized expression"
+  pointer={{
+    group: [
+      { name: "some-region", location: "stack", slot: 0 },
+      {
+        name: "result",
+        location: "storage",
+        slot: { $keccak256: [{ $wordsized: { $read: "some-region" } }] },
+      },
+    ],
+  }}
+  state={{
+    stack: [
+      "0x0000000000000000000000000000000000000000000000000000000000000005",
+    ],
+  }}
+  description="Reads value from stack, pads to word size, then hashes"
+/>
+
+## Variables in expressions
+
+Expressions can reference variables by name. These come from list pointer
+contexts:
+
+<PointerExample
+  title="List variable in expression"
+  pointer={{
+    group: [
+      { name: "array-length", location: "storage", slot: 0 },
+      {
+        list: {
+          count: { $read: "array-length" },
+          each: "i",
+          is: {
+            name: "element",
+            location: "storage",
+            slot: {
+              $sum: [{ $keccak256: [{ $wordsized: 0 }] }, "i"],
+            },
+          },
+        },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e565":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+    },
+  }}
+  description="Variable 'i' takes values 0, 1, 2 computing each element's slot"
+/>
+
+The variable `"i"` takes values from 0 to count-1, computing each element's
+slot.
+
+## Complete example: dynamic array element
+
+Reading element `i` from `uint256[] storage arr` at slot 5:
+
+<PointerExample
+  title="Dynamic array element"
+  pointer={{
+    group: [
+      { name: "array-slot", location: "storage", slot: 5 },
+      {
+        define: { "element-index": 2 },
+        in: {
+          name: "element",
+          location: "storage",
+          slot: {
+            $sum: [
+              { $keccak256: [{ $wordsized: { ".slot": "array-slot" } }] },
+              "element-index",
+            ],
+          },
+        },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x05":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes keccak256(5) + 2 to find element at index 2"
+/>
+
+The pointer:
+
+1. Defines the array's base slot
+2. Computes the element's slot: `keccak256(5) + element_index`
+3. Returns that storage location
+
+## Learn more
+
+- [Regions documentation](./regions) for region structure
+- [Expression specification](/spec/pointer/expression) for the complete
+  expression language
+- [Implementation guide](/docs/implementation-guides/pointers/evaluating-expressions)
+  for building an expression evaluator
+
+</PointerPlayground>

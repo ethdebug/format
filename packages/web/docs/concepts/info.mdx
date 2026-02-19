@@ -1,0 +1,160 @@
+---
+sidebar_position: 6
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+
+# Info
+
+<SpecLink schema="ethdebug/format/info" href="/spec/info/overview" />
+
+This page explains the mental model behind **ethdebug/format** info objects.
+For reference documentation, see the [Info reference](/docs/core-schemas/info).
+
+## The info schema is the top-level container
+
+While types, pointers, and programs describe individual aspects of debug data,
+the **info schema** bundles everything together. It's the top-level container
+that represents a complete unit of debug information for a compilation.
+
+When a compiler produces debug data, it typically emits an info object (or the
+closely related info/resources object) containing all the debug information
+for that compilation.
+
+## What an info object contains
+
+An **ethdebug/format/info** object includes:
+
+- **Compilation** — compiler metadata and source files (singular)
+- **Programs** — one for each bytecode artifact (create and call
+  bytecode)
+- **Shared types** — type definitions referenced across programs
+  (object keyed by name)
+- **Shared pointers** — pointer templates referenced across programs
+  (object keyed by name)
+
+This bundling avoids duplication — when multiple programs reference the same
+type definition or source file, the info object contains it once with
+references pointing to it.
+
+## Two schema variants
+
+The format defines two related schemas:
+
+### ethdebug/format/info
+
+A complete, standalone representation containing all debugging data plus
+compilation metadata. This is what tools consume when they need full debug
+information.
+
+### ethdebug/format/info/resources
+
+A more minimal representation containing compilation-related debug information
+**without** metadata that may already exist elsewhere in compiler output.
+
+The distinction exists because compilers typically already produce structured
+JSON output with compilation metadata. Rather than duplicate that information,
+compilers can emit info/resources objects and let language-specific tooling
+combine them with existing compiler output to produce full info objects.
+
+## Expected workflow
+
+The format anticipates this workflow:
+
+1. **Compilers emit info/resources** — alongside their existing JSON output
+2. **Language tooling combines** — merges info/resources with other compiler
+   output
+3. **Tools consume info objects** — use the complete standalone representation
+
+To illustrate, consider how this might look inside solc's standard
+JSON output. The shared resources (compilation metadata, types,
+pointer templates) live at the top level, while each program sits
+alongside the bytecode it describes:
+
+```
+{
+  "ethdebug": {
+    "resources": {
+      "compilation": { ... },
+      "types": { ... },
+      "pointers": { ... }
+    }
+  },
+
+  "contracts": {
+    "Token.sol": {
+      "Token": {
+        "abi": [ ... ],
+        "evm": {
+          "bytecode": {
+            "object": "6080...",
+            "ethdebug": { "program": { ... } }
+          },
+          "deployedBytecode": {
+            "object": "6080...",
+            "ethdebug": { "program": { ... } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+A companion tool (or solc itself, via a flag or other operating
+mode) would then gather these pieces — the top-level resources plus
+each per-bytecode program — into complete **ethdebug/format/info**
+objects for debugger consumption.
+
+The format recommends that compilers ensure tooling exists to create
+full info objects, whether through custom compilation modes or
+companion tools.
+
+## Relationship to other schemas
+
+The info schema connects everything:
+
+```
+info
+├── compilation (singular object)
+│   ├── compiler
+│   ├── sources[]
+│   └── settings
+├── programs[]
+│   ├── instructions[]
+│   │   └── context
+│   │       ├── variables[]
+│   │       │   ├── type (or reference)
+│   │       │   └── pointer
+│   │       └── code (source range)
+│   └── compilation reference
+├── types{} (shared definitions, keyed by name)
+└── pointers{} (shared pointer templates, keyed by name)
+```
+
+- **Info objects** contain a **compilation** — metadata and sources
+- **Info objects** reference **programs** — one per bytecode
+- **Programs** reference **types** and **pointers** for variables
+- **Programs** reference **sources** via source ranges in contexts
+- **Types** can reference other **types** by ID
+- **Pointers** provide reusable pointer templates
+
+## When to use which schema
+
+**Use the info schema** when:
+
+- Building a debugger that consumes debug data
+- Creating standalone debug artifacts
+- Distributing debug information separately from compiler output
+
+**Use the info/resources schema** when:
+
+- Implementing a compiler that already produces structured output
+- Embedding debug data within existing compiler JSON formats
+- Building tooling that will combine with other compiler output
+
+## Next steps
+
+- **[Info schema reference](/docs/core-schemas/info)** — Schema documentation
+- **[Resources](/docs/core-schemas/info/resources)** — Compilation-level shared data
+- **[Info specification](/spec/info)** — Formal schema definitions

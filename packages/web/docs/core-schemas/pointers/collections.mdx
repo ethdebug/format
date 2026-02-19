@@ -1,0 +1,363 @@
+---
+sidebar_position: 4
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+# Collections
+
+<SpecLink
+  schema="ethdebug/format/pointer/collection"
+  href="/spec/pointer/collection"
+/>
+
+<PointerPlayground>
+
+While [regions](./regions) describe single contiguous byte ranges, **collections**
+aggregate multiple pointers together. Collections handle cases where data
+structures span multiple locations or have dynamic configurations.
+
+## Why collections?
+
+Consider a Solidity struct with multiple fields, or a dynamic array whose
+length isn't known at compile time. These require more than pointing to a
+single memory location—they need to describe relationships between multiple
+pointers or generate pointers based on runtime values.
+
+Collections provide six patterns for composing pointers:
+
+| Collection    | Purpose                                      |
+| ------------- | -------------------------------------------- |
+| `group`       | Combine multiple pointers into one           |
+| `list`        | Generate pointers for indexed sequences      |
+| `conditional` | Choose between pointers based on a condition |
+| `scope`       | Define variables for use in nested pointers  |
+| `reference`   | Invoke reusable pointer templates            |
+| `templates`   | Define inline templates for local reuse      |
+
+Click **"▶ Try it"** on any example to load it into the Pointer Playground
+drawer at the bottom of the screen.
+
+## Group
+
+A **group** combines multiple pointers into a single composite pointer. Each
+pointer in the group can have a name for identification.
+
+<PointerExample
+  title="Struct with two fields"
+  pointer={{
+    group: [
+      { name: "len", location: "storage", slot: 0 },
+      { name: "data", location: "storage", slot: 1 },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000005",
+      "0x01":
+        "0x48656c6c6f000000000000000000000000000000000000000000000000000000",
+    },
+  }}
+/>
+
+Groups are useful for structs and other compound data types where multiple
+fields need to be accessed together.
+
+## List
+
+A **list** generates a sequence of pointers based on a count expression. This
+handles dynamic arrays and other indexed collections.
+
+:::tip[Terminology note]
+The `each` property introduces a **pointer variable** — a named binding for use
+in expressions. This is different from **program variables** (source-level
+identifiers with types and pointers). See the
+[glossary](/docs/reference/glossary) for complete definitions.
+:::
+
+<PointerExample
+  title="Dynamic array (3 elements)"
+  pointer={{
+    list: {
+      count: 3,
+      each: "i",
+      is: {
+        name: "element",
+        location: "storage",
+        slot: { $sum: [10, "i"] },
+      },
+    },
+  }}
+  state={{
+    storage: {
+      "0x0a":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x0b":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x0c":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+    },
+  }}
+/>
+
+The list evaluates `count` to determine how many pointers to generate, then
+for each index (bound to the variable named by `each`), it evaluates the `is`
+pointer template.
+
+### List with dynamic count
+
+When the count comes from storage:
+
+<PointerExample
+  title="Array with length from storage"
+  pointer={{
+    group: [
+      { name: "arrayLength", location: "storage", slot: 0 },
+      {
+        list: {
+          count: { $read: "arrayLength" },
+          each: "i",
+          is: {
+            name: "element",
+            location: "storage",
+            slot: { $sum: [1, "i"] },
+          },
+        },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x01":
+        "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x02":
+        "0x0000000000000000000000000000000000000000000000000000000000000014",
+    },
+  }}
+/>
+
+### List properties
+
+| Property | Description                                         |
+| -------- | --------------------------------------------------- |
+| `count`  | Expression evaluating to the number of items        |
+| `each`   | Variable name for the current index (starting at 0) |
+| `is`     | Pointer template evaluated for each index           |
+
+## Conditional
+
+A **conditional** selects between pointers based on whether an expression
+evaluates to a non-zero value.
+
+<PointerExample
+  title="Conditional pointer"
+  pointer={{
+    group: [
+      { name: "flag", location: "storage", slot: 0 },
+      {
+        if: { $read: "flag" },
+        then: { name: "whenTrue", location: "storage", slot: 1 },
+        else: { name: "whenFalse", location: "storage", slot: 2 },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x01":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+      "0x02":
+        "0x00000000000000000000000000000000000000000000000000000000000000ff",
+    },
+  }}
+  description="Click 'Try it' and change slot 0 to 0x00 to see the 'else' branch"
+/>
+
+### Conditional properties
+
+| Property | Description                              |
+| -------- | ---------------------------------------- |
+| `if`     | Expression to evaluate (non-zero = true) |
+| `then`   | Pointer to use when condition is true    |
+| `else`   | Optional pointer when condition is false |
+
+## Scope
+
+A **scope** defines variables that can be used in a nested pointer. Variables
+are evaluated in order, so later variables can reference earlier ones.
+
+<PointerExample
+  title="Scope with computed slot"
+  pointer={{
+    define: {
+      baseSlot: 3,
+      offset: 2,
+    },
+    in: {
+      name: "result",
+      location: "storage",
+      slot: { $sum: ["baseSlot", "offset"] },
+    },
+  }}
+  state={{
+    storage: {
+      "0x05":
+        "0x0000000000000000000000000000000000000000000000000000000000000064",
+    },
+  }}
+  description="Computes slot 3 + 2 = 5"
+/>
+
+Scopes help break complex pointer definitions into readable steps. For examples
+combining scopes with keccak256 for storage slot computation, see the
+[expressions documentation](./expressions#computing-storage-slots-with-keccak256).
+
+### Scope properties
+
+| Property | Description                                   |
+| -------- | --------------------------------------------- |
+| `define` | Object mapping variable names to expressions  |
+| `in`     | Pointer where defined variables are available |
+
+## Reference and templates
+
+A **reference** invokes a named pointer template, while **templates** defines
+them inline. These work together for reusable pointer patterns.
+
+<PointerExample
+  title="Template with reference"
+  pointer={{
+    templates: {
+      "read-slot": {
+        expect: ["n"],
+        for: { name: "slot", location: "storage", slot: "n" },
+      },
+    },
+    in: {
+      group: [
+        {
+          define: { n: 0 },
+          in: { template: "read-slot" },
+        },
+        {
+          define: { n: 1 },
+          in: { template: "read-slot" },
+        },
+      ],
+    },
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000014",
+    },
+  }}
+  description="Defines a template and uses it twice"
+/>
+
+### Template definition
+
+Each template in the `templates` object has:
+
+| Property | Description                      |
+| -------- | -------------------------------- |
+| `expect` | Array of required variable names |
+| `for`    | The pointer template body        |
+
+### Reference properties
+
+| Property   | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| `template` | Name of the template to invoke                             |
+| `yields`   | Optional object mapping template region names to new names |
+
+## Nesting collections
+
+Collections can be nested to build complex pointer structures. A group might
+contain lists, conditionals might wrap groups, and scopes can define variables
+used throughout nested collections.
+
+<PointerExample
+  title="Nested: scope + conditional + list"
+  pointer={{
+    group: [
+      { name: "lengthSlot", location: "storage", slot: 0 },
+      {
+        define: {
+          len: { $read: "lengthSlot" },
+        },
+        in: {
+          if: "len",
+          then: {
+            list: {
+              count: "len",
+              each: "i",
+              is: {
+                name: "item",
+                location: "storage",
+                slot: { $sum: [1, "i"] },
+              },
+            },
+          },
+        },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x02":
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "0x03":
+        "0x0000000000000000000000000000000000000000000000000000000000000003",
+    },
+  }}
+  description="Reads length, checks if non-zero, then generates that many pointers"
+/>
+
+## Named regions in collections
+
+Pointers within collections can include a `name` property. Named regions are
+tracked during resolution and can be referenced using the `.slot`, `.offset`,
+and `.length` syntax in expressions.
+
+<PointerExample
+  title="Region reference with .slot"
+  pointer={{
+    group: [
+      { name: "header", location: "storage", slot: 0 },
+      {
+        name: "body",
+        location: "storage",
+        slot: { $sum: [{ ".slot": "header" }, 1] },
+      },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000010",
+      "0x01":
+        "0x0000000000000000000000000000000000000000000000000000000000000020",
+    },
+  }}
+  description="Second region's slot is computed from first region's slot (0 + 1 = 1)"
+/>
+
+## Learn more
+
+- [Regions](./regions) for simple pointer definitions
+- [Expressions](./expressions) for dynamic value computation
+- [Pointer specification](/spec/pointer/collection) for formal definitions
+
+</PointerPlayground>

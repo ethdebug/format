@@ -12,6 +12,11 @@ properties:
     const: array
   contains:
     $ref: "schema:ethdebug/format/type/wrapper"
+  count:
+    description: |
+      The fixed number of elements in this array. When omitted, the array
+      is dynamically sized.
+    $ref: "schema:ethdebug/format/data/value"
 
 required:
   - kind
@@ -23,6 +28,12 @@ examples:
       type:
         kind: uint
         bits: 256
+
+  - kind: array
+    count: 10
+    contains:
+      type:
+        kind: address
 
   - kind: array
     contains:

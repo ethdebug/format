@@ -1,0 +1,53 @@
+{
+  "name": "@ethdebug/evm",
+  "version": "0.1.0-0",
+  "description": "EVM execution and state access for ethdebug/format",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "MIT",
+  "imports": {
+    "#executor": {
+      "types": "./src/executor.ts",
+      "default": "./dist/src/executor.js"
+    },
+    "#machine": {
+      "types": "./src/machine.ts",
+      "default": "./dist/src/machine.js"
+    },
+    "#trace": {
+      "types": "./src/trace.ts",
+      "default": "./dist/src/trace.js"
+    }
+  },
+  "scripts": {
+    "prepare": "tsc",
+    "build": "tsc",
+    "watch": "tsc --watch --preserveWatchOutput",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ethereumjs/common": "^10.0.0",
+    "@ethereumjs/evm": "^10.0.0",
+    "@ethereumjs/statemanager": "^10.0.0",
+    "@ethereumjs/util": "^10.0.0",
+    "ethereum-cryptography": "^3.2.0"
+  },
+  "devDependencies": {
+    "@ethdebug/pointers": "^0.1.0-0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@ethdebug/pointers": "^0.1.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@ethdebug/pointers": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

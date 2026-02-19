@@ -1,0 +1,78 @@
+---
+sidebar_position: 1
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+
+# Types
+
+<SpecLink schema="ethdebug/format/type" href="/spec/type/overview" />
+
+Types in **ethdebug/format** describe the structure of data — what shape it
+takes and how its parts relate. Types don't specify where data lives; that's
+what [pointers](/docs/core-schemas/pointers) do. Together, types and pointers give debuggers
+everything needed to locate bytes and interpret them as meaningful values.
+
+For the mental model behind types, see [Concepts: Types](/docs/concepts/types).
+
+## Reference documentation
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Elementary types</h3>
+      </div>
+      <div className="card__body">
+        <p>
+          Integers, addresses, booleans, and other atomic types that don't
+          contain other types.
+        </p>
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="./elementary"
+        >
+          Elementary types →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Composite types</h3>
+      </div>
+      <div className="card__body">
+        <p>Arrays, structs, mappings, and types that compose other types.</p>
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="./composite"
+        >
+          Composite types →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Specification</h3>
+      </div>
+      <div className="card__body">
+        <p>Complete JSON schemas and detailed reference.</p>
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block" href="/spec/type">
+          View spec →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

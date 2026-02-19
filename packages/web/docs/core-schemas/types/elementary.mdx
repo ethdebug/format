@@ -1,0 +1,226 @@
+---
+sidebar_position: 2
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Elementary types
+
+<SpecLink
+  schema="ethdebug/format/type/elementary"
+  href="/spec/category/elementary-types"
+/>
+
+Elementary types are atomic—they don't contain other types. These form the
+building blocks that complex types compose.
+
+## Numeric types
+
+### Unsigned integers (`uint`)
+
+Unsigned integers range from 8 to 256 bits, in increments of 8:
+
+<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
+  {`{ "kind": "uint", "bits": 256 }`}
+</SchemaExample>
+
+<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
+  {`{ "kind": "uint", "bits": 8 }`}
+</SchemaExample>
+
+The `bits` field is required and must be a multiple of 8 between 8 and 256.
+
+### Signed integers (`int`)
+
+Signed integers use two's complement representation:
+
+<SchemaExample schema="type/elementary/int" href="/spec/type/elementary/int">
+  {`{ "kind": "int", "bits": 256 }`}
+</SchemaExample>
+
+Like `uint`, the `bits` field must be a multiple of 8 between 8 and 256.
+
+### Fixed-point numbers (`ufixed`, `fixed`)
+
+Fixed-point decimals specify both total bits and decimal places:
+
+<SchemaExample
+  schema="type/elementary/ufixed"
+  href="/spec/type/elementary/ufixed"
+>
+  {`{ "kind": "ufixed", "bits": 128, "places": 18 }`}
+</SchemaExample>
+
+<SchemaExample
+  schema="type/elementary/fixed"
+  href="/spec/type/elementary/fixed"
+>
+  {`{ "kind": "fixed", "bits": 128, "places": 18 }`}
+</SchemaExample>
+
+## Address type
+
+Addresses represent 20-byte Ethereum addresses:
+
+<SchemaExample
+  schema="type/elementary/address"
+  href="/spec/type/elementary/address"
+>
+  {`{ "kind": "address" }`}
+</SchemaExample>
+
+In Solidity, `address payable` is distinguished by the `payable`
+field:
+
+<SchemaExample
+  schema="type/elementary/address"
+  href="/spec/type/elementary/address"
+>
+  {`{ "kind": "address", "payable": true }`}
+</SchemaExample>
+
+When `payable` is omitted, the address's payability is unknown.
+
+## Boolean type
+
+Booleans represent true/false values:
+
+<SchemaExample schema="type/elementary/bool" href="/spec/type/elementary/bool">
+  {`{ "kind": "bool" }`}
+</SchemaExample>
+
+In the EVM, booleans occupy a full 32-byte word where 0 is false and any
+non-zero value is true.
+
+## Byte types
+
+### Fixed-size bytes (`bytes`)
+
+Fixed-size byte arrays range from 1 to 32 bytes:
+
+<SchemaExample
+  schema="type/elementary/bytes"
+  href="/spec/type/elementary/bytes"
+>
+  {`{ "kind": "bytes", "size": 32 }`}
+</SchemaExample>
+
+<SchemaExample
+  schema="type/elementary/bytes"
+  href="/spec/type/elementary/bytes"
+>
+  {`{ "kind": "bytes", "size": 4 }`}
+</SchemaExample>
+
+The `size` field is required for fixed-size bytes.
+
+### Dynamic bytes (`bytes`)
+
+Dynamic byte arrays have no size limit:
+
+<SchemaExample
+  schema="type/elementary/bytes"
+  href="/spec/type/elementary/bytes"
+>
+  {`{ "kind": "bytes" }`}
+</SchemaExample>
+
+When `size` is omitted, the type represents dynamically-sized bytes.
+
+## String type
+
+Strings represent UTF-8 encoded text:
+
+<SchemaExample
+  schema="type/elementary/string"
+  href="/spec/type/elementary/string"
+>
+  {`{ "kind": "string" }`}
+</SchemaExample>
+
+Strings are dynamically sized. Languages that treat strings as character
+arrays may choose to represent them as `array` types instead.
+
+## Enum type
+
+Enums represent a fixed set of named values:
+
+<SchemaExample schema="type/elementary/enum" href="/spec/type/elementary/enum">
+  {`{
+  "kind": "enum",
+  "definition": {
+    "name": "Status"
+  },
+  "values": ["Pending", "Active", "Completed"]
+}`}
+</SchemaExample>
+
+The `values` field lists all possible values in order. The underlying
+representation is typically a `uint8` (or larger if needed).
+
+## Contract type
+
+Contract types represent references to contract instances:
+
+<SchemaExample
+  schema="type/elementary/contract"
+  href="/spec/type/elementary/contract"
+>
+  {`{ "kind": "contract" }`}
+</SchemaExample>
+
+Contract types may include a `definition` field when the contract is defined
+in source code:
+
+<SchemaExample
+  schema="type/elementary/contract"
+  href="/spec/type/elementary/contract"
+>
+  {`{
+  "kind": "contract",
+  "definition": {
+    "name": "MyToken"
+  }
+}`}
+</SchemaExample>
+
+In the EVM, contract references are addresses (20 bytes), but the contract
+type carries additional semantic information about which contract interface
+applies.
+
+## User-defined types with definitions
+
+Some elementary types (particularly enums) are defined in source code. These
+include a `definition` field:
+
+<SchemaExample
+  schema="type/elementary/enum"
+  href="/spec/type/elementary/enum"
+  title="Enum with source location"
+>
+  {`{
+  "kind": "enum",
+  "definition": {
+    "name": "OrderStatus",
+    "location": {
+      "source": { "id": 42 },
+      "range": {
+        "offset": 150,
+        "length": 85
+      }
+    }
+  },
+  "values": ["Created", "Filled", "Cancelled"]
+}`}
+</SchemaExample>
+
+The `definition` field can include:
+
+- `name`: The identifier used in source code
+- `location`: A source range where the type is defined
+
+## Learn more
+
+For complete schema definitions and all available fields, see the
+[elementary types specification](/spec/category/elementary-types).

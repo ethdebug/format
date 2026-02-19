@@ -1,0 +1,299 @@
+---
+sidebar_position: 4
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Pointers
+
+<SpecLink schema="ethdebug/format/pointer" href="/spec/pointer/overview" />
+
+This page explains the mental model behind **ethdebug/format** pointer
+representations. For reference documentation on regions, expressions, and
+collections, see the [Pointers reference](/docs/core-schemas/pointers).
+
+## Pointers are recipes for finding bytes
+
+A pointer describes **where** data lives, not what it means. It's a recipe that
+a debugger can follow to locate bytes in EVM state.
+
+Simple pointers specify static locations:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+>
+  {`{
+  "location": "storage",
+  "slot": "0x0"
+}`}
+</SchemaExample>
+
+This says "the data is in storage slot 0." The debugger can resolve this
+directly against the EVM state.
+
+Complex pointers describe dynamic locations that depend on runtime values:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="Dynamic storage slot"
+>
+  {`{
+  "location": "storage",
+  "slot": {
+    "$keccak256": [{ "$read": "key-value" }, { "$wordsized": 3 }]
+  }
+}`}
+</SchemaExample>
+
+This says "compute the slot by hashing a runtime value with the number 3." The
+debugger must evaluate this expression against the current machine state.
+
+Pointers are self-contained — they include everything needed to resolve the
+location.
+
+## EVM data locations
+
+The EVM stores data in several distinct locations. Understanding these is
+essential for working with pointers.
+
+### Storage
+
+**Storage** is persistent data associated with a contract. It survives
+transaction boundaries and is where contracts store their state.
+
+- **Persistent** — values remain until explicitly changed
+- **Slot-based** — organized into 32-byte slots numbered from 0
+- **Contract-specific** — each contract has its own storage space
+
+Storage is where you find contract state variables, mapping contents, and
+dynamic array contents.
+
+### Memory
+
+**Memory** is temporary data that exists only during execution. It's cleared
+between calls.
+
+- **Temporary** — cleared after each external call returns
+- **Byte-addressable** — accessed by byte offset, not slots
+- **Linear** — grows as needed from offset 0
+
+Memory holds function arguments, return data being prepared, and temporary
+values.
+
+### Stack
+
+**The stack** is where the EVM performs computations. It holds operands and
+intermediate results.
+
+- **256-bit words** — each stack item is 32 bytes
+- **Limited depth** — maximum 1024 items
+- **LIFO** — last in, first out access pattern
+
+The stack contains function arguments (for internal calls), local variables,
+and intermediate computation results.
+
+### Calldata
+
+**Calldata** is the read-only input data sent to a contract when called.
+
+- **Read-only** — cannot be modified during execution
+- **Byte-addressable** — accessed by byte offset
+- **Cheap to read** — cheaper than memory or storage reads
+
+Calldata contains the function selector (first 4 bytes) and ABI-encoded
+function arguments.
+
+### Returndata
+
+**Returndata** is the output from the most recent external call.
+
+- **Read-only** — set by called contract, read by caller
+- **Replaced on each call** — each external call overwrites previous returndata
+- **Byte-addressable** — accessed by byte offset
+
+### Code
+
+**Code** refers to the contract's bytecode itself. Sometimes data is embedded
+in bytecode.
+
+- **Immutable** — cannot change after deployment
+- **Byte-addressable** — accessed by byte offset
+
+Code is where you find immutable variables and embedded constants.
+
+### Transient storage
+
+**Transient storage** (EIP-1153) is storage that persists within a transaction
+but is cleared afterward.
+
+- **Transaction-scoped** — persists across calls within a transaction
+- **Cleared after transaction** — does not persist to the next transaction
+- **Slot-based** — like storage, organized into 32-byte slots
+
+### Summary
+
+| Location   | Persistence        | Addressing     | Primary use         |
+| ---------- | ------------------ | -------------- | ------------------- |
+| Storage    | Permanent          | 32-byte slots  | Contract state      |
+| Memory     | Single call        | Byte offset    | Temporary data      |
+| Stack      | Instruction-level  | Position index | Computation         |
+| Calldata   | Single call        | Byte offset    | Input parameters    |
+| Returndata | Until next call    | Byte offset    | Call results        |
+| Code       | Permanent          | Byte offset    | Bytecode/immutables |
+| Transient  | Single transaction | 32-byte slots  | Tx-scoped state     |
+
+## A pointer is a region or a collection
+
+The **ethdebug/format/pointer** schema is recursive: a pointer is either a
+**region** (a single continuous byte range) or a **collection** (an
+aggregation of other pointers).
+
+### Regions
+
+A **region** represents a single continuous range of bytes at a specific
+location. Different locations use different region schemas:
+
+**Slice-based regions** (memory, calldata, returndata, code) specify an offset
+and length:
+
+<SchemaExample
+  schema="pointer/region/memory"
+  href="/spec/pointer/region/location/memory"
+>
+  {`{
+  "location": "memory",
+  "offset": "0x80",
+  "length": 32
+}`}
+</SchemaExample>
+
+**Segment-based regions** (storage, stack, transient) specify a slot, with
+optional offset and length for packed values:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="Packed storage value"
+>
+  {`{
+  "location": "storage",
+  "slot": 5,
+  "offset": 0,
+  "length": 16
+}`}
+</SchemaExample>
+
+Regions can be **named** for reference elsewhere in the pointer:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="Named region"
+>
+  {`{
+  "name": "array-length",
+  "location": "storage",
+  "slot": 0
+}`}
+</SchemaExample>
+
+### Collections
+
+A **collection** aggregates multiple pointers. Six collection types exist
+for different purposes:
+
+- **group** — combine pointers statically (e.g., struct members)
+- **list** — generate a sequence of pointers (e.g., array elements)
+- **conditional** — choose between pointers based on a runtime condition
+- **scope** — define variables for use in nested pointers
+- **reference** — refer to a previously defined template
+- **templates** — define reusable pointer patterns with expected variables
+
+## Expressions enable dynamic computation
+
+Static offsets and slots aren't enough for real-world data. Array elements,
+mapping values, and many other locations depend on runtime values.
+
+**Expressions** let pointers compute addresses dynamically:
+
+<SchemaExample
+  schema="pointer/expression"
+  href="/spec/pointer/expression"
+  title="Dynamic slot computation"
+>
+  {`{
+  "location": "storage",
+  "slot": {
+    "$sum": [{ "$keccak256": [{ "$wordsized": 5 }] }, "element-index"]
+  }
+}`}
+</SchemaExample>
+
+Expressions support:
+
+- **Arithmetic**: `$sum`, `$difference`, `$product`, `$quotient`, `$remainder`
+- **Reading values**: `$read` retrieves bytes from a named region
+- **Region properties**: `.offset`, `.length`, `.slot` reference region fields
+- **Hashing**: `$keccak256` computes storage slots for dynamic data
+- **Data manipulation**: `$concat`, `$sized<N>`, `$wordsized`
+
+Variables in expressions come from list iteration (`each`) or scope definitions
+(`define`).
+
+## Addressing schemes
+
+Regions use one of two addressing schemes based on their location:
+
+**Slice-based addressing** (memory, calldata, returndata, code):
+
+- `offset` — byte position from the start
+- `length` — number of bytes
+
+**Segment-based addressing** (storage, stack, transient):
+
+- `slot` — 256-bit slot number
+- `offset` (optional) — byte offset within the slot for packed values
+- `length` (optional) — number of bytes for packed values
+
+## Named regions enable composition
+
+Giving a region a `name` lets you reference it elsewhere:
+
+<SchemaExample
+  schema="pointer/collection/group"
+  href="/spec/pointer/collection/group"
+  title="Reading pointer from stack"
+>
+  {`{
+  "group": [
+    {
+      "name": "base-pointer",
+      "location": "stack",
+      "slot": 0
+    },
+    {
+      "location": "memory",
+      "offset": { "$read": "base-pointer" },
+      "length": 32
+    }
+  ]
+}`}
+</SchemaExample>
+
+The second region's offset comes from reading the value in the first region.
+This pattern is essential for describing data whose location is stored in
+another location (like memory pointers on the stack).
+
+## Next steps
+
+- **[Regions](/docs/core-schemas/pointers/regions)** — Reference for all region types
+- **[Expressions](/docs/core-schemas/pointers/expressions)** — Reference for expression
+  syntax
+- **[Collections](/docs/core-schemas/pointers/collections)** — Reference for collection
+  types
+- **[Pointer specification](/spec/pointer)** — Formal schema definitions
+- **[Challenges](/docs/reference/challenges)** — Why EVM data
+  locations are complex enough to need this

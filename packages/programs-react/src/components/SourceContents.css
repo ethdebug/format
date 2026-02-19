@@ -1,0 +1,14 @@
+.highlighted-code {
+  font-weight: bold;
+  background-color: var(--ifm-color-primary-lightest, #e7f5ff);
+}
+
+.highlighted-ambiguous-code {
+  font-weight: bold;
+  background-color: var(--ifm-color-warning-lightest, #fff9db);
+}
+
+.highlighted-variable-declaration {
+  text-decoration: underline;
+  text-decoration-style: wavy;
+}

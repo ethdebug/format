@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist/",
+    "baseUrl": "./",
+    "paths": {
+      "#executor": ["./src/executor"],
+      "#machine": ["./src/machine"],
+      "#trace": ["./src/trace"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../pointers" }]
+}

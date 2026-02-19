@@ -1,8 +1,10 @@
 import Admonition from "@theme/Admonition";
 import Link from "@docusaurus/Link";
 import { Program } from "@ethdebug/format";
-import { useProgramExampleContext } from "./ProgramExampleContext";
-import { HighlightedInstruction } from "./HighlightedInstruction";
+import {
+  useProgramExampleContext,
+  HighlightedInstruction,
+} from "@ethdebug/programs-react";
 
 // imported for style legend
 import "./SourceContents.css";

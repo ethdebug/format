@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Specification overview
 
-The **ethdebug format** is currently in the design phase and specification is
+**ethdebug/format** is currently in the design phase and specification is
 only just beginning.
 
 ## Contents
@@ -31,6 +31,12 @@ This specification currently contains the following primary schemas:
   annotated compiled bytecode.
 </dd>
 
+<dt>[**ethdebug/format/info**](/spec/info/overview)</dt>
+<dd>
+  A schema for bundling all debug information for a compilation, including
+  programs, shared types, sources, and compilation metadata.
+</dd>
+
 </dl>
 
 In addition, this format defines namespaces containing schemas for common
@@ -53,6 +59,11 @@ concerns:
 
 </dl>
 
+:::tip[New to the format?]
+For an introduction to the concepts behind these schemas, see the
+[conceptual overview](/docs/concepts).
+:::
+
 These schemas are specified as [JSON Schema](https://json-schema.org)
 documents, draft 2020-12.
 
@@ -70,7 +81,7 @@ informally-described constraints). Sections within this specification use the
 term "this schema" to refer to whatever schema is related to the section in
 question.
 
-This specification uses the terms "known" and "unknown" synomously to mean
+This specification uses the terms "known" and "unknown" synonymously to mean
 "within the scope of this format" and "outside the scope of this format",
 respectively.
 

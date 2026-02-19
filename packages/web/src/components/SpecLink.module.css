@@ -1,0 +1,47 @@
+.container {
+  margin-bottom: 1.5rem;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.link:hover {
+  background: var(--ifm-color-emphasis-200);
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.label {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.875rem;
+}
+
+.schema {
+  font-weight: 600;
+  color: var(--ifm-font-color-base);
+}
+
+.arrow {
+  color: var(--ifm-color-primary);
+  font-weight: 500;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .link {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-emphasis-400);
+}
+
+[data-theme="dark"] .link:hover {
+  background: var(--ifm-color-emphasis-200);
+}

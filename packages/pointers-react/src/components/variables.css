@@ -1,0 +1,116 @@
+/**
+ * CSS custom properties for @ethdebug/pointers-react components.
+ *
+ * These variables provide theme-aware styling that integrates with
+ * Docusaurus/Infima theming.
+ */
+
+:root {
+  /* Background colors */
+  --pointers-bg-primary: #ffffff;
+  --pointers-bg-secondary: #f5f6f7;
+  --pointers-bg-code: #f5f6f7;
+  --pointers-bg-hover: rgba(0, 0, 0, 0.05);
+  --pointers-bg-highlight: rgba(9, 105, 218, 0.1);
+
+  /* Border colors */
+  --pointers-border-primary: #dadde1;
+  --pointers-border-secondary: #eaecef;
+  --pointers-border-highlight: #0969da;
+
+  /* Text colors */
+  --pointers-text-primary: #1c1e21;
+  --pointers-text-secondary: #606770;
+  --pointers-text-muted: #898989;
+  --pointers-text-code: #1c1e21;
+
+  /* Syntax highlighting - light theme */
+  --pointers-syntax-keyword: #0550ae;
+  --pointers-syntax-type: #6f42c1;
+  --pointers-syntax-string: #0a3069;
+  --pointers-syntax-number: #0550ae;
+  --pointers-syntax-property: #8250df;
+
+  /* Region type colors */
+  --pointers-region-storage: #1a7f37;
+  --pointers-region-storage-bg: rgba(26, 127, 55, 0.1);
+  --pointers-region-memory: #0969da;
+  --pointers-region-memory-bg: rgba(9, 105, 218, 0.1);
+  --pointers-region-stack: #8250df;
+  --pointers-region-stack-bg: rgba(130, 80, 223, 0.1);
+  --pointers-region-calldata: #bf8700;
+  --pointers-region-calldata-bg: rgba(191, 135, 0, 0.1);
+  --pointers-region-returndata: #cf222e;
+  --pointers-region-returndata-bg: rgba(207, 34, 46, 0.1);
+  --pointers-region-code: #6e7781;
+  --pointers-region-code-bg: rgba(110, 119, 129, 0.1);
+  --pointers-region-transient: #953800;
+  --pointers-region-transient-bg: rgba(149, 56, 0, 0.1);
+
+  /* Accent colors */
+  --pointers-accent-blue: #0969da;
+  --pointers-accent-blue-bg: rgba(9, 105, 218, 0.1);
+  --pointers-accent-green: #1a7f37;
+  --pointers-accent-green-bg: rgba(26, 127, 55, 0.1);
+  --pointers-accent-red: #cf222e;
+  --pointers-accent-purple: #8250df;
+
+  /* Data display */
+  --pointers-data-bg: #f6f8fa;
+  --pointers-data-border: #d0d7de;
+}
+
+[data-theme="dark"] {
+  /* Background colors */
+  --pointers-bg-primary: #1e1e1e;
+  --pointers-bg-secondary: #2d2d30;
+  --pointers-bg-code: #2d2d30;
+  --pointers-bg-hover: rgba(255, 255, 255, 0.05);
+  --pointers-bg-highlight: rgba(86, 156, 214, 0.15);
+
+  /* Border colors */
+  --pointers-border-primary: #3e3e42;
+  --pointers-border-secondary: #454545;
+  --pointers-border-highlight: #569cd6;
+
+  /* Text colors */
+  --pointers-text-primary: #cccccc;
+  --pointers-text-secondary: #969696;
+  --pointers-text-muted: #858585;
+  --pointers-text-code: #d4d4d4;
+
+  /* Syntax highlighting - dark theme */
+  --pointers-syntax-keyword: #569cd6;
+  --pointers-syntax-type: #4ec9b0;
+  --pointers-syntax-string: #ce9178;
+  --pointers-syntax-number: #b5cea8;
+  --pointers-syntax-property: #9cdcfe;
+
+  /* Region type colors */
+  --pointers-region-storage: #4ec9b0;
+  --pointers-region-storage-bg: rgba(78, 201, 176, 0.15);
+  --pointers-region-memory: #569cd6;
+  --pointers-region-memory-bg: rgba(86, 156, 214, 0.15);
+  --pointers-region-stack: #c586c0;
+  --pointers-region-stack-bg: rgba(197, 134, 192, 0.15);
+  --pointers-region-calldata: #dcdcaa;
+  --pointers-region-calldata-bg: rgba(220, 220, 170, 0.15);
+  --pointers-region-returndata: #f14c4c;
+  --pointers-region-returndata-bg: rgba(241, 76, 76, 0.15);
+  --pointers-region-code: #858585;
+  --pointers-region-code-bg: rgba(133, 133, 133, 0.15);
+  --pointers-region-transient: #ce9178;
+  --pointers-region-transient-bg: rgba(206, 145, 120, 0.15);
+
+  /* Accent colors */
+  --pointers-accent-blue: #569cd6;
+  --pointers-accent-blue-bg: rgba(86, 156, 214, 0.15);
+  --pointers-accent-green: #4ec9b0;
+  --pointers-accent-green-bg: rgba(78, 201, 176, 0.2);
+  --pointers-accent-red: #f14c4c;
+  --pointers-accent-purple: #c586c0;
+
+  /* Data display */
+  --pointers-data-bg: #252526;
+  --pointers-data-border: #3e3e42;
+}

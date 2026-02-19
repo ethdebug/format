@@ -1,5 +1,6 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import path from "path";
+import webpack from "webpack";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 import type { Configuration } from "webpack";
@@ -59,12 +60,17 @@ const config: Config = {
                 },
               ],
             },
+            plugins: [
+              new webpack.ProvidePlugin({
+                Buffer: ["buffer", "Buffer"],
+              }),
+            ],
             resolve: {
               alias: {
                 react: path.resolve("../../node_modules/react"),
               },
               fallback: {
-                buffer: false,
+                buffer: require.resolve("buffer/"),
                 util: false,
               },
               fullySpecified: false,
@@ -168,7 +174,7 @@ const config: Config = {
             },
             {
               label: "Known challenges",
-              to: "/docs/known-challenges",
+              to: "/docs/reference/challenges",
             },
           ],
         },

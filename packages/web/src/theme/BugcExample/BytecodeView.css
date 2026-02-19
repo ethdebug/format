@@ -1,0 +1,115 @@
+/**
+ * Styles for BytecodeView component.
+ */
+
+@import "./variables.css";
+
+.bytecode-view {
+  height: 100%;
+  overflow: auto;
+}
+
+.bytecode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--bugc-bg-secondary);
+  border-bottom: 1px solid var(--bugc-border-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bytecode-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--bugc-text-primary);
+}
+
+.bytecode-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.813rem;
+  color: var(--bugc-text-secondary);
+}
+
+.bytecode-content {
+  padding: 1rem;
+}
+
+.bytecode-section {
+  margin-bottom: 2rem;
+}
+
+.bytecode-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--bugc-text-primary);
+}
+
+.bytecode-hex,
+.bytecode-disassembly {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--bugc-bg-code);
+  border: 1px solid var(--bugc-border-primary);
+  border-radius: 4px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.813rem;
+  line-height: 1.5;
+  color: var(--bugc-text-code);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.bytecode-disassembly {
+  white-space: pre;
+  word-break: normal;
+}
+
+.bytecode-separator {
+  margin: 2rem 1rem;
+  border: none;
+  border-top: 1px solid var(--bugc-border-primary);
+}
+
+.bytecode-disassembly-interactive {
+  padding: 1rem;
+  background-color: var(--bugc-bg-code);
+  border: 1px solid var(--bugc-border-primary);
+  border-radius: 4px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.813rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.opcode-line {
+  display: flex;
+  gap: 1rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+
+.opcode-line.has-debug-info:hover {
+  background-color: var(--bugc-bg-hover);
+}
+
+.opcode-line .pc {
+  color: var(--bugc-syntax-address);
+  min-width: 3rem;
+  text-align: right;
+}
+
+.opcode-line .opcode {
+  color: var(--bugc-syntax-opcode);
+  min-width: 6rem;
+  font-weight: 500;
+}
+
+.opcode-line .immediates {
+  color: var(--bugc-syntax-number);
+}

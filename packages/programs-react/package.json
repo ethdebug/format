@@ -1,0 +1,53 @@
+{
+  "name": "@ethdebug/programs-react",
+  "version": "0.1.0-0",
+  "description": "React components for visualizing ethdebug/format program annotations",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "MIT",
+  "imports": {
+    "#components/*": {
+      "types": "./src/components/*.tsx",
+      "default": "./dist/src/components/*.js"
+    },
+    "#shiki/*": {
+      "types": "./src/shiki/*.ts",
+      "default": "./dist/src/shiki/*.js"
+    },
+    "#utils/*": {
+      "types": "./src/utils/*.ts",
+      "default": "./dist/src/utils/*.js"
+    }
+  },
+  "scripts": {
+    "prepare": "tsc",
+    "build": "tsc",
+    "watch": "tsc --watch --preserveWatchOutput",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ethdebug/format": "^0.1.0-0",
+    "@shikijs/langs": "^2.5.0",
+    "@shikijs/themes": "^2.5.0",
+    "shiki": "^2.5.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "jsdom": "^26.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

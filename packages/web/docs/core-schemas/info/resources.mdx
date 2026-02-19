@@ -1,0 +1,180 @@
+---
+sidebar_position: 2
+pagination_next: examples/index
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Resources
+
+<SpecLink schema="ethdebug/format/info/resources" href="/spec/info/resources" />
+
+The **ethdebug/format/info/resources** schema represents compilation-level
+shared data — information that multiple programs within a compilation might
+reference.
+
+## What resources contains
+
+Resources provide a way to avoid duplication by centralizing:
+
+- **Compilation** — compiler invocation metadata and source files
+- **Shared types** — type definitions used by multiple programs
+  (keyed by name)
+- **Shared pointers** — pointer templates used by multiple programs
+  (keyed by name)
+
+## Sources
+
+Sources are part of the `compilation` object (not a separate
+top-level field). Each source has an identifier, path, and required
+`contents`:
+
+<SchemaExample
+  schema="materials/source"
+  href="/spec/materials/source"
+  title="Source files (inside compilation)"
+>
+  {`{
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": { "name": "solc", "version": "0.8.20" },
+    "sources": [
+      {
+        "id": "source-1",
+        "path": "contracts/Token.sol",
+        "language": "solidity",
+        "contents": "// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\n..."
+      },
+      {
+        "id": "source-2",
+        "path": "contracts/Utils.sol",
+        "language": "solidity",
+        "contents": "// SPDX-License-Identifier: MIT\\n..."
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+Sources include:
+
+- **id** — identifier for cross-referencing
+- **path** — file path (relative or absolute)
+- **language** — source language
+- **contents** — the actual source code text (required)
+
+## Source ranges
+
+Throughout **ethdebug/format**, source locations are specified as ranges within
+a source file:
+
+<SchemaExample
+  schema="materials/source-range"
+  href="/spec/materials/source-range"
+  title="Source range"
+>
+  {`{
+  "source": { "id": "source-1" },
+  "range": {
+    "offset": 150,
+    "length": 25
+  }
+}`}
+</SchemaExample>
+
+This identifies bytes 150-174 in the source with id "source-1". Ranges use byte
+offsets, not line/column positions.
+
+## Compilation
+
+The `compilation` field (singular) captures information about how the
+code was compiled:
+
+<SchemaExample
+  schema="materials/compilation"
+  href="/spec/materials/compilation"
+  title="Compilation metadata"
+>
+  {`{
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": {
+      "name": "solc",
+      "version": "0.8.20"
+    },
+    "sources": [
+      {
+        "id": "source-1",
+        "path": "contracts/Token.sol",
+        "language": "solidity",
+        "contents": "// ..."
+      }
+    ],
+    "settings": { }
+  }
+}`}
+</SchemaExample>
+
+Programs reference their compilation, allowing debuggers to
+understand the build context.
+
+## Shared types
+
+Type definitions that appear in multiple programs can be defined once
+in resources and referenced by name. The `types` field is an object
+keyed by name:
+
+<SchemaExample
+  schema="info/resources"
+  href="/spec/info/resources"
+  title="Shared type definitions"
+>
+  {`{
+  "types": {
+    "struct__Coordinate": {
+      "kind": "struct",
+      "contains": [
+        { "name": "x", "type": { "kind": "uint", "bits": 128 } },
+        { "name": "y", "type": { "kind": "uint", "bits": 128 } }
+      ],
+      "definition": {
+        "name": "Coordinate",
+        "location": {
+          "source": { "id": 5 },
+          "range": { "offset": 18, "length": 55 }
+        }
+      }
+    }
+  },
+  "pointers": {}
+}`}
+</SchemaExample>
+
+Programs then reference these types by name rather than duplicating
+the full definition.
+
+## Info vs. resources
+
+The key distinction:
+
+- **info** — complete standalone representation with full metadata
+- **info/resources** — debug data without duplicating existing compiler output
+
+Since compilers typically already produce structured JSON with compilation
+metadata, they can emit resources objects and let tooling combine them into
+full info objects.
+
+## Related schemas
+
+Resources builds on schemas from the **ethdebug/format/materials** namespace:
+
+- **[Source](/spec/materials/source)** — individual source file representation
+- **[Source range](/spec/materials/source-range)** — location within a source
+- **[Compilation](/spec/materials/compilation)** — compiler invocation details
+- **[Identifiers](/spec/materials/id)** — ID and reference patterns
+
+## Specification
+
+For the formal schema definition, see the
+[info/resources specification](/spec/info/resources).
