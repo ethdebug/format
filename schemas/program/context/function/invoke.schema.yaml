@@ -3,12 +3,14 @@ $id: "schema:ethdebug/format/program/context/function/invoke"
 
 title: ethdebug/format/program/context/function/invoke
 description: |
-  Context for a function being invoked. Covers internal calls
-  (JUMP), external contract calls (CALL, DELEGATECALL, STATICCALL),
-  and contract creation (CREATE, CREATE2).
+  This context indicates that the marked instruction is
+  associated with a function invocation. The invocation is one
+  of three kinds: an internal call via JUMP, an external message
+  call (CALL / DELEGATECALL / STATICCALL), or a contract
+  creation (CREATE / CREATE2).
 
-  Extends the function identity schema with variant-specific
-  fields such as call targets, gas, value, and input data.
+  Extends the function identity schema with kind-specific fields
+  such as call targets, gas, value, and input data.
 
 type: object
 properties:
@@ -16,9 +18,10 @@ properties:
     type: object
     title: Function invocation
     description: |
-      Represents a function invocation: an internal call (via JUMP),
-      an external call (via CALL opcodes), or a contract creation
-      (via CREATE/CREATE2).
+      Describes the function invocation associated with this
+      context. Must indicate exactly one invocation kind: `jump`
+      for an internal call, `message` for an external call, or
+      `create` for a contract creation.
 
     $ref: "schema:ethdebug/format/program/context/function"
 
@@ -49,8 +52,8 @@ $defs:
   InternalCall:
     title: Internal call
     description: |
-      Represents an internal function call within the same contract
-      (via JUMP/JUMPI).
+      An internal function call within the same contract, entered
+      via JUMP/JUMPI.
     type: object
     properties:
       jump:
@@ -88,10 +91,10 @@ $defs:
   ExternalCall:
     title: External call
     description: |
-      Represents an external contract call via CALL, DELEGATECALL,
-      or STATICCALL. The type of call may be indicated by setting
-      `delegate` or `static` to `true`. If neither flag is present,
-      the invocation represents a regular CALL.
+      An external message call to another contract via CALL,
+      DELEGATECALL, or STATICCALL. Set `delegate` or `static` to
+      `true` to indicate the call variant; if neither is present
+      the call is a regular CALL.
     type: object
     properties:
       message:
@@ -169,8 +172,8 @@ $defs:
   ContractCreation:
     title: Contract creation
     description: |
-      Represents a contract creation operation via CREATE or
-      CREATE2. The presence of `salt` implies CREATE2.
+      A contract creation via CREATE or CREATE2. The presence
+      of `salt` distinguishes CREATE2 from CREATE.
     type: object
     properties:
       create:

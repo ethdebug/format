@@ -3,13 +3,13 @@ $id: "schema:ethdebug/format/program/context/function"
 
 title: ethdebug/format/program/context/function
 description: |
-  Properties for identifying a function in the source language.
-  Used by function context schemas (invoke, return, revert) to
-  associate a compile-time function identity with runtime
-  execution events.
+  Properties for identifying a source-language function. Function
+  context schemas (invoke, return, revert) extend this schema so
+  that each context can optionally indicate which function it
+  pertains to.
 
   All properties are optional so that compilers may provide as
-  much or as little information as is available.
+  much or as little detail as is available.
 
 type: object
 properties:
