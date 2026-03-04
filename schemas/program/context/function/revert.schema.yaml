@@ -3,9 +3,10 @@ $id: "schema:ethdebug/format/program/context/function/revert"
 
 title: ethdebug/format/program/context/function/revert
 description: |
-  Context for a function that reverts. Extends the function
-  identity schema with optional revert reason data and/or a
-  numeric panic code.
+  This context indicates that the marked instruction is
+  associated with a function revert. Extends the function
+  identity schema with an optional pointer to revert reason
+  data and/or a numeric panic code.
 
 type: object
 properties:

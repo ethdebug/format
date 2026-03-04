@@ -3,9 +3,10 @@ $id: "schema:ethdebug/format/program/context/function/return"
 
 title: ethdebug/format/program/context/function/return
 description: |
-  Context for a function returning successfully. Extends the
-  function identity schema with the return data pointer and,
-  for external calls, the success status.
+  This context indicates that the marked instruction is
+  associated with a successful function return. Extends the
+  function identity schema with a pointer to the return data
+  and, for external calls, the success status.
 
 type: object
 properties:
