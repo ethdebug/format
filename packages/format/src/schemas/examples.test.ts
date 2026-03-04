@@ -13,7 +13,6 @@ const idsOfSchemasAllowedToOmitExamples = new Set([
   "schema:ethdebug/format/type/elementary",
   "schema:ethdebug/format/pointer/region",
   "schema:ethdebug/format/pointer/collection",
-  "schema:ethdebug/format/program/context/function",
 ]);
 
 describe("Examples", () => {

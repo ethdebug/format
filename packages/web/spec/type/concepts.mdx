@@ -158,18 +158,24 @@ possibly includes other fields alongside `"type"`.
   </Tabs>
 </details>
 
-## Type wrappers and type references
+## Type specifiers, wrappers, and references
 
-This schema defines the concept of a type wrapper and the related concept of a
-type reference.
+This schema defines three related concepts for working with types
+indirectly: **type specifiers**, **type wrappers**, and
+**type references**.
 
-Type wrappers serve to encapsulate a type representation alongside other fields
-in the same object, and to facilitate discriminating which polymorphic form is
-used for a particular complex type.
+A **type specifier** is either a complete type representation or a
+reference to a known type by ID. Type specifiers appear wherever a
+type or reference to a type is needed&mdash;as the value of a type
+wrapper's `"type"` field, as properties on variable and function
+context schemas, etc.
 
-Type wrappers are any object of the form
-`{ "type": <type>, ...otherProperties }`, where `<type>` is either a complete
-type representation or a reference to another type by ID.
+A **type wrapper** is any object of the form
+`{ "type": <specifier>, ...otherProperties }`, where `<specifier>`
+is a type specifier. Type wrappers serve to encapsulate a type
+specifier alongside other fields in the same object, and to
+facilitate discriminating which polymorphic form is used for a
+particular complex type.
 
 <details>
 <summary>Example type wrapper with complete type representation</summary>
@@ -198,18 +204,23 @@ type representation or a reference to another type by ID.
 
 </details>
 
-Note that **ethdebug/format/type** places no restriction on IDs other than
-that they must be either a number or a string. Other components of this format
-at-large may impose restrictions, however.
+A **type reference** is the simplest form of type specifier: an
+object containing only an `"id"` field. Note that
+**ethdebug/format/type** places no restriction on IDs other than
+that they must be either a number or a string. Other components
+of this format at-large may impose restrictions, however.
+
+### Type specifier schema
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/type/specifier" }}
+/>
 
 ### Type wrapper schema
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/type/wrapper" }} />
 
 ### Type reference schema
-
-A type reference is an object containing the single `"id"` field. This field
-must be a string or a number.
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/type/reference" }} />
 

@@ -1,0 +1,20 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/specifier"
+
+title: ethdebug/format/type/specifier
+description: |
+  A type specifier: either a complete type representation or a
+  reference to a known type by ID. This schema discriminates
+  between the two forms based on the presence of an `id` field.
+
+if:
+  required: [id]
+then:
+  $ref: "schema:ethdebug/format/type/reference"
+else:
+  $ref: "schema:ethdebug/format/type"
+
+examples:
+  - kind: uint
+    bits: 256
+  - id: 42
