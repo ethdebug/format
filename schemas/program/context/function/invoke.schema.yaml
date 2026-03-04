@@ -24,15 +24,15 @@ properties:
 
     allOf:
       - oneOf:
-          - required: [internal]
-          - required: [call]
+          - required: [jump]
+          - required: [message]
           - required: [create]
       - if:
-          required: [internal]
+          required: [jump]
         then:
           $ref: "#/$defs/InternalCall"
       - if:
-          required: [call]
+          required: [message]
         then:
           $ref: "#/$defs/ExternalCall"
       - if:
@@ -53,7 +53,7 @@ $defs:
       (via JUMP/JUMPI).
     type: object
     properties:
-      internal:
+      jump:
         description: |
           Indicates this is an internal function call (JUMP/JUMPI).
         const: true
@@ -83,7 +83,7 @@ $defs:
           - pointer
         additionalProperties: false
 
-    required: [internal, target]
+    required: [jump, target]
 
   ExternalCall:
     title: External call
@@ -94,9 +94,10 @@ $defs:
       the invocation represents a regular CALL.
     type: object
     properties:
-      call:
+      message:
         description: |
-          Indicates this is an external contract call.
+          Indicates this is an external message call (CALL,
+          DELEGATECALL, or STATICCALL).
         const: true
 
       target:
@@ -159,7 +160,11 @@ $defs:
           Indicates this external call is a STATICCALL.
         const: true
 
-    required: [call, target]
+    not:
+      description: Only one of `delegate` and `static` can be set at a time.
+      required: [delegate, static]
+
+    required: [message, target]
 
   ContractCreation:
     title: Contract creation
@@ -230,7 +235,7 @@ examples:
           location: code
           offset: "0x100"
           length: 1
-      internal: true
+      jump: true
       arguments:
         pointer:
           group:
@@ -246,7 +251,7 @@ examples:
         pointer:
           location: stack
           slot: 1
-      call: true
+      message: true
       gas:
         pointer:
           location: stack
@@ -272,7 +277,7 @@ examples:
         pointer:
           location: stack
           slot: 1
-      call: true
+      message: true
       delegate: true
       gas:
         pointer:
