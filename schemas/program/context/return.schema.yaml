@@ -13,6 +13,8 @@ type: object
 properties:
   return:
     type: object
+    allOf:
+      - $ref: "schema:ethdebug/format/program/context/function"
     properties:
       data:
         type: object
@@ -37,25 +39,35 @@ properties:
         required:
           - pointer
 
+    required:
+      - data
+
+    unevaluatedProperties: false
+
 required:
   - return
 
-additionalProperties: false
-
 examples:
   - return:
+      identifier: "transfer"
+      declaration:
+        source:
+          id: 1
+        range:
+          offset: 256
+          length: 80
       data:
         pointer:
           location: memory
-          offset: 0x40
-          length: 0x20
+          offset: "0x80"
+          length: "0x20"
 
   - return:
       data:
         pointer:
-          location: memory
-          offset: 0x40
-          length: 0x20
+          location: returndata
+          offset: 0
+          length: "0x20"
       success:
         pointer:
           location: stack
@@ -64,6 +76,5 @@ examples:
   - return:
       data:
         pointer:
-          location: returndata
-          offset: 0
-          length: 32
+          location: stack
+          slot: 0

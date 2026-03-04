@@ -224,13 +224,36 @@ const programSchemaIndex: SchemaIndex = {
     href: "/spec/program/context",
   },
 
-  ...["name", "code", "variables", "remark", "pick", "gather", "frame"]
+  ...[
+    "name",
+    "code",
+    "variables",
+    "remark",
+    "pick",
+    "gather",
+    "frame",
+    "invoke",
+    "return",
+    "revert",
+  ]
     .map((name) => ({
       [`schema:ethdebug/format/program/context/${name}`]: {
         href: `/spec/program/context/${name}`,
       },
     }))
     .reduce((a, b) => ({ ...a, ...b }), {}),
+
+  "schema:ethdebug/format/program/context/invoke#/$defs/InternalFunctionInvocation":
+    {
+      title: "Internal function invocation schema",
+      href: "/spec/program/context/invoke#internal-function-invocation",
+    },
+
+  "schema:ethdebug/format/program/context/invoke#/$defs/ExternalFunctionInvocation":
+    {
+      title: "External function invocation schema",
+      href: "/spec/program/context/invoke#external-function-invocation",
+    },
 };
 
 const infoSchemaIndex: SchemaIndex = {

@@ -1,0 +1,29 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/function"
+
+title: ethdebug/format/program/context/function
+description: |
+  Common properties for identifying the function associated with
+  an invoke, return, or revert context. These properties mirror
+  the Variable schema's identity fields (identifier, declaration,
+  type).
+
+type: object
+properties:
+  identifier:
+    type: string
+    description: |
+      The function's name in the source language.
+
+  declaration:
+    description: |
+      Source range where the function is declared.
+    $ref: "schema:ethdebug/format/materials/source-range"
+
+  type:
+    description: |
+      The function's type, specified either as a full
+      ethdebug/format/type representation or a type reference.
+    oneOf:
+      - $ref: "schema:ethdebug/format/type"
+      - $ref: "schema:ethdebug/format/type/reference"

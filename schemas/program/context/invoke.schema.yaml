@@ -3,14 +3,12 @@ $id: "schema:ethdebug/format/program/context/invoke"
 
 title: ethdebug/format/program/context/invoke
 description: |
-  Schema for representing function invocation context at a specific point in
-  program execution.
+  Schema for representing function invocation context at a specific
+  point in program execution.
 
-  This context captures information about function calls, including both
-  internal function calls (via JUMP) and external contract calls (via CALL,
-  DELEGATECALL, STATICCALL, etc.). The schema distinguishes between these
-  different invocation types through the use of `internal` and `external`
-  boolean properties.
+  This context captures information about function calls, including
+  both internal function calls (via JUMP) and external contract calls
+  (via CALL, DELEGATECALL, STATICCALL, etc.).
 
 type: object
 properties:
@@ -18,22 +16,39 @@ properties:
     type: object
     title: Function invocation
     description: |
-      Represents a function invocation, either internal (via JUMP) or external
-      (via CALL opcodes). The schema enforces that exactly one of `internal`
-      or `external` must be true.
+      Represents a function invocation, either internal (via JUMP) or
+      external (via CALL opcodes).
 
-      For internal calls, only `target` and `arguments` are valid.
-      For external calls, `gas`, `value`, `input`, `salt`, `delegate`,
-      `static`, `create`, and `create2` may be used as appropriate.
+    allOf:
+      - $ref: "schema:ethdebug/format/program/context/function"
+      - oneOf:
+          - required: [internal]
+          - required: [external]
+      - if:
+          required: [internal]
+        then:
+          $ref: "#/$defs/InternalFunctionInvocation"
+      - if:
+          required: [external]
+        then:
+          $ref: "#/$defs/ExternalFunctionInvocation"
 
+    unevaluatedProperties: false
+
+required:
+  - invoke
+
+$defs:
+  InternalFunctionInvocation:
+    title: Internal function invocation
+    type: object
     properties:
       target:
         type: object
         title: Invocation target
         description: |
-          Pointer to the target of the invocation. For internal calls, this
-          typically points to a code location. For external calls, this points
-          to the address and/or selector being called.
+          Pointer to the target of the invocation. For internal
+          calls, this typically points to a code location.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -41,22 +56,6 @@ properties:
           - pointer
         additionalProperties: false
 
-    oneOf:
-      - $ref: "#/$defs/InternalFunctionInvocation"
-      - $ref: "#/$defs/ExternalFunctionInvocation"
-
-    unevaluatedProperties: false
-
-    required:
-      - target
-
-required:
-  - invoke
-
-$defs:
-  InternalFunctionInvocation:
-    type: object
-    properties:
       internal:
         description: |
           Indicates this is an internal function call (JUMP/JUMPI).
@@ -67,28 +66,51 @@ $defs:
         title: Function arguments
         description: |
           Pointer to the arguments for an internal function call.
-          Only valid for internal calls.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
         additionalProperties: false
-    required: [internal]
+    required: [internal, target]
 
   ExternalFunctionInvocation:
+    title: External function invocation
+    description: |
+      Represents an external contract call. The type of call may be
+      indicated by setting exactly one of `delegate`, `static`,
+      `create`, or `create2` to `true`. If none of these flags is
+      present, the invocation represents a regular CALL.
     type: object
     properties:
+      target:
+        type: object
+        title: Invocation target
+        description: |
+          Pointer to the target of the invocation. For external
+          calls, this points to the address and/or selector
+          being called.
+
+          Not used for contract creation operations
+          (CREATE/CREATE2), where the creation bytecode is
+          specified via input instead.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
       external:
         description: |
-          Indicates this is an external contract call (CALL/DELEGATECALL/etc).
+          Indicates this is an external contract call.
         const: true
 
       gas:
         type: object
         title: Gas allocation
         description: |
-          Pointer to the gas allocated for an external call
+          Pointer to the gas allocated for the external call.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -100,7 +122,7 @@ $defs:
         type: object
         title: ETH value
         description: |
-          Pointer to the amount of ETH being sent with an external call.
+          Pointer to the amount of ETH being sent with the call.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -113,7 +135,6 @@ $defs:
         title: CREATE2 salt
         description: |
           Pointer to the salt value for CREATE2.
-          Only valid when create2 is true.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -125,8 +146,7 @@ $defs:
         type: object
         title: Call input data
         description: |
-          Pointer to the input data for an external call.
-          Only valid for external calls.
+          Pointer to the input data for the external call.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -135,116 +155,123 @@ $defs:
         additionalProperties: false
 
       delegate:
-        type: boolean
         description: |
           Indicates this external call is a DELEGATECALL.
-          Only valid when external is true.
+        const: true
 
       static:
-        type: boolean
         description: |
           Indicates this external call is a STATICCALL.
-          Only valid when external is true.
+        const: true
 
       create:
-        type: boolean
         description: |
-          Indicates this external call creates a new contract (CREATE).
-          Only valid when external is true.
+          Indicates this external call creates a new contract
+          (CREATE).
+        const: true
 
       create2:
-        type: boolean
         description: |
-          Indicates this external call creates a new contract (CREATE2).
-          Only valid when external is true.
+          Indicates this external call creates a new contract
+          (CREATE2).
+        const: true
+
+    allOf:
+      - if:
+          anyOf:
+            - required: [create]
+            - required: [create2]
+        then:
+          properties:
+            target: false
+        else:
+          required: [target]
 
     required: [external]
 
 examples:
   - invoke:
+      identifier: "transfer"
+      declaration:
+        source:
+          id: 1
+        range:
+          offset: 256
+          length: 80
+      type:
+        id: 42
       target:
         pointer:
           location: code
-          offset: 291
-          length: 2
+          offset: "0x100"
+          length: 1
       internal: true
       arguments:
         pointer:
-          location: stack
-          slot: 0
-          length: 3
+          group:
+            - name: "arg0"
+              location: stack
+              slot: 0
+            - name: "arg1"
+              location: stack
+              slot: 1
 
   - invoke:
       target:
         pointer:
           location: stack
-          slot: 0
+          slot: 1
       external: true
-      value:
+      gas:
         pointer:
           location: stack
-          slot: 1
-      gas:
+          slot: 0
+      value:
         pointer:
           location: stack
           slot: 2
       input:
         pointer:
-          location: memory
-          offset: 128
-          length: 68
+          group:
+            - name: "selector"
+              location: memory
+              offset: "0x80"
+              length: 4
+            - name: "arguments"
+              location: memory
+              offset: "0x84"
+              length: "0x40"
 
   - invoke:
       target:
         pointer:
           location: stack
-          slot: 0
+          slot: 1
       external: true
       delegate: true
       gas:
         pointer:
           location: stack
-          slot: 1
+          slot: 0
       input:
         pointer:
-          location: calldata
-          offset: 4
-          length: 68
+          location: memory
+          offset: "0x80"
+          length: "0x24"
 
   - invoke:
-      target:
+      external: true
+      create2: true
+      value:
         pointer:
           location: stack
           slot: 0
-      external: true
-      create2: true
       salt:
         pointer:
           location: stack
           slot: 1
-      value:
-        pointer:
-          location: stack
-          slot: 2
       input:
         pointer:
           location: memory
-          offset: 0
-          length: 200
-
-  - invoke:
-      target:
-        pointer:
-          location: stack
-          slot: 0
-      external: true
-      static: true
-      gas:
-        pointer:
-          location: stack
-          slot: 1
-      input:
-        pointer:
-          location: calldata
-          offset: 4
-          length: 36
+          offset: "0x80"
+          length: "0x200"
