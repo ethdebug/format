@@ -1,14 +1,14 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/program/context/invoke"
+$id: "schema:ethdebug/format/program/context/function/invoke"
 
-title: ethdebug/format/program/context/invoke
+title: ethdebug/format/program/context/function/invoke
 description: |
-  Schema for representing function invocation context at a specific
-  point in program execution.
+  Context for a function being invoked. Covers internal calls
+  (JUMP), external contract calls (CALL, DELEGATECALL, STATICCALL),
+  and contract creation (CREATE, CREATE2).
 
-  This context captures information about function calls, including
-  both internal function calls (via JUMP) and external contract calls
-  (via CALL, DELEGATECALL, STATICCALL, etc.).
+  Extends the function identity schema with variant-specific
+  fields such as call targets, gas, value, and input data.
 
 type: object
 properties:
@@ -16,22 +16,29 @@ properties:
     type: object
     title: Function invocation
     description: |
-      Represents a function invocation, either internal (via JUMP) or
-      external (via CALL opcodes).
+      Represents a function invocation: an internal call (via JUMP),
+      an external call (via CALL opcodes), or a contract creation
+      (via CREATE/CREATE2).
+
+    $ref: "schema:ethdebug/format/program/context/function"
 
     allOf:
-      - $ref: "schema:ethdebug/format/program/context/function"
       - oneOf:
           - required: [internal]
-          - required: [external]
+          - required: [call]
+          - required: [create]
       - if:
           required: [internal]
         then:
-          $ref: "#/$defs/InternalFunctionInvocation"
+          $ref: "#/$defs/InternalCall"
       - if:
-          required: [external]
+          required: [call]
         then:
-          $ref: "#/$defs/ExternalFunctionInvocation"
+          $ref: "#/$defs/ExternalCall"
+      - if:
+          required: [create]
+        then:
+          $ref: "#/$defs/ContractCreation"
 
     unevaluatedProperties: false
 
@@ -39,10 +46,18 @@ required:
   - invoke
 
 $defs:
-  InternalFunctionInvocation:
-    title: Internal function invocation
+  InternalCall:
+    title: Internal call
+    description: |
+      Represents an internal function call within the same contract
+      (via JUMP/JUMPI).
     type: object
     properties:
+      internal:
+        description: |
+          Indicates this is an internal function call (JUMP/JUMPI).
+        const: true
+
       target:
         type: object
         title: Invocation target
@@ -56,11 +71,6 @@ $defs:
           - pointer
         additionalProperties: false
 
-      internal:
-        description: |
-          Indicates this is an internal function call (JUMP/JUMPI).
-        const: true
-
       arguments:
         type: object
         title: Function arguments
@@ -72,17 +82,23 @@ $defs:
         required:
           - pointer
         additionalProperties: false
+
     required: [internal, target]
 
-  ExternalFunctionInvocation:
-    title: External function invocation
+  ExternalCall:
+    title: External call
     description: |
-      Represents an external contract call. The type of call may be
-      indicated by setting exactly one of `delegate`, `static`,
-      `create`, or `create2` to `true`. If none of these flags is
-      present, the invocation represents a regular CALL.
+      Represents an external contract call via CALL, DELEGATECALL,
+      or STATICCALL. The type of call may be indicated by setting
+      `delegate` or `static` to `true`. If neither flag is present,
+      the invocation represents a regular CALL.
     type: object
     properties:
+      call:
+        description: |
+          Indicates this is an external contract call.
+        const: true
+
       target:
         type: object
         title: Invocation target
@@ -90,21 +106,12 @@ $defs:
           Pointer to the target of the invocation. For external
           calls, this points to the address and/or selector
           being called.
-
-          Not used for contract creation operations
-          (CREATE/CREATE2), where the creation bytecode is
-          specified via input instead.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
         additionalProperties: false
-
-      external:
-        description: |
-          Indicates this is an external contract call.
-        const: true
 
       gas:
         type: object
@@ -123,18 +130,6 @@ $defs:
         title: ETH value
         description: |
           Pointer to the amount of ETH being sent with the call.
-        properties:
-          pointer:
-            $ref: "schema:ethdebug/format/pointer"
-        required:
-          - pointer
-        additionalProperties: false
-
-      salt:
-        type: object
-        title: CREATE2 salt
-        description: |
-          Pointer to the salt value for CREATE2.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -164,30 +159,60 @@ $defs:
           Indicates this external call is a STATICCALL.
         const: true
 
+    required: [call, target]
+
+  ContractCreation:
+    title: Contract creation
+    description: |
+      Represents a contract creation operation via CREATE or
+      CREATE2. The presence of `salt` implies CREATE2.
+    type: object
+    properties:
       create:
         description: |
-          Indicates this external call creates a new contract
-          (CREATE).
+          Indicates this is a contract creation operation
+          (CREATE or CREATE2).
         const: true
 
-      create2:
+      value:
+        type: object
+        title: ETH value
         description: |
-          Indicates this external call creates a new contract
-          (CREATE2).
-        const: true
+          Pointer to the amount of ETH being sent with the
+          creation.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
 
-    allOf:
-      - if:
-          anyOf:
-            - required: [create]
-            - required: [create2]
-        then:
-          properties:
-            target: false
-        else:
-          required: [target]
+      salt:
+        type: object
+        title: CREATE2 salt
+        description: |
+          Pointer to the salt value for CREATE2. Its presence
+          implies this is a CREATE2 operation.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
 
-    required: [external]
+      input:
+        type: object
+        title: Creation bytecode
+        description: |
+          Pointer to the creation bytecode for the new contract.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+        additionalProperties: false
+
+    required: [create]
 
 examples:
   - invoke:
@@ -221,7 +246,7 @@ examples:
         pointer:
           location: stack
           slot: 1
-      external: true
+      call: true
       gas:
         pointer:
           location: stack
@@ -247,7 +272,7 @@ examples:
         pointer:
           location: stack
           slot: 1
-      external: true
+      call: true
       delegate: true
       gas:
         pointer:
@@ -260,8 +285,7 @@ examples:
           length: "0x24"
 
   - invoke:
-      external: true
-      create2: true
+      create: true
       value:
         pointer:
           location: stack

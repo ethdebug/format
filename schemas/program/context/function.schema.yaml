@@ -3,15 +3,19 @@ $id: "schema:ethdebug/format/program/context/function"
 
 title: ethdebug/format/program/context/function
 description: |
-  Common properties for identifying the function associated with
-  an invoke, return, or revert context. These properties mirror
-  the Variable schema's identity fields (identifier, declaration,
-  type).
+  Properties for identifying a function in the source language.
+  Used by function context schemas (invoke, return, revert) to
+  associate a compile-time function identity with runtime
+  execution events.
+
+  All properties are optional so that compilers may provide as
+  much or as little information as is available.
 
 type: object
 properties:
   identifier:
     type: string
+    minLength: 1
     description: |
       The function's name in the source language.
 
@@ -24,6 +28,17 @@ properties:
     description: |
       The function's type, specified either as a full
       ethdebug/format/type representation or a type reference.
-    oneOf:
-      - $ref: "schema:ethdebug/format/type"
-      - $ref: "schema:ethdebug/format/type/reference"
+    $ref: "schema:ethdebug/format/type/specifier"
+
+examples:
+  - identifier: "transfer"
+    declaration:
+      source:
+        id: 1
+      range:
+        offset: 256
+        length: 80
+    type:
+      id: 42
+  - identifier: "balanceOf"
+  - {}

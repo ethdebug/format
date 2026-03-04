@@ -76,21 +76,21 @@ allOf:
       description: |
         Function invocation context, representing an internal function call
         (via JUMP) or an external contract call (via CALL opcodes).
-      $ref: "schema:ethdebug/format/program/context/invoke"
+      $ref: "schema:ethdebug/format/program/context/function/invoke"
   - if:
       required: ["return"]
     then:
       description: |
         Function return context, representing the data returned from a
         function and, for external calls, the success status.
-      $ref: "schema:ethdebug/format/program/context/return"
+      $ref: "schema:ethdebug/format/program/context/function/return"
   - if:
       required: ["revert"]
     then:
       description: |
         Function revert context, representing revert reason data or a
         panic code for built-in assertion failures.
-      $ref: "schema:ethdebug/format/program/context/revert"
+      $ref: "schema:ethdebug/format/program/context/function/revert"
 
 unevaluatedProperties: false
 
