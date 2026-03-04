@@ -13,6 +13,8 @@ type: object
 properties:
   revert:
     type: object
+    allOf:
+      - $ref: "schema:ethdebug/format/program/context/function"
     properties:
       reason:
         type: object
@@ -34,25 +36,26 @@ properties:
           Languages may define their own panic code conventions
           (e.g., Solidity uses codes like 0x11 for arithmetic overflow).
 
+    unevaluatedProperties: false
+
 required:
   - revert
 
-additionalProperties: false
-
 examples:
   - revert:
+      identifier: "transfer"
       reason:
         pointer:
           location: memory
-          offset: 0x40
-          length: 0x60
+          offset: "0x80"
+          length: "0x64"
 
   - revert:
-      panic: 0x11
+      panic: 17
 
   - revert:
       reason:
         pointer:
           location: returndata
           offset: 0
-          length: 100
+          length: "0x64"

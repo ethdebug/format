@@ -1,0 +1,38 @@
+---
+sidebar_position: 8
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Invocation contexts
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/invoke" }}
+/>
+
+## Internal function invocation
+
+An internal function invocation represents a call within the same
+contract via JUMP/JUMPI. The target points to a code location and
+arguments are passed on the stack.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/invoke" }}
+  pointer="#/$defs/InternalFunctionInvocation"
+/>
+
+## External function invocation
+
+An external function invocation represents a call to another contract
+via CALL, DELEGATECALL, STATICCALL, CREATE, or CREATE2. The type of
+call may be indicated by setting exactly one of `delegate`, `static`,
+`create`, or `create2` to `true`. If none of these flags is present,
+the invocation represents a regular CALL.
+
+For CREATE and CREATE2 operations, the `target` field is forbidden
+since the creation bytecode is specified via `input` instead.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/invoke" }}
+  pointer="#/$defs/ExternalFunctionInvocation"
+/>
