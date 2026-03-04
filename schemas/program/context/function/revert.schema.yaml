@@ -1,27 +1,26 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/program/context/revert"
+$id: "schema:ethdebug/format/program/context/function/revert"
 
-title: ethdebug/format/program/context/revert
+title: ethdebug/format/program/context/function/revert
 description: |
-  Schema for representing function revert context at a specific point in
-  program execution.
-
-  This context captures information about function reverts, including
-  revert reason data or panic codes.
+  Context for a function that reverts. Extends the function
+  identity schema with optional revert reason data and/or a
+  numeric panic code.
 
 type: object
 properties:
   revert:
     type: object
-    allOf:
-      - $ref: "schema:ethdebug/format/program/context/function"
+
+    $ref: "schema:ethdebug/format/program/context/function"
+
     properties:
       reason:
         type: object
         title: Revert reason
         description: |
-          Pointer to the revert reason data. This typically contains an
-          ABI-encoded error message or custom error data.
+          Pointer to the revert reason data. This typically contains
+          an ABI-encoded error message or custom error data.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -34,7 +33,8 @@ properties:
         description: |
           Numeric panic code for built-in assertion failures.
           Languages may define their own panic code conventions
-          (e.g., Solidity uses codes like 0x11 for arithmetic overflow).
+          (e.g., Solidity uses codes like 0x11 for arithmetic
+          overflow).
 
     unevaluatedProperties: false
 

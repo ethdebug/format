@@ -1,0 +1,44 @@
+---
+sidebar_position: 1
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Invocation contexts
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+/>
+
+## Internal call
+
+An internal call represents a function call within the same contract
+via JUMP/JUMPI. The target points to a code location and arguments
+are passed on the stack.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/InternalCall"
+/>
+
+## External call
+
+An external call represents a call to another contract via CALL,
+DELEGATECALL, or STATICCALL. The type of call may be indicated by
+setting `delegate` or `static` to `true`. If neither flag is present,
+the invocation represents a regular CALL.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/ExternalCall"
+/>
+
+## Contract creation
+
+A contract creation represents a CREATE or CREATE2 operation. The
+presence of `salt` implies CREATE2.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/ContractCreation"
+/>

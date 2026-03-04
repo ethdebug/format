@@ -1,20 +1,19 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schema:ethdebug/format/program/context/return"
+$id: "schema:ethdebug/format/program/context/function/return"
 
-title: ethdebug/format/program/context/return
+title: ethdebug/format/program/context/function/return
 description: |
-  Schema for representing function return context at a specific point in
-  program execution.
-
-  This context captures information about successful function returns,
-  including the return data and, for external calls, the success status.
+  Context for a function returning successfully. Extends the
+  function identity schema with the return data pointer and,
+  for external calls, the success status.
 
 type: object
 properties:
   return:
     type: object
-    allOf:
-      - $ref: "schema:ethdebug/format/program/context/function"
+
+    $ref: "schema:ethdebug/format/program/context/function"
+
     properties:
       data:
         type: object
