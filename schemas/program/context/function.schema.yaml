@@ -31,14 +31,22 @@ properties:
     $ref: "schema:ethdebug/format/type/specifier"
 
 examples:
+  # All three identity fields provided: the compiler knows the
+  # function name, where it was declared, and its type.
   - identifier: "transfer"
     declaration:
       source:
-        id: 1
+        id: 0
       range:
-        offset: 256
-        length: 80
+        offset: 128
+        length: 95
     type:
-      id: 42
+      id: 7
+
+  # Only the function name is known.
   - identifier: "balanceOf"
+
+  # No identity information. The compiler knows that a function
+  # context applies but cannot attribute it to a specific
+  # function (e.g., an indirect call through a function pointer).
   - {}

@@ -223,38 +223,68 @@ $defs:
     required: [create]
 
 examples:
+  # -----------------------------------------------------------
+  # Internal call: transfer(address, uint256)
+  # -----------------------------------------------------------
+  # This context would mark the JUMP instruction that enters
+  # the function. Before the jump, the compiler has arranged
+  # the stack as follows (top first):
+  #
+  #   slot 0: jump destination (entry PC of `transfer`)
+  #   slot 1: return label
+  #   slot 2: first argument  (`to`)
+  #   slot 3: second argument (`amount`)
+  #
+  # The `target` pointer reads the jump destination from the
+  # stack; `arguments` uses a group to name each argument's
+  # stack position.
   - invoke:
       identifier: "transfer"
       declaration:
         source:
-          id: 1
+          id: 0
         range:
-          offset: 256
-          length: 80
+          offset: 128
+          length: 95
       type:
-        id: 42
+        id: 7
+      jump: true
       target:
         pointer:
-          location: code
-          offset: "0x100"
-          length: 1
-      jump: true
+          location: stack
+          slot: 0
       arguments:
         pointer:
           group:
-            - name: "arg0"
+            - name: "to"
               location: stack
-              slot: 0
-            - name: "arg1"
+              slot: 2
+            - name: "amount"
               location: stack
-              slot: 1
+              slot: 3
 
+  # -----------------------------------------------------------
+  # External CALL: token.balanceOf(account)
+  # -----------------------------------------------------------
+  # This context would mark the CALL instruction. The EVM
+  # expects the stack to contain (top first):
+  #
+  #   slot 0: gas to forward
+  #   slot 1: target contract address
+  #   slot 2: value (0 — balanceOf is non-payable)
+  #
+  # The ABI-encoded calldata has already been written to
+  # memory at 0x80:
+  #
+  #   0x80..0x83: function selector     (4 bytes)
+  #   0x84..0xa3: abi-encoded `account` (32 bytes)
   - invoke:
+      identifier: "balanceOf"
+      message: true
       target:
         pointer:
           location: stack
           slot: 1
-      message: true
       gas:
         pointer:
           location: stack
@@ -273,15 +303,31 @@ examples:
             - name: "arguments"
               location: memory
               offset: "0x84"
-              length: "0x40"
+              length: "0x20"
 
+  # -----------------------------------------------------------
+  # DELEGATECALL: proxy forwarding calldata
+  # -----------------------------------------------------------
+  # This context would mark a DELEGATECALL instruction in a
+  # proxy contract. The call executes the implementation's
+  # code within the proxy's storage context.
+  #
+  # DELEGATECALL takes no value parameter. Stack layout
+  # (top first):
+  #
+  #   slot 0: gas
+  #   slot 1: implementation address
+  #
+  # The original calldata has been copied into memory:
+  #
+  #   0x80..0xe3: forwarded calldata (100 bytes)
   - invoke:
+      message: true
+      delegate: true
       target:
         pointer:
           location: stack
           slot: 1
-      message: true
-      delegate: true
       gas:
         pointer:
           location: stack
@@ -290,8 +336,20 @@ examples:
         pointer:
           location: memory
           offset: "0x80"
-          length: "0x24"
+          length: "0x64"
 
+  # -----------------------------------------------------------
+  # CREATE2: deploying a child contract
+  # -----------------------------------------------------------
+  # This context would mark the CREATE2 instruction. Stack
+  # layout (top first):
+  #
+  #   slot 0: value (ETH to send to the new contract)
+  #   slot 1: salt  (for deterministic address derivation)
+  #
+  # The init code has been placed in memory:
+  #
+  #   0x80..0x027f: creation bytecode (512 bytes)
   - invoke:
       create: true
       value:
