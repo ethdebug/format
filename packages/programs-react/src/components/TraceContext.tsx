@@ -7,14 +7,17 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
 } from "react";
-import type { Program } from "@ethdebug/format";
+import type { Pointer, Program } from "@ethdebug/format";
+import { dereference, Data } from "@ethdebug/pointers";
 import {
   type TraceStep,
   extractVariablesFromInstruction,
   buildPcToInstructionMap,
 } from "#utils/mockTrace";
+import { traceStepToMachineState } from "#utils/traceState";
 
 /**
  * A variable with its resolved value.
@@ -93,8 +96,48 @@ export interface TraceProviderProps {
   program: Program;
   /** Initial step index (default: 0) */
   initialStepIndex?: number;
+  /** Pointer templates for dereference (default: {}) */
+  templates?: Pointer.Templates;
+  /** Whether to resolve variable values (default: true) */
+  resolveVariables?: boolean;
   /** Children to render */
   children: React.ReactNode;
+}
+
+/**
+ * Resolve a single variable's pointer against machine
+ * state, returning the hex-formatted value.
+ */
+async function resolveVariableValue(
+  pointer: Pointer,
+  step: TraceStep,
+  templates: Pointer.Templates,
+): Promise<string> {
+  const state = traceStepToMachineState(step);
+  const cursor = await dereference(pointer, {
+    state,
+    templates,
+  });
+  const view = await cursor.view(state);
+
+  // Collect values from all regions
+  const values: Data[] = [];
+  for (const region of view.regions) {
+    const data = await view.read(region);
+    values.push(data);
+  }
+
+  if (values.length === 0) {
+    return "0x";
+  }
+
+  // Single region: return its hex value
+  if (values.length === 1) {
+    return values[0].toHex();
+  }
+
+  // Multiple regions: concatenate hex values
+  return values.map((d) => d.toHex()).join(", ");
 }
 
 /**
@@ -104,6 +147,8 @@ export function TraceProvider({
   trace,
   program,
   initialStepIndex = 0,
+  templates = {},
+  resolveVariables: shouldResolve = true,
   children,
 }: TraceProviderProps): JSX.Element {
   const [currentStepIndex, setCurrentStepIndex] = useState(
@@ -120,23 +165,81 @@ export function TraceProvider({
     ? pcToInstruction.get(currentStep.pc)
     : undefined;
 
-  // Extract variables from current instruction
-  const currentVariables = useMemo(() => {
+  // Extract variable metadata (synchronous)
+  const extractedVars = useMemo(() => {
     if (!currentInstruction) {
       return [];
     }
+    return extractVariablesFromInstruction(currentInstruction);
+  }, [currentInstruction]);
 
-    const vars = extractVariablesFromInstruction(currentInstruction);
-    return vars.map((v) => ({
+  // Async variable resolution
+  const [currentVariables, setCurrentVariables] = useState<ResolvedVariable[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (extractedVars.length === 0) {
+      setCurrentVariables([]);
+      return;
+    }
+
+    // Immediately show variables with no values
+    const initial: ResolvedVariable[] = extractedVars.map((v) => ({
       identifier: v.identifier,
       type: v.type,
       pointer: v.pointer,
-      // Value resolution would require the full @ethdebug/pointers machinery
-      // For now we just show the variable metadata
       value: undefined,
       error: undefined,
     }));
-  }, [currentInstruction]);
+    setCurrentVariables(initial);
+
+    if (!shouldResolve || !currentStep) {
+      return;
+    }
+
+    // Track whether effect is still current
+    let cancelled = false;
+
+    // Resolve each variable with a pointer in parallel
+    const resolved = [...initial];
+    const promises = extractedVars.map(async (v, index) => {
+      if (!v.pointer) {
+        return;
+      }
+
+      try {
+        const value = await resolveVariableValue(
+          v.pointer as Pointer,
+          currentStep,
+          templates,
+        );
+        if (!cancelled) {
+          resolved[index] = {
+            ...resolved[index],
+            value,
+          };
+          setCurrentVariables([...resolved]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          resolved[index] = {
+            ...resolved[index],
+            error: err instanceof Error ? err.message : String(err),
+          };
+          setCurrentVariables([...resolved]);
+        }
+      }
+    });
+
+    Promise.all(promises).catch(() => {
+      // Individual errors already handled above
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [extractedVars, currentStep, shouldResolve, templates]);
 
   const stepForward = useCallback(() => {
     setCurrentStepIndex((prev) => Math.min(prev + 1, trace.length - 1));
