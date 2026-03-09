@@ -8,14 +8,17 @@
 import type { Machine } from "@ethdebug/pointers";
 import { Data } from "@ethdebug/pointers";
 import type { Executor } from "#executor";
+import type { TraceStep } from "#trace";
 
 /**
  * Options for creating a Machine.State adapter.
  */
 export interface MachineStateOptions {
-  /** Program counter for the current state */
+  /** A captured trace step to read stack/memory from */
+  traceStep?: TraceStep;
+  /** Program counter (overrides traceStep.pc if set) */
   programCounter?: bigint;
-  /** Opcode at the current program counter */
+  /** Opcode (overrides traceStep.opcode if set) */
   opcode?: string;
   /** Trace index (step number) */
   traceIndex?: bigint;
@@ -24,42 +27,72 @@ export interface MachineStateOptions {
 /**
  * Create a Machine.State from an Executor.
  *
- * This adapter allows using @ethdebug/pointers dereference()
- * to evaluate pointers against an EVM executor's storage state.
+ * When a traceStep is provided, stack and memory reads
+ * use the captured step data. Without a traceStep, only
+ * storage is functional (end-state adapter).
  *
- * Note: This creates an "end-state" adapter where only storage
- * is fully implemented. Stack, memory, etc. return empty/zero
- * values since we only have post-execution state access.
- *
- * @param executor - The EVM executor to read state from
- * @param options - Optional state context (PC, opcode, trace index)
- * @returns A Machine.State suitable for pointer dereferencing
+ * @param executor - EVM executor to read storage/code from
+ * @param options - Trace step and context overrides
  */
 export function createMachineState(
   executor: Executor,
   options: MachineStateOptions = {},
 ): Machine.State {
-  const { programCounter = 0n, opcode = "STOP", traceIndex = 0n } = options;
+  const { traceStep, traceIndex = 0n } = options;
+
+  const programCounter =
+    options.programCounter ?? (traceStep ? BigInt(traceStep.pc) : 0n);
+  const opcode = options.opcode ?? (traceStep ? traceStep.opcode : "STOP");
 
   return {
-    // Trace context
     traceIndex: Promise.resolve(traceIndex),
     programCounter: Promise.resolve(programCounter),
     opcode: Promise.resolve(opcode),
 
-    // Stack - not available in end-state
     stack: {
-      length: Promise.resolve(0n),
-      peek: async (): Promise<Data> => Data.zero(),
+      length: Promise.resolve(traceStep ? BigInt(traceStep.stack.length) : 0n),
+      async peek({ depth, slice }): Promise<Data> {
+        if (!traceStep) {
+          return Data.zero();
+        }
+
+        const { stack } = traceStep;
+        const index = stack.length - 1 - Number(depth);
+        if (index < 0 || index >= stack.length) {
+          return Data.zero();
+        }
+
+        const data = Data.fromUint(stack[index]).padUntilAtLeast(32);
+
+        if (slice) {
+          const sliced = new Uint8Array(data).slice(
+            Number(slice.offset),
+            Number(slice.offset + slice.length),
+          );
+          return Data.fromBytes(sliced);
+        }
+
+        return data;
+      },
     },
 
-    // Memory - not available in end-state
     memory: {
-      length: Promise.resolve(0n),
-      read: async (): Promise<Data> => Data.zero(),
+      length: Promise.resolve(
+        traceStep?.memory ? BigInt(traceStep.memory.length) : 0n,
+      ),
+      async read({ slice }): Promise<Data> {
+        if (!traceStep?.memory) {
+          return Data.zero();
+        }
+
+        const sliced = traceStep.memory.slice(
+          Number(slice.offset),
+          Number(slice.offset + slice.length),
+        );
+        return Data.fromBytes(sliced);
+      },
     },
 
-    // Storage - fully implemented via executor
     storage: {
       async read({ slot, slice }): Promise<Data> {
         const slotValue = slot.asUint();
@@ -79,25 +112,31 @@ export function createMachineState(
       },
     },
 
-    // Calldata - not available in end-state
     calldata: {
       length: Promise.resolve(0n),
       read: async (): Promise<Data> => Data.zero(),
     },
 
-    // Returndata - not available in end-state
     returndata: {
       length: Promise.resolve(0n),
       read: async (): Promise<Data> => Data.zero(),
     },
 
-    // Code - not available in end-state
     code: {
-      length: Promise.resolve(0n),
-      read: async (): Promise<Data> => Data.zero(),
+      length: (async () => {
+        const code = await executor.getCode();
+        return BigInt(code.length);
+      })(),
+      async read({ slice }): Promise<Data> {
+        const code = await executor.getCode();
+        const sliced = code.slice(
+          Number(slice.offset),
+          Number(slice.offset + slice.length),
+        );
+        return Data.fromBytes(sliced);
+      },
     },
 
-    // Transient storage - not available in end-state
     transient: {
       read: async (): Promise<Data> => Data.zero(),
     },

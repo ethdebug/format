@@ -6,6 +6,7 @@
  */
 
 import { EVM } from "@ethereumjs/evm";
+import type { InterpreterStep } from "@ethereumjs/evm";
 import { SimpleStateManager } from "@ethereumjs/statemanager";
 import { Common, Mainnet } from "@ethereumjs/common";
 import { Address, Account } from "@ethereumjs/util";
@@ -165,24 +166,25 @@ export class Executor {
       gasLimit: options.gasLimit ?? 10_000_000n,
     };
 
+    let listener: ((step: InterpreterStep) => void) | undefined;
     if (traceHandler) {
-      this.evm.events.on(
-        "step",
-        (step: { pc: number; opcode: { name: string }; stack: bigint[] }) => {
-          const traceStep: TraceStep = {
-            pc: step.pc,
-            opcode: step.opcode.name,
-            stack: [...step.stack],
-          };
-          traceHandler(traceStep);
-        },
-      );
+      listener = (step: InterpreterStep) => {
+        const traceStep: TraceStep = {
+          pc: step.pc,
+          opcode: step.opcode.name,
+          stack: [...step.stack],
+          memory: new Uint8Array(step.memory),
+          gasRemaining: step.gasLeft,
+        };
+        traceHandler(traceStep);
+      };
+      this.evm.events.on("step", listener);
     }
 
     const result = await this.evm.runCall(runCallOpts);
 
-    if (traceHandler) {
-      this.evm.events.removeAllListeners("step");
+    if (listener) {
+      this.evm.events.removeListener("step", listener);
     }
 
     const rawResult = result as ResultWithExec;
@@ -221,8 +223,8 @@ export class Executor {
       data: options.data ? hexToBytes(options.data) : new Uint8Array(),
       gasLimit: options.gasLimit ?? 10_000_000n,
       value: options.value ?? 0n,
-      origin: options.origin ?? new Address(Buffer.alloc(20)),
-      caller: options.caller ?? new Address(Buffer.alloc(20)),
+      origin: options.origin ?? new Address(hexToBytes("00".repeat(20))),
+      caller: options.caller ?? new Address(hexToBytes("00".repeat(20))),
       address: tempAddress,
     };
 
