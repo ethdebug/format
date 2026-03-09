@@ -33,3 +33,20 @@ examples:
           range:
             offset: 132
             length: 16
+
+  - # example: named alternatives for disambiguation
+    pick:
+      - name: "inlined-call"
+        code:
+          source:
+            id: 5
+          range:
+            offset: 68
+            length: 16
+      - name: "original-site"
+        code:
+          source:
+            id: 5
+          range:
+            offset: 132
+            length: 16

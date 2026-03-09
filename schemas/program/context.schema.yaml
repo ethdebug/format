@@ -27,6 +27,13 @@ type: object
 
 allOf:
   - if:
+      required: ["name"]
+    then:
+      description: |
+        A label for this context, for use in identifying it from
+        other contexts (e.g., to disambiguate `pick` alternatives).
+      $ref: "schema:ethdebug/format/program/context/name"
+  - if:
       required: ["code"]
     then:
       description: |
