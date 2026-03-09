@@ -51,9 +51,9 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
         return entry;
       }
       const { offset, length } = slice;
-      const startByte = 32 - Number(offset) - Number(length);
-      const endByte = startByte + Number(length);
-      return Data.fromBytes(entry.slice(startByte, endByte));
+      return Data.fromBytes(
+        entry.slice(Number(offset), Number(offset + length)),
+      );
     },
   };
 
@@ -67,9 +67,9 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
         return value;
       }
       const { offset, length } = slice;
-      const startByte = 32 - Number(offset) - Number(length);
-      const endByte = startByte + Number(length);
-      return Data.fromBytes(value.slice(startByte, endByte));
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
     },
   };
 
@@ -136,9 +136,9 @@ function makeEmptyWordsReader(): Machine.State.Words {
         return value;
       }
       const { offset, length } = slice;
-      const startByte = 32 - Number(offset) - Number(length);
-      const endByte = startByte + Number(length);
-      return Data.fromBytes(value.slice(startByte, endByte));
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
     },
   };
 }
