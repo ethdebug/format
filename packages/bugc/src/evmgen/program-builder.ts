@@ -76,7 +76,7 @@ export function buildProgram(
   const contract: Format.Program.Contract = {
     name: ir.name,
     definition: {
-      source: { id: "0" }, // TODO: Get actual source ID
+      source: { id: ir.sourceId },
       range: ir.loc ?? { offset: 0, length: 0 },
     },
   };

@@ -35,6 +35,7 @@ export namespace State {
    */
   export interface Module {
     readonly name: string;
+    readonly sourceId: string;
     readonly functions: Map<string, Ir.Function>;
     readonly main?: Ir.Function;
     readonly create?: Ir.Function;

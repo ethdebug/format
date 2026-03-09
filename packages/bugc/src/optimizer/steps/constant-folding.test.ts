@@ -20,6 +20,7 @@ describe("ConstantFoldingStep", () => {
 
     return {
       name: "test",
+      sourceId: "test",
       functions: new Map(),
       main: {
         name: "main",

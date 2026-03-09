@@ -236,6 +236,7 @@ describe("Optimizer Property Tests", () => {
 function createModuleWithBinaryOp(a: bigint, b: bigint, op: string): Ir.Module {
   return {
     name: "Test",
+    sourceId: "test",
     main: {
       name: "main",
       parameters: [],
@@ -336,6 +337,7 @@ function createModuleWithDeadCode(useFlags: boolean[]): Ir.Module {
 
   return {
     name: "Test",
+    sourceId: "test",
     main: {
       name: "main",
       parameters: [],
@@ -361,6 +363,7 @@ function createModuleWithDeadCode(useFlags: boolean[]): Ir.Module {
 function createModuleWithDuplicateExpressions(a: bigint, b: bigint): Ir.Module {
   return {
     name: "Test",
+    sourceId: "test",
     main: {
       name: "main",
       parameters: [],
@@ -513,6 +516,7 @@ function createModuleWithMergeableBlocks(
 
   return {
     name: "Test",
+    sourceId: "test",
     main: { name: "main", parameters: [], entry: "entry", blocks },
     functions: new Map(),
   };
@@ -522,6 +526,7 @@ function createModuleWithMergeableBlocks(
 function generateRandomModule(): fc.Arbitrary<Ir.Module> {
   return fc.record({
     name: fc.constant("Test"),
+    sourceId: fc.constant("test"),
     main: generateRandomFunction(),
     functions: fc.constant(new Map()),
   });
