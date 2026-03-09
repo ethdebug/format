@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    threads: false,
+    pool: "forks",
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

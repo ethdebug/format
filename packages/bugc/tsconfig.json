@@ -28,6 +28,7 @@
       "#evmgen/generation": ["./src/evmgen/generation"],
       "#evmgen/serialize": ["./src/evmgen/serialize"],
       "#evmgen/pass": ["./src/evmgen/pass"],
+      "#evmgen/program-builder": ["./src/evmgen/program-builder"],
 
       "#ir": ["./src/ir/index"],
       "#ir/spec": ["./src/ir/spec"],
@@ -38,6 +39,7 @@
       "#irgen/errors": ["./src/irgen/errors"],
       "#irgen/type": ["./src/irgen/type"],
       "#irgen/generate": ["./src/irgen/generate/index"],
+      "#irgen/debug/variables": ["./src/irgen/debug/variables"],
 
       "#optimizer": ["./src/optimizer/index"],
       "#optimizer/*": ["./src/optimizer/*"],
