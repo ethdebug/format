@@ -44,9 +44,7 @@ export interface Trace {
  *
  * @returns [handler, getTrace] tuple
  */
-export function createTraceCollector():
-  [TraceHandler, () => Trace]
-{
+export function createTraceCollector(): [TraceHandler, () => Trace] {
   const steps: TraceStep[] = [];
 
   const handler: TraceHandler = (step) => {

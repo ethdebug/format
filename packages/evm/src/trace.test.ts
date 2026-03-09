@@ -1,13 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { Executor } from "#executor";
-import {
-  createTraceCollector,
-  createMachine,
-} from "#trace";
+import { createTraceCollector, createMachine } from "#trace";
 
 // Constructor that deploys: PUSH1 0x2a PUSH1 0x00 SSTORE STOP
-const constructorCode =
-  "65602a600055006000526006601af3";
+const constructorCode = "65602a600055006000526006601af3";
 
 describe("createTraceCollector", () => {
   it("collects trace steps during execution", async () => {
@@ -39,8 +35,7 @@ describe("createTraceCollector", () => {
     // Constructor: PUSH6 <runtime> PUSH1 0 MSTORE
     //              PUSH1 6 PUSH1 0x1a RETURN
     // where runtime = 604260005200 (MSTORE bytecode)
-    const memConstructor =
-      "656042600052006000526006601af3";
+    const memConstructor = "656042600052006000526006601af3";
     await executor.deploy(memConstructor);
 
     const [handler, getTrace] = createTraceCollector();
@@ -48,9 +43,7 @@ describe("createTraceCollector", () => {
     const trace = getTrace();
 
     // The runtime does MSTORE, so memory should grow
-    const hasMemory = trace.steps.some(
-      (s) => s.memory && s.memory.length > 0,
-    );
+    const hasMemory = trace.steps.some((s) => s.memory && s.memory.length > 0);
     expect(hasMemory).toBe(true);
   });
 
@@ -62,9 +55,7 @@ describe("createTraceCollector", () => {
     await executor.execute({}, handler);
     const trace = getTrace();
 
-    expect(
-      trace.steps[0].gasRemaining,
-    ).toBeGreaterThan(0n);
+    expect(trace.steps[0].gasRemaining).toBeGreaterThan(0n);
   });
 
   it("returns independent copies", async () => {

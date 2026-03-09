@@ -4,8 +4,7 @@ import { Executor } from "#executor";
 import { createMachineState } from "#machine";
 
 // Constructor that deploys: PUSH1 0x2a PUSH1 0x00 SSTORE STOP
-const constructorCode =
-  "65602a600055006000526006601af3";
+const constructorCode = "65602a600055006000526006601af3";
 
 describe("createMachineState", () => {
   let executor: Executor;

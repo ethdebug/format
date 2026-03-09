@@ -223,12 +223,8 @@ export class Executor {
       data: options.data ? hexToBytes(options.data) : new Uint8Array(),
       gasLimit: options.gasLimit ?? 10_000_000n,
       value: options.value ?? 0n,
-      origin: options.origin ?? new Address(
-        hexToBytes("00".repeat(20)),
-      ),
-      caller: options.caller ?? new Address(
-        hexToBytes("00".repeat(20)),
-      ),
+      origin: options.origin ?? new Address(hexToBytes("00".repeat(20))),
+      caller: options.caller ?? new Address(hexToBytes("00".repeat(20))),
       address: tempAddress,
     };
 

@@ -40,10 +40,9 @@ export function createMachineState(
 ): Machine.State {
   const { traceStep, traceIndex = 0n } = options;
 
-  const programCounter = options.programCounter
-    ?? (traceStep ? BigInt(traceStep.pc) : 0n);
-  const opcode = options.opcode
-    ?? (traceStep ? traceStep.opcode : "STOP");
+  const programCounter =
+    options.programCounter ?? (traceStep ? BigInt(traceStep.pc) : 0n);
+  const opcode = options.opcode ?? (traceStep ? traceStep.opcode : "STOP");
 
   return {
     traceIndex: Promise.resolve(traceIndex),
@@ -51,9 +50,7 @@ export function createMachineState(
     opcode: Promise.resolve(opcode),
 
     stack: {
-      length: Promise.resolve(
-        traceStep ? BigInt(traceStep.stack.length) : 0n,
-      ),
+      length: Promise.resolve(traceStep ? BigInt(traceStep.stack.length) : 0n),
       async peek({ depth, slice }): Promise<Data> {
         if (!traceStep) {
           return Data.zero();
@@ -65,8 +62,7 @@ export function createMachineState(
           return Data.zero();
         }
 
-        const data = Data.fromUint(stack[index])
-          .padUntilAtLeast(32);
+        const data = Data.fromUint(stack[index]).padUntilAtLeast(32);
 
         if (slice) {
           const sliced = new Uint8Array(data).slice(
@@ -82,9 +78,7 @@ export function createMachineState(
 
     memory: {
       length: Promise.resolve(
-        traceStep?.memory
-          ? BigInt(traceStep.memory.length)
-          : 0n,
+        traceStep?.memory ? BigInt(traceStep.memory.length) : 0n,
       ),
       async read({ slice }): Promise<Data> {
         if (!traceStep?.memory) {

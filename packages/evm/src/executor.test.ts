@@ -27,8 +27,7 @@ const returnValueCode = "602a60005260206000f3";
 //   PUSH1 06            =>  6006
 //   PUSH1 1a            =>  601a
 //   RETURN              =>  f3
-const constructorCode =
-  "65602a600055006000526006601af3";
+const constructorCode = "65602a600055006000526006601af3";
 
 describe("Executor", () => {
   let executor: Executor;
@@ -46,9 +45,7 @@ describe("Executor", () => {
 
     it("throws on failed deployment", async () => {
       // FE = INVALID opcode
-      await expect(
-        executor.deploy("fe"),
-      ).rejects.toThrow("Deployment failed");
+      await expect(executor.deploy("fe")).rejects.toThrow("Deployment failed");
     });
   });
 
@@ -70,15 +67,11 @@ describe("Executor", () => {
 
   describe("executeCode", () => {
     it("runs bytecode directly", async () => {
-      const result = await executor.executeCode(
-        returnValueCode,
-      );
+      const result = await executor.executeCode(returnValueCode);
       expect(result.success).toBe(true);
       expect(result.returnValue.length).toBe(32);
 
-      const value = BigInt(
-        "0x" + bytesToHex(result.returnValue),
-      );
+      const value = BigInt("0x" + bytesToHex(result.returnValue));
       expect(value).toBe(42n);
     });
   });
