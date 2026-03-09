@@ -5,4 +5,4 @@
 export * from "./annotations.js";
 export * from "./source-map.js";
 export * from "./runners.js";
-export * from "./machine-adapter.js";
+export { createMachineState } from "@ethdebug/evm";

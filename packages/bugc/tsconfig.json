@@ -61,5 +61,9 @@
   },
   "include": ["src/**/*", "bin/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../format" }, { "path": "../pointers" }]
+  "references": [
+    { "path": "../format" },
+    { "path": "../pointers" },
+    { "path": "../evm" }
+  ]
 }

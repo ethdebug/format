@@ -3512,18 +3512,6 @@
     ethereum-cryptography "^3.2.0"
     lru-cache "11.0.2"
 
-"@ethereumjs/block@^10.1.0":
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/block/-/block-10.1.0.tgz#18c19008881a910bd22ce7e519d7a5d5c4a4cee1"
-  integrity sha512-W2GR/ejYn/idfX4fxQ2DRbrbOF5U04Q2wDiMuxtvnOr8zdVCBSlVYCC348N73ufkrqY5ltTlEUZYWLWWobcS/Q==
-  dependencies:
-    "@ethereumjs/common" "^10.1.0"
-    "@ethereumjs/mpt" "^10.1.0"
-    "@ethereumjs/rlp" "^10.1.0"
-    "@ethereumjs/tx" "^10.1.0"
-    "@ethereumjs/util" "^10.1.0"
-    ethereum-cryptography "^3.2.0"
-
 "@ethereumjs/common@^10.0.0", "@ethereumjs/common@^10.1.0":
   version "10.1.0"
   resolved "https://registry.yarnpkg.com/@ethereumjs/common/-/common-10.1.0.tgz#f80e5589feae32ba33a818c50b18a361d8bde527"
@@ -3532,7 +3520,7 @@
     "@ethereumjs/util" "^10.1.0"
     eventemitter3 "^5.0.1"
 
-"@ethereumjs/evm@^10.0.0", "@ethereumjs/evm@^10.1.0":
+"@ethereumjs/evm@^10.0.0":
   version "10.1.0"
   resolved "https://registry.yarnpkg.com/@ethereumjs/evm/-/evm-10.1.0.tgz#97ae3a688efd860d7a3bd2251c51ef00ed750d3e"
   integrity sha512-RD6tjysXEWPfyBHmMxsg3s3T2JdbPVYvsDDDUR0laFaHWtHMnOeW/EIZ5njUx75nG+i72w34Sh6NhhkpkhMGDg==
@@ -3578,16 +3566,6 @@
     ethereum-cryptography "^3.2.0"
     lru-cache "11.0.2"
 
-"@ethereumjs/tx@^10.1.0":
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/tx/-/tx-10.1.0.tgz#90b568f7a1a8c02a20b2531dbc0375be38dff573"
-  integrity sha512-svG6pyzUZDpunafszf2BaolA6Izuvo8ZTIETIegpKxAXYudV1hmzPQDdSI+d8nHCFyQfEFbQ6tfUq95lNArmmg==
-  dependencies:
-    "@ethereumjs/common" "^10.1.0"
-    "@ethereumjs/rlp" "^10.1.0"
-    "@ethereumjs/util" "^10.1.0"
-    ethereum-cryptography "^3.2.0"
-
 "@ethereumjs/util@^10.0.0", "@ethereumjs/util@^10.1.0":
   version "10.1.0"
   resolved "https://registry.yarnpkg.com/@ethereumjs/util/-/util-10.1.0.tgz#56ba2abd5ca0030a1bb6d543bf205c27307cd592"
@@ -3595,23 +3573,6 @@
   dependencies:
     "@ethereumjs/rlp" "^10.1.0"
     ethereum-cryptography "^3.2.0"
-
-"@ethereumjs/vm@^10.0.0":
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/vm/-/vm-10.1.0.tgz#96a859946e8d85cd2759ea4b24d9c194d0a5d704"
-  integrity sha512-5OxHK4hdccDeSiBeSZj8WITl9uB6NbXA6/yf2wAPoflVxZKzOM5h6ssFrOAhz2faD130UoU62pnT23WClgrXSQ==
-  dependencies:
-    "@ethereumjs/block" "^10.1.0"
-    "@ethereumjs/common" "^10.1.0"
-    "@ethereumjs/evm" "^10.1.0"
-    "@ethereumjs/mpt" "^10.1.0"
-    "@ethereumjs/rlp" "^10.1.0"
-    "@ethereumjs/statemanager" "^10.1.0"
-    "@ethereumjs/tx" "^10.1.0"
-    "@ethereumjs/util" "^10.1.0"
-    debug "^4.4.0"
-    ethereum-cryptography "^3.2.0"
-    eventemitter3 "^5.0.1"
 
 "@fortawesome/fontawesome-common-types@6.7.2":
   version "6.7.2"

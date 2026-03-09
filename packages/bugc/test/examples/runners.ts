@@ -10,11 +10,11 @@ import * as Format from "@ethdebug/format";
 import { dereference } from "@ethdebug/pointers";
 import { bytesToHex } from "ethereum-cryptography/utils";
 
-import { EvmExecutor } from "../evm/index.js";
+import { Executor } from "@ethdebug/evm";
+import { createMachineState } from "@ethdebug/evm";
 import type { VariablesTest } from "./annotations.js";
 import type { SourceMapping } from "./source-map.js";
 import { findInstructionsAtLine } from "./source-map.js";
-import { createMachineState } from "./machine-adapter.js";
 
 export interface TestResult {
   passed: boolean;
@@ -140,7 +140,7 @@ async function checkScalarValue(
   after: "deploy" | "call" = "deploy",
   callData?: string,
 ): Promise<TestResult> {
-  const executor = new EvmExecutor();
+  const executor = new Executor();
 
   try {
     // Deploy
@@ -212,7 +212,7 @@ async function checkRegionValues(
   after: "deploy" | "call" = "deploy",
   callData?: string,
 ): Promise<TestResult> {
-  const executor = new EvmExecutor();
+  const executor = new Executor();
 
   try {
     // Deploy
