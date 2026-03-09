@@ -1,12 +1,22 @@
 import { useState } from "react";
 import type { CompileResult } from "./types";
-import { AstView } from "../visualization/AstView";
-import { IrView } from "../visualization/IrView";
-import { CfgView } from "../visualization/CfgView";
-import { BytecodeView } from "../visualization/BytecodeView";
+import {
+  AstView,
+  IrView,
+  CfgView,
+  BytecodeView,
+  type SourceRange,
+} from "@ethdebug/bugc-react";
 import { ErrorView } from "./ErrorView";
-import type { SourceRange } from "../visualization/debugUtils";
 import "./CompilerOutput.css";
+
+// CSS for bugc-react components
+import "@ethdebug/bugc-react/src/components/variables.css";
+import "@ethdebug/bugc-react/src/components/AstView.css";
+import "@ethdebug/bugc-react/src/components/BytecodeView.css";
+import "@ethdebug/bugc-react/src/components/CfgView.css";
+import "@ethdebug/bugc-react/src/components/EthdebugTooltip.css";
+import "@ethdebug/bugc-react/src/components/IrView.css";
 
 interface CompilerOutputProps {
   result: CompileResult;

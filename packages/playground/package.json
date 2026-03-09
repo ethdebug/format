@@ -15,14 +15,13 @@
   },
   "dependencies": {
     "@ethdebug/bugc": "^0.1.0-0",
+    "@ethdebug/bugc-react": "^0.1.0-0",
     "@monaco-editor/react": "^4.6.0",
-    "@types/dagre": "^0.7.52",
     "dagre": "^0.8.5",
     "monaco-editor": "^0.52.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-flow-renderer": "^10.3.17",
-    "vis-network": "^9.1.9"
+    "react-flow-renderer": "^10.3.17"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
