@@ -102,7 +102,7 @@ describe("generateRead", () => {
   });
 
   describe("returndata reads", () => {
-    it("should use RETURNDATACOPY + MLOAD", () => {
+    it("should use RETURNDATACOPY + MLOAD for full read", () => {
       const mnemonics = mnemonicsFor([
         {
           kind: "read",
@@ -127,11 +127,40 @@ describe("generateRead", () => {
       expect(mnemonics).toContain("MLOAD");
       // Should zero scratch memory first
       expect(mnemonics).toContain("MSTORE");
+      // Full read — no shift/mask needed
+      expect(mnemonics).not.toContain("SHR");
+    });
+
+    it("should shift+mask for partial returndata read", () => {
+      const mnemonics = mnemonicsFor([
+        {
+          kind: "read",
+          location: "returndata",
+          offset: {
+            kind: "const",
+            value: 0n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          length: {
+            kind: "const",
+            value: 20n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          type: Ir.Type.Scalar.address,
+          dest: "%1",
+          operationDebug: {},
+        },
+      ]);
+
+      expect(mnemonics).toContain("RETURNDATACOPY");
+      expect(mnemonics).toContain("MLOAD");
+      expect(mnemonics).toContain("SHR");
+      expect(mnemonics).toContain("AND");
     });
   });
 
   describe("code reads", () => {
-    it("should use CODECOPY + MLOAD", () => {
+    it("should use CODECOPY + MLOAD for full read", () => {
       const mnemonics = mnemonicsFor([
         {
           kind: "read",
@@ -154,11 +183,39 @@ describe("generateRead", () => {
 
       expect(mnemonics).toContain("CODECOPY");
       expect(mnemonics).toContain("MLOAD");
+      expect(mnemonics).not.toContain("SHR");
+    });
+
+    it("should shift+mask for partial code read", () => {
+      const mnemonics = mnemonicsFor([
+        {
+          kind: "read",
+          location: "code",
+          offset: {
+            kind: "const",
+            value: 0n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          length: {
+            kind: "const",
+            value: 4n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          type: Ir.Type.Scalar.uint256,
+          dest: "%1",
+          operationDebug: {},
+        },
+      ]);
+
+      expect(mnemonics).toContain("CODECOPY");
+      expect(mnemonics).toContain("MLOAD");
+      expect(mnemonics).toContain("SHR");
+      expect(mnemonics).toContain("AND");
     });
   });
 
   describe("transient storage reads", () => {
-    it("should use TLOAD", () => {
+    it("should use TLOAD for full read", () => {
       const mnemonics = mnemonicsFor([
         {
           kind: "read",
@@ -175,6 +232,38 @@ describe("generateRead", () => {
       ]);
 
       expect(mnemonics).toContain("TLOAD");
+      expect(mnemonics).not.toContain("SHR");
+    });
+
+    it("should shift+mask for partial transient read", () => {
+      const mnemonics = mnemonicsFor([
+        {
+          kind: "read",
+          location: "transient",
+          slot: {
+            kind: "const",
+            value: 0n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          offset: {
+            kind: "const",
+            value: 0n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          length: {
+            kind: "const",
+            value: 1n,
+            type: Ir.Type.Scalar.uint256,
+          },
+          type: Ir.Type.Scalar.uint256,
+          dest: "%1",
+          operationDebug: {},
+        },
+      ]);
+
+      expect(mnemonics).toContain("TLOAD");
+      expect(mnemonics).toContain("SHR");
+      expect(mnemonics).toContain("AND");
     });
   });
 });

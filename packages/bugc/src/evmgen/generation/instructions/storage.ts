@@ -45,11 +45,7 @@ export function generateRead<S extends Stack>(
 
   // Handle transient storage reads
   if (inst.location === "transient" && inst.slot) {
-    return pipe<S>()
-      .then(loadValue(inst.slot, { debug }), { as: "key" })
-      .then(TLOAD({ debug }), { as: "value" })
-      .then(storeValueIfNeeded(inst.dest, { debug }))
-      .done();
+    return generateTransientRead(inst, debug);
   }
 
   // Handle memory reads
@@ -132,6 +128,57 @@ function generateStorageRead<S extends Stack>(
 }
 
 /**
+ * Transient storage read: TLOAD with optional partial extraction.
+ * Same shift+mask logic as regular storage reads.
+ */
+function generateTransientRead<S extends Stack>(
+  inst: Ir.Instruction.Read,
+  debug: Ir.Instruction.Debug,
+): Transition<S, readonly ["value", ...S]> {
+  const offset = inst.offset?.kind === "const" ? inst.offset.value : 0n;
+  const length = inst.length?.kind === "const" ? inst.length.value : 32n;
+
+  if (offset === 0n && length === 32n) {
+    return pipe<S>()
+      .then(loadValue(inst.slot!, { debug }), { as: "key" })
+      .then(TLOAD({ debug }), { as: "value" })
+      .then(storeValueIfNeeded(inst.dest, { debug }))
+      .done();
+  }
+
+  // Partial read - same shift+mask as storage
+  return (
+    pipe<S>()
+      .then(loadValue(inst.slot!, { debug }), { as: "key" })
+      .then(TLOAD({ debug }), { as: "value" })
+
+      .then(PUSHn((32n - BigInt(offset) - BigInt(length)) * 8n, { debug }), {
+        as: "shift",
+      })
+      .then(SHR({ debug }), { as: "shiftedValue" })
+      .then(PUSHn(1n, { debug }), { as: "b" })
+
+      // mask = (1 << (length * 8)) - 1
+      .then(PUSHn(1n, { debug }), { as: "value" })
+      .then(PUSHn(BigInt(length) * 8n, { debug }), {
+        as: "shift",
+      })
+      .then(SHL({ debug }), { as: "a" })
+      .then(SUB({ debug }), { as: "mask" })
+      .then(
+        rebrand<"mask", "a", "shiftedValue", "b">({
+          1: "a",
+          2: "b",
+        }),
+      )
+
+      .then(AND({ debug }), { as: "value" })
+      .then(storeValueIfNeeded(inst.dest, { debug }))
+      .done()
+  );
+}
+
+/**
  * Calldata read: CALLDATALOAD reads 32 bytes at a given offset.
  * For partial reads, shift+mask to extract the desired bytes.
  */
@@ -194,7 +241,38 @@ function generateCopyBasedRead<S extends Stack>(
 ): Transition<S, readonly ["value", ...S]> {
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
 
-  // Clear scratch memory first so partial copies are zero-padded
+  if (length === 32n) {
+    // Full 32-byte read — copy and load directly
+    return (
+      pipe<S>()
+        // Zero out scratch: MSTORE(0x60, 0)
+        .then(PUSHn(0n, { debug }), { as: "value" })
+        .then(PUSHn(SCRATCH_OFFSET, { debug }), { as: "offset" })
+        .then(MSTORE({ debug }))
+
+        // COPY(destOffset=0x60, offset, size=32)
+        .then(PUSHn(32n, { debug }), { as: "size" })
+        .then(loadValue(inst.offset!, { debug }), {
+          as: "offset",
+        })
+        .then(PUSHn(SCRATCH_OFFSET, { debug }), {
+          as: "destOffset",
+        })
+        .then(copyOp({ debug }))
+
+        // MLOAD from scratch
+        .then(PUSHn(SCRATCH_OFFSET, { debug }), {
+          as: "offset",
+        })
+        .then(MLOAD({ debug }), { as: "value" })
+        .then(storeValueIfNeeded(inst.dest, { debug }))
+        .done()
+    );
+  }
+
+  // Partial read: copy `length` bytes to scratch, MLOAD
+  // returns left-aligned data, shift right to right-align,
+  // then mask.
   return (
     pipe<S>()
       // Zero out scratch: MSTORE(0x60, 0)
@@ -204,13 +282,40 @@ function generateCopyBasedRead<S extends Stack>(
 
       // COPY(destOffset=0x60, offset, size=length)
       .then(PUSHn(BigInt(length), { debug }), { as: "size" })
-      .then(loadValue(inst.offset!, { debug }), { as: "offset" })
-      .then(PUSHn(SCRATCH_OFFSET, { debug }), { as: "destOffset" })
+      .then(loadValue(inst.offset!, { debug }), {
+        as: "offset",
+      })
+      .then(PUSHn(SCRATCH_OFFSET, { debug }), {
+        as: "destOffset",
+      })
       .then(copyOp({ debug }))
 
-      // MLOAD from scratch
-      .then(PUSHn(SCRATCH_OFFSET, { debug }), { as: "offset" })
+      // MLOAD from scratch — value is left-aligned
+      .then(PUSHn(SCRATCH_OFFSET, { debug }), {
+        as: "offset",
+      })
       .then(MLOAD({ debug }), { as: "value" })
+
+      // Shift right to right-align
+      .then(PUSHn((32n - BigInt(length)) * 8n, { debug }), { as: "shift" })
+      .then(SHR({ debug }), { as: "shiftedValue" })
+      .then(PUSHn(1n, { debug }), { as: "b" })
+
+      // mask = (1 << (length * 8)) - 1
+      .then(PUSHn(1n, { debug }), { as: "value" })
+      .then(PUSHn(BigInt(length) * 8n, { debug }), {
+        as: "shift",
+      })
+      .then(SHL({ debug }), { as: "a" })
+      .then(SUB({ debug }), { as: "mask" })
+      .then(
+        rebrand<"mask", "a", "shiftedValue", "b">({
+          1: "a",
+          2: "b",
+        }),
+      )
+
+      .then(AND({ debug }), { as: "value" })
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done()
   );
