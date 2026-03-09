@@ -6,6 +6,13 @@
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./src/components/*.css": "./src/components/*.css"
+  },
   "imports": {
     "#components/*": {
       "types": "./src/components/*.tsx",
