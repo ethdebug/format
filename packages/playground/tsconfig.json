@@ -22,5 +22,9 @@
     }
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "../bugc" }]
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "../bugc" },
+    { "path": "../bugc-react" }
+  ]
 }

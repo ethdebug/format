@@ -1,12 +1,10 @@
 import MonacoEditor, { type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
-import { registerBugLanguage } from "./bugLanguage";
-import type { editor as MonacoEditor_Type } from "monaco-editor";
+import * as monaco from "monaco-editor";
+import { registerBugLanguage } from "@ethdebug/bugc-react";
+import type { SourceRange } from "@ethdebug/bugc-react";
 
-export interface SourceRange {
-  offset: number;
-  length: number;
-}
+export type { SourceRange } from "@ethdebug/bugc-react";
 
 interface EditorProps {
   value: string;
@@ -21,13 +19,11 @@ export function Editor({
   language = "bug",
   highlightedRanges = [],
 }: EditorProps) {
-  const editorRef = useRef<MonacoEditor_Type.IStandaloneCodeEditor | null>(
-    null,
-  );
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const decorationsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    registerBugLanguage();
+    registerBugLanguage(monaco);
   }, []);
 
   useEffect(() => {
