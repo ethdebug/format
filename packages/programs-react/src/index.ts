@@ -57,6 +57,7 @@ export {
   type ContextThunk,
   type FindSourceRangeOptions,
   type ResolverOptions,
+  traceStepToMachineState,
   type TraceStep,
   type MockTraceSpec,
 } from "#utils/index";

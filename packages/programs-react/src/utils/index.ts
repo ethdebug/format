@@ -21,3 +21,5 @@ export {
   type TraceStep,
   type MockTraceSpec,
 } from "./mockTrace.js";
+
+export { traceStepToMachineState } from "./traceState.js";
