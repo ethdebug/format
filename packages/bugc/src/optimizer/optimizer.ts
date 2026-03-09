@@ -202,6 +202,7 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
 
     return {
       name: module.name,
+      sourceId: module.sourceId,
       functions: clonedFunctions,
       create: clonedCreate,
       main: clonedMain,

@@ -6,6 +6,7 @@ describe("IrFormatter", () => {
   it("should format phi nodes with predecessor labels", () => {
     const module: Ir.Module = {
       name: "TestModule",
+      sourceId: "test",
       functions: new Map(),
       main: {
         name: "main",
@@ -143,6 +144,7 @@ describe("IrFormatter", () => {
   it("should format multiple phi nodes in a block", () => {
     const module: Ir.Module = {
       name: "TestModule",
+      sourceId: "test",
       functions: new Map(),
       main: {
         name: "main",
@@ -229,6 +231,7 @@ describe("IrFormatter", () => {
   it("should show block predecessors when there are phi nodes", () => {
     const module: Ir.Module = {
       name: "TestModule",
+      sourceId: "test",
       functions: new Map(),
       main: {
         name: "main",

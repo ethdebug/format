@@ -1046,7 +1046,7 @@ export namespace Process {
       }
 
       const { offset, length } = node.loc;
-      const id = (yield* Process.Modules.current()).name;
+      const { sourceId: id } = yield* Process.Modules.current();
 
       // Combine code and variables in a single context object
       // No need for gather since the keys don't conflict

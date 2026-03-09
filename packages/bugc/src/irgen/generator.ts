@@ -15,9 +15,10 @@ import { buildModule } from "#irgen/generate";
 export function generateModule(
   program: Ast.Program,
   types: Types,
+  sourcePath?: string,
 ): Result<Ir.Module, IrgenError> {
   // Create initial state
-  const initialState = createInitialState(program, types);
+  const initialState = createInitialState(program, types, sourcePath);
 
   // Run the generator
   const result = Process.run(buildModule(program, types), initialState);
@@ -55,13 +56,18 @@ export function generateModule(
 /**
  * Create the initial IR generation state
  */
-function createInitialState(program: Ast.Program, types: Types): State {
+function createInitialState(
+  program: Ast.Program,
+  types: Types,
+  sourcePath?: string,
+): State {
   // Create errors array to collect any type resolution errors
   const errors: IrgenError[] = [];
 
   // Create initial module
   const module: State.Module = {
     name: program.name,
+    sourceId: sourcePath ?? "0",
     functions: new Map(),
     storageDeclarations: program.storage ?? [],
   };

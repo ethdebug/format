@@ -50,6 +50,36 @@ describe("generateModule", () => {
       expect(ir.main.blocks.size).toBe(1);
       expect(ir.main.blocks.get("entry")).toBeDefined();
     });
+
+    it("should default sourceId to '0' when no sourcePath", () => {
+      const ir = buildIR(`
+        name Test;
+        storage {}
+        code {}
+      `);
+      expect(ir.sourceId).toBe("0");
+    });
+
+    it("should use sourcePath as sourceId when provided", () => {
+      const source = `
+        name Test;
+        storage {}
+        code {}
+      `;
+      const parseResult = parse(source);
+      if (!parseResult.success) throw new Error("Parse failed");
+      const typeCheckResult = TypeChecker.checkProgram(parseResult.value);
+      if (!typeCheckResult.success) {
+        throw new Error("Type check failed");
+      }
+      const result = generateModule(
+        parseResult.value,
+        typeCheckResult.value.types,
+        "contracts/Test.bug",
+      );
+      if (!result.success) throw new Error("IR gen failed");
+      expect(result.value.sourceId).toBe("contracts/Test.bug");
+    });
   });
 
   describe("expressions", () => {

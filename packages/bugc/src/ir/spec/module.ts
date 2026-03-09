@@ -9,6 +9,8 @@ import type { Function as IrFunction } from "./function.js";
 export interface Module {
   /** Program name from 'name' declaration */
   name: string;
+  /** Source identifier for debug info */
+  sourceId: string;
   /** User-defined functions */
   functions: Map<string, IrFunction>;
   /** Constructor function (optional, for contract creation) */

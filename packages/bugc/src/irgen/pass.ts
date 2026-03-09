@@ -15,14 +15,15 @@ const pass: Pass<{
   needs: {
     ast: Program;
     types: Types;
+    sourcePath?: string;
   };
   adds: {
     ir: Ir.Module;
   };
   error: IrgenError;
 }> = {
-  async run({ ast, types }) {
-    return Result.map(generateModule(ast, types), (ir) => ({ ir }));
+  async run({ ast, types, sourcePath }) {
+    return Result.map(generateModule(ast, types, sourcePath), (ir) => ({ ir }));
   },
 };
 

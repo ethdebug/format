@@ -88,8 +88,7 @@ export function* buildModule(
 
   // Build program-level debug context with storage variables
   const state: State = yield { type: "peek" };
-  const sourceId = "0"; // TODO: Get actual source ID
-  const variables = collectVariablesWithLocations(state, sourceId);
+  const variables = collectVariablesWithLocations(state, module_.sourceId);
   const debugContext =
     variables.length > 0
       ? { variables: variables.map(toVariableContextEntry) }
@@ -98,6 +97,7 @@ export function* buildModule(
   // Return the module, ensuring main exists
   const result: Ir.Module = {
     name: module_.name,
+    sourceId: module_.sourceId,
     functions: module_.functions,
     main: module_.main || createEmptyFunction("main"),
     debugContext,
