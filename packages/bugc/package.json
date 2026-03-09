@@ -75,12 +75,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@ethdebug/evm": "^0.1.0-0",
     "@ethdebug/pointers": "^0.1.0-0",
-    "@ethereumjs/common": "^10.0.0",
-    "@ethereumjs/evm": "^10.0.0",
-    "@ethereumjs/statemanager": "^10.0.0",
-    "@ethereumjs/util": "^10.0.0",
-    "@ethereumjs/vm": "^10.0.0",
     "@hyperjump/browser": "^1.2.0",
     "@hyperjump/json-schema": "^1.11.0",
     "@types/node": "^20.0.0",
