@@ -1,0 +1,14 @@
+---
+sidebar_position: 6
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Named contexts
+
+Contexts may include a `name` property for distinguishing them from
+other contexts. This is particularly useful inside `pick` alternatives,
+where several possible contexts may apply at a given point in execution
+and runtime information is needed to select which one is active.
+
+<SchemaViewer schema={{ id: "schema:ethdebug/format/program/context/name" }} />
