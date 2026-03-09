@@ -268,7 +268,8 @@ export class Executor {
    */
   async setStorage(slot: bigint, value: bigint): Promise<void> {
     const slotBuffer = Buffer.alloc(32);
-    slotBuffer.writeBigUInt64BE(slot, 24);
+    const slotHex = slot.toString(16).padStart(64, "0");
+    slotBuffer.write(slotHex, "hex");
 
     const valueBuffer = Buffer.alloc(32);
     const hex = value.toString(16).padStart(64, "0");
