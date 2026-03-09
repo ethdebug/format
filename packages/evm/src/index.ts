@@ -32,6 +32,6 @@ export type { ExecutionOptions, ExecutionResult } from "#executor";
 export { createMachineState } from "#machine";
 export type { MachineStateOptions } from "#machine";
 
-// Trace types
-export { createTraceCollector } from "#trace";
+// Trace types and Machine
+export { createTraceCollector, createMachine } from "#trace";
 export type { TraceStep, TraceHandler, Trace } from "#trace";
