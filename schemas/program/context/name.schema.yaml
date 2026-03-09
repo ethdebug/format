@@ -3,8 +3,8 @@ $id: "schema:ethdebug/format/program/context/name"
 
 title: ethdebug/format/program/context/name
 description: |
-  A label for this context, for use in identifying it from other
-  contexts. This is particularly useful inside `pick` alternatives,
+  A label for distinguishing this context from other contexts.
+  This is particularly useful inside `pick` alternatives,
   where several possible contexts may apply at a given point in
   execution and runtime information is needed to select which one
   is active.
@@ -21,5 +21,7 @@ required:
   - name
 
 examples:
+  # example: naming an inlined call site
   - name: "inlined-call"
+  # example: naming a generic instantiation
   - name: "Array<T=bytes32>"
