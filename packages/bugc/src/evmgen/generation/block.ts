@@ -79,7 +79,9 @@ export function generate<S extends Stack>(
           result = result.then(JUMPDEST());
         }
 
-        // Annotate TOS with dest variable if this is a continuation with return value
+        // Annotate TOS with dest variable if this is a continuation with return value.
+        // Also spill to memory if allocated, so the value survives stack cleanup
+        // before any subsequent call terminators.
         if (func && predecessor) {
           const predBlock = func.blocks.get(predecessor);
           if (
@@ -87,8 +89,28 @@ export function generate<S extends Stack>(
             predBlock.terminator.continuation === block.id &&
             predBlock.terminator.dest
           ) {
-            // TOS has the return value, annotate it
-            result = result.then(annotateTop(predBlock.terminator.dest));
+            const destId = predBlock.terminator.dest;
+            result = result.then(annotateTop(destId)).then((s) => {
+              const allocation = s.memory.allocations[destId];
+              if (!allocation) return s;
+              // Spill return value to memory: DUP1, PUSH offset, MSTORE
+              return {
+                ...s,
+                instructions: [
+                  ...s.instructions,
+                  { mnemonic: "DUP1" as const, opcode: 0x80 },
+                  {
+                    mnemonic: "PUSH2" as const,
+                    opcode: 0x61,
+                    immediates: [
+                      (allocation.offset >> 8) & 0xff,
+                      allocation.offset & 0xff,
+                    ],
+                  },
+                  { mnemonic: "MSTORE" as const, opcode: 0x52 },
+                ],
+              };
+            });
           }
         }
       }

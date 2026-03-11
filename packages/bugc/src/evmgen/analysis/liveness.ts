@@ -78,6 +78,15 @@ export namespace Function {
           uses.add(retId);
         }
         lastUse.set(retId, `${blockId}:return`);
+      } else if (term.kind === "call") {
+        // Track call arguments as uses
+        for (const arg of term.arguments) {
+          const argId = valueId(arg);
+          if (!defs.has(argId)) {
+            uses.add(argId);
+          }
+          lastUse.set(argId, `${blockId}:call`);
+        }
       }
 
       blockUses.set(blockId, uses);
@@ -132,6 +141,23 @@ export namespace Function {
                   newOut.add(valueId(source));
                   crossBlockValues.add(valueId(source));
                 }
+              }
+            }
+          }
+        } else if (term.kind === "call") {
+          // Continuation block is a successor
+          const contIn = liveIn.get(term.continuation);
+          if (contIn) {
+            for (const val of contIn) newOut.add(val);
+          }
+          // Add phi sources for continuation
+          const contBlock = func.blocks.get(term.continuation);
+          if (contBlock) {
+            for (const phi of contBlock.phis) {
+              const source = phi.sources.get(blockId);
+              if (source && source.kind !== "const") {
+                newOut.add(valueId(source));
+                crossBlockValues.add(valueId(source));
               }
             }
           }

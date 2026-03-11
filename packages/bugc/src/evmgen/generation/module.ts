@@ -43,6 +43,7 @@ export function generate(
     bytecode: number[];
     instructions: Evm.Instruction[];
     patches: typeof runtimeResult.patches;
+    blockOffsets: Record<string, number>;
   }> = [];
 
   for (const [name, func] of module.functions.entries()) {
@@ -58,14 +59,18 @@ export function generate(
         bytecode: funcResult.bytecode,
         instructions: funcResult.instructions,
         patches: funcResult.patches,
+        blockOffsets: funcResult.blockOffsets,
       });
       allWarnings = [...allWarnings, ...funcResult.warnings];
     }
   }
 
-  // Build function registry with offsets
+  // Build function registry with offsets.
+  // Add 1 byte for the STOP guard inserted between the
+  // main function and user-defined functions.
+  const stopGuardSize = functionResults.length > 0 ? 1 : 0;
   const functionRegistry: Record<string, number> = {};
-  let currentOffset = runtimeResult.bytecode.length;
+  let currentOffset = runtimeResult.bytecode.length + stopGuardSize;
   for (const funcResult of functionResults) {
     functionRegistry[funcResult.name] = currentOffset;
     currentOffset += funcResult.bytecode.length;
@@ -79,23 +84,41 @@ export function generate(
     functionRegistry,
   );
 
-  // Patch function calls in user-defined functions
+  // Patch function calls and block jumps in user-defined
+  // functions. Block/continuation patches need the function's
+  // base offset added since block offsets are relative to
+  // the function start, but EVM JUMP needs absolute PC values.
   const patchedFunctions = functionResults.map((funcResult) =>
     Function.patchFunctionCalls(
       funcResult.bytecode,
       funcResult.instructions,
       funcResult.patches,
       functionRegistry,
+      {
+        baseOffset: functionRegistry[funcResult.name],
+        blockOffsets: funcResult.blockOffsets,
+      },
     ),
   );
 
-  // Combine runtime with user functions
+  // Combine runtime with user functions.
+  // Insert STOP between main and user functions to prevent
+  // fall-through when the main function's last block omits
+  // STOP (the isLastBlock optimization).
+  const stopGuard: Evm.Instruction[] =
+    patchedFunctions.length > 0
+      ? [{ mnemonic: "STOP" as const, opcode: 0x00 }]
+      : [];
+  const stopGuardBytes: number[] = patchedFunctions.length > 0 ? [0x00] : [];
+
   const allRuntimeBytes = [
     ...patchedRuntime.bytecode,
+    ...stopGuardBytes,
     ...patchedFunctions.flatMap((f) => f.bytecode),
   ];
   const allRuntimeInstructions = [
     ...patchedRuntime.instructions,
+    ...stopGuard,
     ...patchedFunctions.flatMap((f) => f.instructions),
   ];
 

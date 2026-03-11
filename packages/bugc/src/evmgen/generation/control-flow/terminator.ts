@@ -23,28 +23,28 @@ export function generateTerminator<S extends Stack>(
       // on TOS from the previous instruction in the block. This avoids an
       // unnecessary DUP that would leave an extra value on the stack.
       if (isUserFunction) {
-        const returnDebug = {
-          context: {
-            remark: term.value
-              ? "function-return: return with value"
-              : "function-return: void return",
-          },
-        };
-        if (term.value) {
-          // Return with value (assume value already on TOS)
-          return pipe<S>()
-            .then(PUSHn(0x60n, { debug: returnDebug }), { as: "offset" })
-            .then(MLOAD({ debug: returnDebug }), { as: "counter" })
-            .then(JUMP({ debug: returnDebug }))
-            .done() as unknown as Transition<S, S>;
-        } else {
-          // Return without value (void return)
-          return pipe<S>()
-            .then(PUSHn(0x60n, { debug: returnDebug }), { as: "offset" })
-            .then(MLOAD({ debug: returnDebug }), { as: "counter" })
-            .then(JUMP({ debug: returnDebug }))
-            .done() as unknown as Transition<S, S>;
-        }
+        // Load return PC from the saved slot (not 0x60,
+        // which may have been overwritten by nested calls).
+        return pipe<S>()
+          .peek((state, builder) => {
+            const pcOffset = state.memory.savedReturnPcOffset ?? 0x60;
+            const returnDebug = {
+              context: {
+                remark: term.value
+                  ? "function-return: return with value"
+                  : "function-return: void return",
+              },
+            };
+            return builder
+              .then(PUSHn(BigInt(pcOffset), { debug: returnDebug }), {
+                as: "offset",
+              })
+              .then(MLOAD({ debug: returnDebug }), {
+                as: "counter",
+              })
+              .then(JUMP({ debug: returnDebug }));
+          })
+          .done() as unknown as Transition<S, S>;
       }
 
       // Contract return (main function or create)
@@ -157,6 +157,31 @@ export function generateCallTerminator<S extends Stack>(
 
   return ((state: State<S>): State<Stack> => {
     let currentState: State<Stack> = state as State<Stack>;
+
+    // Clean the stack before setting up the call.
+    // Values produced by block instructions that are only
+    // used as call arguments will have been DUP'd by
+    // loadValue, leaving originals behind. Since this is a
+    // block terminator, all current stack values are dead
+    // after the call — POP them so the function receives a
+    // clean stack with only its arguments.
+    const cleanupDebug = {
+      context: {
+        remark: `call-preparation: clean stack for ${funcName}`,
+      },
+    };
+    while (currentState.stack.length > 0) {
+      currentState = {
+        ...currentState,
+        instructions: [
+          ...currentState.instructions,
+          { mnemonic: "POP", opcode: 0x50, debug: cleanupDebug },
+        ],
+        stack: currentState.stack.slice(1),
+        brands: currentState.brands.slice(1) as Stack,
+      };
+    }
+
     const returnPcPatchIndex = currentState.instructions.length;
 
     // Store return PC to memory at 0x60
@@ -188,7 +213,9 @@ export function generateCallTerminator<S extends Stack>(
       ],
     };
 
-    // Push arguments using loadValue
+    // Push arguments using loadValue.
+    // Stack is clean, so loadValue will reload from memory
+    // (for temps) or re-push (for consts).
     const argsDebug = {
       context: {
         remark: `call-arguments: push ${args.length} argument(s) for ${funcName}`,
@@ -226,6 +253,23 @@ export function generateCallTerminator<S extends Stack>(
         },
       ],
     };
+
+    // Reset stack tracking to match the runtime state at the
+    // continuation block. The function call consumes all args
+    // and leaves just the return value (if any) on the stack.
+    if (term.dest) {
+      currentState = {
+        ...currentState,
+        stack: [{ id: `call_return_${funcName}`, irValue: term.dest }],
+        brands: ["value" as const] as unknown as Stack,
+      };
+    } else {
+      currentState = {
+        ...currentState,
+        stack: [],
+        brands: [] as unknown as Stack,
+      };
+    }
 
     return currentState;
   }) as Transition<S, Stack>;
