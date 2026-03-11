@@ -80,4 +80,19 @@ testSchemaGuards("ethdebug/format/type", [
     schema: "schema:ethdebug/format/type/complex/struct",
     guard: Type.Complex.isStruct,
   },
+
+  // type reference and specifier
+
+  {
+    schema: "schema:ethdebug/format/type/reference",
+    guard: Type.isReference,
+  },
+  {
+    schema: "schema:ethdebug/format/type/specifier",
+    guard: Type.isSpecifier,
+  },
+  {
+    schema: "schema:ethdebug/format/type/wrapper",
+    guard: Type.isWrapper,
+  },
 ] as const);
