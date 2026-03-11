@@ -159,6 +159,10 @@ export function generateCallTerminator<S extends Stack>(
   return ((state: State<S>): State<Stack> => {
     let currentState: State<Stack> = state as State<Stack>;
 
+    // All call setup instructions map back to the call
+    // expression source location via operationDebug.
+    const debug = term.operationDebug;
+
     // Clean the stack before setting up the call.
     // Values produced by block instructions that are only
     // used as call arguments will have been DUP'd by
@@ -166,17 +170,12 @@ export function generateCallTerminator<S extends Stack>(
     // block terminator, all current stack values are dead
     // after the call — POP them so the function receives a
     // clean stack with only its arguments.
-    const cleanupDebug = {
-      context: {
-        remark: `call-preparation: clean stack for ${funcName}`,
-      },
-    };
     while (currentState.stack.length > 0) {
       currentState = {
         ...currentState,
         instructions: [
           ...currentState.instructions,
-          { mnemonic: "POP", opcode: 0x50, debug: cleanupDebug },
+          { mnemonic: "POP", opcode: 0x50, debug },
         ],
         stack: currentState.stack.slice(1),
         brands: currentState.brands.slice(1) as Stack,
@@ -186,11 +185,6 @@ export function generateCallTerminator<S extends Stack>(
     const returnPcPatchIndex = currentState.instructions.length;
 
     // Store return PC to memory at 0x60
-    const returnPcDebug = {
-      context: {
-        remark: `call-preparation: store return address for ${funcName}`,
-      },
-    };
     currentState = {
       ...currentState,
       instructions: [
@@ -199,10 +193,15 @@ export function generateCallTerminator<S extends Stack>(
           mnemonic: "PUSH2",
           opcode: 0x61,
           immediates: [0, 0],
-          debug: returnPcDebug,
+          debug,
         },
-        { mnemonic: "PUSH1", opcode: 0x60, immediates: [0x60] },
-        { mnemonic: "MSTORE", opcode: 0x52 },
+        {
+          mnemonic: "PUSH1",
+          opcode: 0x60,
+          immediates: [0x60],
+          debug,
+        },
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
       ],
       patches: [
         ...currentState.patches,
@@ -217,24 +216,14 @@ export function generateCallTerminator<S extends Stack>(
     // Push arguments using loadValue.
     // Stack is clean, so loadValue will reload from memory
     // (for temps) or re-push (for consts).
-    const argsDebug = {
-      context: {
-        remark: `call-arguments: push ${args.length} argument(s) for ${funcName}`,
-      },
-    };
     for (const arg of args) {
-      currentState = loadValue(arg, { debug: argsDebug })(currentState);
+      currentState = loadValue(arg, { debug })(currentState);
     }
 
     // Push function address and jump.
     // The JUMP gets an invoke context: after JUMP executes,
     // the function has been entered with args on the stack.
     const funcAddrPatchIndex = currentState.instructions.length;
-    const invocationDebug = {
-      context: {
-        remark: `call-invocation: jump to function ${funcName}`,
-      },
-    };
 
     // Build argument pointers: after the JUMP, the callee
     // sees args on the stack in order (first arg deepest).
@@ -273,7 +262,7 @@ export function generateCallTerminator<S extends Stack>(
           mnemonic: "PUSH2",
           opcode: 0x61,
           immediates: [0, 0],
-          debug: invocationDebug,
+          debug,
         },
         { mnemonic: "JUMP", opcode: 0x56, debug: invokeContext },
       ],
