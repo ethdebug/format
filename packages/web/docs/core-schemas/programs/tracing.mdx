@@ -127,10 +127,20 @@ The examples above trace simple straight-line code. Real programs
 make function calls. **invoke** and **return** contexts let a
 debugger follow execution across function boundaries.
 
-Consider a contract with an internal `add` function:
+Click **"Try it"** on the example below, then step through the
+trace. Watch for **invoke** contexts on the JUMP into `add` and
+**return** contexts on the JUMP back to the caller:
 
-```
-name Adder;
+<TraceExample
+  title="Function call and return"
+  description="Calls an internal add function and stores the result"
+  source={`name Adder;
+
+define {
+  function add(a: uint256, b: uint256) -> uint256 {
+    return a + b;
+  };
+}
 
 storage {
   [0] result: uint256;
@@ -140,28 +150,24 @@ create {
   result = 0;
 }
 
-func add(a: uint256, b: uint256) -> uint256 {
-  return a + b;
-}
-
 code {
   result = add(3, 4);
-}
-```
+}`}
+/>
 
-The compiler produces a sequence of instructions. The relevant
-instructions look like this (offsets are illustrative):
+As you step through, three phases are visible:
 
 ### Before the call — setting up arguments
 
 At the call site, the compiler pushes arguments onto the stack and
-prepares the jump. The instruction at the JUMP has an **invoke**
-context:
+prepares the jump. The JUMP instruction carries an **invoke**
+context identifying the function, its target, and the argument
+locations:
 
 <SchemaExample
   schema="program/context/function/invoke"
   href="/spec/program/context/function/invoke"
-  title="Instruction at call site (JUMP)"
+  title="Invoke context on the JUMP"
 >
   {`{
   "invoke": {
@@ -195,13 +201,13 @@ variables.
 
 ### Returning — the result
 
-When `add` finishes, the JUMP back to the caller has a **return**
-context:
+When `add` finishes, the JUMP back to the caller carries a
+**return** context with a pointer to the result:
 
 <SchemaExample
   schema="program/context/function/return"
   href="/spec/program/context/function/return"
-  title="Instruction at return site (JUMP)"
+  title="Return context on the JUMP back"
 >
   {`{
   "return": {
