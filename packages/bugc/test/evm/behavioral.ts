@@ -71,7 +71,7 @@ export async function executeProgram(
   await executor.deploy(createCode);
 
   let callSuccess: boolean | undefined;
-  let returnValue = new Uint8Array();
+  let returnValue: Uint8Array = new Uint8Array();
 
   // Call if calldata provided (even empty string means "call")
   if (calldata !== undefined) {
@@ -80,7 +80,7 @@ export async function executeProgram(
       value,
     });
     callSuccess = execResult.success;
-    returnValue = execResult.returnValue;
+    returnValue = new Uint8Array(execResult.returnValue);
   }
 
   return {
