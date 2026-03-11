@@ -87,13 +87,11 @@ code {
     expect(call.identifier).toBe("add");
 
     // Should have declaration source range
-    const decl = invoke.declaration as Record<string, unknown>;
-    expect(decl).toBeDefined();
-    expect(decl.source).toEqual({ id: "0" });
-    expect(decl.range).toBeDefined();
-    const range = decl.range as Record<string, unknown>;
-    expect(typeof range.offset).toBe("number");
-    expect(typeof range.length).toBe("number");
+    expect(invoke.declaration).toBeDefined();
+    expect(invoke.declaration!.source).toEqual({ id: "0" });
+    expect(invoke.declaration!.range).toBeDefined();
+    expect(typeof invoke.declaration!.range!.offset).toBe("number");
+    expect(typeof invoke.declaration!.range!.length).toBe("number");
 
     // Should have target pointer
     expect(call.target.pointer).toBeDefined();
@@ -133,9 +131,8 @@ code {
     expect(ret.identifier).toBe("add");
 
     // Should have declaration source range
-    const retDecl = ret.declaration as Record<string, unknown>;
-    expect(retDecl).toBeDefined();
-    expect(retDecl.source).toEqual({ id: "0" });
+    expect(ret.declaration).toBeDefined();
+    expect(ret.declaration!.source).toEqual({ id: "0" });
 
     // Should have data pointer to return value at
     // TOS (stack slot 0)

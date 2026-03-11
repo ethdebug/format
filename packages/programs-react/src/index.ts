@@ -26,13 +26,19 @@ export {
   TraceProgress,
   VariableInspector,
   StackInspector,
+  CallStackDisplay,
+  CallInfoPanel,
   type TraceState,
   type TraceProviderProps,
   type ResolvedVariable,
+  type ResolvedCallInfo,
+  type ResolvedPointerRef,
   type TraceControlsProps,
   type TraceProgressProps,
   type VariableInspectorProps,
   type StackInspectorProps,
+  type CallStackDisplayProps,
+  type CallInfoPanelProps,
 } from "#components/index";
 
 // Shiki utilities
@@ -51,7 +57,11 @@ export {
   createMockTrace,
   findInstructionAtPc,
   extractVariablesFromInstruction,
+  extractCallInfoFromInstruction,
   buildPcToInstructionMap,
+  buildCallStack,
+  type CallInfo,
+  type CallFrame,
   type DynamicInstruction,
   type DynamicContext,
   type ContextThunk,
@@ -67,3 +77,5 @@ export {
 // import "@ethdebug/programs-react/components/SourceContents.css";
 // import "@ethdebug/programs-react/components/TraceControls.css";
 // import "@ethdebug/programs-react/components/VariableInspector.css";
+// import "@ethdebug/programs-react/components/CallStackDisplay.css";
+// import "@ethdebug/programs-react/components/CallInfoPanel.css";
