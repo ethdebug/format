@@ -2,6 +2,7 @@
  * Function-level code generation
  */
 
+import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type * as Evm from "#evm";
 import type { Stack } from "#evm";
@@ -27,11 +28,35 @@ function generatePrologue<S extends Stack>(
   return ((state: State<S>): State<readonly []> => {
     let currentState = state;
 
-    // Add JUMPDEST with function entry annotation
-    const entryDebug = {
-      context: {
-        remark: `function-entry: ${func.name || "anonymous"}`,
+    // Add JUMPDEST with function entry annotation.
+    // After this JUMPDEST executes, the callee's args are
+    // on the stack (first arg deepest).
+    const argPointers = params.map((_p, i) => ({
+      location: "stack" as const,
+      slot: params.length - 1 - i,
+    }));
+
+    const entryInvoke: Format.Program.Context.Invoke = {
+      invoke: {
+        jump: true as const,
+        identifier: func.name || "anonymous",
+        target: {
+          pointer: {
+            location: "stack" as const,
+            slot: 0,
+          },
+        },
+        ...(argPointers.length > 0 && {
+          arguments: {
+            pointer: {
+              group: argPointers,
+            },
+          },
+        }),
       },
+    };
+    const entryDebug = {
+      context: entryInvoke as Format.Program.Context,
     };
     currentState = {
       ...currentState,

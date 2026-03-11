@@ -2,6 +2,7 @@
  * Block-level code generation
  */
 
+import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type { Stack } from "#evm";
 
@@ -69,10 +70,23 @@ export function generate<S extends Stack>(
 
         // Add JUMPDEST with continuation annotation if applicable
         if (isContinuation) {
-          const continuationDebug = {
-            context: {
-              remark: `call-continuation: resume after call to ${calledFunction}`,
+          // Return context describes state after JUMPDEST
+          // executes: TOS is the return value (if any).
+          // data pointer is required by the schema; for
+          // void returns, slot 0 is still valid (empty).
+          const returnCtx: Format.Program.Context.Return = {
+            return: {
+              identifier: calledFunction,
+              data: {
+                pointer: {
+                  location: "stack" as const,
+                  slot: 0,
+                },
+              },
             },
+          };
+          const continuationDebug = {
+            context: returnCtx as Format.Program.Context,
           };
           result = result.then(JUMPDEST({ debug: continuationDebug }));
         } else {

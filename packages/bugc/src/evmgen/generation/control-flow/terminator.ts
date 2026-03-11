@@ -1,3 +1,4 @@
+import type * as Format from "@ethdebug/format";
 import type * as Ir from "#ir";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
@@ -225,13 +226,45 @@ export function generateCallTerminator<S extends Stack>(
       currentState = loadValue(arg, { debug: argsDebug })(currentState);
     }
 
-    // Push function address and jump
+    // Push function address and jump.
+    // The JUMP gets an invoke context: after JUMP executes,
+    // the function has been entered with args on the stack.
     const funcAddrPatchIndex = currentState.instructions.length;
     const invocationDebug = {
       context: {
         remark: `call-invocation: jump to function ${funcName}`,
       },
     };
+
+    // Build argument pointers: after the JUMP, the callee
+    // sees args on the stack in order (first arg deepest).
+    const argPointers = args.map((_arg, i) => ({
+      location: "stack" as const,
+      slot: args.length - 1 - i,
+    }));
+
+    // Invoke context describes state after JUMP executes:
+    // the callee has been entered with args on the stack.
+    // target points to the function address at stack slot 0
+    // (consumed by JUMP, but describes the call target).
+    const invoke: Format.Program.Context.Invoke = {
+      invoke: {
+        jump: true as const,
+        identifier: funcName,
+        target: {
+          pointer: { location: "stack" as const, slot: 0 },
+        },
+        ...(argPointers.length > 0 && {
+          arguments: {
+            pointer: {
+              group: argPointers,
+            },
+          },
+        }),
+      },
+    };
+    const invokeContext = { context: invoke as Format.Program.Context };
+
     currentState = {
       ...currentState,
       instructions: [
@@ -242,7 +275,7 @@ export function generateCallTerminator<S extends Stack>(
           immediates: [0, 0],
           debug: invocationDebug,
         },
-        { mnemonic: "JUMP", opcode: 0x56 },
+        { mnemonic: "JUMP", opcode: 0x56, debug: invokeContext },
       ],
       patches: [
         ...currentState.patches,
