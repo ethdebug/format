@@ -7,7 +7,11 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 # Function identity
 
 Function contexts (invoke, return, revert) share a common set of
-identity fields for the function being called.
+identity fields for the function being called. All fields are
+optional, allowing compilers to provide as much or as little
+detail as available — from a fully named function with source
+location and type, down to an empty object for an anonymous
+indirect call.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function" }}
