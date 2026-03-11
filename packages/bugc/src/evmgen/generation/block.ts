@@ -2,6 +2,7 @@
  * Block-level code generation
  */
 
+import type * as Ast from "#ast";
 import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type { Stack } from "#evm";
@@ -47,9 +48,13 @@ export function generate<S extends Stack>(
 
       // Initialize memory for first block
       if (isFirstBlock) {
-        // Always initialize the free memory pointer for consistency
-        // This ensures dynamic allocations start after static ones
-        result = result.then(initializeMemory(state.memory.nextStaticOffset));
+        const sourceInfo =
+          func?.sourceId && func?.loc
+            ? { sourceId: func.sourceId, loc: func.loc }
+            : undefined;
+        result = result.then(
+          initializeMemory(state.memory.nextStaticOffset, sourceInfo),
+        );
       }
 
       // Set JUMPDEST for non-first blocks
@@ -215,18 +220,34 @@ function generatePhi<S extends Stack>(
 
 /**
  * Initialize the free memory pointer at runtime
- * Sets the value at 0x40 to the next available memory location after static allocations
+ * Sets the value at 0x40 to the next available memory location
+ * after static allocations
  */
 function initializeMemory<S extends Stack>(
   nextStaticOffset: number,
+  sourceInfo?: { sourceId: string; loc: Ast.SourceLocation },
 ): Transition<S, S> {
   const { PUSHn, MSTORE } = operations;
 
-  const debug = {
-    context: {
-      remark: "initialize free memory pointer",
-    },
-  };
+  const debug = sourceInfo
+    ? {
+        context: {
+          gather: [
+            { remark: "initialize free memory pointer" },
+            {
+              code: {
+                source: { id: sourceInfo.sourceId },
+                range: sourceInfo.loc,
+              },
+            },
+          ],
+        } as Format.Program.Context,
+      }
+    : {
+        context: {
+          remark: "initialize free memory pointer",
+        } as Format.Program.Context,
+      };
 
   return pipe<S>()
     .then(PUSHn(BigInt(nextStaticOffset), { debug }), {

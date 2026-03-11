@@ -71,11 +71,28 @@ function generatePrologue<S extends Stack>(
     // Return PC is already in memory at 0x60 (stored by caller)
     // Pop and store each arg from argN down to arg0
 
-    const prologueDebug = {
-      context: {
-        remark: `prologue: store ${params.length} parameter(s) to memory`,
-      },
-    };
+    const prologueDebug =
+      func.sourceId && func.loc
+        ? {
+            context: {
+              gather: [
+                {
+                  remark: `prologue: store ${params.length} parameter(s) to memory`,
+                },
+                {
+                  code: {
+                    source: { id: func.sourceId },
+                    range: func.loc,
+                  },
+                },
+              ],
+            } as Format.Program.Context,
+          }
+        : {
+            context: {
+              remark: `prologue: store ${params.length} parameter(s) to memory`,
+            } as Format.Program.Context,
+          };
 
     for (let i = params.length - 1; i >= 0; i--) {
       const param = params[i];
@@ -117,11 +134,28 @@ function generatePrologue<S extends Stack>(
     // so nested function calls don't clobber it.
     const savedPcOffset = currentState.memory.savedReturnPcOffset;
     if (savedPcOffset !== undefined) {
-      const savePcDebug = {
-        context: {
-          remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
-        },
-      };
+      const savePcDebug =
+        func.sourceId && func.loc
+          ? {
+              context: {
+                gather: [
+                  {
+                    remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
+                  },
+                  {
+                    code: {
+                      source: { id: func.sourceId },
+                      range: func.loc,
+                    },
+                  },
+                ],
+              } as Format.Program.Context,
+            }
+          : {
+              context: {
+                remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
+              } as Format.Program.Context,
+            };
       const highByte = (savedPcOffset >> 8) & 0xff;
       const lowByte = savedPcOffset & 0xff;
       currentState = {
