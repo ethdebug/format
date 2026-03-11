@@ -14,8 +14,12 @@ import type { Pointer, Program } from "@ethdebug/format";
 import { dereference, Data } from "@ethdebug/pointers";
 import {
   type TraceStep,
+  type CallInfo,
+  type CallFrame,
   extractVariablesFromInstruction,
+  extractCallInfoFromInstruction,
   buildPcToInstructionMap,
+  buildCallStack,
 } from "#utils/mockTrace";
 import { traceStepToMachineState } from "#utils/traceState";
 
@@ -36,6 +40,36 @@ export interface ResolvedVariable {
 }
 
 /**
+ * A resolved pointer ref with its label and value.
+ */
+export interface ResolvedPointerRef {
+  /** Label for this pointer (e.g., "target", "arguments") */
+  label: string;
+  /** The raw pointer */
+  pointer: unknown;
+  /** Resolved hex value */
+  value?: string;
+  /** Error if resolution failed */
+  error?: string;
+}
+
+/**
+ * Call info with resolved pointer values.
+ */
+export interface ResolvedCallInfo {
+  /** The kind of call event */
+  kind: "invoke" | "return" | "revert";
+  /** Function name */
+  identifier?: string;
+  /** Call variant for invoke contexts */
+  callType?: "internal" | "external" | "create";
+  /** Panic code for revert contexts */
+  panic?: number;
+  /** Resolved pointer refs */
+  pointerRefs: ResolvedPointerRef[];
+}
+
+/**
  * State provided by the Trace context.
  */
 export interface TraceState {
@@ -53,6 +87,10 @@ export interface TraceState {
   currentInstruction: Program.Instruction | undefined;
   /** Variables in scope at current step */
   currentVariables: ResolvedVariable[];
+  /** Call stack at current step */
+  callStack: CallFrame[];
+  /** Call info for current instruction (if any) */
+  currentCallInfo: ResolvedCallInfo | undefined;
   /** Whether we're at the first step */
   isAtStart: boolean;
   /** Whether we're at the last step */
@@ -241,6 +279,93 @@ export function TraceProvider({
     };
   }, [extractedVars, currentStep, shouldResolve, templates]);
 
+  // Build call stack by scanning instructions up to current step
+  const callStack = useMemo(
+    () => buildCallStack(trace, pcToInstruction, currentStepIndex),
+    [trace, pcToInstruction, currentStepIndex],
+  );
+
+  // Extract call info for current instruction (synchronous)
+  const extractedCallInfo = useMemo((): CallInfo | undefined => {
+    if (!currentInstruction) {
+      return undefined;
+    }
+    return extractCallInfoFromInstruction(currentInstruction);
+  }, [currentInstruction]);
+
+  // Async call info pointer resolution
+  const [currentCallInfo, setCurrentCallInfo] = useState<
+    ResolvedCallInfo | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (!extractedCallInfo) {
+      setCurrentCallInfo(undefined);
+      return;
+    }
+
+    // Immediately show call info without resolved values
+    const initial: ResolvedCallInfo = {
+      kind: extractedCallInfo.kind,
+      identifier: extractedCallInfo.identifier,
+      callType: extractedCallInfo.callType,
+      panic: extractedCallInfo.panic,
+      pointerRefs: extractedCallInfo.pointerRefs.map((ref) => ({
+        label: ref.label,
+        pointer: ref.pointer,
+        value: undefined,
+        error: undefined,
+      })),
+    };
+    setCurrentCallInfo(initial);
+
+    if (!shouldResolve || !currentStep) {
+      return;
+    }
+
+    let cancelled = false;
+    const resolved = [...initial.pointerRefs];
+
+    const promises = extractedCallInfo.pointerRefs.map(async (ref, index) => {
+      try {
+        const value = await resolveVariableValue(
+          ref.pointer as Pointer,
+          currentStep,
+          templates,
+        );
+        if (!cancelled) {
+          resolved[index] = {
+            ...resolved[index],
+            value,
+          };
+          setCurrentCallInfo({
+            ...initial,
+            pointerRefs: [...resolved],
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          resolved[index] = {
+            ...resolved[index],
+            error: err instanceof Error ? err.message : String(err),
+          };
+          setCurrentCallInfo({
+            ...initial,
+            pointerRefs: [...resolved],
+          });
+        }
+      }
+    });
+
+    Promise.all(promises).catch(() => {
+      // Individual errors already handled
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [extractedCallInfo, currentStep, shouldResolve, templates]);
+
   const stepForward = useCallback(() => {
     setCurrentStepIndex((prev) => Math.min(prev + 1, trace.length - 1));
   }, [trace.length]);
@@ -272,6 +397,8 @@ export function TraceProvider({
     currentStep,
     currentInstruction,
     currentVariables,
+    callStack,
+    currentCallInfo,
     isAtStart: currentStepIndex === 0,
     isAtEnd: currentStepIndex >= trace.length - 1,
     stepForward,
