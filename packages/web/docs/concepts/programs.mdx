@@ -157,6 +157,55 @@ Contexts can be composed using:
 This composition enables describing complex scenarios like conditional variable
 assignments or function inlining.
 
+## Function call contexts
+
+Programs answer "what function are we in?" through three context types
+that track function boundaries during execution:
+
+- **invoke** — marks an instruction that enters a function. Indicates
+  the invocation kind (internal jump, external message call, or
+  contract creation) and provides pointers to call arguments, target
+  address, gas, and value as appropriate.
+- **return** — marks an instruction associated with a successful
+  return from a function. Provides a pointer to the return data.
+- **revert** — marks an instruction associated with a failed call.
+  May include a pointer to revert reason data or a numeric panic
+  code.
+
+All three extend a common **function identity** schema with optional
+fields for the function's name, declaration source range, and type.
+This lets compilers provide as much or as little attribution as
+available — from a fully identified `transfer` call down to an
+anonymous indirect invocation through a function pointer.
+
+<SchemaExample
+  schema="program/context/function/invoke"
+  href="/spec/program/context/function/invoke"
+  title="Internal function call"
+>
+  {`{
+  "invoke": {
+    "identifier": "transfer",
+    "jump": true,
+    "target": {
+      "pointer": { "location": "stack", "slot": 0 }
+    },
+    "arguments": {
+      "pointer": {
+        "group": [
+          { "name": "to", "location": "stack", "slot": 2 },
+          { "name": "amount", "location": "stack", "slot": 3 }
+        ]
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+A debugger uses these contexts to reconstruct call stacks, show
+function names in stepping UI, and display argument/return values
+alongside source code.
+
 ## What tracing enables
 
 By following contexts through execution, debuggers can provide:

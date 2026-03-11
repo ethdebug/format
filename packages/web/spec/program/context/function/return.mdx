@@ -6,6 +6,11 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Return contexts
 
+A return context marks an instruction associated with a successful
+function return. It extends the function identity schema with a
+pointer to the return data and, for external calls, the success
+status.
+
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/return" }}
 />
