@@ -2,6 +2,7 @@
  * Block-level code generation
  */
 
+import type * as Ast from "#ast";
 import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type { Stack } from "#evm";
@@ -47,9 +48,13 @@ export function generate<S extends Stack>(
 
       // Initialize memory for first block
       if (isFirstBlock) {
-        // Always initialize the free memory pointer for consistency
-        // This ensures dynamic allocations start after static ones
-        result = result.then(initializeMemory(state.memory.nextStaticOffset));
+        const sourceInfo =
+          func?.sourceId && func?.loc
+            ? { sourceId: func.sourceId, loc: func.loc }
+            : undefined;
+        result = result.then(
+          initializeMemory(state.memory.nextStaticOffset, sourceInfo),
+        );
       }
 
       // Set JUMPDEST for non-first blocks
@@ -104,6 +109,7 @@ export function generate<S extends Stack>(
             predBlock.terminator.dest
           ) {
             const destId = predBlock.terminator.dest;
+            const spillDebug = predBlock.terminator.operationDebug;
             result = result.then(annotateTop(destId)).then((s) => {
               const allocation = s.memory.allocations[destId];
               if (!allocation) return s;
@@ -112,7 +118,11 @@ export function generate<S extends Stack>(
                 ...s,
                 instructions: [
                   ...s.instructions,
-                  { mnemonic: "DUP1" as const, opcode: 0x80 },
+                  {
+                    mnemonic: "DUP1" as const,
+                    opcode: 0x80,
+                    debug: spillDebug,
+                  },
                   {
                     mnemonic: "PUSH2" as const,
                     opcode: 0x61,
@@ -120,8 +130,13 @@ export function generate<S extends Stack>(
                       (allocation.offset >> 8) & 0xff,
                       allocation.offset & 0xff,
                     ],
+                    debug: spillDebug,
                   },
-                  { mnemonic: "MSTORE" as const, opcode: 0x52 },
+                  {
+                    mnemonic: "MSTORE" as const,
+                    opcode: 0x52,
+                    debug: spillDebug,
+                  },
                 ],
               };
             });
@@ -205,21 +220,45 @@ function generatePhi<S extends Stack>(
 
 /**
  * Initialize the free memory pointer at runtime
- * Sets the value at 0x40 to the next available memory location after static allocations
+ * Sets the value at 0x40 to the next available memory location
+ * after static allocations
  */
 function initializeMemory<S extends Stack>(
   nextStaticOffset: number,
+  sourceInfo?: { sourceId: string; loc: Ast.SourceLocation },
 ): Transition<S, S> {
   const { PUSHn, MSTORE } = operations;
 
-  return (
-    pipe<S>()
-      // Push the static offset value (the value to store)
-      .then(PUSHn(BigInt(nextStaticOffset)), { as: "value" })
-      // Push the free memory pointer location (0x40) (the offset)
-      .then(PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER)), { as: "offset" })
-      // Store the initial free pointer (expects [value, offset] on stack)
-      .then(MSTORE())
-      .done()
-  );
+  const debug = sourceInfo
+    ? {
+        context: {
+          gather: [
+            { remark: "initialize free memory pointer" },
+            {
+              code: {
+                source: { id: sourceInfo.sourceId },
+                range: sourceInfo.loc,
+              },
+            },
+          ],
+        } as Format.Program.Context,
+      }
+    : {
+        context: {
+          remark: "initialize free memory pointer",
+        } as Format.Program.Context,
+      };
+
+  return pipe<S>()
+    .then(PUSHn(BigInt(nextStaticOffset), { debug }), {
+      as: "value",
+    })
+    .then(
+      PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER), {
+        debug,
+      }),
+      { as: "offset" },
+    )
+    .then(MSTORE({ debug }))
+    .done();
 }

@@ -105,9 +105,37 @@ export function generate(
   // Insert STOP between main and user functions to prevent
   // fall-through when the main function's last block omits
   // STOP (the isLastBlock optimization).
+  const stopGuardDebug =
+    module.main.sourceId && module.main.loc
+      ? {
+          context: {
+            gather: [
+              {
+                remark: "guard: prevent fall-through into functions",
+              },
+              {
+                code: {
+                  source: { id: module.main.sourceId },
+                  range: module.main.loc,
+                },
+              },
+            ],
+          },
+        }
+      : {
+          context: {
+            remark: "guard: prevent fall-through into functions",
+          },
+        };
   const stopGuard: Evm.Instruction[] =
     patchedFunctions.length > 0
-      ? [{ mnemonic: "STOP" as const, opcode: 0x00 }]
+      ? [
+          {
+            mnemonic: "STOP" as const,
+            opcode: 0x00,
+            debug: stopGuardDebug,
+          },
+        ]
       : [];
   const stopGuardBytes: number[] = patchedFunctions.length > 0 ? [0x00] : [];
 
@@ -243,13 +271,19 @@ function buildDeploymentInstructions(
 function deploymentTransition(runtimeOffset: bigint, runtimeLength: bigint) {
   const { PUSHn, CODECOPY, RETURN } = operations;
 
+  const debug = {
+    context: {
+      remark: "deployment: copy runtime bytecode and return",
+    },
+  };
+
   return pipe()
-    .then(PUSHn(runtimeLength), { as: "size" })
-    .then(PUSHn(runtimeOffset), { as: "offset" })
-    .then(PUSHn(0n), { as: "destOffset" })
-    .then(CODECOPY())
-    .then(PUSHn(runtimeLength), { as: "size" })
-    .then(PUSHn(0n), { as: "offset" })
-    .then(RETURN())
+    .then(PUSHn(runtimeLength, { debug }), { as: "size" })
+    .then(PUSHn(runtimeOffset, { debug }), { as: "offset" })
+    .then(PUSHn(0n, { debug }), { as: "destOffset" })
+    .then(CODECOPY({ debug }))
+    .then(PUSHn(runtimeLength, { debug }), { as: "size" })
+    .then(PUSHn(0n, { debug }), { as: "offset" })
+    .then(RETURN({ debug }))
     .done();
 }

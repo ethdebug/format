@@ -17,6 +17,10 @@ export interface Function {
   blocks: Map<string, Block>;
   /** SSA variable metadata mapping temp IDs to original variables */
   ssaVariables?: Map<string, Function.SsaVariable>;
+  /** Source location of the function body */
+  loc?: Ast.SourceLocation;
+  /** Source identifier for debug info */
+  sourceId?: string;
 }
 
 export namespace Function {
