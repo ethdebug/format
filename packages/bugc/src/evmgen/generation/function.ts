@@ -104,7 +104,11 @@ function generatePrologue<S extends Stack>(
         ...currentState,
         instructions: [
           ...currentState.instructions,
-          { mnemonic: "MSTORE", opcode: 0x52 },
+          {
+            mnemonic: "MSTORE",
+            opcode: 0x52,
+            debug: prologueDebug,
+          },
         ],
       };
     }
@@ -130,13 +134,22 @@ function generatePrologue<S extends Stack>(
             immediates: [0x60],
             debug: savePcDebug,
           },
-          { mnemonic: "MLOAD", opcode: 0x51 },
+          {
+            mnemonic: "MLOAD",
+            opcode: 0x51,
+            debug: savePcDebug,
+          },
           {
             mnemonic: "PUSH2",
             opcode: 0x61,
             immediates: [highByte, lowByte],
+            debug: savePcDebug,
           },
-          { mnemonic: "MSTORE", opcode: 0x52 },
+          {
+            mnemonic: "MSTORE",
+            opcode: 0x52,
+            debug: savePcDebug,
+          },
         ],
       };
     }

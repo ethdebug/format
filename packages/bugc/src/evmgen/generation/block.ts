@@ -104,6 +104,7 @@ export function generate<S extends Stack>(
             predBlock.terminator.dest
           ) {
             const destId = predBlock.terminator.dest;
+            const spillDebug = predBlock.terminator.operationDebug;
             result = result.then(annotateTop(destId)).then((s) => {
               const allocation = s.memory.allocations[destId];
               if (!allocation) return s;
@@ -112,7 +113,11 @@ export function generate<S extends Stack>(
                 ...s,
                 instructions: [
                   ...s.instructions,
-                  { mnemonic: "DUP1" as const, opcode: 0x80 },
+                  {
+                    mnemonic: "DUP1" as const,
+                    opcode: 0x80,
+                    debug: spillDebug,
+                  },
                   {
                     mnemonic: "PUSH2" as const,
                     opcode: 0x61,
@@ -120,8 +125,13 @@ export function generate<S extends Stack>(
                       (allocation.offset >> 8) & 0xff,
                       allocation.offset & 0xff,
                     ],
+                    debug: spillDebug,
                   },
-                  { mnemonic: "MSTORE" as const, opcode: 0x52 },
+                  {
+                    mnemonic: "MSTORE" as const,
+                    opcode: 0x52,
+                    debug: spillDebug,
+                  },
                 ],
               };
             });
@@ -212,14 +222,22 @@ function initializeMemory<S extends Stack>(
 ): Transition<S, S> {
   const { PUSHn, MSTORE } = operations;
 
-  return (
-    pipe<S>()
-      // Push the static offset value (the value to store)
-      .then(PUSHn(BigInt(nextStaticOffset)), { as: "value" })
-      // Push the free memory pointer location (0x40) (the offset)
-      .then(PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER)), { as: "offset" })
-      // Store the initial free pointer (expects [value, offset] on stack)
-      .then(MSTORE())
-      .done()
-  );
+  const debug = {
+    context: {
+      remark: "initialize free memory pointer",
+    },
+  };
+
+  return pipe<S>()
+    .then(PUSHn(BigInt(nextStaticOffset), { debug }), {
+      as: "value",
+    })
+    .then(
+      PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER), {
+        debug,
+      }),
+      { as: "offset" },
+    )
+    .then(MSTORE({ debug }))
+    .done();
 }
