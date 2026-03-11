@@ -30,4 +30,20 @@ testSchemaGuards("ethdebug/format/program/context", [
     schema: "schema:ethdebug/format/program/context/frame",
     guard: Context.isFrame,
   },
+  {
+    schema: "schema:ethdebug/format/program/context/function",
+    guard: Context.Function.isIdentity,
+  },
+  {
+    schema: "schema:ethdebug/format/program/context/function/invoke",
+    guard: Context.isInvoke,
+  },
+  {
+    schema: "schema:ethdebug/format/program/context/function/return",
+    guard: Context.isReturn,
+  },
+  {
+    schema: "schema:ethdebug/format/program/context/function/revert",
+    guard: Context.isRevert,
+  },
 ] as const);

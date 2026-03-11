@@ -32,16 +32,30 @@ export namespace Type {
       (typeof value.contains === "object" &&
         Object.values(value.contains).every(Type.isWrapper)));
 
+  export interface Reference {
+    id: string | number;
+  }
+
+  export const isReference = (value: unknown): value is Reference =>
+    typeof value === "object" &&
+    !!value &&
+    "id" in value &&
+    (typeof value.id === "string" || typeof value.id === "number");
+
+  export type Specifier = Type | Reference;
+
+  export const isSpecifier = (value: unknown): value is Specifier =>
+    isType(value) || isReference(value);
+
   export interface Wrapper {
-    type: Type | { id: any };
+    type: Specifier;
   }
 
   export const isWrapper = (value: unknown): value is Wrapper =>
     typeof value === "object" &&
     !!value &&
     "type" in value &&
-    (isType(value.type) ||
-      (typeof value.type === "object" && !!value.type && "id" in value.type));
+    isSpecifier(value.type);
 
   export type Elementary =
     | Elementary.Uint
