@@ -102,9 +102,7 @@ code {
   });
 
   describe("internal functions", () => {
-    // Internal function calls currently fail at runtime
-    // (stack underflow). Tracked as known issue.
-    it.skip("should call defined functions", async () => {
+    it("should call defined functions", async () => {
       const source = `name FuncCall;
 
 define {
@@ -131,6 +129,136 @@ code {
 
       expect(result.callSuccess).toBe(true);
       expect(await result.getStorage(0n)).toBe(30n);
+    });
+
+    it("should call a single-arg function", async () => {
+      const source = `name SingleArgFunc;
+
+define {
+  function double(x: uint256) -> uint256 {
+    return x + x;
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = double(7);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(14n);
+    });
+
+    it("should call multiple functions", async () => {
+      const source = `name MultiFuncCall;
+
+define {
+  function double(x: uint256) -> uint256 {
+    return x + x;
+  };
+  function triple(x: uint256) -> uint256 {
+    return x + x + x;
+  };
+}
+
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+}
+
+create {
+  a = 0;
+  b = 0;
+}
+
+code {
+  a = double(7);
+  b = triple(5);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(14n);
+      expect(await result.getStorage(1n)).toBe(15n);
+    });
+
+    it("should call a function from another function", async () => {
+      const source = `name FuncFromFunc;
+
+define {
+  function add(a: uint256, b: uint256) -> uint256 {
+    return a + b;
+  };
+  function addThree(x: uint256, y: uint256, z: uint256) -> uint256 {
+    let sum1 = add(x, y);
+    let sum2 = add(sum1, z);
+    return sum2;
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = addThree(10, 20, 30);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(60n);
+    });
+
+    it("should call a function in a loop", async () => {
+      const source = `name FuncInLoop;
+
+define {
+  function increment(x: uint256) -> uint256 {
+    return x + 1;
+  };
+}
+
+storage {
+  [0] total: uint256;
+}
+
+create {
+  total = 0;
+}
+
+code {
+  for (let i = 0; i < 3; i = i + 1) {
+    total = increment(total);
+  }
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(3n);
     });
   });
 

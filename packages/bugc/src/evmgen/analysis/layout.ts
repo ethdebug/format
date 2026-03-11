@@ -126,6 +126,9 @@ function dfsOrder(
     const trueBranch = dfsOrder(func, term.trueTarget, visited);
     const falseBranch = dfsOrder(func, term.falseTarget, visited);
     return [blockId, ...trueBranch, ...falseBranch];
+  } else if (term.kind === "call") {
+    // Follow continuation block
+    return [blockId, ...dfsOrder(func, term.continuation, visited)];
   } else {
     return [blockId];
   }

@@ -27,8 +27,10 @@ const {
 } = operations;
 
 // Scratch memory address for copy-based reads (returndata, code).
-// Uses the "zero slot" at 0x60, which is safe for temporary use.
-const SCRATCH_OFFSET = 0x60n;
+// Uses scratch space at 0x00 (Solidity convention). Must NOT use
+// 0x60 because the function calling convention stores the return
+// PC there.
+const SCRATCH_OFFSET = 0x00n;
 
 /**
  * Generate code for the new unified read instruction
@@ -229,10 +231,10 @@ function generateCalldataRead<S extends Stack>(
 /**
  * Copy-based read for returndata and code locations.
  * Uses RETURNDATACOPY or CODECOPY to copy data to scratch
- * memory at 0x60, then MLOAD to read.
+ * memory at 0x00, then MLOAD to read.
  *
  * Stack effect: copies `length` bytes from `offset` in the
- * source to memory[0x60], then loads the 32-byte word.
+ * source to memory[0x00], then loads the 32-byte word.
  */
 function generateCopyBasedRead<S extends Stack>(
   inst: Ir.Instruction.Read,

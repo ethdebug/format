@@ -92,7 +92,11 @@ export namespace Module {
     }
     result.main = mainMemory.value;
 
-    // Process user-defined functions
+    // Process user-defined functions.
+    // Each function's allocations start after the previous
+    // function's end, so all simultaneously-active frames
+    // have non-overlapping memory.
+    let nextFuncOffset = result.main.nextStaticOffset;
     for (const [name, func] of module.functions) {
       const funcLiveness = liveness.functions[name];
       if (!funcLiveness) {
@@ -103,11 +107,15 @@ export namespace Module {
           ),
         );
       }
-      const funcMemory = Function.plan(func, funcLiveness);
+      const funcMemory = Function.plan(func, funcLiveness, {
+        isUserFunction: true,
+        startOffset: nextFuncOffset,
+      });
       if (!funcMemory.success) {
         return funcMemory;
       }
       result.functions[name] = funcMemory.value;
+      nextFuncOffset = funcMemory.value.nextStaticOffset;
     }
 
     return Result.ok(result);
@@ -120,6 +128,12 @@ export namespace Function {
     allocations: Record<string, Allocation>;
     /** Next available memory offset after all static allocations */
     nextStaticOffset: number;
+    /**
+     * Offset where this function saves its return PC.
+     * Only set for user-defined functions that need to
+     * preserve their return address across internal calls.
+     */
+    savedReturnPcOffset?: number;
   }
 
   /**
@@ -128,10 +142,14 @@ export namespace Function {
   export function plan(
     func: Ir.Function,
     liveness: Liveness.Function.Info,
+    options: {
+      isUserFunction?: boolean;
+      startOffset?: number;
+    } = {},
   ): Result<Function.Info, MemoryError> {
     try {
       const allocations: Record<string, Allocation> = {};
-      let nextStaticOffset = regions.STATIC_MEMORY_START;
+      let nextStaticOffset = options.startOffset ?? regions.STATIC_MEMORY_START;
 
       const needsMemory = identifyMemoryValues(func, liveness);
 
@@ -194,9 +212,19 @@ export namespace Function {
         nextStaticOffset = currentSlotOffset;
       }
 
+      // Reserve a slot for the saved return PC in user
+      // functions. This is needed because nested calls
+      // overwrite memory[0x60] with their own return PC.
+      let savedReturnPcOffset: number | undefined;
+      if (options.isUserFunction) {
+        savedReturnPcOffset = nextStaticOffset;
+        nextStaticOffset += SLOT_SIZE;
+      }
+
       return Result.ok({
         allocations,
         nextStaticOffset,
+        savedReturnPcOffset,
       });
     } catch (error) {
       return Result.err(
@@ -396,6 +424,11 @@ function getValueType(valueId: string, func: Ir.Function): Ir.Type | undefined {
         }
       }
     }
+
+    // Check call terminator dest (return value)
+    if (block.terminator.kind === "call" && block.terminator.dest === valueId) {
+      return Ir.Type.Scalar.uint256;
+    }
   }
 
   return undefined;
@@ -482,6 +515,21 @@ function identifyMemoryValues(
         const type = getValueType(condId, func);
         if (type) {
           needsMemory.set(condId, type);
+        }
+      }
+    }
+
+    // Call terminator arguments need memory because the
+    // call convention cleans the stack before loading args.
+    // Non-const args must be reloaded from memory.
+    if (term.kind === "call") {
+      for (const arg of term.arguments) {
+        if (arg.kind !== "const") {
+          const argId = valueId(arg);
+          const type = getValueType(argId, func);
+          if (type) {
+            needsMemory.set(argId, type);
+          }
         }
       }
     }

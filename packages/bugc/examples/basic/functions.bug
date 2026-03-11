@@ -33,7 +33,6 @@ code {
   // Store result
   result = total;
   /*@test function-call-result
-  fails: stack underflow in internal function calls
   variables:
     result:
       pointer: { location: storage, slot: 0 }
