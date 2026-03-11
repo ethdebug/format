@@ -140,6 +140,20 @@
   flex-shrink: 0;
 }
 
+.call-stack-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-content-secondary);
+  margin-right: 4px;
+}
+
+.call-stack-toplevel {
+  color: var(--ifm-color-content-secondary);
+  font-style: italic;
+}
+
 .call-stack-sep {
   color: var(--ifm-color-content-secondary);
   padding: 0 2px;

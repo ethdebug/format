@@ -116,11 +116,21 @@ function TraceDrawerContent(): JSX.Element {
       if (!info) continue;
 
       if (info.kind === "invoke") {
-        frames.push({
-          identifier: info.identifier,
-          stepIndex: i,
-          callType: info.callType,
-        });
+        // The compiler emits invoke on both the caller
+        // JUMP and callee entry JUMPDEST. Skip if the
+        // top frame already matches this call.
+        const top = frames[frames.length - 1];
+        if (
+          !top ||
+          top.identifier !== info.identifier ||
+          top.callType !== info.callType
+        ) {
+          frames.push({
+            identifier: info.identifier,
+            stepIndex: i,
+            callType: info.callType,
+          });
+        }
       } else if (info.kind === "return" || info.kind === "revert") {
         if (frames.length > 0) {
           frames.pop();
@@ -344,9 +354,12 @@ function TraceDrawerContent(): JSX.Element {
                 </button>
               </div>
 
-              {callStack.length > 0 && (
-                <div className="call-stack-bar">
-                  {callStack.map((frame, i) => (
+              <div className="call-stack-bar">
+                <span className="call-stack-label">Call Stack:</span>
+                {callStack.length === 0 ? (
+                  <span className="call-stack-toplevel">(top level)</span>
+                ) : (
+                  callStack.map((frame, i) => (
                     <React.Fragment key={frame.stepIndex}>
                       {i > 0 && (
                         <span className="call-stack-sep">&#x203A;</span>
@@ -359,9 +372,9 @@ function TraceDrawerContent(): JSX.Element {
                         {frame.identifier || "(anonymous)"}
                       </button>
                     </React.Fragment>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
 
               {currentCallInfo && (
                 <div

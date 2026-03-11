@@ -263,11 +263,21 @@ export function buildCallStack(
     }
 
     if (callInfo.kind === "invoke") {
-      stack.push({
-        identifier: callInfo.identifier,
-        stepIndex: i,
-        callType: callInfo.callType,
-      });
+      // The compiler emits invoke on both the caller JUMP and
+      // callee entry JUMPDEST. Skip if the top frame already
+      // matches this call.
+      const top = stack[stack.length - 1];
+      if (
+        !top ||
+        top.identifier !== callInfo.identifier ||
+        top.callType !== callInfo.callType
+      ) {
+        stack.push({
+          identifier: callInfo.identifier,
+          stepIndex: i,
+          callType: callInfo.callType,
+        });
+      }
     } else if (callInfo.kind === "return" || callInfo.kind === "revert") {
       // Pop the matching frame
       if (stack.length > 0) {
