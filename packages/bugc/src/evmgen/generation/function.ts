@@ -2,6 +2,7 @@
  * Function-level code generation
  */
 
+import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type * as Evm from "#evm";
 import type { Stack } from "#evm";
@@ -27,11 +28,35 @@ function generatePrologue<S extends Stack>(
   return ((state: State<S>): State<readonly []> => {
     let currentState = state;
 
-    // Add JUMPDEST with function entry annotation
-    const entryDebug = {
-      context: {
-        remark: `function-entry: ${func.name || "anonymous"}`,
+    // Add JUMPDEST with function entry annotation.
+    // After this JUMPDEST executes, the callee's args are
+    // on the stack (first arg deepest).
+    const argPointers = params.map((_p, i) => ({
+      location: "stack" as const,
+      slot: params.length - 1 - i,
+    }));
+
+    const entryInvoke: Format.Program.Context.Invoke = {
+      invoke: {
+        jump: true as const,
+        identifier: func.name || "anonymous",
+        target: {
+          pointer: {
+            location: "stack" as const,
+            slot: 0,
+          },
+        },
+        ...(argPointers.length > 0 && {
+          arguments: {
+            pointer: {
+              group: argPointers,
+            },
+          },
+        }),
       },
+    };
+    const entryDebug = {
+      context: entryInvoke as Format.Program.Context,
     };
     currentState = {
       ...currentState,
@@ -46,11 +71,28 @@ function generatePrologue<S extends Stack>(
     // Return PC is already in memory at 0x60 (stored by caller)
     // Pop and store each arg from argN down to arg0
 
-    const prologueDebug = {
-      context: {
-        remark: `prologue: store ${params.length} parameter(s) to memory`,
-      },
-    };
+    const prologueDebug =
+      func.sourceId && func.loc
+        ? {
+            context: {
+              gather: [
+                {
+                  remark: `prologue: store ${params.length} parameter(s) to memory`,
+                },
+                {
+                  code: {
+                    source: { id: func.sourceId },
+                    range: func.loc,
+                  },
+                },
+              ],
+            } as Format.Program.Context,
+          }
+        : {
+            context: {
+              remark: `prologue: store ${params.length} parameter(s) to memory`,
+            } as Format.Program.Context,
+          };
 
     for (let i = params.length - 1; i >= 0; i--) {
       const param = params[i];
@@ -79,7 +121,11 @@ function generatePrologue<S extends Stack>(
         ...currentState,
         instructions: [
           ...currentState.instructions,
-          { mnemonic: "MSTORE", opcode: 0x52 },
+          {
+            mnemonic: "MSTORE",
+            opcode: 0x52,
+            debug: prologueDebug,
+          },
         ],
       };
     }
@@ -88,11 +134,28 @@ function generatePrologue<S extends Stack>(
     // so nested function calls don't clobber it.
     const savedPcOffset = currentState.memory.savedReturnPcOffset;
     if (savedPcOffset !== undefined) {
-      const savePcDebug = {
-        context: {
-          remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
-        },
-      };
+      const savePcDebug =
+        func.sourceId && func.loc
+          ? {
+              context: {
+                gather: [
+                  {
+                    remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
+                  },
+                  {
+                    code: {
+                      source: { id: func.sourceId },
+                      range: func.loc,
+                    },
+                  },
+                ],
+              } as Format.Program.Context,
+            }
+          : {
+              context: {
+                remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
+              } as Format.Program.Context,
+            };
       const highByte = (savedPcOffset >> 8) & 0xff;
       const lowByte = savedPcOffset & 0xff;
       currentState = {
@@ -105,13 +168,22 @@ function generatePrologue<S extends Stack>(
             immediates: [0x60],
             debug: savePcDebug,
           },
-          { mnemonic: "MLOAD", opcode: 0x51 },
+          {
+            mnemonic: "MLOAD",
+            opcode: 0x51,
+            debug: savePcDebug,
+          },
           {
             mnemonic: "PUSH2",
             opcode: 0x61,
             immediates: [highByte, lowByte],
+            debug: savePcDebug,
           },
-          { mnemonic: "MSTORE", opcode: 0x52 },
+          {
+            mnemonic: "MSTORE",
+            opcode: 0x52,
+            debug: savePcDebug,
+          },
         ],
       };
     }

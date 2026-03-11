@@ -17,9 +17,13 @@ export {
   createMockTrace,
   findInstructionAtPc,
   extractVariablesFromInstruction,
+  extractCallInfoFromInstruction,
   buildPcToInstructionMap,
+  buildCallStack,
   type TraceStep,
   type MockTraceSpec,
+  type CallInfo,
+  type CallFrame,
 } from "./mockTrace.js";
 
 export { traceStepToMachineState } from "./traceState.js";

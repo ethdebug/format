@@ -121,6 +121,178 @@ b = b + 1;
 }`}
 />
 
+## Tracing through a function call
+
+The examples above trace simple straight-line code. Real programs
+make function calls. **invoke** and **return** contexts let a
+debugger follow execution across function boundaries.
+
+Click **"Try it"** on the example below, then step through the
+trace. Watch for **invoke** contexts on the JUMP into `add` and
+**return** contexts on the JUMP back to the caller:
+
+<TraceExample
+  title="Function call and return"
+  description="Calls an internal add function and stores the result"
+  source={`name Adder;
+
+define {
+function add(a: uint256, b: uint256) -> uint256 {
+return a + b;
+};
+}
+
+storage {
+[0] result: uint256;
+}
+
+create {
+result = 0;
+}
+
+code {
+result = add(3, 4);
+}`}
+/>
+
+As you step through, three phases are visible:
+
+### Before the call — setting up arguments
+
+At the call site, the compiler pushes arguments onto the stack and
+prepares the jump. The JUMP instruction carries an **invoke**
+context identifying the function, its target, and the argument
+locations:
+
+<SchemaExample
+  schema="program/context/function/invoke"
+  href="/spec/program/context/function/invoke"
+  title="Invoke context on the JUMP"
+>
+  {`{
+  "invoke": {
+    "identifier": "add",
+    "jump": true,
+    "target": {
+      "pointer": { "location": "stack", "slot": 0 }
+    },
+    "arguments": {
+      "pointer": {
+        "group": [
+          { "name": "a", "location": "stack", "slot": 2 },
+          { "name": "b", "location": "stack", "slot": 3 }
+        ]
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+The debugger now knows it's entering `add` with arguments at stack
+slots 2 and 3. A trace viewer can show `add(3, 4)` in the call
+stack.
+
+### Inside the function — normal tracing
+
+Inside `add`, instructions carry their own `code` and `variables`
+contexts as usual. The debugger shows the source range within the
+function body, and parameters `a` and `b` appear as in-scope
+variables.
+
+### Returning — the result
+
+When `add` finishes, the JUMP back to the caller carries a
+**return** context with a pointer to the result:
+
+<SchemaExample
+  schema="program/context/function/return"
+  href="/spec/program/context/function/return"
+  title="Return context on the JUMP back"
+>
+  {`{
+  "return": {
+    "identifier": "add",
+    "data": {
+      "pointer": { "location": "stack", "slot": 0 }
+    }
+  }
+}`}
+</SchemaExample>
+
+The debugger pops `add` from the call stack and can display the
+return value (7).
+
+### External calls and reverts
+
+The same pattern applies to external message calls, but with
+additional fields. An external CALL instruction carries gas, value,
+and input data pointers:
+
+<SchemaExample
+  schema="program/context/function/invoke"
+  href="/spec/program/context/function/invoke"
+  title="External call (CALL)"
+>
+  {`{
+  "invoke": {
+    "identifier": "balanceOf",
+    "message": true,
+    "target": {
+      "pointer": { "location": "stack", "slot": 1 }
+    },
+    "gas": {
+      "pointer": { "location": "stack", "slot": 0 }
+    },
+    "input": {
+      "pointer": {
+        "group": [
+          { "name": "selector", "location": "memory",
+            "offset": "0x80", "length": 4 },
+          { "name": "arguments", "location": "memory",
+            "offset": "0x84", "length": "0x20" }
+        ]
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+If the call reverts, a **revert** context captures the reason:
+
+<SchemaExample
+  schema="program/context/function/revert"
+  href="/spec/program/context/function/revert"
+  title="Revert with reason"
+>
+  {`{
+  "revert": {
+    "identifier": "transfer",
+    "reason": {
+      "pointer": {
+        "location": "memory",
+        "offset": "0x80",
+        "length": "0x64"
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+For built-in assertion failures, the compiler can provide a panic
+code instead of (or alongside) a reason pointer:
+
+<SchemaExample
+  schema="program/context/function/revert"
+  href="/spec/program/context/function/revert"
+  title="Arithmetic overflow panic"
+>
+  {`{
+  "revert": {
+    "panic": 17
+  }
+}`}
+</SchemaExample>
+
 ## Trace data structure
 
 A trace step captures the EVM state at a single point:

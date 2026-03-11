@@ -1,0 +1,86 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/function/revert"
+
+title: ethdebug/format/program/context/function/revert
+description: |
+  This context indicates that the marked instruction is
+  associated with a function revert. Extends the function
+  identity schema with an optional pointer to revert reason
+  data and/or a numeric panic code.
+
+type: object
+properties:
+  revert:
+    type: object
+
+    $ref: "schema:ethdebug/format/program/context/function"
+
+    properties:
+      reason:
+        type: object
+        title: Revert reason
+        description: |
+          Pointer to the revert reason data. This typically contains
+          an ABI-encoded error message or custom error data.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+
+      panic:
+        type: integer
+        title: Panic code
+        description: |
+          Numeric panic code for built-in assertion failures.
+          Languages may define their own panic code conventions
+          (e.g., Solidity uses codes like 0x11 for arithmetic
+          overflow).
+
+    unevaluatedProperties: false
+
+required:
+  - revert
+
+examples:
+  # -----------------------------------------------------------
+  # Revert with reason: require() failure in transfer
+  # -----------------------------------------------------------
+  # This context would mark the REVERT instruction after a
+  # failed require(). The compiler has written the ABI-encoded
+  # Error(string) revert reason into memory:
+  #
+  #   0x80..0xe3: ABI-encoded Error(string) (100 bytes)
+  #               selector 0x08c379a0 + offset + length + data
+  - revert:
+      identifier: "transfer"
+      reason:
+        pointer:
+          location: memory
+          offset: "0x80"
+          length: "0x64"
+
+  # -----------------------------------------------------------
+  # Panic: arithmetic overflow (code 0x11)
+  # -----------------------------------------------------------
+  # A built-in safety check detected an arithmetic overflow.
+  # The panic code alone identifies the failure; no pointer to
+  # revert data is needed since the compiler inserts the check
+  # itself.
+  - revert:
+      panic: 17
+
+  # -----------------------------------------------------------
+  # External call revert: processing a failed CALL
+  # -----------------------------------------------------------
+  # This context would mark an instruction after a CALL that
+  # reverted. The callee's revert reason is accessible via the
+  # returndata buffer:
+  #
+  #   returndata 0x00..0x63: ABI-encoded revert reason
+  - revert:
+      reason:
+        pointer:
+          location: returndata
+          offset: 0
+          length: "0x64"

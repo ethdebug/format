@@ -1,0 +1,105 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/function/return"
+
+title: ethdebug/format/program/context/function/return
+description: |
+  This context indicates that the marked instruction is
+  associated with a successful function return. Extends the
+  function identity schema with a pointer to the return data
+  and, for external calls, the success status.
+
+type: object
+properties:
+  return:
+    type: object
+
+    $ref: "schema:ethdebug/format/program/context/function"
+
+    properties:
+      data:
+        type: object
+        title: Return data
+        description: |
+          Pointer to the data being returned from the function.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+
+      success:
+        type: object
+        title: Call success status
+        description: |
+          Pointer to the success status of an external call.
+          Typically points to a boolean value on the stack.
+        properties:
+          pointer:
+            $ref: "schema:ethdebug/format/pointer"
+        required:
+          - pointer
+
+    required:
+      - data
+
+    unevaluatedProperties: false
+
+required:
+  - return
+
+examples:
+  # -----------------------------------------------------------
+  # Internal return: transfer(address, uint256) returns (bool)
+  # -----------------------------------------------------------
+  # This context would mark the JUMP instruction that returns
+  # control to the caller. The function has left its return
+  # value on the stack:
+  #
+  #   slot 0: return value (`bool success`)
+  - return:
+      identifier: "transfer"
+      declaration:
+        source:
+          id: 0
+        range:
+          offset: 128
+          length: 95
+      data:
+        pointer:
+          location: stack
+          slot: 0
+
+  # -----------------------------------------------------------
+  # External call return: processing result of a CALL
+  # -----------------------------------------------------------
+  # This context would mark an instruction after a CALL that
+  # completed successfully. The EVM places a success flag on
+  # the stack, and the callee's return data is accessible via
+  # the returndata buffer:
+  #
+  #   stack slot 0: success flag (1 = success)
+  #   returndata 0x00..0x1f: ABI-encoded return value (32 bytes)
+  - return:
+      data:
+        pointer:
+          location: returndata
+          offset: 0
+          length: "0x20"
+      success:
+        pointer:
+          location: stack
+          slot: 0
+
+  # -----------------------------------------------------------
+  # Minimal return: only the data pointer
+  # -----------------------------------------------------------
+  # When the compiler cannot attribute the return to a named
+  # function, the context may contain only the return data.
+  # Here, a single stack value is being returned.
+  #
+  #   slot 0: return value
+  - return:
+      data:
+        pointer:
+          location: stack
+          slot: 0

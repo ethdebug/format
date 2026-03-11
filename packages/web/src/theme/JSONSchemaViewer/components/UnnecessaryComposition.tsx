@@ -2,6 +2,7 @@ import React from "react";
 import Link from "@docusaurus/Link";
 import CreateNodes from "@theme/JSONSchemaViewer/components/CreateNodes";
 import { SchemaHierarchyComponent } from "@theme-original/JSONSchemaViewer/contexts";
+import { Collapsible } from "@theme/JSONSchemaViewer/components";
 import {
   GenerateFriendlyName,
   QualifierMessages,

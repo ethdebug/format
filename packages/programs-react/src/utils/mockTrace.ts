@@ -101,6 +101,195 @@ function extractVariablesFromContext(
 }
 
 /**
+ * Info about a function call context on an instruction.
+ */
+export interface CallInfo {
+  /** The kind of call event */
+  kind: "invoke" | "return" | "revert";
+  /** Function name (from Function.Identity) */
+  identifier?: string;
+  /** Call variant for invoke contexts */
+  callType?: "internal" | "external" | "create";
+  /** Panic code for revert contexts */
+  panic?: number;
+  /** Named pointer refs to resolve */
+  pointerRefs: Array<{
+    label: string;
+    pointer: unknown;
+  }>;
+}
+
+/**
+ * Extract call info (invoke/return/revert) from an
+ * instruction's context tree.
+ */
+export function extractCallInfoFromInstruction(
+  instruction: Program.Instruction,
+): CallInfo | undefined {
+  if (!instruction.context) {
+    return undefined;
+  }
+  return extractCallInfoFromContext(instruction.context);
+}
+
+function extractCallInfoFromContext(
+  context: Program.Context,
+): CallInfo | undefined {
+  // Use unknown intermediate to avoid strict type checks
+  // on the context union — we discriminate by key presence
+  const ctx = context as unknown as Record<string, unknown>;
+
+  if ("invoke" in ctx) {
+    const inv = ctx.invoke as Record<string, unknown>;
+    const pointerRefs: CallInfo["pointerRefs"] = [];
+
+    let callType: CallInfo["callType"];
+    if ("jump" in inv) {
+      callType = "internal";
+      collectPointerRef(pointerRefs, "target", inv.target);
+      collectPointerRef(pointerRefs, "arguments", inv.arguments);
+    } else if ("message" in inv) {
+      callType = "external";
+      collectPointerRef(pointerRefs, "target", inv.target);
+      collectPointerRef(pointerRefs, "gas", inv.gas);
+      collectPointerRef(pointerRefs, "value", inv.value);
+      collectPointerRef(pointerRefs, "input", inv.input);
+    } else if ("create" in inv) {
+      callType = "create";
+      collectPointerRef(pointerRefs, "value", inv.value);
+      collectPointerRef(pointerRefs, "salt", inv.salt);
+      collectPointerRef(pointerRefs, "input", inv.input);
+    }
+
+    return {
+      kind: "invoke",
+      identifier: inv.identifier as string | undefined,
+      callType,
+      pointerRefs,
+    };
+  }
+
+  if ("return" in ctx) {
+    const ret = ctx.return as Record<string, unknown>;
+    const pointerRefs: CallInfo["pointerRefs"] = [];
+    collectPointerRef(pointerRefs, "data", ret.data);
+    collectPointerRef(pointerRefs, "success", ret.success);
+
+    return {
+      kind: "return",
+      identifier: ret.identifier as string | undefined,
+      pointerRefs,
+    };
+  }
+
+  if ("revert" in ctx) {
+    const rev = ctx.revert as Record<string, unknown>;
+    const pointerRefs: CallInfo["pointerRefs"] = [];
+    collectPointerRef(pointerRefs, "reason", rev.reason);
+
+    return {
+      kind: "revert",
+      identifier: rev.identifier as string | undefined,
+      panic: rev.panic as number | undefined,
+      pointerRefs,
+    };
+  }
+
+  // Walk gather/pick to find call info
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const sub of ctx.gather as Program.Context[]) {
+      const info = extractCallInfoFromContext(sub);
+      if (info) {
+        return info;
+      }
+    }
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    for (const sub of ctx.pick as Program.Context[]) {
+      const info = extractCallInfoFromContext(sub);
+      if (info) {
+        return info;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function collectPointerRef(
+  refs: CallInfo["pointerRefs"],
+  label: string,
+  value: unknown,
+): void {
+  if (value && typeof value === "object" && "pointer" in value) {
+    refs.push({ label, pointer: (value as { pointer: unknown }).pointer });
+  }
+}
+
+/**
+ * A frame in the call stack.
+ */
+export interface CallFrame {
+  /** Function name */
+  identifier?: string;
+  /** The step index where this call was invoked */
+  stepIndex: number;
+  /** The call type */
+  callType?: "internal" | "external" | "create";
+}
+
+/**
+ * Build a call stack by scanning instructions from
+ * step 0 to the given step index.
+ */
+export function buildCallStack(
+  trace: TraceStep[],
+  pcToInstruction: Map<number, Program.Instruction>,
+  upToStep: number,
+): CallFrame[] {
+  const stack: CallFrame[] = [];
+
+  for (let i = 0; i <= upToStep && i < trace.length; i++) {
+    const step = trace[i];
+    const instruction = pcToInstruction.get(step.pc);
+    if (!instruction) {
+      continue;
+    }
+
+    const callInfo = extractCallInfoFromInstruction(instruction);
+    if (!callInfo) {
+      continue;
+    }
+
+    if (callInfo.kind === "invoke") {
+      // The compiler emits invoke on both the caller JUMP and
+      // callee entry JUMPDEST. Skip if the top frame already
+      // matches this call.
+      const top = stack[stack.length - 1];
+      if (
+        !top ||
+        top.identifier !== callInfo.identifier ||
+        top.callType !== callInfo.callType
+      ) {
+        stack.push({
+          identifier: callInfo.identifier,
+          stepIndex: i,
+          callType: callInfo.callType,
+        });
+      }
+    } else if (callInfo.kind === "return" || callInfo.kind === "revert") {
+      // Pop the matching frame
+      if (stack.length > 0) {
+        stack.pop();
+      }
+    }
+  }
+
+  return stack;
+}
+
+/**
  * Build a map of PC to instruction for quick lookup.
  */
 export function buildPcToInstructionMap(

@@ -70,6 +70,25 @@ allOf:
         intermediary representation) to associate a
         context with a particular compiler step.
       $ref: "schema:ethdebug/format/program/context/frame"
+  - if:
+      required: ["invoke"]
+    then:
+      description: |
+        Indicates association with a function invocation (internal call,
+        external message call, or contract creation).
+      $ref: "schema:ethdebug/format/program/context/function/invoke"
+  - if:
+      required: ["return"]
+    then:
+      description: |
+        Indicates association with a successful function return.
+      $ref: "schema:ethdebug/format/program/context/function/return"
+  - if:
+      required: ["revert"]
+    then:
+      description: |
+        Indicates association with a function revert.
+      $ref: "schema:ethdebug/format/program/context/function/revert"
 
 unevaluatedProperties: false
 
