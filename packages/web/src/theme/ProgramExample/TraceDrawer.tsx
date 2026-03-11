@@ -85,6 +85,52 @@ function TraceDrawerContent(): JSX.Element {
     return extractVariables(instruction.debug.context);
   }, [trace, currentStep, pcToInstruction]);
 
+  // Extract call info from current instruction context
+  const currentCallInfo = useMemo(() => {
+    if (trace.length === 0 || currentStep >= trace.length) {
+      return undefined;
+    }
+
+    const step = trace[currentStep];
+    const instruction = pcToInstruction.get(step.pc);
+    if (!instruction?.debug?.context) return undefined;
+
+    return extractCallInfo(instruction.debug.context);
+  }, [trace, currentStep, pcToInstruction]);
+
+  // Build call stack by scanning invoke/return/revert up to
+  // current step
+  const callStack = useMemo(() => {
+    const frames: Array<{
+      identifier?: string;
+      stepIndex: number;
+      callType?: string;
+    }> = [];
+
+    for (let i = 0; i <= currentStep && i < trace.length; i++) {
+      const step = trace[i];
+      const instruction = pcToInstruction.get(step.pc);
+      if (!instruction?.debug?.context) continue;
+
+      const info = extractCallInfo(instruction.debug.context);
+      if (!info) continue;
+
+      if (info.kind === "invoke") {
+        frames.push({
+          identifier: info.identifier,
+          stepIndex: i,
+          callType: info.callType,
+        });
+      } else if (info.kind === "return" || info.kind === "revert") {
+        if (frames.length > 0) {
+          frames.pop();
+        }
+      }
+    }
+
+    return frames;
+  }, [trace, currentStep, pcToInstruction]);
+
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
   const compileAndTrace = useCallback(async (sourceCode: string) => {
@@ -298,6 +344,33 @@ function TraceDrawerContent(): JSX.Element {
                 </button>
               </div>
 
+              {callStack.length > 0 && (
+                <div className="call-stack-bar">
+                  {callStack.map((frame, i) => (
+                    <React.Fragment key={frame.stepIndex}>
+                      {i > 0 && (
+                        <span className="call-stack-sep">&#x203A;</span>
+                      )}
+                      <button
+                        className="call-stack-frame-btn"
+                        onClick={() => setCurrentStep(frame.stepIndex)}
+                        type="button"
+                      >
+                        {frame.identifier || "(anonymous)"}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+
+              {currentCallInfo && (
+                <div
+                  className={`call-info-bar call-info-${currentCallInfo.kind}`}
+                >
+                  {formatCallBanner(currentCallInfo)}
+                </div>
+              )}
+
               <div className="trace-panels">
                 <div className="trace-panel opcodes-panel">
                   <div className="panel-header">Instructions</div>
@@ -466,6 +539,90 @@ function VariablesDisplay({ variables }: VariablesDisplayProps): JSX.Element {
       ))}
     </div>
   );
+}
+
+/**
+ * Info about a call context (invoke/return/revert).
+ */
+interface CallInfoResult {
+  kind: "invoke" | "return" | "revert";
+  identifier?: string;
+  callType?: string;
+}
+
+/**
+ * Extract call info from an ethdebug format context object.
+ */
+function extractCallInfo(context: unknown): CallInfoResult | undefined {
+  if (!context || typeof context !== "object") {
+    return undefined;
+  }
+
+  const ctx = context as Record<string, unknown>;
+
+  if ("invoke" in ctx && ctx.invoke) {
+    const inv = ctx.invoke as Record<string, unknown>;
+    let callType: string | undefined;
+    if ("jump" in inv) callType = "internal";
+    else if ("message" in inv) callType = "external";
+    else if ("create" in inv) callType = "create";
+
+    return {
+      kind: "invoke",
+      identifier: inv.identifier as string | undefined,
+      callType,
+    };
+  }
+
+  if ("return" in ctx && ctx.return) {
+    const ret = ctx.return as Record<string, unknown>;
+    return {
+      kind: "return",
+      identifier: ret.identifier as string | undefined,
+    };
+  }
+
+  if ("revert" in ctx && ctx.revert) {
+    const rev = ctx.revert as Record<string, unknown>;
+    return {
+      kind: "revert",
+      identifier: rev.identifier as string | undefined,
+    };
+  }
+
+  // Walk gather/pick
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const sub of ctx.gather) {
+      const info = extractCallInfo(sub);
+      if (info) return info;
+    }
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    for (const sub of ctx.pick) {
+      const info = extractCallInfo(sub);
+      if (info) return info;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Format a call info banner string.
+ */
+function formatCallBanner(info: CallInfoResult): string {
+  const name = info.identifier || "(anonymous)";
+  switch (info.kind) {
+    case "invoke": {
+      const prefix = info.callType === "create" ? "Creating" : "Calling";
+      return `${prefix} ${name}()`;
+    }
+    case "return":
+      return `Returned from ${name}()`;
+    case "revert":
+      return `Reverted in ${name}()`;
+  }
 }
 
 /**
