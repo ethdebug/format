@@ -5,7 +5,7 @@ const config: Config = {
   rootDir: "./",
   extensionsToTreatAsEsm: [".ts"],
   transform: {
-    "^.+\\.tsx?$": ['ts-jest', { useESM: true, }],
+    "^.+\\.tsx?$": ["ts-jest", { useESM: true }],
   },
   projects: ["<rootDir>/packages/*"],
 };

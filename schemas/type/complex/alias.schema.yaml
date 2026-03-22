@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/alias"
 
 title: ethdebug/format/type/complex/alias
-description:
-  Schema representing a type alias to another type
+description: Schema representing a type alias to another type
 
 type: object
 properties:

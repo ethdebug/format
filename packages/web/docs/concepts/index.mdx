@@ -1,0 +1,117 @@
+---
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Concepts
+
+This section introduces the core concepts behind **ethdebug/format**.
+Understanding these mental models will help you work with the format
+effectively, whether you're consuming it in a debugger or producing it from a
+compiler.
+
+## The main components
+
+**ethdebug/format** consists of four main kinds of information:
+
+### Types
+
+**Types** describe the structure of data — its shape, not its location. They
+specify what kind of value you're looking at and how its parts relate.
+
+For example, a type might describe:
+
+- A `uint256` (256-bit unsigned integer)
+- An `address` (20-byte account identifier)
+- A `struct` with named fields in a specific order
+- A `mapping` from keys to values
+
+Types don't say where data lives or how to find it. That's what pointers do.
+Together, a type and pointer give debuggers everything needed to locate bytes
+and interpret them as meaningful values.
+
+**[Learn more about types →](/docs/concepts/types)**
+
+### Pointers
+
+**Pointers** describe where data lives. They're recipes for finding bytes in
+EVM state.
+
+Simple pointers specify static locations:
+
+- "Storage slot 0"
+- "Memory offset 0x80"
+- "Stack position 2"
+
+Complex pointers describe dynamic locations:
+
+- "Storage slot `keccak256(key, baseSlot)`" for mapping values
+- "Memory at the offset stored in stack position 1" for dynamic references
+
+Pointers can include expressions that compute locations based on runtime state.
+
+**[Learn more about pointers →](/docs/concepts/pointers)**
+
+### Programs
+
+**Programs** describe runtime context. They tell a debugger what's happening
+at each point in execution.
+
+Programs answer questions like:
+
+- What source code corresponds to this bytecode instruction?
+- What variables are in scope right now?
+- What function are we in?
+
+This information enables source-level debugging of optimized bytecode.
+
+**[Learn more about programs →](/docs/concepts/programs)**
+
+### Info
+
+The **info schema** bundles all the pieces together. It's the top-level
+container that compilers actually emit, containing references to programs,
+types, and shared resources.
+
+An info object provides:
+
+- The compiled programs for each bytecode artifact
+- Shared type definitions referenced across programs
+- Source file content or references
+- Compilation metadata (compiler version, settings)
+
+**[Learn more about the info schema →](/docs/concepts/info)**
+
+## How they work together
+
+These components combine to enable rich debugging:
+
+1. A debugger reads **program** information to know which variables are in
+   scope at the current instruction
+2. Each variable has a **type** that describes its structure
+3. Each variable has a **pointer** that describes where to find its value
+4. The debugger resolves the pointer against current EVM state to get raw bytes
+5. The debugger decodes the bytes using the type definition
+6. The user sees meaningful variable values
+
+## Next steps
+
+Dive deeper into each component:
+
+- **[Types concepts](/docs/concepts/types)** — Mental model for type
+  representations
+- **[Pointers concepts](/docs/concepts/pointers)** — Mental model for pointer
+  representations (includes EVM data locations)
+- **[Programs concepts](/docs/concepts/programs)** — Mental model for program
+  representations
+- **[Info schema concepts](/docs/concepts/info)** — Mental model for bundling
+  debug data
+
+Or jump to the reference documentation:
+
+- **[Types reference](/docs/core-schemas/types)** — Full documentation on type definitions
+- **[Pointers reference](/docs/core-schemas/pointers)** — Full documentation on pointer
+  definitions
+- **[Programs reference](/docs/core-schemas/programs)** — Full documentation on program
+  annotations
+- **[Info schema reference](/docs/core-schemas/info)** — Full documentation on info objects

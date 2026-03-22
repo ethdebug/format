@@ -5,43 +5,30 @@ import JSONSchemaViewer from "@theme/JSONSchemaViewer";
 import CodeBlock from "@theme/CodeBlock";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import {
-  type DescribeSchemaOptions,
-  describeSchema,
-} from "@ethdebug/format";
-import {
-  schemaIndex,
-} from "@site/src/schemas";
-import {
-  SchemaContext ,
-  type PointerSchemaIds,
-  internalIdKey,
-} from "@site/src/contexts/SchemaContext";
+import { type DescribeSchemaOptions, describeSchema } from "@ethdebug/format";
+import { schemaIndex } from "@site/src/schemas";
+import { SchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
 import SchemaListing from "./SchemaListing";
 import Playground from "./Playground";
 
-export interface SchemaViewerProps extends DescribeSchemaOptions {
-}
+export interface SchemaViewerProps extends DescribeSchemaOptions {}
 
 export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
   const rootSchemaInfo = describeSchema(props);
-  const {
-    id,
-    rootSchema,
-    yaml,
-    pointer
-  } = rootSchemaInfo;
+  const { id, rootSchema, yaml: _yaml, pointer } = rootSchemaInfo;
 
   const transformedSchema = transformSchema(rootSchema, id || "");
 
   return (
     <Tabs>
       <TabItem value="viewer" label="Explore">
-        <SchemaContext.Provider value={{
-          rootSchemaInfo,
-          schemaIndex,
-        }}>
+        <SchemaContext.Provider
+          value={{
+            rootSchemaInfo,
+            schemaIndex,
+          }}
+        >
           <JSONSchemaViewer
             schema={transformedSchema}
             resolverOptions={{
@@ -51,37 +38,46 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
                   resolve: (uri: URL) => {
                     const id = uri.toString();
                     const { schema } = describeSchema({
-                      schema: { id }
+                      schema: { id },
                     });
                     return transformSchema(schema, id);
-                  }
-                }
-              }
+                  },
+                },
+              },
             }}
             viewerOptions={{
               showExamples: true,
               ValueComponent: ({ value }: { value: unknown }) => {
                 // deal with simple types first
-                if ([
-                  "string",
-                  "number",
-                  "bigint",
-                  "boolean"
-                ].includes(typeof value)) {
-                  return <code>{
-                    (value as string | number | bigint | boolean).toString()
-                  }</code>;
+                if (
+                  ["string", "number", "bigint", "boolean"].includes(
+                    typeof value,
+                  )
+                ) {
+                  return (
+                    <code>
+                      {(value as string | number | bigint | boolean).toString()}
+                    </code>
+                  );
                 }
 
                 // for complex types use a whole CodeBlock
-                return <CodeBlock language="json">{`${
-                  JSON.stringify(value, undefined, 2)
-                }`}</CodeBlock>;
+                return (
+                  <CodeBlock language="json">{`${JSON.stringify(
+                    value,
+                    undefined,
+                    2,
+                  )}`}</CodeBlock>
+                );
               },
-              DescriptionComponent: ({description}: { description: string }) =>
-                <ReactMarkdown children={description} />
-            }} />
-          </SchemaContext.Provider>
+              DescriptionComponent: ({
+                description,
+              }: {
+                description: string;
+              }) => <ReactMarkdown children={description} />,
+            }}
+          />
+        </SchemaContext.Provider>
       </TabItem>
       <TabItem value="listing" label="View source">
         <SchemaListing schema={props.schema} pointer={props.pointer} />
@@ -94,22 +90,23 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
 }
 
 function transformSchema(schema: JSONSchema, id: string): JSONSchema {
-  return insertIds(ensureRefsLackSiblings(schema), `${id}#`)
+  return insertIds(ensureRefsLackSiblings(schema), `${id}#`);
 }
 
 function insertIds<T>(obj: T, rootId: string): T {
   if (Array.isArray(obj)) {
     return obj.map((item, index) => insertIds(item, `${rootId}/${index}`)) as T;
-  } else if (obj !== null && typeof obj === 'object') {
-    return Object.entries(obj).reduce((newObj, [key, value]) => {
-      // @ts-ignore
-      newObj[key] = insertIds(value, `${rootId}/${key}`);
-      return newObj;
-    }, {
-      [internalIdKey]: rootId.endsWith("#")
-        ? rootId.slice(0, -1)
-        : rootId
-    } as T);
+  } else if (obj !== null && typeof obj === "object") {
+    return Object.entries(obj).reduce(
+      (newObj, [key, value]) => {
+        // @ts-expect-error dynamic key assignment
+        newObj[key] = insertIds(value, `${rootId}/${key}`);
+        return newObj;
+      },
+      {
+        [internalIdKey]: rootId.endsWith("#") ? rootId.slice(0, -1) : rootId,
+      } as T,
+    );
   }
   return obj;
 }
@@ -147,33 +144,30 @@ function ensureRefsLackSiblings<T>(obj: T): T {
     return obj;
   }
 
-  const {
-    $ref,
-    ...rest
-  } = obj as T & object & { $ref?: string };
+  const { $ref, ...rest } = obj as T & object & { $ref?: string };
 
-  const result = Object.entries(rest)
-    .reduce((newObj, [key, value]) => {
-      // @ts-ignore
-      newObj[key] = ensureRefsLackSiblings(value);
-      return newObj;
-    }, {} as T);
+  const result = Object.entries(rest).reduce((newObj, [key, value]) => {
+    // @ts-expect-error dynamic key assignment
+    newObj[key] = ensureRefsLackSiblings(value);
+    return newObj;
+  }, {} as T);
 
   if (!$ref) {
     return result;
   }
 
   // find an unused schema composition keyword and move the $ref there
-  const propertyName = ["allOf", "oneOf", "anyOf"]
-    .find((candidate) => !(candidate in obj));
+  const propertyName = ["allOf", "oneOf", "anyOf"].find(
+    (candidate) => !(candidate in obj),
+  );
 
   if (!propertyName) {
     throw new Error(
-      `Could not find available composition keyword in ${JSON.stringify(obj)}`
+      `Could not find available composition keyword in ${JSON.stringify(obj)}`,
     );
   }
 
-  // @ts-ignore
+  // @ts-expect-error dynamic property assignment
   result[propertyName] = [{ $ref: $ref }];
 
   return result;

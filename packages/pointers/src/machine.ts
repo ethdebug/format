@@ -1,11 +1,10 @@
-import type { Data } from "./data.js";
+import type { Data } from "#data";
 
 export interface Machine {
   trace(): AsyncIterable<Machine.State>;
 }
 
 export namespace Machine {
-
   export interface State {
     get traceIndex(): Promise<bigint>;
     get programCounter(): Promise<bigint>;
@@ -30,10 +29,7 @@ export namespace Machine {
       get length(): Promise<bigint>;
 
       /** read element at position from top of stack */
-      peek(options: {
-        depth: bigint;
-        slice?: Slice;
-      }): Promise<Data>;
+      peek(options: { depth: bigint; slice?: Slice }): Promise<Data>;
     }
 
     export interface Bytes {

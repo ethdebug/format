@@ -12,6 +12,18 @@ properties:
     title: Template identifier
     $ref: "schema:ethdebug/format/pointer/identifier"
 
+  yields:
+    title: Region name mapping
+    description: |
+      Maps region names produced by the template to new names for use
+      outside the template. Unmapped region names pass through unchanged.
+      When omitted, all regions keep their original names.
+    type: object
+    propertyNames:
+      $ref: "schema:ethdebug/format/pointer/identifier"
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/identifier"
+
 required:
   - template
 
@@ -19,3 +31,8 @@ additionalProperties: false
 
 examples:
   - template: "string-storage-pointer"
+
+  - template: "string-storage-pointer"
+    yields:
+      data: "name-data"
+      length: "name-length"

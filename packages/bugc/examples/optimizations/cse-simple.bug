@@ -1,0 +1,23 @@
+name CSESimple;
+
+storage {
+  [0] value: uint256;
+  [1] result: uint256;
+}
+
+code {
+  // Simple CSE within a single basic block
+  // These should get deduplicated
+  let a = value * 2;
+  let b = value * 2;  // Same computation as line 11
+  let c = value * 2;  // Same computation as line 11
+
+  result = a + b + c;
+}
+
+/*@test cse-with-zero-value
+after: call
+storage:
+  0: 0
+  1: 0
+*/

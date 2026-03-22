@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/int"
 
 title: ethdebug/format/type/elementary/int
-description:
-  Schema describing the representation of a signed integer type
+description: Schema describing the representation of a signed integer type
 
 type: object
 properties:

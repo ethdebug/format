@@ -6,6 +6,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import { describeSchema } from "@ethdebug/format";
 import CodeBlock from "@theme/CodeBlock";
+import StatusBanner from "@site/src/components/StatusBanner";
 
 # Overview
 
@@ -45,6 +46,10 @@ See [additional examples](#example-valid-representations) below
 for a sample of valid type representations according to this schema.
 :::
 
+:::tip[Conceptual introduction]
+For the mental model behind type representations, see
+[Concepts: Types](/docs/concepts/types).
+:::
 
 This format defines schemas for representing the data types allowable in a
 supporting high-level language.
@@ -54,10 +59,14 @@ JSON values that adhere to this schema may (for example) represent a particular
 fields, a particular `mapping` type from a certain key type to a certain value
 type, and so on.
 
+## Status
+
+<StatusBanner schema="type" />
+
 ## Reading this schema
 
 The **ethdebug/format/type** schema is a root schema that conditionally defers
-to one or more other related schemas in the ethdebug/format/type/* namespace.
+to one or more other related schemas in the ethdebug/format/type/\* namespace.
 
 These schemas (like all schemas in this format) are specified as
 [JSON Schema](https://json-schema.org), draft 2020-12.
@@ -74,32 +83,26 @@ Please refer to one or more of the following resources in this section:
   and [Complex types](/spec/category/complex-types) comprise individual
   subschemas for all known kinds of types.
 
-- The [Base schema](/spec/type/base) defines the mimimum overall structure of
+- The [Base schema](/spec/type/base) defines the minimum overall structure of
   **ethdebug/format/type** objects for purposes of schema extension.
-
 
 ## Example valid representations
 
 Here are some example **ethdebug/format/type** type representations.
 
-<Tabs>{
-  [
+<Tabs>
+  {[
     "ethdebug/format/type/elementary/address",
     "ethdebug/format/type/complex/mapping",
-    "ethdebug/format/type/complex/struct"
+    "ethdebug/format/type/complex/struct",
   ].map((id, index) => {
     const { schema } = describeSchema({ schema: `schema:${id}` });
-    return <TabItem
-      key={index}
-      value={index}
-      label={id.split("/").pop()}
-    >
-      <CodeBlock
-        language="json"
-        title={`Example ${id} type`}
-      >{
-        JSON.stringify(schema.examples[0], undefined, 2)
-      }</CodeBlock>
-    </TabItem>
-  })
-}</Tabs>
+    return (
+      <TabItem key={index} value={index} label={id.split("/").pop()}>
+        <CodeBlock language="json" title={`Example ${id} type`}>
+          {JSON.stringify(schema.examples[0], undefined, 2)}
+        </CodeBlock>
+      </TabItem>
+    );
+  })}
+</Tabs>

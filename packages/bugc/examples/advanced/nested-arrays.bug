@@ -1,0 +1,31 @@
+name NestedArrays;
+
+// Example 7: Nested Arrays
+//
+// Expected IR:
+//   // First dimension: matrix[i]
+//   %outer_base = compute_slot kind="array", base=15
+//   %inner_array_slot = add %outer_base, %i
+//
+//   // Second dimension: matrix[i][j]
+//   %inner_base = compute_slot kind="array", base=%inner_array_slot
+//   %element_slot = add %inner_base, %j
+//
+//   write location="storage", slot=%element_slot, offset=0, length=32, value=%value
+//   %elem = read location="storage", slot=%element_slot, offset=0, length=32
+//
+// EVM Strategy: Double keccak256 for nested dynamic arrays
+//
+// Key Insight: Dynamic arrays in storage use keccak hashing at each nesting level
+
+storage {
+  [15] matrix: array<array<uint256>>;
+}
+
+code {
+  let i = 2;
+  let j = 5;
+  let value = 999;
+  matrix[i][j] = value;
+  let elem = matrix[i][j];
+}

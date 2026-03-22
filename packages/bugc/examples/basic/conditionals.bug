@@ -1,0 +1,73 @@
+name Conditionals;
+
+storage {
+  [0] count: uint256;
+  [1] threshold: uint256;
+  [2] isActive: bool;
+  [3] owner: address;
+  [4] lastSender: address;
+  [5] permission: uint8;
+}
+
+create {
+  // Simple if statement
+  if (count == 0) {
+    count = 1;
+  }
+
+  // If-else statement
+  if (msg.sender == owner) {
+    permission = 255;  // Full permissions
+  } else {
+    permission = 1;    // Basic permissions
+  }
+
+  // Nested conditions
+  if (isActive) {
+    if (count < threshold) {
+      count = count + 1;
+    } else {
+      isActive = false;
+      count = 0;
+    }
+  }
+
+  // Complex boolean expressions
+  if (msg.sender != owner && count > 10) {
+    return;  // Early exit for non-owners when count is high
+  }
+
+  // Multiple conditions with logical operators
+  if (permission > 100 || (isActive && msg.sender == owner)) {
+    threshold = threshold * 2;
+  }
+
+  // Comparison operators
+  if (msg.value >= 1000000000000000000) {  // 1 ether in wei
+    count = count + 10;
+  } else {
+    if (msg.value >= 100000000000000000) {  // 0.1 ether
+      count = count + 1;
+    }
+  }
+
+  // Store last sender
+  lastSender = msg.sender;
+
+  /*@test count-after-deploy
+  variables:
+    count:
+      pointer: { location: storage, slot: 0 }
+      value: 1
+  */
+
+  /*@test permission-pointer
+  variables:
+    permission:
+      pointer: { location: storage, slot: 5, length: 1 }
+  */
+  return;
+}
+
+code {
+}

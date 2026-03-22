@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/tuple"
 
 title: ethdebug/format/type/complex/tuple
-description:
-  Schema for representing tuple types
+description: Schema for representing tuple types
 
 type: object
 properties:
@@ -42,8 +41,7 @@ $defs:
   Element:
     type: object
     title: Element
-    description:
-      An optionally named element type within a tuple. This is an
+    description: An optionally named element type within a tuple. This is an
       **ethdebug/format/type/wrapper** with additional fields.
     allOf:
       - $ref: "schema:ethdebug/format/type/wrapper"

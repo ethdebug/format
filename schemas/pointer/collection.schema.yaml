@@ -12,3 +12,4 @@ oneOf:
   - $ref: "schema:ethdebug/format/pointer/collection/conditional"
   - $ref: "schema:ethdebug/format/pointer/collection/scope"
   - $ref: "schema:ethdebug/format/pointer/collection/reference"
+  - $ref: "schema:ethdebug/format/pointer/collection/templates"

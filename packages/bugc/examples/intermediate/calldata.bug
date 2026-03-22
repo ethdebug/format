@@ -1,0 +1,16 @@
+name CalldataAccess;
+
+// Example 14: Calldata Access
+//
+// Expected IR:
+//   %param1 = calldata[4*]
+//   %param2 = calldata[36*]
+//
+// EVM Strategy: CALLDATALOAD at respective offsets
+//
+// Note: Calldata is read-only, standard ABI encoding starts at offset 4 (after selector)
+
+code {
+  let param1 = msg.data[4:36];   // First parameter
+  let param2 = msg.data[36:68];  // Second parameter
+}

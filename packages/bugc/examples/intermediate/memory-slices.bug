@@ -1,0 +1,17 @@
+name MemorySlice;
+
+// Example 11: Memory Slice
+//
+// Expected IR:
+//   %slice_offset = compute_offset location="memory", base=%data, byte_offset=10
+//   %slice = slice location="memory", offset=%slice_offset, length=40
+//
+// EVM Strategy: Calculate memory offsets, copy to new location with proper length prefix
+//
+// Note: Slice operations might deserve optimization passes to batch adjacent reads
+
+code {
+  let data: bytes = 0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627282930313233343536373839;
+  let slice = data[10:50];  // 40 bytes from offset 10
+}
+

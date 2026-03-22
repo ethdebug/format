@@ -14,11 +14,13 @@ concepts that are worth highlighting here.
 ## Types are organized by `kind`
 
 :::info[Example: Boolean type]
+
 ```json
 {
   "kind": "bool"
 }
 ```
+
 :::
 
 An **ethdebug/format/type** type representation is a JSON object with a
@@ -72,6 +74,7 @@ two ways (the optional `"class"` field, and the absence or existence of a
 
 Complex types inherently compose at least one other type and may do so in one
 of three forms:
+
 - Complex types may compose exactly one other type
 - Complex types may compose an ordered list of other types
 - Complex types may compose an object mapping of specific other types by key
@@ -151,6 +154,7 @@ possibly includes other fields alongside `"type"`.
       }
       ```
     </TabItem>
+
   </Tabs>
 </details>
 
@@ -178,6 +182,7 @@ type representation or a reference to another type by ID.
   }
 }
 ```
+
 </details>
 
 <details>
@@ -193,25 +198,20 @@ type representation or a reference to another type by ID.
 
 </details>
 
-
 Note that **ethdebug/format/type** places no restriction on IDs other than
 that they must be either a number or a string. Other components of this format
 at-large may impose restrictions, however.
 
 ### Type wrapper schema
 
-<SchemaViewer
-  schema={{ id: "schema:ethdebug/format/type/wrapper" }}
-  />
+<SchemaViewer schema={{ id: "schema:ethdebug/format/type/wrapper" }} />
 
 ### Type reference schema
 
 A type reference is an object containing the single `"id"` field. This field
 must be a string or a number.
 
-<SchemaViewer
-  schema={{ id: "schema:ethdebug/format/type/reference" }}
-  />
+<SchemaViewer schema={{ id: "schema:ethdebug/format/type/reference" }} />
 
 ## Sometimes types are defined in code
 
@@ -242,6 +242,4 @@ to a type expression.
 
 ### Type definition schema
 
-<SchemaViewer
-  schema={{ id: "schema:ethdebug/format/type/definition" }}
-  />
+<SchemaViewer schema={{ id: "schema:ethdebug/format/type/definition" }} />

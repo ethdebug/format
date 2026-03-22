@@ -1,0 +1,100 @@
+name ArraysAndLoops;
+
+storage {
+  [0] numbers: array<uint256, 10>;
+  [1] sum: uint256;
+  [2] max: uint256;
+  [3] count: uint256;
+  [4] found: bool;
+  [5] searchValue: uint256;
+}
+
+code {
+  // Initialize array with values
+  for (let i = 0; i < 10; i = i + 1) {
+    numbers[i] = i * i;  // Store squares: 0, 1, 4, 9, 16, 25, 36, 49, 64, 81
+  }
+
+  // Calculate sum of all elements
+  sum = 0;
+  /*@test sum-initialized
+  after: deploy
+  variables:
+    sum:
+      pointer: { location: storage, slot: 1 }
+      value: 0
+  */
+  for (let i = 0; i < 10; i = i + 1) {
+    sum = sum + numbers[i];
+  }
+
+  // Find maximum value
+  max = numbers[0];
+  for (let i = 1; i < 10; i = i + 1) {
+    if (numbers[i] > max) {
+      max = numbers[i];
+    }
+  }
+
+  // Search for a specific value with early exit
+  searchValue = 25;
+  found = false;
+  for (let i = 0; i < 10; i = i + 1) {
+    if (numbers[i] == searchValue) {
+      found = true;
+      break;  // Exit loop early
+    }
+  }
+
+  // Count elements greater than a threshold
+  count = 0;
+  for (let i = 0; i < 10; i = i + 1) {
+    if (numbers[i] > 20) {
+      count = count + 1;
+    }
+  }
+
+  // Nested loop example (bubble sort first 5 elements)
+  for (let i = 0; i < 5; i = i + 1) {
+    for (let j = 0; j < 4 - i; j = j + 1) {
+      if (numbers[j] > numbers[j + 1]) {
+        // Swap elements
+        let temp = numbers[j];
+        numbers[j] = numbers[j + 1];
+        numbers[j + 1] = temp;
+      }
+    }
+  }
+
+  // Count elements below 50
+  let idx = 0;
+  for (let k = 0; k < 10; k = k + 1) {
+    if (numbers[k] < 50) {
+      idx = idx + 1;
+    }
+  }
+  count = idx;  // Store count of elements < 50
+  /*@test final-sum
+  fails: stack overflow during call - needs investigation
+  variables:
+    sum:
+      pointer: { location: storage, slot: 1 }
+      value: 285
+  */
+  /*@test final-max
+  fails: stack overflow during call - needs investigation
+  variables:
+    max:
+      pointer: { location: storage, slot: 2 }
+      value: 81
+  */
+  /*@test final-count
+  fails: stack overflow during call - needs investigation
+  variables:
+    count:
+      pointer: { location: storage, slot: 3 }
+      value: 8
+  */
+
+  return;
+}

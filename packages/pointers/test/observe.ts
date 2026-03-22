@@ -69,15 +69,15 @@ export async function observeTrace<V>({
   compileOptions,
   observe,
   equals = (a, b) => a === b,
-  shouldObserve = () => Promise.resolve(true)
+  shouldObserve = () => Promise.resolve(true),
 }: ObserveTraceOptions<V>): Promise<V[]> {
   const observedValues: V[] = [];
 
   // initialize local development blockchain
   const provider = (await loadGanache()).provider({
     logging: {
-      quiet: true
-    }
+      quiet: true,
+    },
   });
 
   // perform compilation
@@ -92,7 +92,7 @@ export async function observeTrace<V>({
   let cursor; // delay initialization until first state of trace
   let lastObservedValue;
   for await (const state of machine.trace()) {
-    if (!await shouldObserve(state)) {
+    if (!(await shouldObserve(state))) {
       continue;
     }
 

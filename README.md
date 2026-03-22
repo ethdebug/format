@@ -46,6 +46,7 @@ This repository contains a
 with the formal JSON Schemas defined by this project (in YAML format).
 
 This repository also contains the source materials for the following NPM packages:
+
 - **@ethdebug/format** in
   [`packages/format/`](https://github.com/ethdebug/format/tree/main/packages/format)
   distributes the formal schemas for use in TypeScript
@@ -75,6 +76,7 @@ To build and run the site locally, please ensure you have Node.js
 (LTS or better) and `yarn` installed globally.
 
 First, clone this repo and install the Node.js dependencies:
+
 ```console
 git clone https://github.com/ethdebug/format.git
 cd format
@@ -96,10 +98,12 @@ This project uses a dual-license approach:
 
 - All other code and documentation in this repository is licensed under the [MIT License](LICENSE).
 
-[^1]: See [Debugging data format -
-  Wikipedia](https://en.wikipedia.org/wiki/Debugging_data_format)
+[^1]:
+    See [Debugging data format -
+    Wikipedia](https://en.wikipedia.org/wiki/Debugging_data_format)
 
 [^2]: See [DWARF - Wikipedia](https://en.wikipedia.org/wiki/DWARF)
 
-[^3]: See [Using type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)
-  section from TypeScript's Narrowing documentation.
+[^3]:
+    See [Using type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)
+    section from TypeScript's Narrowing documentation.

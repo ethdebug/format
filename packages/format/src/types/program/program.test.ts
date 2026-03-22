@@ -1,9 +1,9 @@
-import { testSchemaGuards } from "../../../test/guards";
-import { Program, isProgram } from "./program";
+import { testSchemaGuards } from "#test/guards";
+import { isProgram } from "./program.js";
 
 testSchemaGuards("ethdebug/format/program", [
   {
     schema: "schema:ethdebug/format/program",
-    guard: isProgram
+    guard: isProgram,
   },
 ] as const);

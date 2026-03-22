@@ -2,6 +2,11 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/array"
 
 title: ethdebug/format/type/complex/array
+description: |
+  Schema for representing array types, both fixed-size and dynamically
+  sized. An array type specifies the element type it contains and,
+  optionally, a fixed element count.
+
 type: object
 properties:
   class:
@@ -11,19 +16,36 @@ properties:
     type: string
     const: array
   contains:
+    description: |
+      The element type contained by this array, specified as an
+      **ethdebug/format/type/wrapper**.
     $ref: "schema:ethdebug/format/type/wrapper"
+  count:
+    description: |
+      The fixed number of elements in this array. When omitted, the array
+      is dynamically sized.
+    $ref: "schema:ethdebug/format/data/value"
 
 required:
   - kind
   - contains
 
 examples:
+  # example: a dynamically-sized array of uint256
   - kind: array
     contains:
       type:
         kind: uint
         bits: 256
 
+  # example: a fixed-size array of 10 addresses
+  - kind: array
+    count: 10
+    contains:
+      type:
+        kind: address
+
+  # example: a nested array with an unknown element type
   - kind: array
     contains:
       type:

@@ -1,0 +1,70 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.level {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.level.in-design {
+  background-color: rgba(99, 102, 241, 0.08);
+  border-left-color: #6366f1;
+}
+
+.level.implementable {
+  background-color: rgba(217, 119, 6, 0.08);
+  border-left-color: #d97706;
+}
+
+.level.reference-available {
+  background-color: rgba(5, 150, 105, 0.08);
+  border-left-color: #059669;
+}
+
+.badge {
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+}
+
+.description {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.adoptersNote {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* Dark mode */
+[data-theme="dark"] .level.in-design {
+  background-color: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .level.implementable {
+  background-color: rgba(217, 119, 6, 0.12);
+}
+
+[data-theme="dark"] .level.reference-available {
+  background-color: rgba(5, 150, 105, 0.12);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .level {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

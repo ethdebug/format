@@ -1,0 +1,244 @@
+---
+sidebar_position: 2
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Instructions
+
+<SpecLink
+  schema="ethdebug/format/program/instruction"
+  href="/spec/program/instruction"
+/>
+
+Each instruction record in a program corresponds to one EVM opcode in the
+bytecode. Instructions carry the context information that debuggers need.
+
+## Structure
+
+An instruction requires only `offset`; `operation` and `context` are
+optional:
+
+<SchemaExample schema="program/instruction" href="/spec/program/instruction">
+  {`{
+  "offset": 42,
+  "operation": {
+    "mnemonic": "SSTORE"
+  },
+  "context": { }
+}`}
+</SchemaExample>
+
+- **`offset`**: byte position in the bytecode (the program counter
+  value when this instruction executes)
+- **`operation`**: machine operation info — includes `mnemonic`
+  (required) and optional `arguments` (immediate values)
+- **`context`**: high-level information valid after this instruction
+  (defaults to `{}` when omitted)
+
+## Operation
+
+The optional `operation` field describes the machine-level operation:
+
+<SchemaExample
+  schema="program/instruction"
+  href="/spec/program/instruction"
+  title="Instruction with operation"
+>
+  {`{
+  "offset": 0,
+  "operation": {
+    "mnemonic": "PUSH1",
+    "arguments": ["0x60"]
+  }
+}`}
+</SchemaExample>
+
+- **`mnemonic`** (required): the opcode name (e.g., `"PUSH1"`,
+  `"SSTORE"`, `"ADD"`)
+- **`arguments`** (optional): immediate values passed to the opcode
+  (relevant for `PUSH` instructions)
+
+## Context types
+
+The `context` field can take several forms:
+
+### Code context
+
+Maps the instruction to source code:
+
+<SchemaExample
+  schema="program/context/code"
+  href="/spec/program/context/code"
+  title="Source mapping"
+>
+  {`{
+  "offset": 42,
+  "context": {
+    "code": {
+      "source": { "id": 0 },
+      "range": {
+        "offset": 150,
+        "length": 16
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+The `source` field references a source file by ID and specifies the exact
+character range.
+
+### Variables context
+
+Declares variables that are in scope:
+
+<SchemaExample
+  schema="program/context/variables"
+  href="/spec/program/context/variables"
+  title="Variable declaration"
+>
+  {`{
+  "offset": 100,
+  "context": {
+    "variables": [
+      {
+        "identifier": "amount",
+        "type": { "kind": "uint", "bits": 256 },
+        "pointer": {
+          "location": "stack",
+          "slot": 0
+        }
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+Each variable includes:
+
+- `identifier`: the variable name from source code
+- `type`: an **ethdebug/format** type reference
+- `pointer`: where to find the variable's value
+
+### Frame context
+
+Indicates which compilation frame the context applies to. This is
+useful for compilers with distinct frontend/backend stages (e.g.,
+source language vs. intermediate representation):
+
+<SchemaExample
+  schema="program/context/frame"
+  href="/spec/program/context/frame"
+>
+  {`{
+  "offset": 200,
+  "context": {
+    "frame": "ir"
+  }
+}`}
+</SchemaExample>
+
+The `frame` value is a string naming the compilation frame, e.g.:
+
+- `"source"`: the original source language
+- `"ir"`: an intermediate representation
+
+## Composing contexts
+
+### Gather
+
+Combine multiple contexts (like nested scopes):
+
+<SchemaExample
+  schema="program/context/gather"
+  href="/spec/program/context"
+  title="Combining contexts"
+>
+  {`{
+  "offset": 150,
+  "context": {
+    "gather": [
+      {
+        "code": {
+          "source": { "id": 0 },
+          "range": { "offset": 200, "length": 12 }
+        }
+      },
+      {
+        "variables": [
+          {
+            "identifier": "x",
+            "type": { "kind": "uint", "bits": 256 },
+            "pointer": { "location": "stack", "slot": 0 }
+          }
+        ]
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+### Pick
+
+Indicate that one of several possible contexts is true, possibly
+requiring additional information to disambiguate:
+
+<SchemaExample
+  schema="program/context/pick"
+  href="/spec/program/context"
+  title="Pick between contexts"
+>
+  {`{
+  "offset": 175,
+  "context": {
+    "pick": [
+      {
+        "code": {
+          "source": { "id": 5 },
+          "range": { "offset": 68, "length": 16 }
+        }
+      },
+      {
+        "code": {
+          "source": { "id": 5 },
+          "range": { "offset": 132, "length": 16 }
+        }
+      }
+    ]
+  }
+}`}
+</SchemaExample>
+
+Each item in the `pick` array is a full context object. The debugger
+may need runtime information to determine which context applies.
+
+### Remark
+
+Add metadata without affecting scope:
+
+<SchemaExample schema="program/context/remark" href="/spec/program/context">
+  {`{
+  "offset": 180,
+  "context": {
+    "remark": "loop iteration boundary"
+  }
+}`}
+</SchemaExample>
+
+## Instruction ordering
+
+Instructions must be listed in bytecode order, matching the sequence of
+opcodes. The list is indexed by offset, so debuggers can quickly find the
+instruction for any program counter value.
+
+Not every byte offset needs an instruction—only positions where opcodes begin.
+Push data, for instance, doesn't get its own instruction entry.
+
+## Learn more
+
+For complete schemas, see:
+
+- [Instruction schema](/spec/program/instruction)
+- [Context schema](/spec/program/context)

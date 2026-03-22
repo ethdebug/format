@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/bool"
 
 title: ethdebug/format/type/elementary/bool
-description:
-  Schema describing the representation of the boolean type
+description: Schema describing the representation of the boolean type
 
 type: object
 properties:

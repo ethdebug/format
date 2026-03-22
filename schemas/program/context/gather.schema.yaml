@@ -35,24 +35,24 @@ examples:
             offset: 113
             length: 19
   - gather:
-    - variables:
-      - identifier: x
-        declaration:
-          source:
-            id: 5
-          range:
-            offset: 10
-            length: 56
-        type:
-          kind: string
-    - variables:
-      - identifier: x
-        declaration:
-          source:
-            id: 5
-          range:
-            offset: 10
-            length: 56
-        pointer:
-          location: storage
-          slot: 0
+      - variables:
+          - identifier: x
+            declaration:
+              source:
+                id: 5
+              range:
+                offset: 10
+                length: 56
+            type:
+              kind: string
+      - variables:
+          - identifier: x
+            declaration:
+              source:
+                id: 5
+              range:
+                offset: 10
+                length: 56
+            pointer:
+              location: storage
+              slot: 0

@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/ufixed"
 
 title: ethdebug/format/type/elementary/ufixed
-description:
-  Schema describing the representation of an unsigned fixed decimal type
+description: Schema describing the representation of an unsigned fixed decimal type
 
 type: object
 properties:
@@ -31,4 +30,3 @@ examples:
   - kind: ufixed
     bits: 256
     places: 10
-

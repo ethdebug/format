@@ -1,0 +1,20 @@
+// @wip
+name TypedLocals;
+
+create {
+  // Test explicit type annotations
+  let x: uint256 = 42;
+  let y: uint128 = 100;
+  let addr: address = 0x1234567890123456789012345678901234567890;
+  let flag: bool = true;
+
+  // Test bytes type annotations (using supported types)
+  let small: bytes4 = 0xABCDEF12;
+  let medium: bytes8 = 0xDEADBEEFCAFEBABE;
+  let large: bytes32 = 0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20;
+  let dynamic: bytes = large;
+  let sliced = dynamic[3:7];
+
+  // Test that dynamic bytes work with explicit annotation
+  let data: bytes = 0x11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111;
+}

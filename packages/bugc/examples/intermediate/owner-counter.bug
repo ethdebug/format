@@ -1,0 +1,48 @@
+name OwnedCounter;
+
+storage {
+  [0] count: uint256;
+  [1] owner: address;
+  [2] maxCount: uint256;
+}
+
+create {
+  // Set the deployer as owner
+  owner = msg.sender;
+
+  // Initialize counter to 0
+  count = 0;
+
+  // Set max count limit
+  maxCount = 1000000;
+  /*@test count-after-deploy
+  variables:
+    count:
+      pointer: { location: storage, slot: 0 }
+      value: 0
+    maxCount:
+      pointer: { location: storage, slot: 2 }
+      value: 1000000
+  */
+}
+
+code {
+  // Only owner can increment
+  if (msg.sender != owner) {
+    return;
+  }
+
+  // Check if we've hit the limit
+  if (count >= maxCount) {
+    return;
+  }
+
+  // Increment counter
+  count = count + 1;
+  /*@test count-after-call
+  variables:
+    count:
+      pointer: { location: storage, slot: 0 }
+      value: 1
+  */
+}

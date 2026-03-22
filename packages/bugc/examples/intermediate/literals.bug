@@ -1,0 +1,32 @@
+// @wip
+name Literals;
+
+define {
+  struct Point {
+    x: uint256;
+    y: uint256;
+  };
+
+  struct User {
+    id: uint256;
+    name: bytes32;
+    balance: uint256;
+  };
+}
+
+code {
+  // Test array literals
+  let numbers = [1, 2, 3, 4, 5];
+  let hexValues = [0x41, 0x42, 0x43];
+  let empty = [];
+
+  // Test struct literals
+  let origin = Point { x: 0, y: 0 };
+  let point = Point { x: 10, y: 20 };
+
+  let user = User {
+    id: 123,
+    name: 0x4a6f686e000000000000000000000000000000000000000000000000000000,
+    balance: 1000
+  };
+}

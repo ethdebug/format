@@ -1,12 +1,11 @@
 import { Pointer } from "@ethdebug/format";
-import type { Machine } from "../machine.js";
-import type { Cursor } from "../cursor.js";
-import { Data } from "../data.js";
-import { evaluate } from "../evaluate.js";
+import type { Machine } from "#machine";
+import type { Cursor } from "#cursor";
+import { Data } from "#data";
+import { evaluate } from "#evaluate";
 
 import { Memo } from "./memo.js";
 import { adjustStackLength, evaluateRegion } from "./region.js";
-
 
 /**
  * Contextual information for use within a pointer dereference process
@@ -31,7 +30,7 @@ export type Process = AsyncGenerator<Cursor.Region, Memo[]>;
  */
 export async function* processPointer(
   pointer: Pointer,
-  options: ProcessOptions
+  options: ProcessOptions,
 ): Process {
   if (Pointer.isRegion(pointer)) {
     const region = pointer;
@@ -61,17 +60,21 @@ export async function* processPointer(
     return yield* processReference(collection, options);
   }
 
+  if (Pointer.Collection.isTemplates(collection)) {
+    return yield* processTemplates(collection, options);
+  }
+
   console.error("%s", JSON.stringify(pointer, undefined, 2));
   throw new Error("Unexpected unknown kind of pointer");
 }
 
 async function* processRegion(
   region: Pointer.Region,
-  { stackLengthChange, ...options}: ProcessOptions
+  { stackLengthChange, ...options }: ProcessOptions,
 ): Process {
   const evaluatedRegion = await evaluateRegion(
     adjustStackLength(region, stackLengthChange),
-    options
+    options,
   );
 
   yield evaluatedRegion;
@@ -85,7 +88,7 @@ async function* processRegion(
 
 async function* processGroup(
   collection: Pointer.Collection.Group,
-  options: ProcessOptions
+  _options: ProcessOptions,
 ): Process {
   const { group } = collection;
   return group.map(Memo.dereferencePointer);
@@ -93,7 +96,7 @@ async function* processGroup(
 
 async function* processList(
   collection: Pointer.Collection.List,
-  options: ProcessOptions
+  options: ProcessOptions,
 ): Process {
   const { list } = collection;
   const { count: countExpression, each, is } = list;
@@ -102,9 +105,11 @@ async function* processList(
 
   const memos: Memo[] = [];
   for (let index = 0n; index < count; index++) {
-    memos.push(Memo.saveVariables({
-      [each]: Data.fromUint(index)
-    }));
+    memos.push(
+      Memo.saveVariables({
+        [each]: Data.fromUint(index),
+      }),
+    );
 
     memos.push(Memo.dereferencePointer(is));
   }
@@ -114,7 +119,7 @@ async function* processList(
 
 async function* processConditional(
   collection: Pointer.Collection.Conditional,
-  options: ProcessOptions
+  options: ProcessOptions,
 ): Process {
   const { if: ifExpression, then: then_, else: else_ } = collection;
 
@@ -125,71 +130,85 @@ async function* processConditional(
   }
 
   // otherwise, return the else clause if it exists (it is optional)
-  return else_
-    ? [Memo.dereferencePointer(else_)]
-    : [];
+  return else_ ? [Memo.dereferencePointer(else_)] : [];
 }
 
 async function* processScope(
   collection: Pointer.Collection.Scope,
-  options: ProcessOptions
+  options: ProcessOptions,
 ): Process {
   const { define: variableExpressions, in: in_ } = collection;
 
   const allVariables = {
-    ...options.variables
+    ...options.variables,
   };
   const newVariables: { [identifier: string]: Data } = {};
   for (const [identifier, expression] of Object.entries(variableExpressions)) {
     const data = await evaluate(expression, {
       ...options,
-      variables: allVariables
+      variables: allVariables,
     });
 
     allVariables[identifier] = data;
     newVariables[identifier] = data;
   }
 
-  return [
-    Memo.saveVariables(newVariables),
-    Memo.dereferencePointer(in_)
-  ];
+  return [Memo.saveVariables(newVariables), Memo.dereferencePointer(in_)];
 }
 
 async function* processReference(
   collection: Pointer.Collection.Reference,
-  options: ProcessOptions
+  options: ProcessOptions,
 ): Process {
-  const { template: templateName } = collection;
+  const { template: templateName, yields } = collection;
 
   const { templates, variables } = options;
 
   const template = templates[templateName];
 
   if (!template) {
+    throw new Error(`Unknown pointer template named ${templateName}`);
+  }
+
+  const { expect: expectedVariables, for: pointer } = template;
+
+  const definedVariables = new Set(Object.keys(variables));
+  const missingVariables = expectedVariables.filter(
+    (identifier) => !definedVariables.has(identifier),
+  );
+
+  if (missingVariables.length > 0) {
     throw new Error(
-      `Unknown pointer template named ${templateName}`
+      [
+        `Invalid reference to template named ${templateName}; missing expected `,
+        `variables with identifiers: ${missingVariables.join(", ")}. `,
+        `Please ensure these variables are defined prior to this reference.`,
+      ].join(""),
     );
   }
 
-  const {
-    expect: expectedVariables,
-    for: pointer
-  } = template;
-
-  const definedVariables = new Set(Object.keys(variables));
-  const missingVariables = expectedVariables
-    .filter(identifier => !definedVariables.has(identifier));
-
-  if (missingVariables.length > 0) {
-    throw new Error([
-      `Invalid reference to template named ${templateName}; missing expected `,
-      `variables with identifiers: ${missingVariables.join(", ")}. `,
-      `Please ensure these variables are defined prior to this reference.`
-    ].join(""));
+  // If yields is specified with mappings, wrap the dereference with
+  // push/pop region renames memos
+  if (yields && Object.keys(yields).length > 0) {
+    return [
+      Memo.pushRegionRenames(yields),
+      Memo.dereferencePointer(pointer),
+      Memo.popRegionRenames(),
+    ];
   }
 
+  return [Memo.dereferencePointer(pointer)];
+}
+
+async function* processTemplates(
+  collection: Pointer.Collection.Templates,
+  _options: ProcessOptions,
+): Process {
+  const { templates, in: in_ } = collection;
+
   return [
-    Memo.dereferencePointer(pointer)
+    Memo.pushTemplates(templates),
+    Memo.dereferencePointer(in_),
+    Memo.popTemplates(),
   ];
 }

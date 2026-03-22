@@ -1,10 +1,8 @@
 export namespace Data {
-  export type Value =
-    | Unsigned
-    | Hex;
+  export type Value = Unsigned | Hex;
 
   export const isValue = (value: unknown): value is Value =>
-    [isUnsigned, isHex].some(guard => guard(value));
+    [isUnsigned, isHex].some((guard) => guard(value));
 
   export type Unsigned = number;
 

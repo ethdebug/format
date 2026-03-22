@@ -1,0 +1,172 @@
+/**
+ * Shared Drawer Styles
+ *
+ * Base styles for bottom-of-viewport pull-out panels.
+ * Used by pointer playground, trace playground, etc.
+ */
+
+.drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #1b1b1d; /* Solid fallback */
+  background: var(--ifm-background-color);
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease-out;
+}
+
+html[data-theme="light"] .drawer {
+  background: #ffffff;
+}
+
+.drawer.closed {
+  transform: translateY(calc(100% - 44px));
+}
+
+.drawer.open {
+  transform: translateY(0);
+  height: var(--drawer-height, 45vh);
+  max-height: 85vh;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer.resizing {
+  transition: none;
+  user-select: none;
+}
+
+/* Resize handle */
+.drawer-resize-handle {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.drawer-resize-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ifm-color-emphasis-400);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.drawer-resize-handle:hover .drawer-resize-bar,
+.drawer.resizing .drawer-resize-bar {
+  background: var(--ifm-color-primary);
+}
+
+/* Header */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
+  flex-shrink: 0;
+}
+
+.drawer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ifm-color-content);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.drawer-toggle:hover {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.drawer-toggle-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.drawer-toggle-text {
+  font-family: var(--ifm-font-family-base);
+}
+
+.drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-close {
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ifm-color-emphasis-600);
+  border-radius: 4px;
+  transition:
+    background 0.2s,
+    color 0.2s;
+  line-height: 1;
+}
+
+.drawer-close:hover {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-content);
+}
+
+/* Content */
+.drawer-content {
+  flex: 1;
+  overflow: hidden;
+  background: #1b1b1d;
+  background: var(--ifm-background-color);
+}
+
+html[data-theme="light"] .drawer-content {
+  background: #ffffff;
+}
+
+/* Mobile: full screen */
+@media (max-width: 768px) {
+  .drawer.open {
+    height: 100vh !important;
+    max-height: 100vh;
+    top: 0;
+    border-top: none;
+  }
+
+  .drawer-resize-handle {
+    display: none;
+  }
+
+  .drawer-header {
+    padding: 12px 16px;
+  }
+}
+
+/* Dark mode */
+[data-theme="dark"] .drawer {
+  border-top-color: var(--ifm-color-emphasis-400);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .drawer-header {
+  border-bottom-color: var(--ifm-color-emphasis-400);
+}

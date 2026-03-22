@@ -1,0 +1,165 @@
+// @wip
+name VotingSystem;
+
+// This example demonstrates:
+// 1. Complex data structures with nested mappings and arrays
+// 2. Realistic calldata parsing with slice syntax for function dispatch
+// 3. State management for a decentralized voting system
+//
+// Function selectors (first 4 bytes of keccak256 hash):
+// - createProposal(): 0x9cb5dfac
+// - vote(uint256): 0x0121b93f
+// - executeProposal(uint256): 0x28bf0f4e
+// - setQuorum(uint256): 0x2c79b42a
+
+define {
+  struct Vote {
+    supporter: address;
+    weight: uint256;
+    timestamp: uint256;
+  };
+
+  struct Proposal {
+    id: uint256;
+    proposer: address;
+    voteCount: uint256;
+    executed: bool;
+    deadline: uint256;
+  };
+}
+
+storage {
+  [0] proposals: mapping<uint256, Proposal>;
+  [1] votes: mapping<uint256, array<Vote, 100>>;  // proposalId -> votes array
+  [2] userVotes: mapping<address, mapping<uint256, bool>>;  // user -> proposalId -> voted
+  [3] votingPower: mapping<address, uint256>;
+  [4] proposalCount: uint256;
+  [5] quorum: uint256;
+  [6] owner: address;
+  [7] paused: bool;
+}
+
+create {
+  // Initialize voting system
+  owner = msg.sender;
+  proposalCount = 0;
+  quorum = 50;  // Default quorum of 50 votes
+  paused = false;
+  
+  // Give owner initial voting power
+  votingPower[msg.sender] = 10;
+}
+
+code {
+  // Check if system is paused
+  if (paused) {
+    return;
+  }
+  
+  // Initialize voting power for new users
+  if (votingPower[msg.sender] == 0) {
+    votingPower[msg.sender] = 1;
+  }
+  
+  // Extract 4-byte function selector from calldata
+  let functionSelector = msg.data[0:4];
+  
+  // createProposal() - selector starts with 0x9c
+  if (functionSelector[0] == 156 && msg.value >= 1000000000000000) {
+    // 0.001 ether proposal fee required
+    proposalCount = proposalCount + 1;
+    
+    proposals[proposalCount].id = proposalCount;
+    proposals[proposalCount].proposer = msg.sender;
+    proposals[proposalCount].voteCount = 0;
+    proposals[proposalCount].executed = false;
+    proposals[proposalCount].deadline = block.timestamp + 604800; // 7 days
+    return;
+  }
+  
+  // vote(uint256 proposalId) - selector starts with 0x01
+  if (functionSelector[0] == 1) {
+    // Parse proposal ID parameter
+    let proposalIdParam = msg.data[4:36];   // bytes 4-35: proposal ID
+    
+    // For demo, vote on proposal 1 (real implementation would decode proposalIdParam)
+    let targetProposal = 1;
+  
+    if (targetProposal <= proposalCount && targetProposal > 0) {
+      // Check if proposal exists and is active
+      if (!proposals[targetProposal].executed) {
+        if (block.timestamp <= proposals[targetProposal].deadline) {
+          // Check if user hasn't voted yet
+          if (!userVotes[msg.sender][targetProposal]) {
+            // Find next empty vote slot
+            let voteIndex = 0;
+            for (let i = 0; i < 100; i = i + 1) {
+              if (votes[targetProposal][i].supporter == 0x0000000000000000000000000000000000000000) {
+                voteIndex = i;
+                break;
+              }
+            }
+            
+            // Record the vote
+            votes[targetProposal][voteIndex].supporter = msg.sender;
+            votes[targetProposal][voteIndex].weight = votingPower[msg.sender];
+            votes[targetProposal][voteIndex].timestamp = block.timestamp;
+            
+            // Update vote count
+            proposals[targetProposal].voteCount = proposals[targetProposal].voteCount + votingPower[msg.sender];
+            
+            // Mark user as voted
+            userVotes[msg.sender][targetProposal] = true;
+          }
+        }
+      }
+    }
+    return;
+  }
+  
+  // executeProposal(uint256 proposalId) - selector starts with 0x28
+  if (functionSelector[0] == 40) {
+    // Parse proposal ID parameter
+    let proposalIdParam = msg.data[4:36];   // bytes 4-35: proposal ID
+    
+    // For demo, execute proposal 1
+    let executeProposal = 1;
+    
+    if (executeProposal <= proposalCount && executeProposal > 0) {
+      if (!proposals[executeProposal].executed) {
+        if (proposals[executeProposal].voteCount >= quorum) {
+          proposals[executeProposal].executed = true;
+          
+          // Reward proposer
+          let proposerAddr = proposals[executeProposal].proposer;
+          votingPower[proposerAddr] = votingPower[proposerAddr] + 10;
+        }
+      }
+    }
+    return;
+  }
+  
+  // setQuorum(uint256 newQuorum) - selector starts with 0x2c (owner only)
+  if (functionSelector[0] == 44 && msg.sender == owner) {
+    // Parse new quorum parameter
+    let quorumParam = msg.data[4:36];   // bytes 4-35: new quorum value
+    
+    // For demo, set quorum to 100
+    quorum = 100;
+    return;
+  }
+  
+  // emergencyPause() - selector starts with 0xff (owner only)
+  if (functionSelector[0] == 255 && msg.sender == owner) {
+    paused = true;
+    return;
+  }
+  
+  // emergencyUnpause() - selector starts with 0xfe (owner only)
+  if (functionSelector[0] == 254 && msg.sender == owner) {
+    paused = false;
+    return;
+  }
+  
+  return;
+}

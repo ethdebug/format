@@ -1,0 +1,20 @@
+name OwnerCheck;
+
+storage {
+  [0] owner: address;
+}
+
+create {
+  owner = msg.sender;
+  /*@test owner-pointer
+  variables:
+    owner:
+      pointer: { location: storage, slot: 0, length: 20 }
+  */
+}
+
+code {
+  if (msg.sender == owner) {
+    owner = 0x0000000000000000000000000000000000000000;
+  }
+}

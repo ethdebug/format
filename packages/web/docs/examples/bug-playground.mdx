@@ -1,0 +1,52 @@
+---
+sidebar_position: 2
+---
+
+# BUG playground
+
+BUG is a minimal smart contract language designed for demonstrating and testing
+**ethdebug/format**. It compiles to EVM bytecode and produces rich debug
+information.
+
+Use the interactive playground below to explore how BUG code compiles to
+intermediate representations and EVM bytecode.
+
+import { BugPlayground } from "@theme/BugcExample";
+
+<BugPlayground height="700px" />
+
+## About BUG
+
+BUG is intentionally minimal—it provides just enough
+language features to demonstrate the debugging challenges that
+**ethdebug/format** addresses:
+
+- **Storage variables** with automatic slot allocation
+- **Functions** with parameters and return values
+- **Control flow** (if/else, while loops)
+- **Basic types** (uint256, bool, address, bytes32)
+- **Complex types** (arrays, mappings, structs)
+
+## Things to try
+
+1. **Edit the source code** in the left panel and watch the outputs
+   update. Try adding a new storage variable or changing a loop
+   bound.
+2. **Switch between views** (AST, IR, CFG, Bytecode) to see how
+   source code transforms through each compilation stage.
+3. **Hover over instructions** in the IR or Bytecode views to see
+   which source code they correspond to.
+4. **Inspect the Bytecode view** to see **ethdebug/format** program
+   annotations — each instruction shows its offset, operation, and
+   context (source ranges, variables in scope).
+5. **Look at the CFG** to understand control flow structure — useful
+   for seeing how `if`/`while` compiles to branching bytecode.
+
+## Compilation views
+
+The playground shows several stages of compilation:
+
+- **AST** — The abstract syntax tree after parsing
+- **IR** — The intermediate representation used for optimization
+- **CFG** — The control flow graph visualizing program structure
+- **Bytecode** — The final EVM bytecode with debug annotations

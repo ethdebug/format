@@ -19,11 +19,9 @@ value.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/test-cases.ts"
-  extract={sourceFile => sourceFile.getVariableStatement("stringStorageTest")}
-  />
+  extract={(sourceFile) => sourceFile.getVariableStatement("stringStorageTest")}
+/>
 
 ## Tested pointer
 
-<TestedPointer
-  pointerQuery="string-storage-contract-variable-slot"
-  />
+<TestedPointer pointerQuery="string-storage-contract-variable-slot" />

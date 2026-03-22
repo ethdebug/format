@@ -63,34 +63,49 @@ examples:
               length: $wordsize
 
   - # example `struct Record { uint8 x; uint8 y; bytes4 salt; }` in storage
-    define:
-      "struct-storage-contract-variable-slot": 0
+    #
+    # this example defines the "packed-field" template inline and demonstrates
+    # how templates can be reused with `yields` to rename regions.
+    # each field is placed by packing right-to-left from the previous offset.
+    templates:
+      packed-field:
+        expect:
+          - "struct-storage-contract-variable-slot"
+          - "previous"
+          - "size"
+        for:
+          name: "field"
+          location: storage
+          slot: "struct-storage-contract-variable-slot"
+          offset:
+            $difference: ["previous", "size"]
+          length: "size"
     in:
-      group:
-        - name: "x"
-          location: storage
-          slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - $wordsize
-              - .length: $this
-          length: 1  # uint8
-        - name: "y"
-          location: storage
-          slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - .offset: "x"
-              - .length: $this
-          length: 1  # uint8
-        - name: "salt"
-          location: storage
-          slot: "struct-storage-contract-variable-slot"
-          offset:
-            $difference:
-              - .offset: "y"
-              - .length: $this
-          length: 4  # bytes4
+      define:
+        "struct-storage-contract-variable-slot": 0
+      in:
+        group:
+          # sentinel region marking where packing begins (end of word)
+          - name: "packing-begin"
+            location: storage
+            slot: "struct-storage-contract-variable-slot"
+            offset: $wordsize
+            length: 0
+
+          - define: { previous: { .offset: "packing-begin" }, size: 1 }
+            in:
+              template: "packed-field"
+              yields: { "field": "x" }
+
+          - define: { previous: { .offset: "x" }, size: 1 }
+            in:
+              template: "packed-field"
+              yields: { "field": "y" }
+
+          - define: { previous: { .offset: "y" }, size: 4 }
+            in:
+              template: "packed-field"
+              yields: { "field": "salt" }
 
   - # example `(struct Record { uint256 x; uint256 y; })[] memory`
     group:
@@ -127,8 +142,8 @@ examples:
                     - .offset: "array-count"
                     - .length: "array-count"
                     - $product:
-                      - "item-index"
-                      - .length: "struct-pointer"
+                        - "item-index"
+                        - .length: "struct-pointer"
                 length: $wordsize
 
               # following that pointer leads to the region corresponding to
@@ -196,8 +211,8 @@ examples:
                   "string-length":
                     $quotient:
                       - $difference:
-                        - $read: "long-string-length-data"
-                        - 1
+                          - $read: "long-string-length-data"
+                          - 1
                       - 2
 
                   "start-slot":

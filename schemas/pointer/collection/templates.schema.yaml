@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/collection/templates"
+
+title: ethdebug/format/pointer/collection/templates
+description: |
+  A pointer with locally-defined templates available for use within.
+
+  Templates defined here are available by name for reference collections
+  inside the `in` pointer.
+
+type: object
+
+properties:
+  templates:
+    title: Mapping of template names to template definitions
+    type: object
+    propertyNames:
+      $ref: "schema:ethdebug/format/pointer/identifier"
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/template"
+  in:
+    $ref: "schema:ethdebug/format/pointer"
+
+required:
+  - templates
+  - in
+
+additionalProperties: false
+
+examples:
+  - templates:
+      simple-slot:
+        expect: ["slot"]
+        for:
+          location: storage
+          slot: "slot"
+    in:
+      define:
+        slot: 0
+      in:
+        template: "simple-slot"

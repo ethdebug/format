@@ -1,0 +1,234 @@
+---
+sidebar_position: 2
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+# Regions
+
+<SpecLink schema="ethdebug/format/pointer/region" href="/spec/pointer/region" />
+
+<PointerPlayground>
+
+A region represents a contiguous block of bytes in a specific EVM data
+location. Regions are the leaves of the pointer tree—the actual byte ranges
+that hold data.
+
+## Addressing schemes
+
+The EVM uses two different models for organizing bytes, and regions reflect
+this:
+
+### Slice-based locations
+
+**Memory**, **calldata**, **returndata**, and **code** are byte-addressable.
+Regions in these locations use `offset` and `length`:
+
+<PointerExample
+  title="Memory region (slice-based)"
+  pointer={{ location: "memory", offset: "0x40", length: 32 }}
+  state={{
+    memory:
+      "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080",
+  }}
+  description="Reads 32 bytes starting at offset 0x40 (the free memory pointer)"
+/>
+
+- `offset`: byte position from the start (required)
+- `length`: number of bytes (required)
+
+### Slot-based locations
+
+**Storage**, **transient storage**, and **stack** are organized in 32-byte
+slots. Regions use `slot`:
+
+<PointerExample
+  title="Storage slot (slot-based)"
+  pointer={{ location: "storage", slot: 5 }}
+  state={{
+    storage: {
+      "0x05":
+        "0x00000000000000000000000000000000000000000000000000000000000003e8",
+    },
+  }}
+  description="Reads the full 32-byte word at storage slot 5"
+/>
+
+For storage and transient storage, values that don't fill a full slot can
+specify sub-slot positioning:
+
+<PointerExample
+  title="Packed storage (sub-slot)"
+  pointer={{ location: "storage", slot: 0, offset: 12, length: 20 }}
+  state={{
+    storage: {
+      "0x00":
+        "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+    },
+  }}
+  description="Reads 20 bytes at offset 12 within slot 0 (an address in packed storage)"
+/>
+
+This addresses 20 bytes starting at byte 12 within slot 0—useful for packed
+storage.
+
+## Location-specific details
+
+### Memory
+
+Memory is a simple byte array that grows as needed:
+
+<PointerExample
+  title="Memory region"
+  pointer={{ location: "memory", offset: "0x80", length: 64 }}
+  state={{
+    memory:
+      "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000048656c6c6f20576f726c642100",
+  }}
+  description="Reads 64 bytes starting at offset 0x80"
+/>
+
+Memory addresses often come from the free memory pointer (stored at `0x40`).
+
+### Storage
+
+Storage persists between transactions. Slots are 32-byte words addressed by
+256-bit keys:
+
+<PointerExample
+  title="Storage slot"
+  pointer={{
+    location: "storage",
+    slot: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Reads storage slot 0 (full 256-bit key)"
+/>
+
+Slot addresses can be literal numbers, hex strings, or computed expressions.
+
+### Stack
+
+The EVM stack holds up to 1024 words. Slot 0 is the top:
+
+<PointerExample
+  title="Stack position"
+  pointer={{ location: "stack", slot: 0 }}
+  state={{
+    stack: [
+      "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000000000000000000000000000002",
+    ],
+  }}
+  description="Reads the top of the stack (slot 0)"
+/>
+
+Stack regions are typically read-only from a debugging perspective—you observe
+values but don't address sub-ranges.
+
+### Calldata
+
+Function arguments arrive in calldata, read-only and byte-addressable:
+
+<PointerExample
+  title="Calldata region"
+  pointer={{ location: "calldata", offset: 4, length: 32 }}
+  state={{
+    calldata:
+      "0xa9059cbb000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa960450000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  }}
+  description="Reads first argument (32 bytes after 4-byte selector)"
+/>
+
+The first 4 bytes are typically the function selector; arguments follow.
+
+### Returndata
+
+After a call, the returned data is accessible:
+
+<PointerExample
+  title="Returndata region"
+  pointer={{ location: "returndata", offset: 0, length: 32 }}
+  state={{
+    returndata:
+      "0x0000000000000000000000000000000000000000000000000000000000000001",
+  }}
+  description="Reads first 32 bytes of return data"
+/>
+
+### Code
+
+Contract bytecode can be read as data:
+
+<PointerExample
+  title="Code region"
+  pointer={{ location: "code", offset: 100, length: 32 }}
+  state={{
+    code: "0x608060405234801561001057600080fd5b506004361061002b5760003560e01c806360fe47b1146100305780636d4ce63c1461004c575b600080fd5b61004a60048036038101906100459190610",
+  }}
+  description="Reads 32 bytes from bytecode at offset 100"
+/>
+
+This is used for immutable variables and other data embedded in bytecode.
+
+### Transient storage
+
+Transient storage (EIP-1153) persists only within a transaction:
+
+<PointerExample
+  title="Transient storage"
+  pointer={{ location: "transient", slot: 0 }}
+  state={{
+    transient: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+    },
+  }}
+  description="Reads transient storage slot 0"
+/>
+
+Uses the same slot-based addressing as regular storage.
+
+## Naming regions
+
+Any region can have a `name` that other parts of the pointer reference:
+
+<PointerExample
+  title="Named region"
+  pointer={{ name: "token-balance", location: "storage", slot: 3 }}
+  state={{
+    storage: {
+      "0x03":
+        "0x00000000000000000000000000000000000000000000000000000000000003e8",
+    },
+  }}
+  description="Named region 'token-balance' at storage slot 3"
+/>
+
+Names enable:
+
+- Reading the region's value with `{ "$read": "token-balance" }`
+- Referencing properties with `{ ".slot": "token-balance" }`
+- Building self-documenting pointer structures
+
+## Dynamic addresses
+
+Region fields like `offset`, `slot`, and `length` can use expressions to
+compute values at runtime. This enables pointers for dynamic data like arrays
+and mappings.
+
+For the full expression language including arithmetic, `$keccak256`, and value
+reading, see [expressions](./expressions).
+
+## Learn more
+
+For complete schemas for each location type, see the
+[pointer region specification](/spec/pointer/region).
+
+</PointerPlayground>

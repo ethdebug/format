@@ -56,7 +56,9 @@ describe("Data", () => {
     });
 
     it("throws an error for invalid hex string format", () => {
-      expect(() => Data.fromHex("ff")).toThrow("Invalid hex string format. Expected \"0x\" prefix.");
+      expect(() => Data.fromHex("ff")).toThrow(
+        'Invalid hex string format. Expected "0x" prefix.',
+      );
     });
   });
 });

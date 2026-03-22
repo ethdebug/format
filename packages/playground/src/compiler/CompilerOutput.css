@@ -1,0 +1,70 @@
+.compiler-output {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+}
+
+.output-tabs {
+  display: flex;
+  background-color: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+  overflow-x: auto;
+}
+
+.output-tab {
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #969696;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.output-tab:hover:not(:disabled) {
+  color: #cccccc;
+}
+
+.output-tab.active {
+  color: #ffffff;
+  border-bottom-color: #0e639c;
+}
+
+.output-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.output-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.output-warnings {
+  background-color: #332b00;
+  border-top: 1px solid #665500;
+  padding: 1rem;
+  color: #ffcc00;
+}
+
+.output-warnings h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.output-warnings ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.output-warnings li {
+  font-size: 0.813rem;
+  line-height: 1.5;
+}

@@ -1,0 +1,40 @@
+// @wip
+name StringLength;
+
+define {
+  function getSelector() -> bytes4 {
+    let sig = "transfer(address,uint256)";
+    let hash = keccak256(sig);
+
+    // Note: sig.length would return 25 (the length of the string)
+    // But for this example, we'll just return the function selector
+    return hash as bytes4;
+  };
+}
+
+storage {
+  [0] lastDataSize: uint256;
+  [1] lastSelector: bytes4;
+}
+
+code {
+  // Store the calldata size
+  lastDataSize = msg.data.length;
+
+  // Check if we have at least 4 bytes for a function selector
+  if (msg.data.length >= 4) {
+    // Extract and store the selector
+    let selector = msg.data[0:4] as bytes4;
+
+    lastSelector = selector;
+
+    // Compare with our known selector
+    let transferSelector = getSelector();
+    if (selector == transferSelector) {
+      // This is a transfer call
+      return;
+    }
+  }
+
+  return;
+}

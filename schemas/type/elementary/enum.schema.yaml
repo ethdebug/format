@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/enum"
 
 title: ethdebug/format/type/elementary/enum
-description:
-  Schema describing the representation of an enumerated type
+description: Schema describing the representation of an enumerated type
 
 type: object
 properties:

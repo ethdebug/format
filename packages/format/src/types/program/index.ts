@@ -1,1 +1,1 @@
-export { Program, isProgram } from "./program";
+export { Program, isProgram } from "./program.js";

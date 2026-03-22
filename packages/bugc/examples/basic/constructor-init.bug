@@ -1,0 +1,16 @@
+name ConstructorArray;
+
+storage {
+  [0] items: array<uint256, 3>;
+}
+
+create {
+  items[0] = 0x101 as uint256;
+  items[1] = 0x102 as uint256;
+  items[2] = 0x103 as uint256;
+}
+
+code {
+  // Access items to make it available for testing
+  let first = items[0];
+}

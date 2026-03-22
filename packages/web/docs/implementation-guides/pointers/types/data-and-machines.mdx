@@ -8,14 +8,14 @@ import CodeListing from "@site/src/components/CodeListing";
 
 The **@ethdebug/pointers** package includes two abstractions that it uses for
 representing low-level concerns:
-- `class Data` extends JavaScript's `Uint8Array` to represent sequences of
-    bytes and allow conversion to/from different formats (like hex strings)
-- `interface Machine` defines an asynchronous API to model a running EVM.
-    It includes the sole method `trace(): AsyncIterable<Machine.State>`,
-    where the `Machine.State` type represents point-in-time access to a
-    running EVM at a particular program counter in a particular execution
-    context, etc.
 
+- `class Data` extends JavaScript's `Uint8Array` to represent sequences of
+  bytes and allow conversion to/from different formats (like hex strings)
+- `interface Machine` defines an asynchronous API to model a running EVM.
+  It includes the sole method `trace(): AsyncIterable<Machine.State>`,
+  where the `Machine.State` type represents point-in-time access to a
+  running EVM at a particular program counter in a particular execution
+  context, etc.
 
 ## Data
 
@@ -31,9 +31,7 @@ When implementing this functionality, be careful not to get this wrong.
 <details>
 <summary>Code listing for `src/data.ts`</summary>
 
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/data.ts" />
+<CodeListing packageName="@ethdebug/pointers" sourcePath="src/data.ts" />
 
 </details>
 
@@ -42,8 +40,6 @@ When implementing this functionality, be careful not to get this wrong.
 <details>
 <summary>Code listing for `src/machine.ts`</summary>
 
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/machine.ts" />
+<CodeListing packageName="@ethdebug/pointers" sourcePath="src/machine.ts" />
 
 </details>

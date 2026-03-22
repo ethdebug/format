@@ -1,0 +1,34 @@
+name ArrayLength;
+
+storage {
+  [0] fixedArray: array<uint256, 10>;
+  [10] arraySize: uint256;
+  [11] dataSize: uint256;
+  [12] isLarge: bool;
+}
+
+create {
+  // Get length of fixed-size array
+  arraySize = fixedArray.length;  // Should be constant 10
+
+  // Get length of msg.data (dynamic bytes)
+  dataSize = msg.data.length;
+
+  // Use length in conditional
+  if (msg.data.length > 4) {
+    isLarge = true;
+  } else {
+    isLarge = false;
+  }
+
+  /*@test array-length-after-deploy
+  variables:
+    arraySize:
+      pointer: { location: storage, slot: 10 }
+      value: 10
+  */
+  return;
+}
+
+code {
+}

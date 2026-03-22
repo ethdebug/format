@@ -6,12 +6,9 @@ import type { SchemaIndex } from "@site/src/schemas";
 
 export type JSONSchemaWithInternalIdKeys =
   | boolean
-  | (
-      & Exclude<JSONSchema, boolean>
-      & {
-          [internalIdKey]: string;
-        }
-    );
+  | (Exclude<JSONSchema, boolean> & {
+      [internalIdKey]: string;
+    });
 
 export interface SchemaContextValue {
   rootSchemaInfo?: SchemaInfo;
@@ -19,7 +16,7 @@ export interface SchemaContextValue {
 }
 
 export type PointerSchemaIds = {
-  [jsonPointer: string]: string
+  [jsonPointer: string]: string;
 };
 
 export const SchemaContext = createContext<SchemaContextValue>({

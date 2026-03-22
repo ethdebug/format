@@ -1,5 +1,3 @@
-
-
 dl.opcodes {
   display: grid;
   grid-template-columns: max-content max-content;
@@ -18,7 +16,8 @@ dl.opcodes dt {
   cursor: pointer;
 }
 
-dl.opcodes dt, dl.opcodes dt + dd{
+dl.opcodes dt,
+dl.opcodes dt + dd {
   margin-top: 5px;
   border-bottom: 1px solid var(--ifm-color-primary-light);
 }

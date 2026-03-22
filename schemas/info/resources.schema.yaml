@@ -27,7 +27,6 @@ properties:
   compilation:
     $ref: "schema:ethdebug/format/materials/compilation"
 
-
 required:
   - types
   - pointers

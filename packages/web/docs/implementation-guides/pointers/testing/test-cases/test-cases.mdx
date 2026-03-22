@@ -15,13 +15,16 @@ Test cases are aggregated into the `observeTraceTests` variable:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/test-cases.ts"
-  extract={sourceFile => sourceFile.getVariableStatement("observeTraceTests")}
+  extract={(sourceFile) => sourceFile.getVariableStatement("observeTraceTests")}
   links={{
-    structStorageTest: "/docs/implementation-guides/pointers/testing/test-cases/struct-storage/",
-    stringStorageTest: "/docs/implementation-guides/pointers/testing/test-cases/string-storage/",
-    uint256ArrayMemoryTest: "/docs/implementation-guides/pointers/testing/test-cases/uint256-array-memory/",
+    structStorageTest:
+      "/docs/implementation-guides/pointers/testing/test-cases/struct-storage/",
+    stringStorageTest:
+      "/docs/implementation-guides/pointers/testing/test-cases/string-storage/",
+    uint256ArrayMemoryTest:
+      "/docs/implementation-guides/pointers/testing/test-cases/uint256-array-memory/",
   }}
-  />
+/>
 
 To see a brief introduction and the relevant code listings for each test case,
 please use the sidebar navigation or the hyperlinks included above.

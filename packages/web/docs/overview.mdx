@@ -4,9 +4,84 @@ sidebar_position: 1
 
 # Project overview
 
-The security of smart contracts hinges on the availability of robust debugging
-tools. As the compiler optimizes a contract, it may move instructions around or
-remove them thus weakening its relationship with the original source code. The
-debugger then faces the challenging task of reversing these transformations to
-enrich the often cryptic artifacts with contexts mapping back to the contract's
-source.
+**ethdebug/format** is an open specification for debugging information in
+EVM-based smart contracts. It provides a standard way for compilers to emit
+rich debug data that debuggers can use to help developers understand what
+their contracts are doing at runtime.
+
+## The problem
+
+Compilers are relentless optimizers. They inline functions, eliminate dead
+code, reorder instructions, and pack multiple values into single storage
+slots. The resulting bytecode bears little resemblance to the source code
+that produced it.
+
+This creates a fundamental challenge for debugging. When a transaction fails,
+developers need to understand what happened — but the connection between
+bytecode and source has been obscured. Without standardized debug information,
+every debugger must reverse-engineer these transformations on its own, and
+each compiler-debugger pair requires custom integration work.
+
+## What this format provides
+
+**ethdebug/format** defines schemas including:
+
+- **Types** — Describe the structure of data (integers, structs, arrays,
+  mappings) — what shape it takes and how its parts relate
+- **Pointers** — Describe where data lives at runtime, including dynamic
+  locations that depend on execution state
+- **Programs** — Describe the runtime context at each bytecode instruction,
+  including which variables are in scope and what source code corresponds
+  to each operation
+- **Info schema** — Bundles all debug data for a compilation, including
+  programs, shared types, sources, and compiler metadata
+
+## Get started
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Building a debugger?</h3>
+      </div>
+      <div className="card__body">
+        Learn how to consume **ethdebug/format** data to build better debugging
+        tools.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--primary button--block"
+          href="/docs/getting-started/for-debugger-authors"
+        >
+          Debugger guide →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Building a compiler?</h3>
+      </div>
+      <div className="card__body">
+        Learn how to emit **ethdebug/format** data from your compiler.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--primary button--block"
+          href="/docs/getting-started/for-compiler-authors"
+        >
+          Compiler guide →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+Or explore the [concepts](/docs/concepts) to understand the format's
+design, browse [examples](/docs/examples) to see it in action, or
+dive into the [specification](/spec/overview) for formal definitions.
+
+To understand the motivation behind this project, see the
+[design goals](/docs/reference/goals) and the
+[challenges](/docs/reference/challenges) this format addresses.

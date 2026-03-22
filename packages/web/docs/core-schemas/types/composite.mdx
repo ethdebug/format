@@ -1,0 +1,232 @@
+---
+sidebar_position: 3
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Complex types
+
+<SpecLink
+  schema="ethdebug/format/type/complex"
+  href="/spec/category/complex-types"
+/>
+
+Complex types contain other types. They use the `contains` field to
+express this composition.
+
+## Arrays
+
+Arrays represent ordered collections of a single element type.
+
+### Dynamic arrays
+
+<SchemaExample schema="type/complex/array" href="/spec/type/complex/array">
+  {`{
+  "kind": "array",
+  "contains": {
+    "type": { "kind": "uint", "bits": 256 }
+  }
+}`}
+</SchemaExample>
+
+This represents `uint256[]`—an array of any length.
+
+### Fixed-size arrays
+
+<SchemaExample schema="type/complex/array" href="/spec/type/complex/array">
+  {`{
+  "kind": "array",
+  "count": 10,
+  "contains": {
+    "type": { "kind": "address" }
+  }
+}`}
+</SchemaExample>
+
+This represents `address[10]`—exactly 10 addresses.
+
+## Structs
+
+Structs group named members of potentially different types:
+
+<SchemaExample schema="type/complex/struct" href="/spec/type/complex/struct">
+  {`{
+  "kind": "struct",
+  "definition": {
+    "name": "User"
+  },
+  "contains": [
+    {
+      "name": "balance",
+      "type": { "kind": "uint", "bits": 256 }
+    },
+    {
+      "name": "owner",
+      "type": { "kind": "address" }
+    },
+    {
+      "name": "active",
+      "type": { "kind": "bool" }
+    }
+  ]
+}`}
+</SchemaExample>
+
+The `contains` field is an ordered list. Each element includes:
+
+- `name`: The member's identifier
+- `type`: The member's type (inline or by reference)
+
+## Mappings
+
+Mappings represent key-value associations:
+
+<SchemaExample schema="type/complex/mapping" href="/spec/type/complex/mapping">
+  {`{
+  "kind": "mapping",
+  "contains": {
+    "key": {
+      "type": { "kind": "address" }
+    },
+    "value": {
+      "type": { "kind": "uint", "bits": 256 }
+    }
+  }
+}`}
+</SchemaExample>
+
+This represents `mapping(address => uint256)`.
+
+### Nested mappings
+
+Mappings can nest by using another mapping as the value type:
+
+<SchemaExample
+  schema="type/complex/mapping"
+  href="/spec/type/complex/mapping"
+  title="Nested mapping (e.g., ERC-20 allowances)"
+>
+  {`{
+  "kind": "mapping",
+  "contains": {
+    "key": {
+      "type": { "kind": "address" }
+    },
+    "value": {
+      "type": {
+        "kind": "mapping",
+        "contains": {
+          "key": { "type": { "kind": "address" } },
+          "value": { "type": { "kind": "uint", "bits": 256 } }
+        }
+      }
+    }
+  }
+}`}
+</SchemaExample>
+
+This represents `mapping(address => mapping(address => uint256))`, commonly
+used for ERC-20 allowances.
+
+## Tuples
+
+Tuples represent ordered, unnamed sequences:
+
+<SchemaExample schema="type/complex/tuple" href="/spec/type/complex/tuple">
+  {`{
+  "kind": "tuple",
+  "contains": [
+    { "type": { "kind": "uint", "bits": 256 } },
+    { "type": { "kind": "address" } },
+    { "type": { "kind": "bool" } }
+  ]
+}`}
+</SchemaExample>
+
+Unlike structs, tuple elements don't have names. Tuples commonly appear in
+function return types and event parameters.
+
+## Type aliases
+
+Aliases give names to other types:
+
+<SchemaExample schema="type/complex/alias" href="/spec/type/complex/alias">
+  {`{
+  "kind": "alias",
+  "definition": {
+    "name": "TokenId"
+  },
+  "contains": {
+    "type": { "kind": "uint", "bits": 256 }
+  }
+}`}
+</SchemaExample>
+
+This represents a user-defined type like Solidity's `type TokenId is uint256`.
+
+## Function types
+
+Function types represent callable references:
+
+<SchemaExample
+  schema="type/complex/function"
+  href="/spec/type/complex/function"
+>
+  {`{
+  "kind": "function",
+  "internal": true,
+  "contains": {
+    "parameters": {
+      "type": {
+        "kind": "tuple",
+        "contains": [
+          { "type": { "kind": "address" } },
+          { "type": { "kind": "uint", "bits": 256 } }
+        ]
+      }
+    },
+    "returns": {
+      "type": { "kind": "bool" }
+    }
+  }
+}`}
+</SchemaExample>
+
+Function types must specify either `"internal": true` or
+`"external": true`. Internal functions are called within the
+language's own semantics; external functions are called via EVM
+contract call semantics (e.g., the Solidity ABI).
+
+## Using type references
+
+For deeply nested or repeated types, use references to avoid duplication:
+
+<SchemaExample
+  schema="type/complex/struct"
+  href="/spec/type/complex/struct"
+  title="Struct with type references"
+>
+  {`{
+  "kind": "struct",
+  "definition": { "name": "Order" },
+  "contains": [
+    {
+      "name": "maker",
+      "type": { "id": "user-type-id" }
+    },
+    {
+      "name": "taker",
+      "type": { "id": "user-type-id" }
+    }
+  ]
+}`}
+</SchemaExample>
+
+Both `maker` and `taker` reference the same `User` type by ID rather than
+repeating the full definition.
+
+## Learn more
+
+For complete schema definitions, see the
+[complex types specification](/spec/category/complex-types).

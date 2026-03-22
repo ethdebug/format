@@ -55,7 +55,8 @@ The full signature of this function is as follows:
 
       return tempSourceFile.getFunction("dereference");
     }
-  } />
+
+} />
 
 :::tip
 
@@ -76,12 +77,13 @@ compose stack-located regions.
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/dereference/index.ts"
-  extract={sourceFile => sourceFile.getInterface("DereferenceOptions")}
-  />
+  extract={(sourceFile) => sourceFile.getInterface("DereferenceOptions")}
+/>
 
 ## Control flow architecture
 
 The `dereference()` function itself performs two tasks:
+
 1. Create a "simple cursor": a function that takes a machine state and
    produces an asynchronous list of `Cursor.Region`s.
 2. Adapt this simple cursor to conform to the full `Cursor` interface

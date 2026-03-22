@@ -27,6 +27,12 @@ type: object
 
 allOf:
   - if:
+      required: ["name"]
+    then:
+      description: |
+        A label for distinguishing this context from others.
+      $ref: "schema:ethdebug/format/program/context/name"
+  - if:
       required: ["code"]
     then:
       description: |

@@ -1,0 +1,37 @@
+name MemoryToStorageCopy;
+
+// Example 13: Memory to Storage Copy
+//
+// Expected IR:
+//   // Read from memory
+//   %id = read location="memory", offset=%mem_user, length=32
+//   %name = read location="memory", offset=add(%mem_user, 32), length=32
+//
+//   // Write to storage (consecutive slots)
+//   write location="storage", slot=30, offset=0, length=32, value=%id
+//   write location="storage", slot=31, offset=0, length=32, value=%name
+//
+// EVM Strategy: MLOAD fields from memory, SSTORE to consecutive slots
+//
+// Key Insight: Mixed locations (e.g., memory→storage copies) need explicit read/write pairs
+
+define {
+  struct User {
+    id: uint256;
+    name: bytes32;
+  };
+}
+
+storage {
+  [30] stored_user: User;
+}
+
+code {
+  // Memory struct values that will be copied to storage
+  let id: uint256 = 999;
+  let name: bytes32 = 0x4a6f686e00000000000000000000000000000000000000000000000000000000;
+
+  // Copy to storage struct (would be field by field in IR)
+  stored_user.id = id;
+  stored_user.name = name;
+}

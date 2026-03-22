@@ -12,7 +12,6 @@ description: |
   This schema is constructed by extending the base region schema
   and the schema for the segment addressing scheme.
 type: object
-
 allOf:
   - title: '{ "location": "stack" }' # note: whitespace chars are \255 (nbsp)
     properties:

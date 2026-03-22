@@ -1,0 +1,162 @@
+---
+sidebar_position: 3
+---
+
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# For compiler authors
+
+You're building a compiler or toolchain that produces EVM bytecode. Here's how
+to emit **ethdebug/format** data so debuggers can provide rich debugging
+experiences for your users.
+
+## What you need to emit
+
+**ethdebug/format** defines several kinds of debug information:
+
+- **Type information** — Describe the structure of data in your language
+  (integers, structs, arrays, mappings)
+- **Pointer information** — Describe where variables are stored at runtime,
+  including dynamic locations computed from other values
+- **Program information** — Describe what's in scope at each bytecode
+  instruction, mapping bytecode back to source code
+- **Info schema** — Bundle everything together with source files and
+  compilation metadata
+
+## Quick example: describing a type
+
+Here's how to describe a simple `uint256`:
+
+<SchemaExample
+  schema="type/elementary/uint"
+  href="/spec/type/elementary/uint"
+  title="A uint256 type"
+>
+  {`{
+  "kind": "uint",
+  "bits": 256
+}`}
+</SchemaExample>
+
+A storage mapping from addresses to balances:
+
+<SchemaExample
+  schema="type/complex/mapping"
+  href="/spec/type/complex/mapping"
+  title="An address → uint256 mapping"
+>
+  {`{
+  "kind": "mapping",
+  "contains": {
+    "key": { "type": { "kind": "address" } },
+    "value": { "type": { "kind": "uint", "bits": 256 } }
+  }
+}`}
+</SchemaExample>
+
+## Quick example: describing a storage variable
+
+A pointer tells debuggers where to find a variable's value. For a `uint256`
+at storage slot 0:
+
+<SchemaExample
+  schema="pointer/region/storage"
+  href="/spec/pointer/region/location/storage"
+  title="A simple storage pointer"
+>
+  {`{
+  "location": "storage",
+  "slot": "0x0",
+  "length": 32
+}`}
+</SchemaExample>
+
+For a dynamic array where the length is at slot 2 and elements start at
+`keccak256(2)`:
+
+<SchemaExample
+  schema="pointer/collection"
+  href="/spec/pointer/collection"
+  title="A dynamic array pointer"
+>
+  {`{
+  "group": [
+    { "name": "array-length", "location": "storage", "slot": "0x2" },
+    {
+      "list": {
+        "count": { "$read": "array-length" },
+        "each": "i",
+        "is": {
+          "location": "storage",
+          "slot": {
+            "$sum": [{ "$keccak256": [{ "$wordsized": "0x2" }] }, "i"]
+          }
+        }
+      }
+    }
+  ]
+}`}
+</SchemaExample>
+
+## Integration approach
+
+Most compilers can add **ethdebug/format** support incrementally:
+
+1. **Start with types** — Emit type definitions for your language's data
+   structures. This can be a straightforward starting point.
+2. **Add storage pointers** — Describe where storage variables live. Many
+   variables have static locations.
+3. **Add memory/stack pointers** — Describe temporary values. These often
+   require tracking allocation during code generation.
+4. **Add program information** — Emit source mappings and scope information.
+   This typically requires the most compiler changes.
+
+## Go deeper
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Compiler implementation guide</h4>
+      </div>
+      <div className="card__body">
+        Detailed guidance on emitting **ethdebug/format** from your compiler.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="/docs/implementation-guides/compiler"
+        >
+          Compiler guides →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h4>Specification</h4>
+      </div>
+      <div className="card__body">
+        Formal schema definitions for all **ethdebug/format** structures.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="/spec/overview"
+        >
+          Read the spec →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+### Explore by topic
+
+- **[Types](/docs/core-schemas/types)** — Full documentation on type definitions
+- **[Pointers](/docs/core-schemas/pointers)** — Full documentation on pointer definitions
+- **[Programs](/docs/core-schemas/programs)** — Full documentation on program annotations
+- **[Info schema](/docs/core-schemas/info)** — Full documentation on bundling debug data
+- **[BUG Playground](/docs/examples/bug-playground)** — See a working
+  compiler that emits **ethdebug/format**

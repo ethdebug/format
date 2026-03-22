@@ -2,6 +2,8 @@
 sidebar_position: 1
 ---
 
+import StatusBanner from "@site/src/components/StatusBanner";
+
 # Overview
 
 :::tip[Summary]
@@ -11,6 +13,7 @@ sidebar_position: 1
 for representing the debugging data pertaining to a particular compilation.
 
 These two schemas serve to address two distinct purposes:
+
 1. **ethdebug/format/info** provides a means for representing a complete,
    standalone, and language-agnostic representation of all necessary debugging
    data. Objects in this schema contain all information specified by
@@ -37,13 +40,16 @@ This format defines the primary **ethdebug/format/info** schema.
 JSON values adhering to this schema contain debugging information about a
 single invocation of a compiler.
 
+## Status
+
+<StatusBanner schema="info" />
 
 ## Reading this schema
 
-The **ethdebug/format/info** schema is a standalone schema and does not define
-a corresponding namespace.
+The **ethdebug/format/info** schema is a root schema that also defines the
+**ethdebug/format/info/resources** subschema.
 
-This schema (like all schemas in this format) are specified as
+These schemas (like all schemas in this format) are specified as
 [JSON Schema](https://json-schema.org), draft 2020-12.
 
 Please refer to one or more of the following resources in this section, or

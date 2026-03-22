@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary"
 
 title: ethdebug/format/type/elementary
-description:
-  Canonical representation of an elementary type
+description: Canonical representation of an elementary type
 
 type: object
 properties:

@@ -1,0 +1,19 @@
+// @wip
+name TransientStorage;
+
+// Example 15: Transient Storage
+//
+// Expected IR:
+//   transient[5*] = %temp_value
+//   %val = transient[5*]
+//
+// EVM Strategy: TSTORE/TLOAD opcodes (available since Cancun)
+//
+// Note: Transient storage follows same pattern as regular storage with
+// segment-based addressing
+
+code {
+  let temp_value = 42;
+  transient[5] = temp_value;  // Store temporarily
+  let val = transient[5];      // Read back
+}

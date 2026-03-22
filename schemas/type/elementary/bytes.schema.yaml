@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/bytes"
 
 title: ethdebug/format/type/elementary/bytes
-description:
-  Schema describing the representation of a type of bytes string
+description: Schema describing the representation of a type of bytes string
   (either dynamic or static)
 
 type: object

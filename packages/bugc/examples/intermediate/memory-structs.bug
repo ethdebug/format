@@ -1,0 +1,22 @@
+// @wip
+name MemoryTest;
+
+define {
+  struct Point {
+    x: uint256;
+    y: uint256;
+  };
+}
+
+code {
+  // Test struct field operations
+  let p: Point;
+  p.x = 50;
+  p.y = 75;
+  let xCoord: uint256 = p.x;
+
+  // Test bytes operations
+  let data: bytes32 = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef;
+  let firstByte: uint256 = data[0];
+  data[1] = 0xFF as uint8;
+}

@@ -1,0 +1,110 @@
+---
+sidebar_position: 1
+---
+
+import SpecLink from "@site/src/components/SpecLink";
+import SchemaExample from "@site/src/components/SchemaExample";
+
+# Info
+
+<SpecLink schema="ethdebug/format/info" href="/spec/info/overview" />
+
+The **info schema** is the top-level container for **ethdebug/format** debug
+data. It bundles programs, types, sources, and compilation metadata into a
+single representation.
+
+For the mental model behind info objects, see
+[Concepts: Info](/docs/concepts/info).
+
+## What the info schema provides
+
+The **ethdebug/format/info** schema represents a complete unit of debug
+information for a compilation:
+
+- **Programs** for each bytecode artifact (create and call)
+- **Shared type definitions** referenced across programs
+- **Source files** (content or references)
+- **Compilation metadata** (compiler version, settings)
+
+## Schema overview
+
+An info object at minimum includes:
+
+<SchemaExample
+  schema="info"
+  href="/spec/info/overview"
+  title="Minimal info object"
+>
+  {`{
+  "$schema": "https://ethdebug.github.io/format/schema/info.json",
+  "compilation": {
+    "id": "compilation-1",
+    "compiler": { "name": "solc", "version": "0.8.20" },
+    "sources": [
+      { "id": "source-1", "language": "Solidity",
+        "path": "contracts/Token.sol", "contents": "// ..." }
+    ]
+  },
+  "programs": [
+    { /* program for create bytecode */ },
+    { /* program for call bytecode */ }
+  ],
+  "types": {},
+  "pointers": {}
+}`}
+</SchemaExample>
+
+## When to use the info schema
+
+Use **ethdebug/format/info** when you need:
+
+- A complete, standalone debug artifact
+- Debug data separate from compiler output
+- Input for debuggers and analysis tools
+
+For embedding debug data within compiler output, see
+[info/resources](/docs/core-schemas/info/resources).
+
+## Navigation
+
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Resources</h3>
+      </div>
+      <div className="card__body">
+        Compilation-level shared data: sources, compilations, and shared types.
+      </div>
+      <div className="card__footer">
+        <a
+          className="button button--secondary button--block"
+          href="/docs/core-schemas/info/resources"
+        >
+          Resources →
+        </a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>Specification</h3>
+      </div>
+      <div className="card__body">
+        Formal JSON Schema definition for info objects.
+      </div>
+      <div className="card__footer">
+        <a className="button button--secondary button--block" href="/spec/info">
+          View spec →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+## Related concepts
+
+- **[Programs](/docs/core-schemas/programs)** — Runtime context for each bytecode
+- **[Types](/docs/core-schemas/types)** — Data structure descriptions
+- **[Pointers](/docs/core-schemas/pointers)** — Data location descriptions

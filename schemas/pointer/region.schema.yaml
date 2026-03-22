@@ -6,6 +6,10 @@ description: |
   A representation of a region of data in the EVM
 type: object
 
+properties:
+  location:
+    $ref: "#/$defs/Location"
+
 oneOf:
   - $ref: "schema:ethdebug/format/pointer/region/stack"
   - $ref: "schema:ethdebug/format/pointer/region/memory"
@@ -15,9 +19,20 @@ oneOf:
   - $ref: "schema:ethdebug/format/pointer/region/transient"
   - $ref: "schema:ethdebug/format/pointer/region/code"
 
+$defs:
+  Location:
+    type: string
+    enum:
+      - stack
+      - memory
+      - storage
+      - calldata
+      - returndata
+      - transient
+      - code
+
 unevaluatedProperties: false
 
 examples:
   - location: storage
     slot: "0x0000000000000000000000000000000000000000000000000000000000000000"
-

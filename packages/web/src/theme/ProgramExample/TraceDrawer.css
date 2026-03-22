@@ -1,0 +1,337 @@
+/**
+ * Trace Drawer Styles
+ */
+
+/* Layout */
+.trace-drawer .drawer-content {
+  padding: 0;
+}
+
+.trace-drawer-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+.trace-drawer-editor {
+  border-right: 1px solid var(--ifm-color-emphasis-300);
+  overflow: hidden;
+}
+
+.trace-drawer-output {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header buttons */
+.trace-drawer-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+}
+
+.trace-drawer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trace-btn {
+  background: var(--ifm-color-primary);
+  color: white;
+}
+
+.trace-btn:hover:not(:disabled) {
+  background: var(--ifm-color-primary-dark);
+}
+
+/* Error display */
+.trace-drawer-error {
+  padding: 12px 16px;
+  background: var(--ifm-color-danger-contrast-background);
+  color: var(--ifm-color-danger-darkest);
+  font-size: 13px;
+  border-bottom: 1px solid var(--ifm-color-danger-light);
+}
+
+/* Placeholder */
+.trace-drawer-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ifm-color-content-secondary);
+  font-size: 14px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Trace viewer */
+.trace-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.trace-controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  flex-shrink: 0;
+}
+
+.trace-nav-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.trace-nav-btn:hover:not(:disabled) {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.trace-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trace-step-info {
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ifm-color-content);
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Trace panels */
+.trace-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+  gap: 1px;
+  background: var(--ifm-color-emphasis-200);
+}
+
+.trace-panel {
+  background: var(--ifm-background-color);
+  overflow: auto;
+}
+
+.panel-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-content-secondary);
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.current-opcode {
+  padding: 10px 12px;
+  background: var(--ifm-color-primary-lightest);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-opcode code {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ifm-color-primary-darkest);
+}
+
+.current-opcode .opcode-pc {
+  font-size: 12px;
+  color: var(--ifm-color-content-secondary);
+}
+
+/* Opcode list */
+.opcode-list {
+  padding: 4px 0;
+}
+
+.opcode-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.opcode-item:hover {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.opcode-item.active {
+  background: var(--ifm-color-primary-lightest);
+}
+
+.opcode-index {
+  min-width: 28px;
+  color: var(--ifm-color-content-secondary);
+  font-size: 11px;
+  text-align: right;
+}
+
+.opcode-pc {
+  min-width: 48px;
+  color: var(--ifm-color-content-secondary);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+}
+
+.opcode-name {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ifm-color-content);
+}
+
+.opcode-ellipsis {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--ifm-color-content-secondary);
+  font-style: italic;
+}
+
+/* Stack display */
+.stack-list {
+  padding: 8px 12px;
+}
+
+.stack-empty {
+  padding: 8px 12px;
+  color: var(--ifm-color-content-secondary);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.stack-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.stack-index {
+  min-width: 24px;
+  color: var(--ifm-color-content-secondary);
+  font-size: 11px;
+}
+
+.stack-value {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-content);
+  word-break: break-all;
+}
+
+.stack-more {
+  color: var(--ifm-color-content-secondary);
+  font-style: italic;
+}
+
+/* Variables display */
+.variables-list {
+  padding: 8px 12px;
+}
+
+.variable-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.variable-name {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 500;
+  color: var(--ifm-color-content);
+}
+
+.variable-type {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  color: var(--ifm-color-content-secondary);
+}
+
+/* Storage display */
+.storage-list {
+  padding: 8px 12px;
+}
+
+.storage-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.storage-slot {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-content-secondary);
+}
+
+.storage-arrow {
+  color: var(--ifm-color-content-secondary);
+  font-size: 10px;
+}
+
+.storage-value {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-content);
+  word-break: break-all;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .trace-drawer-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 40% 60%;
+  }
+
+  .trace-drawer-editor {
+    border-right: none;
+    border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  }
+
+  .trace-panels {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}

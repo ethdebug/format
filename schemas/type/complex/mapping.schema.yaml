@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/mapping"
 
 title: ethdebug/format/type/complex/mapping
-description:
-  Schema for representing mapping types
+description: Schema for representing mapping types
 
 type: object
 properties:

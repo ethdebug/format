@@ -1,5 +1,5 @@
-export { dereference, DereferenceOptions } from "./dereference/index.js";
-export { Cursor } from "./cursor.js";
+export { dereference, DereferenceOptions } from "#dereference";
+export { Cursor } from "#cursor";
 
-export type { Machine } from "./machine.js";
-export { Data } from "./data.js";
+export type { Machine } from "#machine";
+export { Data } from "#data";

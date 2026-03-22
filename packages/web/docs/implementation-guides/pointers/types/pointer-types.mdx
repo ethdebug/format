@@ -46,8 +46,8 @@ See these quick examples to get a sense for this part of the type hierarchy:
 import { Pointer } from "@ethdebug/format";
 
 const expression: Pointer.Expression = {
-  $sum: [0, 1]
-}
+  $sum: [0, 1],
+};
 
 Pointer.Expression.isKeccak256(expression); // false
 Pointer.Expression.isArithmetic(expression); // true
@@ -59,4 +59,5 @@ Pointer.Expression.Arithmetic.isSum(expression); // true
 <CodeListing
   packageName="@ethdebug/format"
   includePackageNameInTitle
-  sourcePath="src/types/pointer/pointer.ts" />
+  sourcePath="src/types/pointer/pointer.ts"
+/>

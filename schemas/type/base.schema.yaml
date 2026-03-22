@@ -2,8 +2,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/base"
 
 title: ethdebug/format/type/base
-description:
-  Defines the minimally necessary schema for a data type.
+description: Defines the minimally necessary schema for a data type.
   Types belong to a particular `class` (`"elementary"` or `"complex"`),
   and are further identified by a particular `kind`.
 type: object
@@ -14,8 +13,7 @@ oneOf:
 $defs:
   ElementaryType:
     title: Base elementary type
-    description:
-      Represents an elementary type (one that does not compose other types)
+    description: Represents an elementary type (one that does not compose other types)
     type: object
     properties:
       class:
@@ -25,8 +23,7 @@ $defs:
         type: string
       contains:
         not:
-          description:
-            "Elementary types **must not** specify a `contains` field
+          description: "Elementary types **must not** specify a `contains` field
             (to make it easier to discriminate elementary vs. complex)"
     required:
       - kind
@@ -113,8 +110,7 @@ $defs:
 
   TypeWrapperObject:
     title: '{ "key": { "type": ... }, ... }'
-    description:
-      A key-value mapping of wrapped types, where the wrapper may add fields
+    description: A key-value mapping of wrapped types, where the wrapper may add fields
     type: object
     additionalProperties:
       $ref: "#/$defs/TypeWrapper"
