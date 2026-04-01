@@ -93,3 +93,139 @@ export function formatDebugContext(context: unknown): string {
 export function hasSourceRange(context: unknown): boolean {
   return extractSourceRange(context).length > 0;
 }
+
+/**
+ * Kinds of function call contexts.
+ */
+export type ContextKind =
+  | "invoke"
+  | "return"
+  | "revert"
+  | "remark"
+  | "code"
+  | "other";
+
+/**
+ * Classify a debug context by its top-level discriminant.
+ */
+export function classifyContext(context: unknown): ContextKind {
+  if (!context || typeof context !== "object") {
+    return "other";
+  }
+
+  const ctx = context as Record<string, unknown>;
+
+  if ("invoke" in ctx) return "invoke";
+  if ("return" in ctx) return "return";
+  if ("revert" in ctx) return "revert";
+  if ("remark" in ctx) return "remark";
+  if ("code" in ctx) return "code";
+
+  // Check inside gather — a gather of contexts inherits
+  // the kind of its function-call child if present
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const item of ctx.gather) {
+      const kind = classifyContext(item);
+      if (kind === "invoke" || kind === "return" || kind === "revert") {
+        return kind;
+      }
+    }
+  }
+
+  return "other";
+}
+
+/**
+ * Summary of a function call context for display.
+ */
+export interface ContextSummary {
+  kind: ContextKind;
+  label: string;
+  functionName?: string;
+  details?: string;
+}
+
+/**
+ * Extract a human-readable summary from a debug context.
+ */
+export function summarizeContext(context: unknown): ContextSummary {
+  const kind = classifyContext(context);
+  const ctx = context as Record<string, unknown>;
+
+  switch (kind) {
+    case "invoke": {
+      const invoke = findNestedField(ctx, "invoke") as
+        | Record<string, unknown>
+        | undefined;
+      const name = (invoke?.identifier as string) ?? "unknown";
+      const callType = invoke?.jump
+        ? "internal"
+        : invoke?.message
+          ? "external"
+          : invoke?.create
+            ? "create"
+            : "";
+      return {
+        kind,
+        label: `invoke ${name}`,
+        functionName: name,
+        details: callType ? `${callType} call` : undefined,
+      };
+    }
+
+    case "return": {
+      const ret = findNestedField(ctx, "return") as
+        | Record<string, unknown>
+        | undefined;
+      const name = (ret?.identifier as string) ?? "unknown";
+      return {
+        kind,
+        label: `return ${name}`,
+        functionName: name,
+      };
+    }
+
+    case "revert": {
+      const rev = findNestedField(ctx, "revert") as
+        | Record<string, unknown>
+        | undefined;
+      const name = (rev?.identifier as string) ?? "unknown";
+      const panic = rev?.panic as number | undefined;
+      return {
+        kind,
+        label: `revert ${name}`,
+        functionName: name,
+        details: panic !== undefined ? `panic(${panic})` : undefined,
+      };
+    }
+
+    case "remark":
+      return {
+        kind,
+        label: ctx.remark as string,
+      };
+
+    case "code":
+      return { kind, label: "source mapping" };
+
+    default:
+      return { kind, label: "debug info" };
+  }
+}
+
+/**
+ * Find a field by name, searching inside gather arrays.
+ */
+function findNestedField(ctx: Record<string, unknown>, field: string): unknown {
+  if (field in ctx) return ctx[field];
+
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const item of ctx.gather) {
+      if (item && typeof item === "object" && field in item) {
+        return (item as Record<string, unknown>)[field];
+      }
+    }
+  }
+
+  return undefined;
+}

@@ -113,3 +113,82 @@
 .opcode-line .immediates {
   color: var(--bugc-syntax-number);
 }
+
+/* Context badges for invoke/return/revert */
+.context-badge {
+  cursor: pointer;
+  padding: 0.0625rem 0.25rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  user-select: none;
+  display: inline-block;
+  min-width: 1.2rem;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.context-badge-invoke {
+  color: var(--bugc-accent-blue);
+  background-color: var(--bugc-accent-blue-bg);
+}
+
+.context-badge-invoke:hover {
+  background-color: var(--bugc-accent-blue);
+  color: var(--bugc-bg-primary);
+}
+
+.context-badge-return {
+  color: var(--bugc-accent-green);
+  background-color: var(--bugc-accent-green-bg);
+}
+
+.context-badge-return:hover {
+  background-color: var(--bugc-accent-green);
+  color: var(--bugc-bg-primary);
+}
+
+.context-badge-revert {
+  color: var(--bugc-accent-red);
+  background-color: rgba(207, 34, 46, 0.1);
+}
+
+.context-badge-revert:hover {
+  background-color: var(--bugc-accent-red);
+  color: var(--bugc-bg-primary);
+}
+
+/* Inline context labels */
+.context-label {
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-left: 0.5rem;
+}
+
+.context-label-invoke {
+  color: var(--bugc-accent-blue);
+}
+
+.context-label-return {
+  color: var(--bugc-accent-green);
+}
+
+.context-label-revert {
+  color: var(--bugc-accent-red);
+}
+
+/* Highlight rows with call contexts */
+.opcode-line.context-invoke {
+  border-left: 2px solid var(--bugc-accent-blue);
+  padding-left: calc(0.5rem - 2px);
+}
+
+.opcode-line.context-return {
+  border-left: 2px solid var(--bugc-accent-green);
+  padding-left: calc(0.5rem - 2px);
+}
+
+.opcode-line.context-revert {
+  border-left: 2px solid var(--bugc-accent-red);
+  padding-left: calc(0.5rem - 2px);
+}

@@ -6,6 +6,10 @@ export {
   extractSourceRange,
   formatDebugContext,
   hasSourceRange,
+  classifyContext,
+  summarizeContext,
+  type ContextKind,
+  type ContextSummary,
 } from "./debugUtils.js";
 
 export {
