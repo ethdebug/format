@@ -5,6 +5,11 @@ sidebar_position: 4
 import SpecLink from "@site/src/components/SpecLink";
 import SchemaExample from "@site/src/components/SchemaExample";
 import { TracePlayground, TraceExample } from "@theme/ProgramExample";
+import {
+  counterIncrement,
+  thresholdCheck,
+  multipleStorageSlots,
+} from "./tracing-examples";
 
 # Tracing execution
 
@@ -50,19 +55,7 @@ This example shows a basic counter that increments a storage variable:
 <TraceExample
   title="Counter increment"
   description="Increments count from 0 to 1, storing the result"
-  source={`name Counter;
-
-storage {
-[0] count: uint256;
-}
-
-create {
-count = 0;
-}
-
-code {
-count = count + 1;
-}`}
+  source={counterIncrement}
 />
 
 ### Storage with threshold check
@@ -72,25 +65,7 @@ This example demonstrates conditional logic with storage variables:
 <TraceExample
   title="Threshold check"
   description="Increments counter and resets when reaching threshold"
-  source={`name ThresholdCounter;
-
-storage {
-[0] count: uint256;
-[1] threshold: uint256;
-}
-
-create {
-count = 0;
-threshold = 5;
-}
-
-code {
-count = count + 1;
-
-if (count >= threshold) {
-count = 0;
-}
-}`}
+  source={thresholdCheck}
 />
 
 ### Multiple storage slots
@@ -100,25 +75,7 @@ This example shows working with multiple storage locations:
 <TraceExample
   title="Multiple storage slots"
   description="Updates multiple storage values in sequence"
-  source={`name MultiSlot;
-
-storage {
-[0] a: uint256;
-[1] b: uint256;
-[2] sum: uint256;
-}
-
-create {
-a = 10;
-b = 20;
-sum = 0;
-}
-
-code {
-sum = a + b;
-a = a + 1;
-b = b + 1;
-}`}
+  source={multipleStorageSlots}
 />
 
 ## Trace data structure
