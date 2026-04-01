@@ -7,11 +7,53 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 # Return contexts
 
 A return context marks an instruction associated with a successful
-function return. It extends the function identity schema with a
-pointer to the return data and, for external calls, the success
-status. It extends the
-[function identity](/spec/program/context/function) schema.
+function return. It extends the
+[function identity](/spec/program/context/function) schema with
+a pointer to the return data and, for external calls, the
+success status.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/return" }}
 />
+
+## Return data
+
+The `data` field is required and contains a pointer to the value
+being returned. For internal calls this typically points to a
+stack location; for external calls it points into the
+`returndata` buffer.
+
+## Internal return
+
+An internal return marks the JUMP instruction that transfers
+control back to the caller within the same contract. The
+function leaves its return value on the stack, so `data` points
+to the relevant stack slot.
+
+Internal returns do not use the `success` field—internal calls
+either return normally or revert, with no separate success flag.
+
+## External call return
+
+An external call return marks an instruction after a CALL,
+DELEGATECALL, or STATICCALL that completed successfully. The
+EVM places a success flag on the stack (1 for success, 0 for
+failure), and the callee's output is accessible via the
+returndata buffer.
+
+The `success` field is specific to external call returns. It
+contains a pointer to the boolean success value on the stack,
+letting the debugger distinguish successful returns from
+reverts at the EVM level.
+
+## Field optionality
+
+The `data` pointer is always required—every return context must
+indicate where the return value can be found. The `success`
+field is optional and only meaningful for external calls.
+
+Function identity fields (`identifier`, `declaration`, `type`)
+are all optional. A compiler may omit them when it cannot
+attribute the return to a specific named function, for instance
+when returning from a fallback function or an anonymous code
+path.
