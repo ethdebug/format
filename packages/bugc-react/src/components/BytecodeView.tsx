@@ -5,9 +5,27 @@
 import React from "react";
 import type { Evm } from "@ethdebug/bugc";
 import type { BytecodeOutput, SourceRange } from "#types";
-import { extractSourceRange } from "#utils/debugUtils";
+import {
+  extractSourceRange,
+  classifyContext,
+  summarizeContext,
+  type ContextKind,
+} from "#utils/debugUtils";
 import { useEthdebugTooltip } from "#hooks/useEthdebugTooltip";
 import { EthdebugTooltip } from "./EthdebugTooltip.js";
+
+function contextBadgeLabel(kind: ContextKind): string {
+  switch (kind) {
+    case "invoke":
+      return "\u279c"; // arrow right
+    case "return":
+      return "\u21b5"; // return arrow
+    case "revert":
+      return "\u2717"; // x mark
+    default:
+      return "\u2139"; // info
+  }
+}
 
 /**
  * Props for BytecodeView component.
@@ -47,12 +65,35 @@ function InstructionsView({
     onOpcodeHover?.([]);
   };
 
+  const formatTooltipContent = (instruction: Evm.Instruction): string => {
+    const ctx = instruction.debug?.context;
+    if (!ctx) return "";
+
+    const summary = summarizeContext(ctx);
+    const lines: string[] = [];
+
+    if (
+      summary.kind === "invoke" ||
+      summary.kind === "return" ||
+      summary.kind === "revert"
+    ) {
+      lines.push(summary.label);
+      if (summary.details) {
+        lines.push(`  (${summary.details})`);
+      }
+      lines.push("");
+    }
+
+    lines.push(JSON.stringify(ctx, null, 2));
+    return lines.join("\n");
+  };
+
   const handleDebugIconMouseEnter = (
     e: React.MouseEvent<HTMLSpanElement>,
     instruction: Evm.Instruction,
   ) => {
     if (instruction.debug?.context) {
-      showTooltip(e, JSON.stringify(instruction.debug.context, null, 2));
+      showTooltip(e, formatTooltipContent(instruction));
     }
   };
 
@@ -61,7 +102,7 @@ function InstructionsView({
     instruction: Evm.Instruction,
   ) => {
     if (instruction.debug?.context) {
-      pinTooltip(e, JSON.stringify(instruction.debug.context, null, 2));
+      pinTooltip(e, formatTooltipContent(instruction));
     }
   };
 
@@ -73,22 +114,43 @@ function InstructionsView({
 
         const sourceRanges = extractSourceRange(instruction.debug?.context);
         const hasDebugInfo = !!instruction.debug?.context;
+        const kind: ContextKind = hasDebugInfo
+          ? classifyContext(instruction.debug?.context)
+          : "other";
+        const isCallContext =
+          kind === "invoke" || kind === "return" || kind === "revert";
 
         return (
           <div
             key={idx}
-            className={`opcode-line ${hasDebugInfo ? "has-debug-info" : ""}`}
+            className={[
+              "opcode-line",
+              hasDebugInfo ? "has-debug-info" : "",
+              isCallContext ? `context-${kind}` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onMouseEnter={() => handleOpcodeMouseEnter(sourceRanges)}
             onMouseLeave={handleOpcodeMouseLeave}
           >
-            {hasDebugInfo ? (
+            {isCallContext ? (
+              <span
+                className={`context-badge context-badge-${kind}`}
+                onMouseEnter={(e) => handleDebugIconMouseEnter(e, instruction)}
+                onMouseLeave={hideTooltip}
+                onClick={(e) => handleDebugIconClick(e, instruction)}
+                title={summarizeContext(instruction.debug?.context).label}
+              >
+                {contextBadgeLabel(kind)}
+              </span>
+            ) : hasDebugInfo ? (
               <span
                 className="debug-info-icon"
                 onMouseEnter={(e) => handleDebugIconMouseEnter(e, instruction)}
                 onMouseLeave={hideTooltip}
                 onClick={(e) => handleDebugIconClick(e, instruction)}
               >
-                ℹ
+                {"\u2139"}
               </span>
             ) : (
               <span className="debug-info-spacer"></span>
@@ -101,6 +163,11 @@ function InstructionsView({
                 {instruction.immediates
                   .map((b) => b.toString(16).padStart(2, "0"))
                   .join("")}
+              </span>
+            )}
+            {isCallContext && (
+              <span className={`context-label context-label-${kind}`}>
+                {summarizeContext(instruction.debug?.context).label}
               </span>
             )}
           </div>
