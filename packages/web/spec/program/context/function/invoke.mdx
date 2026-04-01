@@ -6,6 +6,19 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Invocation contexts
 
+An invoke context marks an instruction that enters a function.
+The schema distinguishes three kinds of invocation — internal
+calls (via JUMP), external message calls (CALL/DELEGATECALL/
+STATICCALL), and contract creations (CREATE/CREATE2) — each
+with fields appropriate to the call mechanism.
+
+All variants extend the [function identity](/spec/program/context/function)
+schema and may include pointers to the call target, arguments,
+gas, value, and input data as applicable. See
+[Tracing execution](/docs/core-schemas/programs/tracing) for
+worked examples showing how debuggers use invoke and return
+contexts to reconstruct call stacks.
+
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
 />
