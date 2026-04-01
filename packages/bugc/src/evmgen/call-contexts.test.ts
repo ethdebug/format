@@ -358,4 +358,35 @@ code {
       });
     });
   });
+
+  describe("return epilogue source maps", () => {
+    it(
+      "should map return epilogue instructions " + "to source location",
+      async () => {
+        const program = await compileProgram(source);
+
+        // The return epilogue is PUSH/MLOAD/JUMP inside
+        // user functions. Find JUMP instructions that are
+        // NOT invoke contexts — these are return jumps.
+        const returnJumps = program.instructions.filter(
+          (instr) =>
+            instr.operation?.mnemonic === "JUMP" &&
+            !Context.isInvoke(instr.context),
+        );
+
+        // Should have at least one return JUMP (from add)
+        expect(returnJumps.length).toBeGreaterThanOrEqual(1);
+
+        // The return JUMP should have a code context with
+        // source location (not just a remark)
+        const returnJump = returnJumps[0];
+        expect(returnJump.context).toBeDefined();
+        const ctx = returnJump.context as Record<string, unknown>;
+        expect(ctx.code).toBeDefined();
+        const code = ctx.code as Record<string, unknown>;
+        expect(code.source).toEqual({ id: "0" });
+        expect(code.range).toBeDefined();
+      },
+    );
+  });
 });

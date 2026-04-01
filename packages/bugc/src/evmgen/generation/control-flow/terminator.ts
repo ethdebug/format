@@ -26,24 +26,16 @@ export function generateTerminator<S extends Stack>(
       if (isUserFunction) {
         // Load return PC from the saved slot (not 0x60,
         // which may have been overwritten by nested calls).
+        // Use operationDebug from the IR return terminator
+        // so the epilogue maps back to the return statement.
+        const debug = term.operationDebug;
         return pipe<S>()
           .peek((state, builder) => {
             const pcOffset = state.memory.savedReturnPcOffset ?? 0x60;
-            const returnDebug = {
-              context: {
-                remark: term.value
-                  ? "function-return: return with value"
-                  : "function-return: void return",
-              },
-            };
             return builder
-              .then(PUSHn(BigInt(pcOffset), { debug: returnDebug }), {
-                as: "offset",
-              })
-              .then(MLOAD({ debug: returnDebug }), {
-                as: "counter",
-              })
-              .then(JUMP({ debug: returnDebug }));
+              .then(PUSHn(BigInt(pcOffset), { debug }), { as: "offset" })
+              .then(MLOAD({ debug }), { as: "counter" })
+              .then(JUMP({ debug }));
           })
           .done() as unknown as Transition<S, S>;
       }
