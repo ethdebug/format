@@ -110,6 +110,8 @@ export interface CallInfo {
   identifier?: string;
   /** Call variant for invoke contexts */
   callType?: "internal" | "external" | "create";
+  /** Named arguments (from invoke context) */
+  argumentNames?: string[];
   /** Panic code for revert contexts */
   panic?: number;
   /** Named pointer refs to resolve */
@@ -161,10 +163,14 @@ function extractCallInfoFromContext(
       collectPointerRef(pointerRefs, "input", inv.input);
     }
 
+    // Extract argument names from group entries
+    const argNames = extractArgNamesFromInvoke(inv);
+
     return {
       kind: "invoke",
       identifier: inv.identifier as string | undefined,
       callType,
+      argumentNames: argNames,
       pointerRefs,
     };
   }
@@ -217,6 +223,33 @@ function extractCallInfoFromContext(
   return undefined;
 }
 
+function extractArgNamesFromInvoke(
+  inv: Record<string, unknown>,
+): string[] | undefined {
+  const args = inv.arguments as Record<string, unknown> | undefined;
+  if (!args) return undefined;
+
+  const pointer = args.pointer as Record<string, unknown> | undefined;
+  if (!pointer) return undefined;
+
+  const group = pointer.group as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(group)) return undefined;
+
+  const names: string[] = [];
+  let hasAny = false;
+  for (const entry of group) {
+    const name = entry.name as string | undefined;
+    if (name) {
+      names.push(name);
+      hasAny = true;
+    } else {
+      names.push("_");
+    }
+  }
+
+  return hasAny ? names : undefined;
+}
+
 function collectPointerRef(
   refs: CallInfo["pointerRefs"],
   label: string,
@@ -237,6 +270,8 @@ export interface CallFrame {
   stepIndex: number;
   /** The call type */
   callType?: "internal" | "external" | "create";
+  /** Named arguments (from invoke context) */
+  argumentNames?: string[];
 }
 
 /**
@@ -276,6 +311,7 @@ export function buildCallStack(
           identifier: callInfo.identifier,
           stepIndex: i,
           callType: callInfo.callType,
+          argumentNames: extractArgNames(instruction),
         });
       }
     } else if (callInfo.kind === "return" || callInfo.kind === "revert") {
@@ -287,6 +323,63 @@ export function buildCallStack(
   }
 
   return stack;
+}
+
+/**
+ * Extract argument names from an instruction's invoke
+ * context, if present.
+ */
+function extractArgNames(
+  instruction: Program.Instruction,
+): string[] | undefined {
+  const ctx = instruction.context as Record<string, unknown> | undefined;
+  if (!ctx) return undefined;
+
+  // Find the invoke field (may be nested in gather)
+  const invoke = findInvokeField(ctx);
+  if (!invoke) return undefined;
+
+  const args = invoke.arguments as Record<string, unknown> | undefined;
+  if (!args) return undefined;
+
+  const pointer = args.pointer as Record<string, unknown> | undefined;
+  if (!pointer) return undefined;
+
+  const group = pointer.group as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(group)) return undefined;
+
+  const names: string[] = [];
+  let hasAny = false;
+  for (const entry of group) {
+    const name = entry.name as string | undefined;
+    if (name) {
+      names.push(name);
+      hasAny = true;
+    } else {
+      names.push("_");
+    }
+  }
+
+  return hasAny ? names : undefined;
+}
+
+function findInvokeField(
+  ctx: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  if ("invoke" in ctx) {
+    return ctx.invoke as Record<string, unknown>;
+  }
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const item of ctx.gather) {
+      if (item && typeof item === "object" && "invoke" in item) {
+        return (item as Record<string, unknown>).invoke as Record<
+          string,
+          unknown
+        >;
+      }
+    }
+  }
+  return undefined;
 }
 
 /**

@@ -63,6 +63,8 @@ export interface ResolvedCallInfo {
   identifier?: string;
   /** Call variant for invoke contexts */
   callType?: "internal" | "external" | "create";
+  /** Named arguments (from invoke context) */
+  argumentNames?: string[];
   /** Panic code for revert contexts */
   panic?: number;
   /** Resolved pointer refs */
@@ -309,6 +311,7 @@ export function TraceProvider({
       kind: extractedCallInfo.kind,
       identifier: extractedCallInfo.identifier,
       callType: extractedCallInfo.callType,
+      argumentNames: extractedCallInfo.argumentNames,
       panic: extractedCallInfo.panic,
       pointerRefs: extractedCallInfo.pointerRefs.map((ref) => ({
         label: ref.label,

@@ -10,6 +10,7 @@ import {
   classifyContext,
   summarizeContext,
   type ContextKind,
+  type DeclarationRange,
 } from "#utils/debugUtils";
 import { useEthdebugTooltip } from "#hooks/useEthdebugTooltip";
 import { EthdebugTooltip } from "./EthdebugTooltip.js";
@@ -35,16 +36,20 @@ export interface BytecodeViewProps {
   bytecode: BytecodeOutput;
   /** Callback when hovering over an opcode with source ranges */
   onOpcodeHover?: (ranges: SourceRange[]) => void;
+  /** Callback when clicking a context badge with a declaration */
+  onDeclarationClick?: (decl: DeclarationRange) => void;
 }
 
 interface InstructionsViewProps {
   instructions: Evm.Instruction[];
   onOpcodeHover?: (ranges: SourceRange[]) => void;
+  onDeclarationClick?: (decl: DeclarationRange) => void;
 }
 
 function InstructionsView({
   instructions,
   onOpcodeHover,
+  onDeclarationClick,
 }: InstructionsViewProps): JSX.Element {
   const {
     tooltip,
@@ -106,6 +111,21 @@ function InstructionsView({
     }
   };
 
+  const handleBadgeClick = (
+    e: React.MouseEvent<HTMLSpanElement>,
+    instruction: Evm.Instruction,
+  ) => {
+    const ctx = instruction.debug?.context;
+    if (!ctx) return;
+
+    const summary = summarizeContext(ctx);
+    if (summary.declaration && onDeclarationClick) {
+      onDeclarationClick(summary.declaration);
+    } else {
+      pinTooltip(e, formatTooltipContent(instruction));
+    }
+  };
+
   return (
     <div className="bytecode-disassembly-interactive">
       {instructions.map((instruction, idx) => {
@@ -138,7 +158,7 @@ function InstructionsView({
                 className={`context-badge context-badge-${kind}`}
                 onMouseEnter={(e) => handleDebugIconMouseEnter(e, instruction)}
                 onMouseLeave={hideTooltip}
-                onClick={(e) => handleDebugIconClick(e, instruction)}
+                onClick={(e) => handleBadgeClick(e, instruction)}
                 title={summarizeContext(instruction.debug?.context).label}
               >
                 {contextBadgeLabel(kind)}
@@ -202,6 +222,7 @@ function InstructionsView({
 export function BytecodeView({
   bytecode,
   onOpcodeHover,
+  onDeclarationClick,
 }: BytecodeViewProps): JSX.Element {
   const runtimeHex = Array.from(bytecode.runtime)
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -236,6 +257,7 @@ export function BytecodeView({
                 <InstructionsView
                   instructions={bytecode.createInstructions}
                   onOpcodeHover={onOpcodeHover}
+                  onDeclarationClick={onDeclarationClick}
                 />
               )}
             </div>
@@ -263,6 +285,7 @@ export function BytecodeView({
           <InstructionsView
             instructions={bytecode.runtimeInstructions}
             onOpcodeHover={onOpcodeHover}
+            onDeclarationClick={onDeclarationClick}
           />
         </div>
       </div>

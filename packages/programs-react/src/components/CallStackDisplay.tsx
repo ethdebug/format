@@ -52,7 +52,9 @@ export function CallStackDisplay({
               <span className="call-stack-name">
                 {frame.identifier || "(anonymous)"}
               </span>
-              <span className="call-stack-parens">()</span>
+              <span className="call-stack-parens">
+                ({frame.argumentNames ? frame.argumentNames.join(", ") : ""})
+              </span>
             </button>
           </React.Fragment>
         ))}
