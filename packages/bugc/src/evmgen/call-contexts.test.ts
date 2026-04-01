@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 
 import { compile } from "#compiler";
 import type * as Format from "@ethdebug/format";
+import { Program } from "@ethdebug/format";
+
+const { Context } = Program;
+const { Invocation } = Context.Invoke;
+
+type InternalCall = Format.Program.Context.Invoke.Invocation.InternalCall;
 
 /**
  * Compile a BUG source and return the runtime program
@@ -24,13 +30,21 @@ async function compileProgram(source: string): Promise<Format.Program> {
 }
 
 /**
- * Find instructions matching a predicate
+ * Find instructions with a given mnemonic whose context
+ * satisfies a type guard
  */
-function findInstructions(
+function findInstructionsWithContext<C extends Format.Program.Context>(
   program: Format.Program,
-  predicate: (instr: Format.Program.Instruction) => boolean,
-): Format.Program.Instruction[] {
-  return program.instructions.filter(predicate);
+  mnemonic: string,
+  guard: (value: unknown) => value is C,
+): (Format.Program.Instruction & { context: C })[] {
+  return program.instructions.filter(
+    (
+      instr,
+    ): instr is Format.Program.Instruction & {
+      context: C;
+    } => instr.operation?.mnemonic === mnemonic && guard(instr.context),
+  );
 }
 
 describe("function call debug contexts", () => {
@@ -57,30 +71,27 @@ code {
   it("should emit invoke context on caller JUMP", async () => {
     const program = await compileProgram(source);
 
-    // Find JUMP instructions with invoke context
-    const invokeJumps = findInstructions(
+    const invokeJumps = findInstructionsWithContext(
       program,
-      (instr) =>
-        instr.operation?.mnemonic === "JUMP" &&
-        !!(instr.context as Record<string, unknown>)?.invoke,
+      "JUMP",
+      Context.isInvoke,
     );
 
     expect(invokeJumps.length).toBeGreaterThanOrEqual(1);
 
-    const ctx = (invokeJumps[0].context as Record<string, unknown>)!;
-    const invoke = ctx.invoke as Record<string, unknown>;
+    const { invoke } = invokeJumps[0].context;
+    expect(Invocation.isInternalCall(invoke)).toBe(true);
 
-    expect(invoke.jump).toBe(true);
-    expect(invoke.identifier).toBe("add");
+    const call = invoke as InternalCall;
+    expect(call.jump).toBe(true);
+    expect(call.identifier).toBe("add");
 
     // Should have target pointer
-    const target = invoke.target as Record<string, unknown>;
-    expect(target.pointer).toBeDefined();
+    expect(call.target.pointer).toBeDefined();
 
     // Should have argument pointers
-    const args = invoke.arguments as Record<string, unknown>;
-    const pointer = args.pointer as Record<string, unknown>;
-    const group = pointer.group as Array<Record<string, unknown>>;
+    expect(call.arguments).toBeDefined();
+    const group = (call.arguments!.pointer as { group: unknown[] }).group;
 
     expect(group).toHaveLength(2);
     // First arg (a) is deepest on stack
@@ -98,26 +109,21 @@ code {
   it("should emit return context on continuation JUMPDEST", async () => {
     const program = await compileProgram(source);
 
-    // Find JUMPDEST instructions with return context
-    const returnJumpdests = findInstructions(
+    const returnJumpdests = findInstructionsWithContext(
       program,
-      (instr) =>
-        instr.operation?.mnemonic === "JUMPDEST" &&
-        !!(instr.context as Record<string, unknown>)?.return,
+      "JUMPDEST",
+      Context.isReturn,
     );
 
     expect(returnJumpdests.length).toBeGreaterThanOrEqual(1);
 
-    const ctx = (returnJumpdests[0].context as Record<string, unknown>)!;
-    const ret = ctx.return as Record<string, unknown>;
+    const { return: ret } = returnJumpdests[0].context;
 
     expect(ret.identifier).toBe("add");
 
     // Should have data pointer to return value at
     // TOS (stack slot 0)
-    const data = ret.data as Record<string, unknown>;
-    const pointer = data.pointer as Record<string, unknown>;
-    expect(pointer).toEqual({
+    expect(ret.data.pointer).toEqual({
       location: "stack",
       slot: 0,
     });
@@ -126,28 +132,26 @@ code {
   it("should emit invoke context on callee entry JUMPDEST", async () => {
     const program = await compileProgram(source);
 
-    // Find JUMPDEST instructions with invoke context
-    // (the callee entry point, not the continuation)
-    const invokeJumpdests = findInstructions(
+    // The callee entry point, not the continuation
+    const invokeJumpdests = findInstructionsWithContext(
       program,
-      (instr) =>
-        instr.operation?.mnemonic === "JUMPDEST" &&
-        !!(instr.context as Record<string, unknown>)?.invoke,
+      "JUMPDEST",
+      Context.isInvoke,
     );
 
     expect(invokeJumpdests.length).toBeGreaterThanOrEqual(1);
 
-    const ctx = (invokeJumpdests[0].context as Record<string, unknown>)!;
-    const invoke = ctx.invoke as Record<string, unknown>;
+    const { invoke } = invokeJumpdests[0].context;
+    expect(Invocation.isInternalCall(invoke)).toBe(true);
 
-    expect(invoke.jump).toBe(true);
-    expect(invoke.identifier).toBe("add");
+    const call = invoke as InternalCall;
+    expect(call.jump).toBe(true);
+    expect(call.identifier).toBe("add");
 
     // Should have argument pointers matching
     // function parameters
-    const args = invoke.arguments as Record<string, unknown>;
-    const pointer = args.pointer as Record<string, unknown>;
-    const group = pointer.group as Array<Record<string, unknown>>;
+    expect(call.arguments).toBeDefined();
+    const group = (call.arguments!.pointer as { group: unknown[] }).group;
 
     expect(group).toHaveLength(2);
   });
@@ -157,18 +161,16 @@ code {
 
     // The caller JUMP should come before the
     // continuation JUMPDEST
-    const invokeJump = findInstructions(
+    const invokeJump = findInstructionsWithContext(
       program,
-      (instr) =>
-        instr.operation?.mnemonic === "JUMP" &&
-        !!(instr.context as Record<string, unknown>)?.invoke,
+      "JUMP",
+      Context.isInvoke,
     )[0];
 
-    const returnJumpdest = findInstructions(
+    const returnJumpdest = findInstructionsWithContext(
       program,
-      (instr) =>
-        instr.operation?.mnemonic === "JUMPDEST" &&
-        !!(instr.context as Record<string, unknown>)?.return,
+      "JUMPDEST",
+      Context.isReturn,
     )[0];
 
     expect(invokeJump).toBeDefined();
@@ -206,25 +208,20 @@ code {
 }`;
 
     it(
-      "should emit return context without data pointer " + "for void functions",
+      "should emit return context with data pointer " +
+        "for value-returning functions",
       async () => {
-        // This tests that when a function returns a
-        // value, the return context includes data.
-        // (All our test functions return values, so
-        // data should always be present here.)
         const program = await compileProgram(voidSource);
 
-        const returnJumpdests = findInstructions(
+        const returnJumpdests = findInstructionsWithContext(
           program,
-          (instr) =>
-            instr.operation?.mnemonic === "JUMPDEST" &&
-            !!(instr.context as Record<string, unknown>)?.return,
+          "JUMPDEST",
+          Context.isReturn,
         );
 
         expect(returnJumpdests.length).toBeGreaterThanOrEqual(1);
 
-        const ctx = (returnJumpdests[0].context as Record<string, unknown>)!;
-        const ret = ctx.return as Record<string, unknown>;
+        const { return: ret } = returnJumpdests[0].context;
         expect(ret.identifier).toBe("setVal");
         // Since setVal returns a value, data should
         // be present
@@ -271,11 +268,10 @@ code {
       // 2. addThree -> add (first call)
       // 3. addThree -> add (second call)
       // Plus callee entry JUMPDESTs
-      const invokeJumps = findInstructions(
+      const invokeJumps = findInstructionsWithContext(
         program,
-        (instr) =>
-          instr.operation?.mnemonic === "JUMP" &&
-          !!(instr.context as Record<string, unknown>)?.invoke,
+        "JUMP",
+        Context.isInvoke,
       );
 
       // At least 3 invoke JUMPs (main->addThree,
@@ -284,24 +280,17 @@ code {
 
       // Check we have invokes for both functions
       const invokeIds = invokeJumps.map(
-        (instr) =>
-          (
-            (instr.context as Record<string, unknown>).invoke as Record<
-              string,
-              unknown
-            >
-          ).identifier,
+        (instr) => instr.context.invoke.identifier,
       );
       expect(invokeIds).toContain("addThree");
       expect(invokeIds).toContain("add");
 
       // Should have return contexts for all
       // continuation points
-      const returnJumpdests = findInstructions(
+      const returnJumpdests = findInstructionsWithContext(
         program,
-        (instr) =>
-          instr.operation?.mnemonic === "JUMPDEST" &&
-          !!(instr.context as Record<string, unknown>)?.return,
+        "JUMPDEST",
+        Context.isReturn,
       );
 
       expect(returnJumpdests.length).toBeGreaterThanOrEqual(3);
@@ -332,20 +321,20 @@ code {
     it("should emit single-element argument group", async () => {
       const program = await compileProgram(singleArgSource);
 
-      const invokeJumps = findInstructions(
+      const invokeJumps = findInstructionsWithContext(
         program,
-        (instr) =>
-          instr.operation?.mnemonic === "JUMP" &&
-          !!(instr.context as Record<string, unknown>)?.invoke,
+        "JUMP",
+        Context.isInvoke,
       );
 
       expect(invokeJumps.length).toBeGreaterThanOrEqual(1);
 
-      const ctx = (invokeJumps[0].context as Record<string, unknown>)!;
-      const invoke = ctx.invoke as Record<string, unknown>;
-      const args = invoke.arguments as Record<string, unknown>;
-      const pointer = args.pointer as Record<string, unknown>;
-      const group = pointer.group as Array<Record<string, unknown>>;
+      const { invoke } = invokeJumps[0].context;
+      expect(Invocation.isInternalCall(invoke)).toBe(true);
+
+      const call = invoke as InternalCall;
+      expect(call.arguments).toBeDefined();
+      const group = (call.arguments!.pointer as { group: unknown[] }).group;
 
       // Single arg at stack slot 0
       expect(group).toHaveLength(1);
