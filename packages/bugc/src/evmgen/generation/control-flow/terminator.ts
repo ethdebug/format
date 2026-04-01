@@ -147,14 +147,17 @@ export function generateTerminator<S extends Stack>(
 }
 
 /**
- * Generate code for a call terminator - handled specially since it crosses function boundaries
+ * Generate code for a call terminator - handled specially
+ * since it crosses function boundaries
  */
 export function generateCallTerminator<S extends Stack>(
   term: Extract<Ir.Block.Terminator, { kind: "call" }>,
+  functions?: Map<string, Ir.Function>,
 ): Transition<S, Stack> {
   const funcName = term.function;
   const args = term.arguments;
   const cont = term.continuation;
+  const targetFunc = functions?.get(funcName);
 
   return ((state: State<S>): State<Stack> => {
     let currentState: State<Stack> = state as State<Stack>;
@@ -227,10 +230,21 @@ export function generateCallTerminator<S extends Stack>(
 
     // Build argument pointers: after the JUMP, the callee
     // sees args on the stack in order (first arg deepest).
+    const params = targetFunc?.parameters;
     const argPointers = args.map((_arg, i) => ({
+      ...(params?.[i]?.name ? { name: params[i].name } : {}),
       location: "stack" as const,
       slot: args.length - 1 - i,
     }));
+
+    // Build declaration source range if available
+    const declaration =
+      targetFunc?.loc && targetFunc?.sourceId
+        ? {
+            source: { id: targetFunc.sourceId },
+            range: targetFunc.loc,
+          }
+        : undefined;
 
     // Invoke context describes state after JUMP executes:
     // the callee has been entered with args on the stack.
@@ -240,8 +254,12 @@ export function generateCallTerminator<S extends Stack>(
       invoke: {
         jump: true as const,
         identifier: funcName,
+        ...(declaration ? { declaration } : {}),
         target: {
-          pointer: { location: "stack" as const, slot: 0 },
+          pointer: {
+            location: "stack" as const,
+            slot: 0,
+          },
         },
         ...(argPointers.length > 0 && {
           arguments: {

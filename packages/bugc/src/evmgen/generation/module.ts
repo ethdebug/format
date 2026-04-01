@@ -32,6 +32,7 @@ export function generate(
     module.main,
     memory.main,
     blocks.main,
+    { functions: module.functions },
   );
 
   // Collect all warnings
@@ -53,6 +54,7 @@ export function generate(
     if (funcMemory && funcLayout) {
       const funcResult = Function.generate(func, funcMemory, funcLayout, {
         isUserFunction: true,
+        functions: module.functions,
       });
       functionResults.push({
         name,
