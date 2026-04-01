@@ -86,6 +86,15 @@ code {
     expect(call.jump).toBe(true);
     expect(call.identifier).toBe("add");
 
+    // Should have declaration source range
+    const decl = invoke.declaration as Record<string, unknown>;
+    expect(decl).toBeDefined();
+    expect(decl.source).toEqual({ id: "0" });
+    expect(decl.range).toBeDefined();
+    const range = decl.range as Record<string, unknown>;
+    expect(typeof range.offset).toBe("number");
+    expect(typeof range.length).toBe("number");
+
     // Should have target pointer
     expect(call.target.pointer).toBeDefined();
 
@@ -96,11 +105,13 @@ code {
     expect(group).toHaveLength(2);
     // First arg (a) is deepest on stack
     expect(group[0]).toEqual({
+      name: "a",
       location: "stack",
       slot: 1,
     });
     // Second arg (b) is on top
     expect(group[1]).toEqual({
+      name: "b",
       location: "stack",
       slot: 0,
     });
@@ -120,6 +131,11 @@ code {
     const { return: ret } = returnJumpdests[0].context;
 
     expect(ret.identifier).toBe("add");
+
+    // Should have declaration source range
+    const retDecl = ret.declaration as Record<string, unknown>;
+    expect(retDecl).toBeDefined();
+    expect(retDecl.source).toEqual({ id: "0" });
 
     // Should have data pointer to return value at
     // TOS (stack slot 0)
@@ -339,6 +355,7 @@ code {
       // Single arg at stack slot 0
       expect(group).toHaveLength(1);
       expect(group[0]).toEqual({
+        name: "x",
         location: "stack",
         slot: 0,
       });

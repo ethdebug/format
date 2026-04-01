@@ -31,15 +31,26 @@ function generatePrologue<S extends Stack>(
     // Add JUMPDEST with function entry annotation.
     // After this JUMPDEST executes, the callee's args are
     // on the stack (first arg deepest).
-    const argPointers = params.map((_p, i) => ({
+    const argPointers = params.map((p, i) => ({
+      ...(p.name ? { name: p.name } : {}),
       location: "stack" as const,
       slot: params.length - 1 - i,
     }));
+
+    // Build declaration source range if available
+    const declaration =
+      func.loc && func.sourceId
+        ? {
+            source: { id: func.sourceId },
+            range: func.loc,
+          }
+        : undefined;
 
     const entryInvoke: Format.Program.Context.Invoke = {
       invoke: {
         jump: true as const,
         identifier: func.name || "anonymous",
+        ...(declaration ? { declaration } : {}),
         target: {
           pointer: {
             location: "stack" as const,
@@ -157,7 +168,10 @@ export function generate(
   func: Ir.Function,
   memory: Memory.Function.Info,
   layout: Layout.Function.Info,
-  options: { isUserFunction?: boolean } = {},
+  options: {
+    isUserFunction?: boolean;
+    functions?: Map<string, Ir.Function>;
+  } = {},
 ): {
   instructions: Evm.Instruction[];
   bytecode: number[];
@@ -205,6 +219,7 @@ export function generate(
         isFirstBlock,
         options.isUserFunction || false,
         func,
+        options.functions,
       )(state);
     },
     stateAfterPrologue,

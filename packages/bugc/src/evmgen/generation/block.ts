@@ -29,6 +29,7 @@ export function generate<S extends Stack>(
   isFirstBlock: boolean = false,
   isUserFunction: boolean = false,
   func?: Ir.Function,
+  functions?: Map<string, Ir.Function>,
 ): Transition<S, Stack> {
   const { JUMPDEST } = operations;
 
@@ -74,9 +75,18 @@ export function generate<S extends Stack>(
           // executes: TOS is the return value (if any).
           // data pointer is required by the schema; for
           // void returns, slot 0 is still valid (empty).
+          const calledFunc = functions?.get(calledFunction);
+          const declaration =
+            calledFunc?.loc && calledFunc?.sourceId
+              ? {
+                  source: { id: calledFunc.sourceId },
+                  range: calledFunc.loc,
+                }
+              : undefined;
           const returnCtx: Format.Program.Context.Return = {
             return: {
               identifier: calledFunction,
+              ...(declaration ? { declaration } : {}),
               data: {
                 pointer: {
                   location: "stack" as const,
@@ -142,7 +152,9 @@ export function generate<S extends Stack>(
       // Process terminator
       // Handle call terminators specially (they cross function boundaries)
       if (block.terminator.kind === "call") {
-        result = result.then(generateCallTerminator(block.terminator));
+        result = result.then(
+          generateCallTerminator(block.terminator, functions),
+        );
       } else {
         result = result.then(
           generateTerminator(block.terminator, isLastBlock, isUserFunction),
