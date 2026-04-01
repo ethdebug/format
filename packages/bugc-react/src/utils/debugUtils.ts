@@ -136,13 +136,24 @@ export function classifyContext(context: unknown): ContextKind {
 }
 
 /**
+ * A declaration source range for click-to-source.
+ */
+export interface DeclarationRange {
+  sourceId: string;
+  offset: number;
+  length: number;
+}
+
+/**
  * Summary of a function call context for display.
  */
 export interface ContextSummary {
   kind: ContextKind;
   label: string;
   functionName?: string;
+  argumentNames?: string[];
   details?: string;
+  declaration?: DeclarationRange;
 }
 
 /**
@@ -165,11 +176,16 @@ export function summarizeContext(context: unknown): ContextSummary {
           : invoke?.create
             ? "create"
             : "";
+      const argNames = extractArgumentNames(invoke);
+      const declaration = extractDeclaration(invoke);
+      const paramList = argNames.length > 0 ? `(${argNames.join(", ")})` : "()";
       return {
         kind,
-        label: `invoke ${name}`,
+        label: `invoke ${name}${paramList}`,
         functionName: name,
+        argumentNames: argNames.length > 0 ? argNames : undefined,
         details: callType ? `${callType} call` : undefined,
+        declaration,
       };
     }
 
@@ -178,10 +194,12 @@ export function summarizeContext(context: unknown): ContextSummary {
         | Record<string, unknown>
         | undefined;
       const name = (ret?.identifier as string) ?? "unknown";
+      const declaration = extractDeclaration(ret);
       return {
         kind,
-        label: `return ${name}`,
+        label: `return ${name}()`,
         functionName: name,
+        declaration,
       };
     }
 
@@ -191,11 +209,13 @@ export function summarizeContext(context: unknown): ContextSummary {
         | undefined;
       const name = (rev?.identifier as string) ?? "unknown";
       const panic = rev?.panic as number | undefined;
+      const declaration = extractDeclaration(rev);
       return {
         kind,
-        label: `revert ${name}`,
+        label: `revert ${name}()`,
         functionName: name,
         details: panic !== undefined ? `panic(${panic})` : undefined,
+        declaration,
       };
     }
 
@@ -211,6 +231,88 @@ export function summarizeContext(context: unknown): ContextSummary {
     default:
       return { kind, label: "debug info" };
   }
+}
+
+/**
+ * Format a function call signature with param names.
+ *
+ * Returns "name(a, b)" if names are available,
+ * "name()" otherwise.
+ */
+export function formatCallSignature(
+  identifier: string | undefined,
+  argNames?: string[],
+): string {
+  const name = identifier || "(anonymous)";
+  if (argNames && argNames.length > 0) {
+    return `${name}(${argNames.join(", ")})`;
+  }
+  return `${name}()`;
+}
+
+/**
+ * Extract argument names from an invoke context's
+ * arguments pointer group.
+ */
+function extractArgumentNames(
+  invoke: Record<string, unknown> | undefined,
+): string[] {
+  if (!invoke) return [];
+
+  const args = invoke.arguments as Record<string, unknown> | undefined;
+  if (!args) return [];
+
+  const pointer = args.pointer as Record<string, unknown> | undefined;
+  if (!pointer) return [];
+
+  const group = pointer.group as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(group)) return [];
+
+  const names: string[] = [];
+  let hasAnyName = false;
+  for (const entry of group) {
+    const name = entry.name as string | undefined;
+    if (name) {
+      names.push(name);
+      hasAnyName = true;
+    } else {
+      names.push("_");
+    }
+  }
+
+  return hasAnyName ? names : [];
+}
+
+/**
+ * Extract a declaration source range from a function
+ * identity object (invoke.invoke, return.return, etc.).
+ */
+function extractDeclaration(
+  identity: Record<string, unknown> | undefined,
+): DeclarationRange | undefined {
+  if (!identity) return undefined;
+
+  const decl = identity.declaration as Record<string, unknown> | undefined;
+  if (!decl) return undefined;
+
+  const source = decl.source as Record<string, unknown> | undefined;
+  const range = decl.range as Record<string, number> | undefined;
+
+  if (
+    !source ||
+    !range ||
+    typeof source.id !== "string" ||
+    typeof range.offset !== "number" ||
+    typeof range.length !== "number"
+  ) {
+    return undefined;
+  }
+
+  return {
+    sourceId: source.id,
+    offset: range.offset,
+    length: range.length,
+  };
 }
 
 /**

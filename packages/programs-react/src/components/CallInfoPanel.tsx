@@ -25,6 +25,9 @@ export interface CallInfoPanelProps {
 
 function formatBanner(info: ResolvedCallInfo): string {
   const name = info.identifier || "(anonymous)";
+  const params = info.argumentNames
+    ? `(${info.argumentNames.join(", ")})`
+    : "()";
 
   if (info.kind === "invoke") {
     const prefix =
@@ -33,7 +36,7 @@ function formatBanner(info: ResolvedCallInfo): string {
         : info.callType === "create"
           ? "Creating"
           : "Calling";
-    return `${prefix} ${name}()`;
+    return `${prefix} ${name}${params}`;
   }
 
   if (info.kind === "return") {

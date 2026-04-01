@@ -105,6 +105,7 @@ function TraceDrawerContent(): JSX.Element {
       identifier?: string;
       stepIndex: number;
       callType?: string;
+      argumentNames?: string[];
     }> = [];
 
     for (let i = 0; i <= currentStep && i < trace.length; i++) {
@@ -129,6 +130,7 @@ function TraceDrawerContent(): JSX.Element {
             identifier: info.identifier,
             stepIndex: i,
             callType: info.callType,
+            argumentNames: info.argumentNames,
           });
         }
       } else if (info.kind === "return" || info.kind === "revert") {
@@ -369,7 +371,11 @@ function TraceDrawerContent(): JSX.Element {
                         onClick={() => setCurrentStep(frame.stepIndex)}
                         type="button"
                       >
-                        {frame.identifier || "(anonymous)"}
+                        {frame.identifier || "(anonymous)"}(
+                        {frame.argumentNames
+                          ? frame.argumentNames.join(", ")
+                          : ""}
+                        )
                       </button>
                     </React.Fragment>
                   ))
@@ -561,6 +567,7 @@ interface CallInfoResult {
   kind: "invoke" | "return" | "revert";
   identifier?: string;
   callType?: string;
+  argumentNames?: string[];
 }
 
 /**
@@ -584,6 +591,7 @@ function extractCallInfo(context: unknown): CallInfoResult | undefined {
       kind: "invoke",
       identifier: inv.identifier as string | undefined,
       callType,
+      argumentNames: extractArgNamesFromInvoke(inv),
     };
   }
 
@@ -626,16 +634,46 @@ function extractCallInfo(context: unknown): CallInfoResult | undefined {
  */
 function formatCallBanner(info: CallInfoResult): string {
   const name = info.identifier || "(anonymous)";
+  const params = info.argumentNames
+    ? `(${info.argumentNames.join(", ")})`
+    : "()";
   switch (info.kind) {
     case "invoke": {
       const prefix = info.callType === "create" ? "Creating" : "Calling";
-      return `${prefix} ${name}()`;
+      return `${prefix} ${name}${params}`;
     }
     case "return":
       return `Returned from ${name}()`;
     case "revert":
       return `Reverted in ${name}()`;
   }
+}
+
+function extractArgNamesFromInvoke(
+  inv: Record<string, unknown>,
+): string[] | undefined {
+  const args = inv.arguments as Record<string, unknown> | undefined;
+  if (!args) return undefined;
+
+  const pointer = args.pointer as Record<string, unknown> | undefined;
+  if (!pointer) return undefined;
+
+  const group = pointer.group as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(group)) return undefined;
+
+  const names: string[] = [];
+  let hasAny = false;
+  for (const entry of group) {
+    const name = entry.name as string | undefined;
+    if (name) {
+      names.push(name);
+      hasAny = true;
+    } else {
+      names.push("_");
+    }
+  }
+
+  return hasAny ? names : undefined;
 }
 
 /**
