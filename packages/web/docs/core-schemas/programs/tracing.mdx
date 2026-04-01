@@ -9,6 +9,7 @@ import {
   counterIncrement,
   thresholdCheck,
   multipleStorageSlots,
+  functionCallAndReturn,
 } from "./tracing-examples";
 
 # Tracing execution
@@ -91,25 +92,7 @@ trace. Watch for **invoke** contexts on the JUMP into `add` and
 <TraceExample
   title="Function call and return"
   description="Calls an internal add function and stores the result"
-  source={`name Adder;
-
-define {
-function add(a: uint256, b: uint256) -> uint256 {
-return a + b;
-};
-}
-
-storage {
-[0] result: uint256;
-}
-
-create {
-result = 0;
-}
-
-code {
-result = add(3, 4);
-}`}
+  source={functionCallAndReturn}
 />
 
 As you step through, three phases are visible:

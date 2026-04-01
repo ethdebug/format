@@ -51,3 +51,23 @@ code {
   a = a + 1;
   b = b + 1;
 }`;
+
+export const functionCallAndReturn = `name Adder;
+
+define {
+  function add(a: uint256, b: uint256) -> uint256 {
+    return a + b;
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = add(3, 4);
+}`;
