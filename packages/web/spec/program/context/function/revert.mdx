@@ -9,7 +9,8 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 A revert context marks an instruction associated with a function
 revert. It extends the function identity schema with an optional
 pointer to revert reason data and/or a numeric panic code for
-built-in assertion failures.
+built-in assertion failures. It extends the
+[function identity](/spec/program/context/function) schema.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/revert" }}
