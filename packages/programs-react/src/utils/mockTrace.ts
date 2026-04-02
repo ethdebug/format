@@ -298,15 +298,19 @@ export function buildCallStack(
     }
 
     if (callInfo.kind === "invoke") {
-      // The compiler emits invoke on both the caller JUMP and
-      // callee entry JUMPDEST. Skip if the top frame already
-      // matches this call.
+      // The compiler emits invoke on both the caller JUMP
+      // and callee entry JUMPDEST for the same call. These
+      // occur on consecutive trace steps. Only skip if the
+      // top frame matches AND was pushed on the immediately
+      // preceding step — otherwise this is a new call (e.g.
+      // recursion with the same function name).
       const top = stack[stack.length - 1];
-      if (
-        !top ||
-        top.identifier !== callInfo.identifier ||
-        top.callType !== callInfo.callType
-      ) {
+      const isDuplicate =
+        top &&
+        top.identifier === callInfo.identifier &&
+        top.callType === callInfo.callType &&
+        top.stepIndex === i - 1;
+      if (!isDuplicate) {
         stack.push({
           identifier: callInfo.identifier,
           stepIndex: i,
