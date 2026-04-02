@@ -68,52 +68,44 @@ code {
   result = add(10, 20);
 }`;
 
-  it("should emit invoke context on caller JUMP", async () => {
-    const program = await compileProgram(source);
+  it(
+    "should emit invoke context on caller JUMP " +
+      "(identity + code target, no args)",
+    async () => {
+      const program = await compileProgram(source);
 
-    const invokeJumps = findInstructionsWithContext(
-      program,
-      "JUMP",
-      Context.isInvoke,
-    );
+      const invokeJumps = findInstructionsWithContext(
+        program,
+        "JUMP",
+        Context.isInvoke,
+      );
 
-    expect(invokeJumps.length).toBeGreaterThanOrEqual(1);
+      expect(invokeJumps.length).toBeGreaterThanOrEqual(1);
 
-    const { invoke } = invokeJumps[0].context;
-    expect(Invocation.isInternalCall(invoke)).toBe(true);
+      const { invoke } = invokeJumps[0].context;
+      expect(Invocation.isInternalCall(invoke)).toBe(true);
 
-    const call = invoke as InternalCall;
-    expect(call.jump).toBe(true);
-    expect(call.identifier).toBe("add");
+      const call = invoke as InternalCall;
+      expect(call.jump).toBe(true);
+      expect(call.identifier).toBe("add");
 
-    // Should have declaration source range
-    expect(invoke.declaration).toBeDefined();
-    expect(invoke.declaration!.source).toEqual({ id: "0" });
-    expect(invoke.declaration!.range).toBeDefined();
-    expect(typeof invoke.declaration!.range!.offset).toBe("number");
-    expect(typeof invoke.declaration!.range!.length).toBe("number");
+      // Should have declaration source range
+      expect(invoke.declaration).toBeDefined();
+      expect(invoke.declaration!.source).toEqual({ id: "0" });
+      expect(invoke.declaration!.range).toBeDefined();
+      expect(typeof invoke.declaration!.range!.offset).toBe("number");
+      expect(typeof invoke.declaration!.range!.length).toBe("number");
 
-    // Should have target pointer
-    expect(call.target.pointer).toBeDefined();
+      // Target should be a code pointer (not stack)
+      const ptr = call.target.pointer as Record<string, unknown>;
+      expect(ptr.location).toBe("code");
+      expect(ptr.offset).toBeDefined();
 
-    // Should have argument pointers
-    expect(call.arguments).toBeDefined();
-    const group = (call.arguments!.pointer as { group: unknown[] }).group;
-
-    expect(group).toHaveLength(2);
-    // First arg (a) is deepest on stack
-    expect(group[0]).toEqual({
-      name: "a",
-      location: "stack",
-      slot: 1,
-    });
-    // Second arg (b) is on top
-    expect(group[1]).toEqual({
-      name: "b",
-      location: "stack",
-      slot: 0,
-    });
-  });
+      // Caller JUMP should NOT have argument pointers
+      // (args live on the callee JUMPDEST invoke context)
+      expect(call.arguments).toBeUndefined();
+    },
+  );
 
   it("should emit return context on continuation JUMPDEST", async () => {
     const program = await compileProgram(source);
@@ -142,32 +134,53 @@ code {
     });
   });
 
-  it("should emit invoke context on callee entry JUMPDEST", async () => {
-    const program = await compileProgram(source);
+  it(
+    "should emit invoke context on callee entry " +
+      "JUMPDEST with args and code target",
+    async () => {
+      const program = await compileProgram(source);
 
-    // The callee entry point, not the continuation
-    const invokeJumpdests = findInstructionsWithContext(
-      program,
-      "JUMPDEST",
-      Context.isInvoke,
-    );
+      // The callee entry point, not the continuation
+      const invokeJumpdests = findInstructionsWithContext(
+        program,
+        "JUMPDEST",
+        Context.isInvoke,
+      );
 
-    expect(invokeJumpdests.length).toBeGreaterThanOrEqual(1);
+      expect(invokeJumpdests.length).toBeGreaterThanOrEqual(1);
 
-    const { invoke } = invokeJumpdests[0].context;
-    expect(Invocation.isInternalCall(invoke)).toBe(true);
+      const { invoke } = invokeJumpdests[0].context;
+      expect(Invocation.isInternalCall(invoke)).toBe(true);
 
-    const call = invoke as InternalCall;
-    expect(call.jump).toBe(true);
-    expect(call.identifier).toBe("add");
+      const call = invoke as InternalCall;
+      expect(call.jump).toBe(true);
+      expect(call.identifier).toBe("add");
 
-    // Should have argument pointers matching
-    // function parameters
-    expect(call.arguments).toBeDefined();
-    const group = (call.arguments!.pointer as { group: unknown[] }).group;
+      // Target should be a code pointer
+      const ptr = call.target.pointer as Record<string, unknown>;
+      expect(ptr.location).toBe("code");
+      expect(ptr.offset).toBeDefined();
 
-    expect(group).toHaveLength(2);
-  });
+      // Should have argument pointers matching
+      // function parameters
+      expect(call.arguments).toBeDefined();
+      const group = (call.arguments!.pointer as { group: unknown[] }).group;
+
+      expect(group).toHaveLength(2);
+      // First arg (a) is deepest on stack
+      expect(group[0]).toEqual({
+        name: "a",
+        location: "stack",
+        slot: 1,
+      });
+      // Second arg (b) is on top
+      expect(group[1]).toEqual({
+        name: "b",
+        location: "stack",
+        slot: 0,
+      });
+    },
+  );
 
   it("should emit contexts in correct instruction order", async () => {
     const program = await compileProgram(source);
@@ -331,32 +344,37 @@ code {
   result = double(7);
 }`;
 
-    it("should emit single-element argument group", async () => {
-      const program = await compileProgram(singleArgSource);
+    it(
+      "should emit single-element argument group " + "on callee JUMPDEST",
+      async () => {
+        const program = await compileProgram(singleArgSource);
 
-      const invokeJumps = findInstructionsWithContext(
-        program,
-        "JUMP",
-        Context.isInvoke,
-      );
+        // Args are on the callee JUMPDEST, not the
+        // caller JUMP
+        const invokeJumpdests = findInstructionsWithContext(
+          program,
+          "JUMPDEST",
+          Context.isInvoke,
+        );
 
-      expect(invokeJumps.length).toBeGreaterThanOrEqual(1);
+        expect(invokeJumpdests.length).toBeGreaterThanOrEqual(1);
 
-      const { invoke } = invokeJumps[0].context;
-      expect(Invocation.isInternalCall(invoke)).toBe(true);
+        const { invoke } = invokeJumpdests[0].context;
+        expect(Invocation.isInternalCall(invoke)).toBe(true);
 
-      const call = invoke as InternalCall;
-      expect(call.arguments).toBeDefined();
-      const group = (call.arguments!.pointer as { group: unknown[] }).group;
+        const call = invoke as InternalCall;
+        expect(call.arguments).toBeDefined();
+        const group = (call.arguments!.pointer as { group: unknown[] }).group;
 
-      // Single arg at stack slot 0
-      expect(group).toHaveLength(1);
-      expect(group[0]).toEqual({
-        name: "x",
-        location: "stack",
-        slot: 0,
-      });
-    });
+        // Single arg at stack slot 0
+        expect(group).toHaveLength(1);
+        expect(group[0]).toEqual({
+          name: "x",
+          location: "stack",
+          slot: 0,
+        });
+      },
+    );
   });
 
   describe("return epilogue source maps", () => {
