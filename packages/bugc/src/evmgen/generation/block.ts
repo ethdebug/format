@@ -154,18 +154,37 @@ export function generate<S extends Stack>(
         }
       }
 
-      // Process phi nodes if we have a predecessor
-      if (predecessor && block.phis.length > 0) {
-        result = result.then(generatePhis(block.phis, predecessor));
-      }
+      // Phi resolution happens at predecessors, not at the
+      // target. Each predecessor stores its phi source values
+      // into the phi destination memory slots before jumping.
+      // This is necessary for back-edges (loops, TCO) where
+      // the runtime predecessor differs from the layout-order
+      // predecessor.
 
       // Process regular instructions
       for (const inst of block.instructions) {
         result = result.then(Instruction.generate(inst));
       }
 
+      // Emit phi copies for successor blocks before the
+      // terminator. For jump terminators, check if the
+      // target has phis and store the source values for
+      // this block.
+      if (func && block.terminator.kind === "jump") {
+        const target = func.blocks.get(block.terminator.target);
+        if (target && target.phis.length > 0) {
+          const relevant = target.phis.filter((phi) =>
+            phi.sources.has(block.id),
+          );
+          if (relevant.length > 0) {
+            result = result.then(generatePhis(relevant, block.id));
+          }
+        }
+      }
+
       // Process terminator
-      // Handle call terminators specially (they cross function boundaries)
+      // Handle call terminators specially
+      // (they cross function boundaries)
       if (block.terminator.kind === "call") {
         result = result.then(
           generateCallTerminator(block.terminator, functions),

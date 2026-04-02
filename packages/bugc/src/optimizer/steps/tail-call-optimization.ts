@@ -80,55 +80,59 @@ export class TailCallOptimizationStep extends BaseOptimizationStep {
         tailCallBlocks.push(blockId);
       }
 
-      // If we found tail calls, create a loop structure
+      // If we found tail calls, transform into a loop.
+      //
+      // Strategy: create a trampoline "pre_entry" block as
+      // the new function entry. Add phi nodes to the original
+      // entry block that select between the initial param
+      // values (from pre_entry) and the tail-call arguments
+      // (from each tail-call site). Tail-call blocks jump
+      // directly to the original entry.
       if (tailCallBlocks.length > 0) {
-        // Create a new loop header block that will contain phis for parameters
-        const loopHeaderId = `${func.entry}_loop`;
-        const originalEntry = func.blocks.get(func.entry);
+        const origEntryId = func.entry;
+        const origEntry = func.blocks.get(origEntryId);
+        if (!origEntry) return;
 
-        if (!originalEntry) {
-          return; // Should not happen
-        }
+        // Create trampoline that becomes the new func.entry
+        const preEntryId = `${origEntryId}_pre`;
+        const preEntry: Ir.Block = {
+          id: preEntryId,
+          phis: [],
+          instructions: [],
+          terminator: {
+            kind: "jump",
+            target: origEntryId,
+            operationDebug: {},
+          },
+          predecessors: new Set<string>(),
+          debug: {},
+        };
+        func.blocks.set(preEntryId, preEntry);
+        func.entry = preEntryId;
 
-        // Create phi nodes for each parameter
+        // Build phi nodes on the original entry block.
+        // Sources: preEntry → original param, each tail
+        // call block → the call's corresponding argument.
         const paramPhis: Ir.Block.Phi[] = [];
         for (let i = 0; i < func.parameters.length; i++) {
           const param = func.parameters[i];
-          const phiSources = new Map<string, Ir.Value>();
-
-          // Initial value from function entry
-          phiSources.set(func.entry, {
+          const sources = new Map<string, Ir.Value>();
+          sources.set(preEntryId, {
             kind: "temp",
             id: param.tempId,
             type: param.type,
           });
-
           paramPhis.push({
             kind: "phi",
-            sources: phiSources,
-            dest: `${param.tempId}_loop`,
+            sources,
+            dest: param.tempId,
             type: param.type,
-            operationDebug: { context: param.loc ? undefined : undefined },
+            operationDebug: {},
           });
         }
 
-        // Create the loop header block
-        const loopHeader: Ir.Block = {
-          id: loopHeaderId,
-          phis: paramPhis,
-          instructions: [],
-          terminator: {
-            kind: "jump",
-            target: func.entry,
-            operationDebug: {},
-          },
-          predecessors: new Set([func.entry, ...tailCallBlocks]),
-          debug: {},
-        };
-
-        func.blocks.set(loopHeaderId, loopHeader);
-
-        // Transform each tail call
+        // Transform each tail call: replace call with jump
+        // to origEntry, add phi sources for arguments.
         for (const blockId of tailCallBlocks) {
           const block = func.blocks.get(blockId)!;
           const callTerm = block.terminator as Ir.Block.Terminator & {
@@ -136,21 +140,18 @@ export class TailCallOptimizationStep extends BaseOptimizationStep {
           };
           const contBlock = func.blocks.get(callTerm.continuation)!;
 
-          // Update phi sources with arguments from this tail call
           for (let i = 0; i < func.parameters.length; i++) {
             if (i < callTerm.arguments.length) {
               paramPhis[i].sources.set(blockId, callTerm.arguments[i]);
             }
           }
 
-          // Replace call with jump to loop header
           block.terminator = {
             kind: "jump",
-            target: loopHeaderId,
+            target: origEntryId,
             operationDebug: callTerm.operationDebug,
           };
 
-          // Track the transformation
           context.trackTransformation({
             type: "replace",
             pass: this.name,
@@ -159,29 +160,35 @@ export class TailCallOptimizationStep extends BaseOptimizationStep {
               ...Ir.Utils.extractContexts(contBlock),
             ],
             result: Ir.Utils.extractContexts(block),
-            reason: `Optimized tail-recursive call to ${funcName} into loop`,
+            reason:
+              `Optimized tail-recursive call to ` + `${funcName} into loop`,
           });
 
-          // Mark continuation block for removal if it has no other
-          // predecessors
-          const otherPredecessors = Array.from(contBlock.predecessors).filter(
-            (pred) => pred !== blockId,
+          // Remove continuation if no other predecessors
+          const otherPreds = Array.from(contBlock.predecessors).filter(
+            (p) => p !== blockId,
           );
 
-          if (otherPredecessors.length === 0) {
+          if (otherPreds.length === 0) {
             blocksToRemove.add(callTerm.continuation);
-
             context.trackTransformation({
               type: "delete",
               pass: this.name,
               original: Ir.Utils.extractContexts(contBlock),
               result: [],
-              reason: `Removed unused continuation block ${callTerm.continuation}`,
+              reason:
+                `Removed unused continuation block ` + callTerm.continuation,
             });
           } else {
-            // Update predecessors
             contBlock.predecessors.delete(blockId);
           }
+        }
+
+        // Install phis and update predecessors
+        origEntry.phis = [...paramPhis, ...origEntry.phis];
+        origEntry.predecessors.add(preEntryId);
+        for (const blockId of tailCallBlocks) {
+          origEntry.predecessors.add(blockId);
         }
       }
 

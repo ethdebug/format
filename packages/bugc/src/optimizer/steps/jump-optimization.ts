@@ -18,6 +18,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
       for (const [blockId, block] of func.blocks) {
         if (
           block.instructions.length === 0 &&
+          block.phis.length === 0 &&
           block.terminator.kind === "jump"
         ) {
           jumpTargets.set(blockId, block.terminator.target);
