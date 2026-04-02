@@ -55,12 +55,12 @@ places additional constraints in addition to what the base schema specifies.
 ## Elementary vs. complex types
 
 Type representations in this schema fall into one of two `class`es: either
-`"elementary"` or `"complex"`. Type representations express this disinction in
+`"elementary"` or `"complex"`. Type representations express this distinction in
 two ways (the optional `"class"` field, and the absence or existence of a
 `"contains"` field).
 
 - Elementary types do not compose any other types. For example, `uint256` is an
-  elementary type. `string` may be an elementary type for languages that whose
+  elementary type. `string` may be an elementary type for languages whose
   semantics treat strings differently than simply an array of characters (like
   Solidity does).
 

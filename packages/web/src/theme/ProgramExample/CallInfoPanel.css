@@ -49,6 +49,10 @@
   flex-shrink: 0;
 }
 
+.call-info-ref-value {
+  display: inline;
+}
+
 .call-info-ref-resolved {
   font-family: monospace;
   font-size: 0.9em;
