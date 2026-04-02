@@ -118,14 +118,18 @@ function TraceDrawerContent(): JSX.Element {
 
       if (info.kind === "invoke") {
         // The compiler emits invoke on both the caller
-        // JUMP and callee entry JUMPDEST. Skip if the
-        // top frame already matches this call.
+        // JUMP and callee entry JUMPDEST for the same
+        // call. These occur on consecutive trace steps.
+        // Only skip if the top frame matches AND was
+        // pushed on the immediately preceding step —
+        // otherwise this is a new call (e.g. recursion).
         const top = frames[frames.length - 1];
-        if (
-          !top ||
-          top.identifier !== info.identifier ||
-          top.callType !== info.callType
-        ) {
+        const isDuplicate =
+          top &&
+          top.identifier === info.identifier &&
+          top.callType === info.callType &&
+          top.stepIndex === i - 1;
+        if (!isDuplicate) {
           frames.push({
             identifier: info.identifier,
             stepIndex: i,
