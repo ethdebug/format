@@ -196,6 +196,76 @@ code {
       expect(await result.getStorage(1n)).toBe(15n);
     });
 
+    it("should return correct value from if/else branches", async () => {
+      const source = `name MultiBlockReturn;
+
+define {
+  function max(a: uint256, b: uint256) -> uint256 {
+    if (a > b) {
+      return a;
+    } else {
+      return b;
+    }
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = max(10, 20);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(20n);
+    });
+
+    it("should return correct value from both branches", async () => {
+      const source = `name BothBranches;
+
+define {
+  function max(a: uint256, b: uint256) -> uint256 {
+    if (a > b) {
+      return a;
+    } else {
+      return b;
+    }
+  };
+}
+
+storage {
+  [0] r1: uint256;
+  [1] r2: uint256;
+}
+
+create {
+  r1 = 0;
+  r2 = 0;
+}
+
+code {
+  r1 = max(10, 20);
+  r2 = max(30, 5);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(20n);
+      expect(await result.getStorage(1n)).toBe(30n);
+    });
+
     it("should call a function from another function", async () => {
       const source = `name FuncFromFunc;
 
