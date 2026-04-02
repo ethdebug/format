@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { compile } from "#compiler";
 import type * as Format from "@ethdebug/format";
-import { Program } from "@ethdebug/format";
+import { Pointer, Program } from "@ethdebug/format";
 
 const { Context } = Program;
 const { Invocation } = Context.Invoke;
@@ -97,9 +97,7 @@ code {
       expect(typeof invoke.declaration!.range!.length).toBe("number");
 
       // Target should be a code pointer (not stack)
-      const ptr = call.target.pointer as Record<string, unknown>;
-      expect(ptr.location).toBe("code");
-      expect(ptr.offset).toBeDefined();
+      expect(Pointer.Region.isCode(call.target.pointer)).toBe(true);
 
       // Caller JUMP should NOT have argument pointers
       // (args live on the callee JUMPDEST invoke context)
@@ -157,9 +155,7 @@ code {
       expect(call.identifier).toBe("add");
 
       // Target should be a code pointer
-      const ptr = call.target.pointer as Record<string, unknown>;
-      expect(ptr.location).toBe("code");
-      expect(ptr.offset).toBeDefined();
+      expect(Pointer.Region.isCode(call.target.pointer)).toBe(true);
 
       // Should have argument pointers matching
       // function parameters
