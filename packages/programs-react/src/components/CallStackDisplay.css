@@ -41,6 +41,10 @@
   font-weight: 500;
 }
 
+.call-stack-empty-text {
+  font-style: italic;
+}
+
 .call-stack-parens {
   color: var(--programs-text-muted, #888);
 }
