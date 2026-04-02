@@ -14,8 +14,8 @@ export function generateTerminator<S extends Stack>(
   term: Ir.Block.Terminator,
   isLastBlock: boolean = false,
   isUserFunction: boolean = false,
-): Transition<S, S> {
-  const { PUSHn, PUSH2, MSTORE, MLOAD, RETURN, STOP, JUMP, JUMPI } = operations;
+): Transition<S, Stack> {
+  const { PUSHn, PUSH2, MSTORE, RETURN, STOP, JUMP, JUMPI } = operations;
 
   switch (term.kind) {
     case "return": {
@@ -24,20 +24,12 @@ export function generateTerminator<S extends Stack>(
       // on TOS from the previous instruction in the block. This avoids an
       // unnecessary DUP that would leave an extra value on the stack.
       if (isUserFunction) {
-        // Load return PC from the saved slot (not 0x60,
-        // which may have been overwritten by nested calls).
-        // Use operationDebug from the IR return terminator
-        // so the epilogue maps back to the return statement.
+        // Internal function return epilogue.
+        // Uses the same imperative pattern as
+        // generateCallTerminator — returns
+        // Transition<S, Stack> to erase output type.
         const debug = term.operationDebug;
-        return pipe<S>()
-          .peek((state, builder) => {
-            const pcOffset = state.memory.savedReturnPcOffset ?? 0x60;
-            return builder
-              .then(PUSHn(BigInt(pcOffset), { debug }), { as: "offset" })
-              .then(MLOAD({ debug }), { as: "counter" })
-              .then(JUMP({ debug }));
-          })
-          .done() as unknown as Transition<S, S>;
+        return generateReturnEpilogue(term.value, debug);
       }
 
       // Contract return (main function or create)
@@ -304,5 +296,82 @@ export function generateCallTerminator<S extends Stack>(
     }
 
     return currentState;
+  }) as Transition<S, Stack>;
+}
+
+/**
+ * Generate return epilogue for user-defined functions.
+ *
+ * Loads the return value (if any), cleans stale stack
+ * values from predecessor blocks, then loads the saved
+ * return PC and jumps back to the caller.
+ */
+function generateReturnEpilogue<S extends Stack>(
+  value: Ir.Value | undefined,
+  debug: Ir.Block.Debug,
+): Transition<S, Stack> {
+  return ((state: State<S>): State<Stack> => {
+    let s: State<Stack> = state as State<Stack>;
+
+    // Load return value onto the stack if present.
+    if (value) {
+      s = loadValue(value, { debug })(s);
+    }
+
+    // Pop stale values, keeping only the return value
+    // (if any). Multi-block functions can accumulate
+    // leftover values (e.g. branch condition results)
+    // from predecessor blocks.
+    const keep = value ? 1 : 0;
+    while (s.stack.length > keep) {
+      if (keep > 0 && s.stack.length > 1) {
+        const depth = s.stack.length - 1;
+        s = {
+          ...s,
+          instructions: [
+            ...s.instructions,
+            {
+              mnemonic: `SWAP${depth}`,
+              opcode: 0x8f + depth,
+              debug,
+            },
+          ],
+          stack: [s.stack[depth], ...s.stack.slice(1, depth), s.stack[0]],
+          brands: [
+            s.brands[depth],
+            ...s.brands.slice(1, depth),
+            s.brands[0],
+          ] as Stack,
+        };
+      }
+      s = {
+        ...s,
+        instructions: [
+          ...s.instructions,
+          { mnemonic: "POP", opcode: 0x50, debug },
+        ],
+        stack: s.stack.slice(1),
+        brands: s.brands.slice(1) as Stack,
+      };
+    }
+
+    // Load return PC from saved slot and jump back.
+    const pcOffset = s.memory.savedReturnPcOffset ?? 0x60;
+    s = {
+      ...s,
+      instructions: [
+        ...s.instructions,
+        {
+          mnemonic: "PUSH2",
+          opcode: 0x61,
+          immediates: [(pcOffset >> 8) & 0xff, pcOffset & 0xff],
+          debug,
+        },
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        { mnemonic: "JUMP", opcode: 0x56, debug },
+      ],
+    };
+
+    return s;
   }) as Transition<S, Stack>;
 }
