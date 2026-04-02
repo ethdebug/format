@@ -363,6 +363,39 @@ code { result = count(0, 5); }`;
       expect(await result.getStorage(0n)).toBe(5n);
     });
 
+    // Known bug: nested call arguments (e.g. count(succ(n), target))
+    // fail at optimizer level 2+. Tracked separately.
+    it.skip("should support recursion at optimization level 2", async () => {
+      const source = `name RecursionOpt;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(
+    n: uint256, target: uint256
+  ) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = count(0, 5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: 2,
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(5n);
+    });
+
     it("should support simple self-recursion", async () => {
       const source = `name SimpleRecursion;
 
