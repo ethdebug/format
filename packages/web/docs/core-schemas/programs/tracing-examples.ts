@@ -72,18 +72,16 @@ code {
   result = add(3, 4);
 }`;
 
-export const recursiveCount = `name Counter;
+export const mutualRecursion = `name EvenOdd;
 
 define {
-  function succ(n: uint256) -> uint256 {
-    return n + 1;
+  function isEven(n: uint256) -> uint256 {
+    if (n == 0) { return 1; }
+    else { return isOdd(n - 1); }
   };
-  function count(n: uint256, target: uint256) -> uint256 {
-    if (n < target) {
-      return count(succ(n), target);
-    } else {
-      return n;
-    }
+  function isOdd(n: uint256) -> uint256 {
+    if (n == 0) { return 0; }
+    else { return isEven(n - 1); }
   };
 }
 
@@ -96,5 +94,5 @@ create {
 }
 
 code {
-  result = count(0, 5);
+  result = isEven(4);
 }`;

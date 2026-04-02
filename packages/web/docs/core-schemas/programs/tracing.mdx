@@ -10,7 +10,7 @@ import {
   thresholdCheck,
   multipleStorageSlots,
   functionCallAndReturn,
-  recursiveCount,
+  mutualRecursion,
 } from "./tracing-examples";
 
 # Tracing execution
@@ -96,15 +96,15 @@ trace. Watch for **invoke** contexts on the JUMP into `add` and
   source={functionCallAndReturn}
 />
 
-Recursive calls produce nested invoke/return pairs. In this
-example, `count` calls `succ` and then calls itself repeatedly
-until `n` reaches `target`. Each recursive call adds a frame
+Mutual recursion produces alternating invoke/return pairs. In
+this example, `isEven` and `isOdd` call each other, bouncing
+back and forth until `n` reaches zero. Each call adds a frame
 to the call stack:
 
 <TraceExample
-  title="Recursive function calls"
-  description="Counts from 0 to 5 using recursive succ and count functions"
-  source={recursiveCount}
+  title="Mutual recursion"
+  description="Checks if 4 is even using mutually recursive isEven/isOdd"
+  source={mutualRecursion}
 />
 
 As you step through, three phases are visible:
