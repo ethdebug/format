@@ -210,18 +210,10 @@ export function generateCallTerminator<S extends Stack>(
     }
 
     // Push function address and jump.
-    // The JUMP gets an invoke context: after JUMP executes,
-    // the function has been entered with args on the stack.
+    // The JUMP gets a simplified invoke context with
+    // identity and code target only; the full invoke
+    // with arg pointers lives on the callee JUMPDEST.
     const funcAddrPatchIndex = currentState.instructions.length;
-
-    // Build argument pointers: after the JUMP, the callee
-    // sees args on the stack in order (first arg deepest).
-    const params = targetFunc?.parameters;
-    const argPointers = args.map((_arg, i) => ({
-      ...(params?.[i]?.name ? { name: params[i].name } : {}),
-      location: "stack" as const,
-      slot: args.length - 1 - i,
-    }));
 
     // Build declaration source range if available
     const declaration =
@@ -232,10 +224,6 @@ export function generateCallTerminator<S extends Stack>(
           }
         : undefined;
 
-    // Invoke context describes state after JUMP executes:
-    // the callee has been entered with args on the stack.
-    // target points to the function address at stack slot 0
-    // (consumed by JUMP, but describes the call target).
     const invoke: Format.Program.Context.Invoke = {
       invoke: {
         jump: true as const,
@@ -243,20 +231,16 @@ export function generateCallTerminator<S extends Stack>(
         ...(declaration ? { declaration } : {}),
         target: {
           pointer: {
-            location: "stack" as const,
-            slot: 0,
+            location: "code" as const,
+            offset: 0,
+            length: 1,
           },
         },
-        ...(argPointers.length > 0 && {
-          arguments: {
-            pointer: {
-              group: argPointers,
-            },
-          },
-        }),
       },
     };
-    const invokeContext = { context: invoke as Format.Program.Context };
+    const invokeContext = {
+      context: invoke as Format.Program.Context,
+    };
 
     currentState = {
       ...currentState,

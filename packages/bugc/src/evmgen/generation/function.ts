@@ -2,7 +2,7 @@
  * Function-level code generation
  */
 
-import type * as Format from "@ethdebug/format";
+import * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import type * as Evm from "#evm";
 import type { Stack } from "#evm";
@@ -53,8 +53,9 @@ function generatePrologue<S extends Stack>(
         ...(declaration ? { declaration } : {}),
         target: {
           pointer: {
-            location: "stack" as const,
-            slot: 0,
+            location: "code" as const,
+            offset: 0,
+            length: 1,
           },
         },
         ...(argPointers.length > 0 && {
@@ -483,8 +484,46 @@ export function patchFunctionCalls(
     patchedBytecode[bytePos + 1] = lowByte;
   }
 
+  // Patch invoke context code pointers. During codegen,
+  // invoke targets use placeholder offset 0; resolve them
+  // to the actual function entry from the registry.
+  for (const inst of patchedInstructions) {
+    patchInvokeTarget(inst, functionRegistry);
+  }
+
   return {
     bytecode: patchedBytecode,
     instructions: patchedInstructions,
   };
+}
+
+/**
+ * Resolve placeholder code pointer offsets in invoke debug
+ * contexts. The codegen emits `{ location: "code", offset: 0 }`
+ * as a placeholder; this replaces offset with the actual
+ * function entry address from the registry.
+ */
+function patchInvokeTarget(
+  inst: Evm.Instruction,
+  functionRegistry: Record<string, number>,
+): void {
+  const ctx = inst.debug?.context;
+  if (!ctx) return;
+
+  if (!Format.Program.Context.isInvoke(ctx)) return;
+
+  const { invoke } = ctx;
+  if (!Format.Program.Context.Invoke.Invocation.isInternalCall(invoke)) {
+    return;
+  }
+
+  if (!invoke.identifier) return;
+
+  const offset = functionRegistry[invoke.identifier];
+  if (offset === undefined) return;
+
+  const ptr = invoke.target.pointer;
+  if (Format.Pointer.Region.isCode(ptr)) {
+    ptr.offset = `0x${offset.toString(16)}`;
+  }
 }
