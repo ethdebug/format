@@ -272,6 +272,8 @@ export interface CallFrame {
   callType?: "internal" | "external" | "create";
   /** Named arguments (from invoke context) */
   argumentNames?: string[];
+  /** Individual argument pointers for value resolution */
+  argumentPointers?: unknown[];
 }
 
 /**
@@ -310,12 +312,21 @@ export function buildCallStack(
         top.identifier === callInfo.identifier &&
         top.callType === callInfo.callType &&
         top.stepIndex === i - 1;
-      if (!isDuplicate) {
+      if (isDuplicate) {
+        // Use the callee entry step for resolution —
+        // the argument pointers reference stack slots
+        // that are valid at the JUMPDEST, not the JUMP
+        const argResult = extractArgInfo(instruction);
+        top.stepIndex = i;
+        top.argumentPointers = argResult?.pointers;
+      } else {
+        const argResult = extractArgInfo(instruction);
         stack.push({
           identifier: callInfo.identifier,
           stepIndex: i,
           callType: callInfo.callType,
-          argumentNames: extractArgNames(instruction),
+          argumentNames: argResult?.names,
+          argumentPointers: argResult?.pointers,
         });
       }
     } else if (callInfo.kind === "return" || callInfo.kind === "revert") {
@@ -330,16 +341,15 @@ export function buildCallStack(
 }
 
 /**
- * Extract argument names from an instruction's invoke
- * context, if present.
+ * Extract argument names and pointers from an
+ * instruction's invoke context, if present.
  */
-function extractArgNames(
+function extractArgInfo(
   instruction: Program.Instruction,
-): string[] | undefined {
+): { names?: string[]; pointers?: unknown[] } | undefined {
   const ctx = instruction.context as Record<string, unknown> | undefined;
   if (!ctx) return undefined;
 
-  // Find the invoke field (may be nested in gather)
   const invoke = findInvokeField(ctx);
   if (!invoke) return undefined;
 
@@ -353,18 +363,23 @@ function extractArgNames(
   if (!Array.isArray(group)) return undefined;
 
   const names: string[] = [];
-  let hasAny = false;
+  const pointers: unknown[] = [];
+  let hasAnyName = false;
   for (const entry of group) {
     const name = entry.name as string | undefined;
     if (name) {
       names.push(name);
-      hasAny = true;
+      hasAnyName = true;
     } else {
       names.push("_");
     }
+    pointers.push(entry);
   }
 
-  return hasAny ? names : undefined;
+  return {
+    names: hasAnyName ? names : undefined,
+    pointers,
+  };
 }
 
 function findInvokeField(

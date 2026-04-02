@@ -8,7 +8,13 @@
  * - Step-through trace visualization
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import { compile as bugCompile, Severity, type Evm } from "@ethdebug/bugc";
 import {
@@ -18,6 +24,7 @@ import {
   extractSourceRange,
 } from "@ethdebug/bugc-react";
 import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
+import { dereference, Data, type Machine } from "@ethdebug/pointers";
 import { Drawer } from "@theme/Drawer";
 import { useTracePlayground } from "./TracePlaygroundContext";
 
@@ -106,6 +113,7 @@ function TraceDrawerContent(): JSX.Element {
       stepIndex: number;
       callType?: string;
       argumentNames?: string[];
+      argumentPointers?: unknown[];
     }> = [];
 
     for (let i = 0; i <= currentStep && i < trace.length; i++) {
@@ -129,12 +137,19 @@ function TraceDrawerContent(): JSX.Element {
           top.identifier === info.identifier &&
           top.callType === info.callType &&
           top.stepIndex === i - 1;
-        if (!isDuplicate) {
+        if (isDuplicate) {
+          // Use the callee entry step for resolution —
+          // argument pointers reference stack slots
+          // valid at the JUMPDEST, not the JUMP
+          top.stepIndex = i;
+          top.argumentPointers = info.argumentPointers;
+        } else {
           frames.push({
             identifier: info.identifier,
             stepIndex: i,
             callType: info.callType,
             argumentNames: info.argumentNames,
+            argumentPointers: info.argumentPointers,
           });
         }
       } else if (info.kind === "return" || info.kind === "revert") {
@@ -146,6 +161,79 @@ function TraceDrawerContent(): JSX.Element {
 
     return frames;
   }, [trace, currentStep, pcToInstruction]);
+
+  // Resolve argument values for call stack frames
+  const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
+
+  const [resolvedArgs, setResolvedArgs] = useState<Map<number, ResolvedArg[]>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    if (callStack.length === 0) {
+      setResolvedArgs(new Map());
+      return;
+    }
+
+    // Initialize with cached values
+    const initial = new Map<number, ResolvedArg[]>();
+    for (const frame of callStack) {
+      const cached = argCacheRef.current.get(frame.stepIndex);
+      if (cached) {
+        initial.set(frame.stepIndex, cached);
+      }
+    }
+    setResolvedArgs(new Map(initial));
+
+    let cancelled = false;
+
+    const promises = callStack.map(async (frame) => {
+      if (argCacheRef.current.has(frame.stepIndex)) {
+        return;
+      }
+
+      const ptrs = frame.argumentPointers;
+      const names = frame.argumentNames;
+      if (!ptrs || ptrs.length === 0) return;
+
+      const step = trace[frame.stepIndex];
+      if (!step) return;
+
+      const state = traceStepToState(step, storage);
+      const args: ResolvedArg[] = ptrs.map((_, i) => ({
+        name: names?.[i] ?? `_${i}`,
+      }));
+
+      const resolvePromises = ptrs.map(async (ptr, i) => {
+        try {
+          const value = await resolvePointer(ptr, state);
+          args[i] = { ...args[i], value };
+        } catch (err) {
+          args[i] = {
+            ...args[i],
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
+      });
+
+      await Promise.all(resolvePromises);
+
+      if (!cancelled) {
+        argCacheRef.current.set(frame.stepIndex, args);
+        setResolvedArgs((prev) => {
+          const next = new Map(prev);
+          next.set(frame.stepIndex, args);
+          return next;
+        });
+      }
+    });
+
+    Promise.all(promises).catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callStack, trace, storage]);
 
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
@@ -431,10 +519,7 @@ function TraceDrawerContent(): JSX.Element {
                         type="button"
                       >
                         {frame.identifier || "(anonymous)"}(
-                        {frame.argumentNames
-                          ? frame.argumentNames.join(", ")
-                          : ""}
-                        )
+                        {formatFrameArgs(frame, resolvedArgs)})
                       </button>
                     </React.Fragment>
                   ))
@@ -627,6 +712,7 @@ interface CallInfoResult {
   identifier?: string;
   callType?: string;
   argumentNames?: string[];
+  argumentPointers?: unknown[];
 }
 
 /**
@@ -646,11 +732,13 @@ function extractCallInfo(context: unknown): CallInfoResult | undefined {
     else if ("message" in inv) callType = "external";
     else if ("create" in inv) callType = "create";
 
+    const argInfo = extractArgInfoFromInvoke(inv);
     return {
       kind: "invoke",
       identifier: inv.identifier as string | undefined,
       callType,
-      argumentNames: extractArgNamesFromInvoke(inv),
+      argumentNames: argInfo?.names,
+      argumentPointers: argInfo?.pointers,
     };
   }
 
@@ -708,9 +796,9 @@ function formatCallBanner(info: CallInfoResult): string {
   }
 }
 
-function extractArgNamesFromInvoke(
+function extractArgInfoFromInvoke(
   inv: Record<string, unknown>,
-): string[] | undefined {
+): { names?: string[]; pointers?: unknown[] } | undefined {
   const args = inv.arguments as Record<string, unknown> | undefined;
   if (!args) return undefined;
 
@@ -721,18 +809,23 @@ function extractArgNamesFromInvoke(
   if (!Array.isArray(group)) return undefined;
 
   const names: string[] = [];
-  let hasAny = false;
+  const pointers: unknown[] = [];
+  let hasAnyName = false;
   for (const entry of group) {
     const name = entry.name as string | undefined;
     if (name) {
       names.push(name);
-      hasAny = true;
+      hasAnyName = true;
     } else {
       names.push("_");
     }
+    pointers.push(entry);
   }
 
-  return hasAny ? names : undefined;
+  return {
+    names: hasAnyName ? names : undefined,
+    pointers,
+  };
 }
 
 /**
@@ -806,6 +899,166 @@ function formatType(type: unknown): string {
   }
 
   return JSON.stringify(type);
+}
+
+function formatFrameArgs(
+  frame: {
+    stepIndex: number;
+    argumentNames?: string[];
+  },
+  resolved: Map<number, ResolvedArg[]>,
+): string {
+  const args = resolved.get(frame.stepIndex);
+  if (!args) {
+    return frame.argumentNames ? frame.argumentNames.join(", ") : "";
+  }
+  return args
+    .map((arg) => {
+      if (arg.value === undefined) return arg.name;
+      const decimal = formatAsDecimal(arg.value);
+      return `${arg.name}: ${decimal}`;
+    })
+    .join(", ");
+}
+
+function formatAsDecimal(hex: string): string {
+  try {
+    const n = BigInt(hex);
+    if (n <= 9999n) return n.toString();
+    return hex;
+  } catch {
+    return hex;
+  }
+}
+
+/**
+ * Convert an evm TraceStep + storage into a Machine.State
+ * for pointer dereferencing.
+ */
+function traceStepToState(
+  step: TraceStep,
+  storage: Record<string, string>,
+): Machine.State {
+  const stackEntries = step.stack.map((v) =>
+    Data.fromUint(v).padUntilAtLeast(32),
+  );
+
+  const memoryData = step.memory ? Data.fromBytes(step.memory) : Data.zero();
+
+  const storageMap = new Map<string, Data>();
+  for (const [slot, value] of Object.entries(storage)) {
+    const key = Data.fromHex(slot).padUntilAtLeast(32).toHex();
+    storageMap.set(key, Data.fromHex(value).padUntilAtLeast(32));
+  }
+
+  const stack: Machine.State.Stack = {
+    get length() {
+      return Promise.resolve(BigInt(stackEntries.length));
+    },
+    async peek({ depth, slice }) {
+      const index = stackEntries.length - 1 - Number(depth);
+      if (index < 0 || index >= stackEntries.length) {
+        throw new Error(`Stack underflow: depth ${depth}`);
+      }
+      const entry = stackEntries[index];
+      if (!slice) return entry;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        entry.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  const makeBytesReader = (data: Data): Machine.State.Bytes => ({
+    get length() {
+      return Promise.resolve(BigInt(data.length));
+    },
+    async read({ slice }) {
+      const { offset, length } = slice;
+      const start = Number(offset);
+      const end = start + Number(length);
+      if (end > data.length) {
+        const result = new Uint8Array(Number(length));
+        const available = Math.max(0, data.length - start);
+        if (available > 0 && start < data.length) {
+          result.set(data.slice(start, start + available), 0);
+        }
+        return Data.fromBytes(result);
+      }
+      return Data.fromBytes(data.slice(start, end));
+    },
+  });
+
+  const storageReader: Machine.State.Words = {
+    async read({ slot, slice }) {
+      const key = slot.padUntilAtLeast(32).toHex();
+      const value = storageMap.get(key) || Data.zero().padUntilAtLeast(32);
+      if (!slice) return value;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  const emptyWords: Machine.State.Words = {
+    async read({ slice }) {
+      const value = Data.zero().padUntilAtLeast(32);
+      if (!slice) return value;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  return {
+    get traceIndex() {
+      return Promise.resolve(0n);
+    },
+    get programCounter() {
+      return Promise.resolve(BigInt(step.pc));
+    },
+    get opcode() {
+      return Promise.resolve(step.opcode);
+    },
+    stack,
+    memory: makeBytesReader(memoryData),
+    storage: storageReader,
+    calldata: makeBytesReader(Data.zero()),
+    returndata: makeBytesReader(Data.zero()),
+    code: makeBytesReader(Data.zero()),
+    transient: emptyWords,
+  };
+}
+
+/**
+ * Resolve a single pointer against a machine state.
+ */
+async function resolvePointer(
+  pointer: unknown,
+  state: Machine.State,
+): Promise<string> {
+  const cursor = await dereference(
+    pointer as Parameters<typeof dereference>[0],
+    { state, templates: {} },
+  );
+  const view = await cursor.view(state);
+
+  const values: Data[] = [];
+  for (const region of view.regions) {
+    values.push(await view.read(region));
+  }
+
+  if (values.length === 0) return "0x";
+  if (values.length === 1) return values[0].toHex();
+  return values.map((d) => d.toHex()).join(", ");
+}
+
+interface ResolvedArg {
+  name: string;
+  value?: string;
+  error?: string;
 }
 
 export default TraceDrawer;

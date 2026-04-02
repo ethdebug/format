@@ -39,8 +39,8 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
       return Promise.resolve(BigInt(stackEntries.length));
     },
     async peek({ depth, slice }) {
-      const index = Number(depth);
-      if (index >= stackEntries.length) {
+      const index = stackEntries.length - 1 - Number(depth);
+      if (index < 0 || index >= stackEntries.length) {
         throw new Error(
           `Stack underflow: depth ${depth} ` +
             `exceeds stack size ${stackEntries.length}`,

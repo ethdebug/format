@@ -32,6 +32,7 @@ export {
   type TraceProviderProps,
   type ResolvedVariable,
   type ResolvedCallInfo,
+  type ResolvedCallFrame,
   type ResolvedPointerRef,
   type TraceControlsProps,
   type TraceProgressProps,
