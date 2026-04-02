@@ -24,6 +24,54 @@ import {
 import { traceStepToMachineState } from "#utils/traceState";
 
 /**
+ * Compute a key representing an instruction's source range,
+ * used to detect when stepping has moved to a new source
+ * location. Returns empty string for instructions without
+ * source ranges.
+ */
+function sourceRangeKey(instruction: Program.Instruction | undefined): string {
+  if (!instruction?.context) return "";
+
+  const ctx = instruction.context as Record<string, unknown>;
+  const ranges = collectCodeRanges(ctx);
+  if (ranges.length === 0) return "";
+
+  return ranges.map((r) => `${r.offset}:${r.length}`).join(",");
+}
+
+function collectCodeRanges(
+  ctx: Record<string, unknown>,
+): Array<{ offset: number; length: number }> {
+  if ("code" in ctx && typeof ctx.code === "object") {
+    const code = ctx.code as Record<string, unknown>;
+    if (code.range && typeof code.range === "object") {
+      const r = code.range as Record<string, number>;
+      if (typeof r.offset === "number" && typeof r.length === "number") {
+        return [{ offset: r.offset, length: r.length }];
+      }
+    }
+  }
+
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    return ctx.gather.flatMap((item: unknown) =>
+      item && typeof item === "object"
+        ? collectCodeRanges(item as Record<string, unknown>)
+        : [],
+    );
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    return ctx.pick.flatMap((item: unknown) =>
+      item && typeof item === "object"
+        ? collectCodeRanges(item as Record<string, unknown>)
+        : [],
+    );
+  }
+
+  return [];
+}
+
+/**
  * A variable with its resolved value.
  */
 export interface ResolvedVariable {
@@ -98,10 +146,14 @@ export interface TraceState {
   /** Whether we're at the last step */
   isAtEnd: boolean;
 
-  /** Move to the next step */
+  /** Move to the next trace step */
   stepForward(): void;
-  /** Move to the previous step */
+  /** Move to the previous trace step */
   stepBackward(): void;
+  /** Step to the next different source range */
+  stepToNextSource(): void;
+  /** Step to the previous different source range */
+  stepToPrevSource(): void;
   /** Jump to a specific step */
   jumpToStep(index: number): void;
   /** Reset to the first step */
@@ -377,6 +429,41 @@ export function TraceProvider({
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  const stepToNextSource = useCallback(() => {
+    setCurrentStepIndex((prev) => {
+      const currentKey = sourceRangeKey(pcToInstruction.get(trace[prev]?.pc));
+      for (let i = prev + 1; i < trace.length; i++) {
+        const instr = pcToInstruction.get(trace[i].pc);
+        const key = sourceRangeKey(instr);
+        if (key !== currentKey && key !== "") {
+          return i;
+        }
+      }
+      return trace.length - 1;
+    });
+  }, [trace, pcToInstruction]);
+
+  const stepToPrevSource = useCallback(() => {
+    setCurrentStepIndex((prev) => {
+      const currentKey = sourceRangeKey(pcToInstruction.get(trace[prev]?.pc));
+      // First skip past all steps with the same range
+      let i = prev - 1;
+      while (i > 0) {
+        const key = sourceRangeKey(pcToInstruction.get(trace[i].pc));
+        if (key !== currentKey && key !== "") break;
+        i--;
+      }
+      // Now find the start of that source range
+      const targetKey = sourceRangeKey(pcToInstruction.get(trace[i]?.pc));
+      while (i > 0) {
+        const prevKey = sourceRangeKey(pcToInstruction.get(trace[i - 1]?.pc));
+        if (prevKey !== targetKey) break;
+        i--;
+      }
+      return Math.max(0, i);
+    });
+  }, [trace, pcToInstruction]);
+
   const jumpToStep = useCallback(
     (index: number) => {
       setCurrentStepIndex(Math.max(0, Math.min(index, trace.length - 1)));
@@ -406,6 +493,8 @@ export function TraceProvider({
     isAtEnd: currentStepIndex >= trace.length - 1,
     stepForward,
     stepBackward,
+    stepToNextSource,
+    stepToPrevSource,
     jumpToStep,
     reset,
     jumpToEnd,
