@@ -140,8 +140,10 @@ function TraceDrawerContent(): JSX.Element {
         if (isDuplicate) {
           // Use the callee entry step for resolution —
           // argument pointers reference stack slots
-          // valid at the JUMPDEST, not the JUMP
+          // valid at the JUMPDEST, not the JUMP.
+          // Argument names also live on the callee entry.
           top.stepIndex = i;
+          top.argumentNames = info.argumentNames ?? top.argumentNames;
           top.argumentPointers = info.argumentPointers;
         } else {
           frames.push({
