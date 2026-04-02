@@ -315,9 +315,11 @@ export function buildCallStack(
       if (isDuplicate) {
         // Use the callee entry step for resolution —
         // the argument pointers reference stack slots
-        // that are valid at the JUMPDEST, not the JUMP
+        // that are valid at the JUMPDEST, not the JUMP.
+        // Argument names also live on the callee entry.
         const argResult = extractArgInfo(instruction);
         top.stepIndex = i;
+        top.argumentNames = argResult?.names ?? top.argumentNames;
         top.argumentPointers = argResult?.pointers;
       } else {
         const argResult = extractArgInfo(instruction);
