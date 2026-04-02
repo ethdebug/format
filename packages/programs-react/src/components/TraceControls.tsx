@@ -33,6 +33,8 @@ export function TraceControls({
     isAtEnd,
     stepBackward,
     stepForward,
+    stepToPrevSource,
+    stepToNextSource,
     reset,
     jumpToEnd,
   } = useTraceContext();
@@ -47,25 +49,43 @@ export function TraceControls({
           title="Reset to start"
           type="button"
         >
-          ⏮
+          &#x23EE;
+        </button>
+        <button
+          className="trace-control-btn trace-control-prev-source"
+          onClick={stepToPrevSource}
+          disabled={isAtStart}
+          title="Previous source location"
+          type="button"
+        >
+          &#x25C0;
         </button>
         <button
           className="trace-control-btn trace-control-prev"
           onClick={stepBackward}
           disabled={isAtStart}
-          title="Previous step"
+          title="Previous trace step"
           type="button"
         >
-          ←
+          &#x25C1;
         </button>
         <button
           className="trace-control-btn trace-control-next"
           onClick={stepForward}
           disabled={isAtEnd}
-          title="Next step"
+          title="Next trace step"
           type="button"
         >
-          →
+          &#x25B7;
+        </button>
+        <button
+          className="trace-control-btn trace-control-next-source"
+          onClick={stepToNextSource}
+          disabled={isAtEnd}
+          title="Next source location"
+          type="button"
+        >
+          &#x25B6;
         </button>
         <button
           className="trace-control-btn trace-control-end"
@@ -74,7 +94,7 @@ export function TraceControls({
           title="Jump to end"
           type="button"
         >
-          ⏭
+          &#x23ED;
         </button>
       </div>
 

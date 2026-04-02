@@ -258,6 +258,45 @@ function TraceDrawerContent(): JSX.Element {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  const rangeKey = (stepIdx: number): string => {
+    const step = trace[stepIdx];
+    if (!step) return "";
+    const instr = pcToInstruction.get(step.pc);
+    if (!instr?.debug?.context) return "";
+    const ranges = extractSourceRange(instr.debug.context);
+    if (ranges.length === 0) return "";
+    return ranges.map((r) => `${r.offset}:${r.length}`).join(",");
+  };
+
+  const stepToNextSource = () => {
+    setCurrentStep((prev) => {
+      const currentKey = rangeKey(prev);
+      for (let i = prev + 1; i < trace.length; i++) {
+        const key = rangeKey(i);
+        if (key !== currentKey && key !== "") return i;
+      }
+      return trace.length - 1;
+    });
+  };
+
+  const stepToPrevSource = () => {
+    setCurrentStep((prev) => {
+      const currentKey = rangeKey(prev);
+      let i = prev - 1;
+      while (i > 0) {
+        const key = rangeKey(i);
+        if (key !== currentKey && key !== "") break;
+        i--;
+      }
+      const targetKey = rangeKey(i);
+      while (i > 0) {
+        if (rangeKey(i - 1) !== targetKey) break;
+        i--;
+      }
+      return Math.max(0, i);
+    });
+  };
+
   const jumpToStart = () => setCurrentStep(0);
   const jumpToEnd = () => setCurrentStep(trace.length - 1);
 
@@ -332,12 +371,20 @@ function TraceDrawerContent(): JSX.Element {
                   &#x23EE;
                 </button>
                 <button
-                  onClick={stepBackward}
+                  onClick={stepToPrevSource}
                   disabled={currentStep === 0}
                   className="trace-nav-btn"
-                  title="Step backward"
+                  title="Previous source location"
                 >
                   &#x25C0;
+                </button>
+                <button
+                  onClick={stepBackward}
+                  disabled={currentStep === 0}
+                  className="trace-nav-btn trace-nav-btn-step"
+                  title="Previous trace step"
+                >
+                  &#x25C1;
                 </button>
                 <span className="trace-step-info">
                   {currentStep + 1} / {trace.length}
@@ -345,8 +392,16 @@ function TraceDrawerContent(): JSX.Element {
                 <button
                   onClick={stepForward}
                   disabled={currentStep >= trace.length - 1}
+                  className="trace-nav-btn trace-nav-btn-step"
+                  title="Next trace step"
+                >
+                  &#x25B7;
+                </button>
+                <button
+                  onClick={stepToNextSource}
+                  disabled={currentStep >= trace.length - 1}
                   className="trace-nav-btn"
-                  title="Step forward"
+                  title="Next source location"
                 >
                   &#x25B6;
                 </button>
