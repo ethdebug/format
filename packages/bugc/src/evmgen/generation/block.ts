@@ -5,6 +5,7 @@
 import type * as Ast from "#ast";
 import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
+import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 
 import { Error, ErrorCode } from "#evmgen/errors";
@@ -47,8 +48,10 @@ export function generate<S extends Stack>(
         },
       }));
 
-      // Initialize memory for first block
-      if (isFirstBlock) {
+      // Initialize memory for first block of main/create.
+      // User functions allocate frames in the prologue
+      // instead — re-initializing here would clobber FP/FMP.
+      if (isFirstBlock && !isUserFunction) {
         const sourceInfo =
           func?.sourceId && func?.loc
             ? { sourceId: func.sourceId, loc: func.loc }
@@ -123,7 +126,8 @@ export function generate<S extends Stack>(
             result = result.then(annotateTop(destId)).then((s) => {
               const allocation = s.memory.allocations[destId];
               if (!allocation) return s;
-              // Spill return value to memory: DUP1, PUSH offset, MSTORE
+              // Spill return value to memory.
+              // DUP1 keeps the value; compute address; MSTORE.
               return {
                 ...s,
                 instructions: [
@@ -133,15 +137,11 @@ export function generate<S extends Stack>(
                     opcode: 0x80,
                     debug: spillDebug,
                   },
-                  {
-                    mnemonic: "PUSH2" as const,
-                    opcode: 0x61,
-                    immediates: [
-                      (allocation.offset >> 8) & 0xff,
-                      allocation.offset & 0xff,
-                    ],
-                    debug: spillDebug,
-                  },
+                  ...computeAddress(
+                    allocation.offset,
+                    s.memory.frameSize !== undefined,
+                    spillDebug,
+                  ),
                   {
                     mnemonic: "MSTORE" as const,
                     opcode: 0x52,
@@ -200,7 +200,7 @@ function generatePhi<S extends Stack>(
   phi: Ir.Block.Phi,
   predecessor: string,
 ): Transition<S, S> {
-  const { PUSHn, MSTORE } = operations;
+  const { PUSHn, ADD, MLOAD, MSTORE } = operations;
 
   const source = phi.sources.get(predecessor);
   if (!source) {
@@ -222,8 +222,20 @@ function generatePhi<S extends Stack>(
             `Phi destination ${phi.dest} not allocated`,
           );
         }
+        if (state.memory.frameSize !== undefined) {
+          return builder
+            .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER)), { as: "offset" })
+            .then(MLOAD(), { as: "b" })
+            .then(PUSHn(BigInt(allocation.offset)), {
+              as: "a",
+            })
+            .then(ADD(), { as: "offset" })
+            .then(MSTORE());
+        }
         return builder
-          .then(PUSHn(BigInt(allocation.offset)), { as: "offset" })
+          .then(PUSHn(BigInt(allocation.offset)), {
+            as: "offset",
+          })
           .then(MSTORE());
       })
       .done()
@@ -261,16 +273,81 @@ function initializeMemory<S extends Stack>(
         } as Format.Program.Context,
       };
 
-  return pipe<S>()
-    .then(PUSHn(BigInt(nextStaticOffset), { debug }), {
-      as: "value",
-    })
-    .then(
-      PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER), {
-        debug,
-      }),
-      { as: "offset" },
-    )
-    .then(MSTORE({ debug }))
-    .done();
+  const { PUSH0 } = operations;
+
+  return (
+    pipe<S>()
+      .then(PUSHn(BigInt(nextStaticOffset), { debug }), {
+        as: "value",
+      })
+      .then(
+        PUSHn(BigInt(Memory.regions.FREE_MEMORY_POINTER), {
+          debug,
+        }),
+        { as: "offset" },
+      )
+      .then(MSTORE({ debug }))
+      // Initialize frame pointer to 0 (no active frame)
+      .then(PUSH0({ debug }), { as: "value" })
+      .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER), { debug }), {
+        as: "offset",
+      })
+      .then(MSTORE({ debug }))
+      .done()
+  );
+}
+
+/**
+ * Emit instructions to compute a memory address.
+ *
+ * For frame-based functions, emits PUSH FP; MLOAD;
+ * PUSH offset; ADD. For absolute mode, emits PUSH2
+ * with the offset encoded directly.
+ */
+function computeAddress(
+  offset: number,
+  isFrameBased: boolean,
+  debug: Evm.Instruction["debug"],
+): Evm.Instruction[] {
+  if (isFrameBased) {
+    return [
+      ...pushImm(Memory.regions.FRAME_POINTER, debug),
+      { mnemonic: "MLOAD" as const, opcode: 0x51, debug },
+      ...pushImm(offset, debug),
+      { mnemonic: "ADD" as const, opcode: 0x01, debug },
+    ];
+  }
+  return [
+    {
+      mnemonic: "PUSH2" as const,
+      opcode: 0x61,
+      immediates: [(offset >> 8) & 0xff, offset & 0xff],
+      debug,
+    },
+  ];
+}
+
+/** PUSH an integer as the smallest PUSHn. */
+function pushImm(
+  value: number,
+  debug: Evm.Instruction["debug"],
+): Evm.Instruction[] {
+  if (value === 0) {
+    return [{ mnemonic: "PUSH0", opcode: 0x5f, debug }];
+  }
+  const bytes: number[] = [];
+  let v = value;
+  while (v > 0) {
+    bytes.unshift(v & 0xff);
+    v >>= 8;
+  }
+  const n = bytes.length;
+  return [
+    {
+      mnemonic: `PUSH${n}`,
+      opcode: 0x5f + n,
+      immediates: bytes,
+      debug,
+    },
+  ];
 }

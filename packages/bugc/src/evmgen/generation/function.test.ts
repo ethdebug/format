@@ -46,9 +46,10 @@ describe("Function.generate", () => {
 
     const { instructions } = generate(func, memory, layout);
 
-    // Should have memory initialization (PUSH1 0x80, PUSH1 0x40, MSTORE) followed by PUSH1 42
-    // No JUMPDEST for entry with no predecessors, no STOP since it's the last block
-    expect(instructions).toHaveLength(4);
+    // Memory init: FMP (PUSH 0x80, PUSH 0x40, MSTORE)
+    //   then FP=0 (PUSH0, PUSH 0x80, MSTORE)
+    //   then PUSH1 42
+    expect(instructions).toHaveLength(7);
     expect(instructions[0]).toMatchObject({
       mnemonic: "PUSH1",
       immediates: [0x80],
@@ -61,6 +62,16 @@ describe("Function.generate", () => {
       mnemonic: "MSTORE",
     });
     expect(instructions[3]).toMatchObject({
+      mnemonic: "PUSH0",
+    });
+    expect(instructions[4]).toMatchObject({
+      mnemonic: "PUSH1",
+      immediates: [0x80],
+    });
+    expect(instructions[5]).toMatchObject({
+      mnemonic: "MSTORE",
+    });
+    expect(instructions[6]).toMatchObject({
       mnemonic: "PUSH1",
       immediates: [42],
     });

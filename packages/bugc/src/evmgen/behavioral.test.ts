@@ -332,6 +332,63 @@ code {
     });
   });
 
+  describe("recursion", () => {
+    it("should support recursive function calls", async () => {
+      const source = `name RecursionTest;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(
+    n: uint256, target: uint256
+  ) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = count(0, 5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(5n);
+    });
+
+    it("should support simple self-recursion", async () => {
+      const source = `name SimpleRecursion;
+
+define {
+  function factorial(n: uint256) -> uint256 {
+    if (n < 2) {
+      return 1;
+    } else {
+      return n * factorial(n - 1);
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = factorial(5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(120n);
+    });
+  });
+
   describe("loops", () => {
     it("should execute a for loop", async () => {
       const source = `name Loop;

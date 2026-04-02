@@ -1,7 +1,9 @@
 import type * as Format from "@ethdebug/format";
 import type * as Ir from "#ir";
+import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
+import { Memory } from "#evmgen/analysis";
 
 import { type Transition, operations, pipe } from "#evmgen/operations";
 
@@ -355,23 +357,81 @@ function generateReturnEpilogue<S extends Stack>(
       };
     }
 
-    // Load return PC from saved slot and jump back.
-    const pcOffset = s.memory.savedReturnPcOffset ?? 0x60;
+    // Deallocate frame and jump to saved return PC.
+    //
+    // fp = mem[FRAME_POINTER]
+    // return_pc = mem[fp + SAVED_RETURN_PC]
+    // old_fp = mem[fp + SAVED_FP]  (= mem[fp])
+    // mem[FRAME_POINTER] = old_fp
+    // mem[FREE_MEMORY_POINTER] = fp  (deallocate)
+    // JUMP return_pc
+    const FP = Memory.regions.FRAME_POINTER;
+    const FMP = Memory.regions.FREE_MEMORY_POINTER;
+    const pcOff = Memory.frameHeader.SAVED_RETURN_PC;
+
     s = {
       ...s,
       instructions: [
         ...s.instructions,
-        {
-          mnemonic: "PUSH2",
-          opcode: 0x61,
-          immediates: [(pcOffset >> 8) & 0xff, pcOffset & 0xff],
-          debug,
-        },
+        // fp
+        ...pushImm(FP, debug),
         { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [fp, ...]
+
+        // return_pc = mem[fp + SAVED_RETURN_PC]
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        ...pushImm(pcOff, debug),
+        { mnemonic: "ADD", opcode: 0x01, debug },
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [return_pc, fp, ...]
+
+        // old_fp = mem[fp] (SAVED_FP offset is 0)
+        { mnemonic: "SWAP1", opcode: 0x90, debug },
+        // Stack: [fp, return_pc, ...]
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [old_fp, fp, return_pc, ...]
+
+        // mem[FRAME_POINTER] = old_fp
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        ...pushImm(FP, debug),
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        // Stack: [old_fp, fp, return_pc, ...]
+
+        // mem[FREE_MEMORY_POINTER] = fp (deallocate)
+        { mnemonic: "POP", opcode: 0x50, debug },
+        // Stack: [fp, return_pc, ...]
+        ...pushImm(FMP, debug),
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        // Stack: [return_pc, ...]
+
+        // JUMP
         { mnemonic: "JUMP", opcode: 0x56, debug },
       ],
     };
 
     return s;
   }) as Transition<S, Stack>;
+}
+
+/** PUSH an integer as the smallest PUSHn. */
+function pushImm(value: number, debug: Ir.Block.Debug): Evm.Instruction[] {
+  if (value === 0) {
+    return [{ mnemonic: "PUSH0", opcode: 0x5f, debug }];
+  }
+  const bytes: number[] = [];
+  let v = value;
+  while (v > 0) {
+    bytes.unshift(v & 0xff);
+    v >>= 8;
+  }
+  const n = bytes.length;
+  return [
+    {
+      mnemonic: `PUSH${n}`,
+      opcode: 0x5f + n,
+      immediates: bytes,
+      debug,
+    },
+  ];
 }

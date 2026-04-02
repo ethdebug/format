@@ -89,12 +89,12 @@ describe("Memory Planning", () => {
 
     // Phi destination %3 should be allocated memory
     expect("%3" in memory.allocations).toBe(true);
-    // %1 is allocated first at 0x80, then %3 at 0xa0 (160)
-    expect(memory.allocations["%3"].offset).toBe(0xa0);
+    // %1 is allocated first at 0xa0, then %3 at 0xc0
+    expect(memory.allocations["%3"].offset).toBe(0xc0);
 
     // Cross-block value %1 should also be allocated
     expect("%1" in memory.allocations).toBe(true);
-    expect(memory.allocations["%1"].offset).toBe(0x80);
+    expect(memory.allocations["%1"].offset).toBe(0xa0);
   });
 
   it("should allocate memory for cross-block values", () => {
