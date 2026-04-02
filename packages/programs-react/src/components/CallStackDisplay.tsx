@@ -19,10 +19,49 @@ export interface CallStackDisplayProps {
  * Shows function names separated by arrows, e.g.:
  *   main() -> transfer() -> _update()
  */
+function formatArgs(
+  frame: { identifier?: string; stepIndex: number },
+  resolvedCallStack: Array<{
+    stepIndex: number;
+    resolvedArgs?: Array<{
+      name: string;
+      value?: string;
+    }>;
+  }>,
+): string {
+  const resolved = resolvedCallStack.find(
+    (r) => r.stepIndex === frame.stepIndex,
+  );
+  if (!resolved?.resolvedArgs) {
+    return "";
+  }
+  return resolved.resolvedArgs
+    .map((arg) => {
+      if (arg.value === undefined) {
+        return arg.name;
+      }
+      const decimal = formatAsDecimal(arg.value);
+      return `${arg.name}: ${decimal}`;
+    })
+    .join(", ");
+}
+
+function formatAsDecimal(hex: string): string {
+  try {
+    const n = BigInt(hex);
+    if (n <= 9999n) {
+      return n.toString();
+    }
+    return hex;
+  } catch {
+    return hex;
+  }
+}
+
 export function CallStackDisplay({
   className = "",
 }: CallStackDisplayProps): JSX.Element {
-  const { callStack, jumpToStep } = useTraceContext();
+  const { callStack, resolvedCallStack, jumpToStep } = useTraceContext();
 
   if (callStack.length === 0) {
     return (
@@ -53,7 +92,7 @@ export function CallStackDisplay({
                 {frame.identifier || "(anonymous)"}
               </span>
               <span className="call-stack-parens">
-                ({frame.argumentNames ? frame.argumentNames.join(", ") : ""})
+                ({formatArgs(frame, resolvedCallStack)})
               </span>
             </button>
           </React.Fragment>

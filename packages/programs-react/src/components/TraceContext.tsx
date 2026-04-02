@@ -9,6 +9,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 import type { Pointer, Program } from "@ethdebug/format";
 import { dereference, Data } from "@ethdebug/pointers";
@@ -120,6 +121,24 @@ export interface ResolvedCallInfo {
 }
 
 /**
+ * A call frame with resolved argument values.
+ */
+export interface ResolvedCallFrame {
+  /** Function name */
+  identifier?: string;
+  /** The step index where this call was invoked */
+  stepIndex: number;
+  /** The call type */
+  callType?: "internal" | "external" | "create";
+  /** Argument names paired with resolved values */
+  resolvedArgs?: Array<{
+    name: string;
+    value?: string;
+    error?: string;
+  }>;
+}
+
+/**
  * State provided by the Trace context.
  */
 export interface TraceState {
@@ -139,6 +158,8 @@ export interface TraceState {
   currentVariables: ResolvedVariable[];
   /** Call stack at current step */
   callStack: CallFrame[];
+  /** Call stack with resolved argument values */
+  resolvedCallStack: ResolvedCallFrame[];
   /** Call info for current instruction (if any) */
   currentCallInfo: ResolvedCallInfo | undefined;
   /** Whether we're at the first step */
@@ -339,6 +360,97 @@ export function TraceProvider({
     [trace, pcToInstruction, currentStepIndex],
   );
 
+  // Resolve argument values for call stack frames.
+  // Cache by stepIndex so we don't re-resolve frames that
+  // haven't changed when the user steps forward.
+  const argCacheRef = useRef<Map<number, ResolvedCallFrame["resolvedArgs"]>>(
+    new Map(),
+  );
+
+  const [resolvedCallStack, setResolvedCallStack] = useState<
+    ResolvedCallFrame[]
+  >([]);
+
+  useEffect(() => {
+    if (callStack.length === 0) {
+      setResolvedCallStack([]);
+      return;
+    }
+
+    // Build initial resolved frames using cached values
+    const initial: ResolvedCallFrame[] = callStack.map((frame) => ({
+      identifier: frame.identifier,
+      stepIndex: frame.stepIndex,
+      callType: frame.callType,
+      resolvedArgs: argCacheRef.current.get(frame.stepIndex),
+    }));
+    setResolvedCallStack(initial);
+
+    if (!shouldResolve) {
+      return;
+    }
+
+    let cancelled = false;
+    const resolved = [...initial];
+
+    // Resolve frames that aren't cached yet
+    const promises = callStack.map(async (frame, index) => {
+      if (argCacheRef.current.has(frame.stepIndex)) {
+        return;
+      }
+
+      const names = frame.argumentNames;
+      const pointers = frame.argumentPointers;
+      if (!pointers || pointers.length === 0) {
+        return;
+      }
+
+      const step = trace[frame.stepIndex];
+      if (!step) {
+        return;
+      }
+
+      const args: NonNullable<ResolvedCallFrame["resolvedArgs"]> = pointers.map(
+        (_, i) => ({
+          name: names?.[i] ?? `_${i}`,
+        }),
+      );
+
+      const resolvePromises = pointers.map(async (ptr, i) => {
+        try {
+          const value = await resolveVariableValue(
+            ptr as Pointer,
+            step,
+            templates,
+          );
+          args[i] = { ...args[i], value };
+        } catch (err) {
+          args[i] = {
+            ...args[i],
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
+      });
+
+      await Promise.all(resolvePromises);
+
+      if (!cancelled) {
+        argCacheRef.current.set(frame.stepIndex, args);
+        resolved[index] = {
+          ...resolved[index],
+          resolvedArgs: args,
+        };
+        setResolvedCallStack([...resolved]);
+      }
+    });
+
+    Promise.all(promises).catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callStack, shouldResolve, trace, templates]);
+
   // Extract call info for current instruction (synchronous)
   const extractedCallInfo = useMemo((): CallInfo | undefined => {
     if (!currentInstruction) {
@@ -488,6 +600,7 @@ export function TraceProvider({
     currentInstruction,
     currentVariables,
     callStack,
+    resolvedCallStack,
     currentCallInfo,
     isAtStart: currentStepIndex === 0,
     isAtEnd: currentStepIndex >= trace.length - 1,
