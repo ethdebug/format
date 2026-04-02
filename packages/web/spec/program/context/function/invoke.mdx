@@ -19,15 +19,37 @@ gas, value, and input data as applicable. See
 worked examples showing how debuggers use invoke and return
 contexts to reconstruct call stacks.
 
+## Pointer evaluation and instruction placement
+
+An instruction's context describes what is known _following_
+that instruction's execution: the fact that a function was
+invoked holds from that point forward. Pointers within the
+context reference the machine state at the instruction's trace
+step — the state a debugger observes when it encounters the
+instruction.
+
+For **internal calls**, this context is typically placed on the
+callee's entry JUMPDEST rather than the caller's JUMP. JUMP
+consumes its destination operand from the stack; at the entry
+JUMPDEST, the remaining stack (return address followed by
+arguments) is stable and directly addressable.
+
+For **external calls** and **contract creations**, this context
+marks the CALL/DELEGATECALL/STATICCALL/CREATE/CREATE2
+instruction itself, where the call parameters are visible on
+the stack.
+
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
 />
 
 ## Internal call
 
-An internal call represents a function call within the same contract
-via JUMP/JUMPI. The target points to a code location and arguments
-are passed on the stack.
+An internal call represents a function call within the same contract.
+This context is typically placed on the callee's entry JUMPDEST; the
+caller's JUMP has already consumed the destination from the stack, so
+pointer slot values reflect the post-JUMP layout. The target points
+to a code location and arguments are passed on the stack.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}

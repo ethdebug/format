@@ -12,6 +12,24 @@ description: |
   Extends the function identity schema with kind-specific fields
   such as call targets, gas, value, and input data.
 
+  Per the **ethdebug/format/program/instruction** schema, an
+  instruction's context describes what is known following that
+  instruction's execution: the context's semantic facts (e.g.,
+  "a function was invoked") hold from that point forward.
+  Pointers within the context reference the machine state at
+  the instruction's trace step, which is the state a debugger
+  observes when it encounters the instruction.
+
+  For internal calls, this context is typically placed on the
+  callee's entry JUMPDEST rather than the caller's JUMP, because
+  JUMP consumes its destination operand from the stack. At the
+  entry JUMPDEST the remaining stack (return address, arguments)
+  is stable and directly addressable.
+
+  For external calls and contract creations, this context marks
+  the CALL/DELEGATECALL/STATICCALL/CREATE/CREATE2 instruction
+  itself, where the call parameters are visible on the stack.
+
 type: object
 properties:
   invoke:
@@ -52,8 +70,11 @@ $defs:
   InternalCall:
     title: Internal call
     description: |
-      An internal function call within the same contract, entered
-      via JUMP/JUMPI.
+      An internal function call within the same contract. This
+      context is typically placed on the callee's entry JUMPDEST;
+      the caller's JUMP has already consumed the destination from
+      the stack, so pointer slot values reflect the post-JUMP
+      layout.
     type: object
     properties:
       jump:
@@ -226,18 +247,17 @@ examples:
   # -----------------------------------------------------------
   # Internal call: transfer(address, uint256)
   # -----------------------------------------------------------
-  # This context would mark the JUMP instruction that enters
-  # the function. Before the jump, the compiler has arranged
-  # the stack as follows (top first):
+  # This context would mark the JUMPDEST at the entry of the
+  # `transfer` function. The caller's JUMP has consumed the
+  # destination from the stack, leaving (top first):
   #
-  #   slot 0: jump destination (entry PC of `transfer`)
-  #   slot 1: return label
-  #   slot 2: first argument  (`to`)
-  #   slot 3: second argument (`amount`)
+  #   slot 0: return label
+  #   slot 1: first argument  (`to`)
+  #   slot 2: second argument (`amount`)
   #
-  # The `target` pointer reads the jump destination from the
-  # stack; `arguments` uses a group to name each argument's
-  # stack position.
+  # The `target` pointer identifies the function's entry point
+  # in the bytecode; `arguments` uses a group to name each
+  # argument's stack position.
   - invoke:
       identifier: "transfer"
       declaration:
@@ -251,23 +271,25 @@ examples:
       jump: true
       target:
         pointer:
-          location: stack
-          slot: 0
+          location: code
+          offset: "0x100"
+          length: 1
       arguments:
         pointer:
           group:
             - name: "to"
               location: stack
-              slot: 2
+              slot: 1
             - name: "amount"
               location: stack
-              slot: 3
+              slot: 2
 
   # -----------------------------------------------------------
   # External CALL: token.balanceOf(account)
   # -----------------------------------------------------------
-  # This context would mark the CALL instruction. The EVM
-  # expects the stack to contain (top first):
+  # This context marks the CALL instruction. Stack-based
+  # pointers reference the pre-execution state visible in
+  # the trace step (CALL consumes all stack operands):
   #
   #   slot 0: gas to forward
   #   slot 1: target contract address
@@ -308,12 +330,11 @@ examples:
   # -----------------------------------------------------------
   # DELEGATECALL: proxy forwarding calldata
   # -----------------------------------------------------------
-  # This context would mark a DELEGATECALL instruction in a
-  # proxy contract. The call executes the implementation's
-  # code within the proxy's storage context.
-  #
-  # DELEGATECALL takes no value parameter. Stack layout
-  # (top first):
+  # This context marks a DELEGATECALL instruction in a proxy
+  # contract. The call executes the implementation's code
+  # within the proxy's storage context. Stack-based pointers
+  # reference the pre-execution state (DELEGATECALL consumes
+  # all stack operands):
   #
   #   slot 0: gas
   #   slot 1: implementation address
@@ -341,11 +362,15 @@ examples:
   # -----------------------------------------------------------
   # CREATE2: deploying a child contract
   # -----------------------------------------------------------
-  # This context would mark the CREATE2 instruction. Stack
-  # layout (top first):
+  # This context marks the CREATE2 instruction. Stack-based
+  # pointers reference the pre-execution state (CREATE2
+  # consumes all stack operands). The EVM stack layout for
+  # CREATE2 (top first):
   #
-  #   slot 0: value (ETH to send to the new contract)
-  #   slot 1: salt  (for deterministic address derivation)
+  #   slot 0: value  (ETH to send to the new contract)
+  #   slot 1: offset (memory offset of init code)
+  #   slot 2: length (byte length of init code)
+  #   slot 3: salt   (for deterministic address derivation)
   #
   # The init code has been placed in memory:
   #
@@ -359,7 +384,7 @@ examples:
       salt:
         pointer:
           location: stack
-          slot: 1
+          slot: 3
       input:
         pointer:
           location: memory
