@@ -8,7 +8,7 @@ import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 
 import type { State } from "#evmgen/state";
-import type { Layout, Memory } from "#evmgen/analysis";
+import { type Layout, Memory } from "#evmgen/analysis";
 import type { Error as EvmgenError } from "#evmgen/errors";
 
 import * as Block from "./block.js";
@@ -77,126 +77,28 @@ function generatePrologue<S extends Stack>(
       ],
     };
 
-    // Store each parameter to memory and pop from stack
-    // Stack layout on entry: [arg0, arg1, ..., argN]
-    // Return PC is already in memory at 0x60 (stored by caller)
-    // Pop and store each arg from argN down to arg0
+    const d = makePrologueDebug(func);
+    const frameSize = currentState.memory.frameSize;
 
-    const prologueDebug =
-      func.sourceId && func.loc
-        ? {
-            context: {
-              gather: [
-                {
-                  remark: `prologue: store ${params.length} parameter(s) to memory`,
-                },
-                {
-                  code: {
-                    source: { id: func.sourceId },
-                    range: func.loc,
-                  },
-                },
-              ],
-            } as Format.Program.Context,
-          }
-        : {
-            context: {
-              remark: `prologue: store ${params.length} parameter(s) to memory`,
-            } as Format.Program.Context,
-          };
+    if (frameSize !== undefined) {
+      // Allocate call frame from FMP and save context.
+      // Stack on entry: [argN, ..., arg1, arg0]
+      currentState = emitFrameAlloc(currentState, frameSize, d);
+      // Stack: [new_fp, argN, ..., arg0]
 
-    for (let i = params.length - 1; i >= 0; i--) {
-      const param = params[i];
-      const allocation = currentState.memory.allocations[param.tempId];
+      // Pop new_fp — it's now stored at FRAME_POINTER.
+      currentState = emit(currentState, d, { mnemonic: "POP", opcode: 0x50 });
+      // Stack: [argN, ..., arg0]
 
-      if (!allocation) continue;
-
-      // Push memory offset
-      const highByte = (allocation.offset >> 8) & 0xff;
-      const lowByte = allocation.offset & 0xff;
-      currentState = {
-        ...currentState,
-        instructions: [
-          ...currentState.instructions,
-          {
-            mnemonic: "PUSH2",
-            opcode: 0x61,
-            immediates: [highByte, lowByte],
-            debug: prologueDebug,
-          },
-        ],
-      };
-
-      // MSTORE pops arg and offset
-      currentState = {
-        ...currentState,
-        instructions: [
-          ...currentState.instructions,
-          {
-            mnemonic: "MSTORE",
-            opcode: 0x52,
-            debug: prologueDebug,
-          },
-        ],
-      };
-    }
-
-    // Save the return PC from 0x60 to a dedicated slot
-    // so nested function calls don't clobber it.
-    const savedPcOffset = currentState.memory.savedReturnPcOffset;
-    if (savedPcOffset !== undefined) {
-      const savePcDebug =
-        func.sourceId && func.loc
-          ? {
-              context: {
-                gather: [
-                  {
-                    remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
-                  },
-                  {
-                    code: {
-                      source: { id: func.sourceId },
-                      range: func.loc,
-                    },
-                  },
-                ],
-              } as Format.Program.Context,
-            }
-          : {
-              context: {
-                remark: `prologue: save return PC to 0x${savedPcOffset.toString(16)}`,
-              } as Format.Program.Context,
-            };
-      const highByte = (savedPcOffset >> 8) & 0xff;
-      const lowByte = savedPcOffset & 0xff;
-      currentState = {
-        ...currentState,
-        instructions: [
-          ...currentState.instructions,
-          {
-            mnemonic: "PUSH1",
-            opcode: 0x60,
-            immediates: [0x60],
-            debug: savePcDebug,
-          },
-          {
-            mnemonic: "MLOAD",
-            opcode: 0x51,
-            debug: savePcDebug,
-          },
-          {
-            mnemonic: "PUSH2",
-            opcode: 0x61,
-            immediates: [highByte, lowByte],
-            debug: savePcDebug,
-          },
-          {
-            mnemonic: "MSTORE",
-            opcode: 0x52,
-            debug: savePcDebug,
-          },
-        ],
-      };
+      // Store each param to its frame-relative slot.
+      // PUSH FP; MLOAD; PUSH offset; ADD produces the
+      // address on top; the arg is second; MSTORE
+      // consumes both.
+      for (let i = params.length - 1; i >= 0; i--) {
+        const alloc = currentState.memory.allocations[params[i].tempId];
+        if (!alloc) continue;
+        currentState = emitFpRelativeStore(currentState, alloc.offset, d);
+      }
     }
 
     // Return with empty stack
@@ -206,6 +108,181 @@ function generatePrologue<S extends Stack>(
       brands: [],
     } as State<readonly []>;
   }) as Transition<S, readonly []>;
+}
+
+// ----- prologue helpers -----
+
+const { FRAME_POINTER, FREE_MEMORY_POINTER, RETURN_PC_SCRATCH } =
+  Memory.regions;
+const { SAVED_RETURN_PC } = Memory.frameHeader;
+
+type Debug = Evm.Instruction["debug"];
+type Inst = Omit<Evm.Instruction, "debug">;
+
+/** Append instructions to state, attaching debug. */
+function emit<S extends Stack>(
+  state: State<S>,
+  debug: Debug,
+  ...instrs: Inst[]
+): State<S> {
+  return {
+    ...state,
+    instructions: [
+      ...state.instructions,
+      ...instrs.map((i) => ({ ...i, debug })),
+    ],
+  };
+}
+
+/** PUSH an integer as the smallest PUSHn. */
+function pushImm(value: number, debug: Debug): Evm.Instruction[] {
+  if (value === 0) {
+    return [{ mnemonic: "PUSH0", opcode: 0x5f, debug }];
+  }
+  const bytes: number[] = [];
+  let v = value;
+  while (v > 0) {
+    bytes.unshift(v & 0xff);
+    v >>= 8;
+  }
+  const n = bytes.length;
+  return [
+    {
+      mnemonic: `PUSH${n}`,
+      opcode: 0x5f + n,
+      immediates: bytes,
+      debug,
+    },
+  ];
+}
+
+/**
+ * Emit frame allocation sequence.
+ *
+ * Pushes new_fp onto the stack, bumps FMP, saves old FP
+ * and return PC into the new frame, updates FRAME_POINTER.
+ *
+ * Stack effect: [...args] → [new_fp, ...args]
+ */
+function emitFrameAlloc<S extends Stack>(
+  state: State<S>,
+  frameSize: number,
+  debug: Debug,
+): State<S> {
+  let s = state;
+
+  // new_fp = mem[FMP]
+  s = emit(s, debug, ...pushImm(FREE_MEMORY_POINTER, debug), {
+    mnemonic: "MLOAD",
+    opcode: 0x51,
+  });
+  // Stack: [new_fp, args...]
+
+  // mem[FMP] = new_fp + frameSize
+  s = emit(
+    s,
+    debug,
+    { mnemonic: "DUP1", opcode: 0x80 },
+    ...pushImm(frameSize, debug),
+    { mnemonic: "ADD", opcode: 0x01 },
+    ...pushImm(FREE_MEMORY_POINTER, debug),
+    { mnemonic: "MSTORE", opcode: 0x52 },
+  );
+
+  // frame[SAVED_FP] = old FP
+  // old_fp = mem[FRAME_POINTER]
+  s = emit(
+    s,
+    debug,
+    ...pushImm(FRAME_POINTER, debug),
+    { mnemonic: "MLOAD", opcode: 0x51 },
+    // Stack: [old_fp, new_fp, args...]
+    { mnemonic: "DUP2", opcode: 0x81 },
+    // Stack: [new_fp, old_fp, new_fp, args...]
+    { mnemonic: "MSTORE", opcode: 0x52 },
+    // MSTORE(offset=new_fp, value=old_fp)
+    // → stores old_fp at new_fp+0 (SAVED_FP=0)
+    // Stack: [new_fp, args...]
+  );
+
+  // mem[FRAME_POINTER] = new_fp
+  s = emit(
+    s,
+    debug,
+    { mnemonic: "DUP1", opcode: 0x80 },
+    ...pushImm(FRAME_POINTER, debug),
+    { mnemonic: "MSTORE", opcode: 0x52 },
+  );
+
+  // frame[SAVED_RETURN_PC] = mem[RETURN_PC_SCRATCH]
+  s = emit(
+    s,
+    debug,
+    ...pushImm(RETURN_PC_SCRATCH, debug),
+    { mnemonic: "MLOAD", opcode: 0x51 },
+    // Stack: [return_pc, new_fp, args...]
+    { mnemonic: "DUP2", opcode: 0x81 },
+    // Stack: [new_fp, return_pc, new_fp, args...]
+    ...pushImm(SAVED_RETURN_PC, debug),
+    { mnemonic: "ADD", opcode: 0x01 },
+    // Stack: [new_fp+0x20, return_pc, new_fp, args...]
+    { mnemonic: "MSTORE", opcode: 0x52 },
+    // MSTORE(offset=new_fp+0x20, value=return_pc)
+    // Stack: [new_fp, args...]
+  );
+
+  return s;
+}
+
+/**
+ * Emit FP-relative MSTORE.
+ *
+ * Computes mem[FRAME_POINTER] + offset and stores the
+ * current TOS value there. Consumes TOS.
+ *
+ * Stack effect: [value, ...] → [...]
+ */
+function emitFpRelativeStore<S extends Stack>(
+  state: State<S>,
+  offset: number,
+  debug: Debug,
+): State<S> {
+  // Stack: [value, ...]
+  // → PUSH FP; MLOAD; PUSH offset; ADD
+  // Stack: [fp+offset, value, ...]
+  // → MSTORE (offset=fp+offset, value=value)
+  // Stack: [...]
+  return emit(
+    state,
+    debug,
+    ...pushImm(FRAME_POINTER, debug),
+    { mnemonic: "MLOAD", opcode: 0x51 },
+    ...pushImm(offset, debug),
+    { mnemonic: "ADD", opcode: 0x01 },
+    { mnemonic: "MSTORE", opcode: 0x52 },
+  );
+}
+
+function makePrologueDebug(func: Ir.Function): Debug {
+  return func.sourceId && func.loc
+    ? {
+        context: {
+          gather: [
+            { remark: "prologue: allocate call frame" },
+            {
+              code: {
+                source: { id: func.sourceId },
+                range: func.loc,
+              },
+            },
+          ],
+        } as Format.Program.Context,
+      }
+    : {
+        context: {
+          remark: "prologue: allocate call frame",
+        } as Format.Program.Context,
+      };
 }
 
 /**
