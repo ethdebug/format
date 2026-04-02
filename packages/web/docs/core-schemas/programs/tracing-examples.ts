@@ -71,3 +71,30 @@ create {
 code {
   result = add(3, 4);
 }`;
+
+export const recursiveCount = `name Counter;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(n: uint256, target: uint256) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = count(0, 5);
+}`;
