@@ -14,9 +14,11 @@ description: |
 
   Per the **ethdebug/format/program/instruction** schema, an
   instruction's context describes what is known following that
-  instruction's execution. Pointer values within the context
-  reference the machine state as it exists at the marked
-  instruction's trace step.
+  instruction's execution: the context's semantic facts (e.g.,
+  "a function was invoked") hold from that point forward.
+  Pointers within the context reference the machine state at
+  the instruction's trace step, which is the state a debugger
+  observes when it encounters the instruction.
 
   For internal calls, this context is typically placed on the
   callee's entry JUMPDEST rather than the caller's JUMP, because
@@ -26,9 +28,7 @@ description: |
 
   For external calls and contract creations, this context marks
   the CALL/DELEGATECALL/STATICCALL/CREATE/CREATE2 instruction
-  itself. Stack-based pointers (target address, gas, value)
-  reference the pre-execution state visible in the trace step,
-  since the instruction consumes all of its stack operands.
+  itself, where the call parameters are visible on the stack.
 
 type: object
 properties:
