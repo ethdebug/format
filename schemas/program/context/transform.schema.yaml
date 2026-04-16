@@ -32,6 +32,14 @@ description: |
     tail-call-optimized back-edge JUMP or continuation, where
     the call was realized as a direct jump (or reuse of the
     caller's frame) rather than a standard call/return sequence.
+  - `"fold"` — the marked instruction carries the result of a
+    compile-time constant fold. Typically a PUSH of the folded
+    value, replacing a compute sequence that appeared in source.
+  - `"coalesce"` — the marked instruction is part of a
+    read-write merging sequence (e.g., SHL/OR sequences packing
+    narrower fields into a wider word) that the user did not
+    explicitly write; the compiler introduced it to combine
+    adjacent source-level reads or writes.
 
   Debuggers unfamiliar with a given identifier should preserve
   it as an opaque label.
@@ -58,5 +66,9 @@ required:
 examples:
   - transform: ["inline"]
   - transform: ["tailcall"]
+  - transform: ["fold"]
+  - transform: ["coalesce"]
   - transform: ["inline", "inline"]
   - transform: ["inline", "tailcall"]
+  - transform: ["inline", "fold"]
+  - transform: ["coalesce", "coalesce"]

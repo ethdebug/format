@@ -39,7 +39,7 @@ optimization-aware presentations:
 
 ## v1 identifiers
 
-Two identifiers are recognized in v1:
+Four identifiers are recognized in v1:
 
 - **`"inline"`** — the marked instruction is part of an inlined
   function body. Surrounding invoke/return contexts name the
@@ -51,6 +51,21 @@ Two identifiers are recognized in v1:
   A JUMP carrying a `tailcall` transform often co-occurs with a
   `gather` context combining a return (from the previous
   iteration) and an invoke (of the new iteration).
+- **`"fold"`** — the marked instruction carries the result of
+  a compile-time constant fold. Typically a PUSH of the folded
+  value replacing a compute sequence (e.g., `ADD` over two
+  known constants) that appeared in source. The instruction's
+  surrounding `code` context, if present, points to the
+  original expression.
+- **`"coalesce"`** — the marked instruction is part of a
+  read-write merging sequence the compiler introduced to
+  combine adjacent source-level reads or writes. Common
+  examples include SHL/OR sequences that pack narrower fields
+  into a single storage slot, or wider loads split into
+  narrower field extractions. The user did not write these
+  instructions directly; the `coalesce` marker lets a debugger
+  present the sequence as one source-level operation rather
+  than stepping through each byte-shuffling opcode.
 
 The identifier set is extensible. Compilers may emit additional
 identifiers for optimizations not yet standardized; debuggers
@@ -60,10 +75,15 @@ than rejecting them.
 ## Repetition and composition
 
 Identifiers may repeat. A function inlined into another inlined
-function produces `transform: ["inline", "inline"]`. Different
-transformations compose:
+function produces `transform: ["inline", "inline"]`. A coalesce
+sequence nested inside another coalesced region produces
+`transform: ["coalesce", "coalesce"]`.
+
+Different transformations compose:
 `transform: ["inline", "tailcall"]` marks an instruction inside
-an inlined body that was itself a TCO back-edge in the callee.
+an inlined body that was itself a TCO back-edge in the callee;
+`transform: ["inline", "fold"]` marks a constant-folded PUSH
+sitting inside an inlined body.
 
 Order in the array is not semantically significant—only the
 multiset of identifiers matters.

@@ -295,6 +295,11 @@ export namespace Context {
     // Recognized v1 identifiers. Unknown strings are permitted
     // (the identifier set is extensible); the union preserves
     // autocomplete for known values.
-    export type Identifier = "inline" | "tailcall" | (string & {});
+    export type Identifier =
+      | "inline"
+      | "tailcall"
+      | "fold"
+      | "coalesce"
+      | (string & {});
   }
 }
