@@ -1,4 +1,5 @@
 import type * as Format from "@ethdebug/format";
+import type * as Ast from "#ast";
 
 import { Value } from "./value.js";
 import type { Type } from "./type.js";
@@ -31,10 +32,34 @@ export namespace Block {
   }
 
   /**
+   * Metadata for a jump that originated as a tail call.
+   *
+   * TCO replaces a call terminator with a jump to the
+   * function's loop header. This metadata preserves the
+   * logical "invoke" identity so codegen can emit an
+   * invoke debug context on the JUMP, letting debuggers
+   * still see the recursive call in the trace.
+   */
+  export interface TailCall {
+    /** Name of the recursively-called function */
+    function: string;
+    /** Source location of the function declaration */
+    declarationLoc?: Ast.SourceLocation;
+    /** Source ID for the declaration (inherited from module) */
+    declarationSourceId?: string;
+  }
+
+  /**
    * Block terminator instructions
    */
   export type Terminator =
-    | { kind: "jump"; target: string; operationDebug: Block.Debug }
+    | {
+        kind: "jump";
+        target: string;
+        operationDebug: Block.Debug;
+        /** Set when this jump replaces a tail-recursive call */
+        tailCall?: TailCall;
+      }
     | {
         kind: "branch";
         condition: Value;

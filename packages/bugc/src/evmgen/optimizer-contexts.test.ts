@@ -11,9 +11,11 @@
  * Each test compiles the same source at multiple levels,
  * asserts the resulting bytecode still runs correctly, and
  * verifies the expected invoke/return contexts are present
- * with the right identifiers. Tail call optimization is
- * handled separately — it intentionally eliminates the
- * recursive call, so its contexts disappear by design.
+ * with the right identifiers. TCO is a special case: the
+ * invoke context is preserved on the jump that replaces the
+ * recursive call, but no matching return context is emitted
+ * because the tail call folds into the outer activation's
+ * return.
  */
 import { describe, it, expect } from "vitest";
 
@@ -377,16 +379,18 @@ code { r = check(3, 4); }`;
     }
   });
 
-  describe("tail call optimization (TCO eliminates recursive call)", () => {
+  describe("tail call optimization preserves invoke contexts", () => {
     // `count` is tail-recursive: the recursive call is in
     // return position. At levels 2 and 3, TCO rewrites the
-    // recursive call into a jump, so its invoke/return
-    // contexts are intentionally eliminated.
+    // recursive call into a jump, but the invoke context
+    // must still be emitted on that jump so debuggers can
+    // see "this was a recursive call" in the trace.
     //
-    // This test documents the expected behavior: the initial
-    // call from `code` to `count` still has contexts, but
-    // the recursive self-call does not. The helper `succ`
-    // is called each iteration and keeps its contexts.
+    // No return context is emitted for the TCO'd call —
+    // the tail call folds into the outer activation's
+    // return. A future `transform: tailcall` marker will
+    // let the debugger reconcile the missing return with
+    // the eventual outer return popping all tail frames.
     const source = `name TailCall;
 
 define {
@@ -416,18 +420,28 @@ code { r = count(0, 5); }`;
 
     for (const level of [2, 3] as const) {
       it(
-        `eliminates recursive count call but preserves ` +
-          `initial call and succ at level ${level}`,
+        `preserves invoke on TCO'd jump but drops its ` +
+          `return context at level ${level}`,
         async () => {
           const program = await compileAt(source, level);
           const counts = countCallSites(program);
 
-          // Only the initial (non-tail) count call remains.
-          // The recursive self-call became a block-internal
-          // jump. `succ` still has its call/return contexts
-          // — it's called each loop iteration.
-          expect(counts.invokeJump).toEqual({ count: 1, succ: 1 });
+          // Both count invokes are still present: the
+          // initial call JUMP and the TCO'd recursive
+          // JUMP (which targets the loop header). `succ`
+          // keeps its call/return contexts since it's
+          // invoked each iteration.
+          expect(counts.invokeJump).toEqual({ count: 2, succ: 1 });
+
+          // Only one callee-entry JUMPDEST per function:
+          // count's is shared between first entry (from
+          // the TCO trampoline) and subsequent iterations
+          // (from the TCO'd jump).
           expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
+
+          // Only the initial count call has a continuation
+          // JUMPDEST; the TCO'd call has no return because
+          // it folds into the outer activation's return.
           expect(counts.returnJumpdest).toEqual({ count: 1, succ: 1 });
 
           // Still correct end-to-end.

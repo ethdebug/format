@@ -67,13 +67,26 @@ export function generateTerminator<S extends Stack>(
     }
 
     case "jump": {
+      // When this jump replaces a tail-recursive call (TCO),
+      // attach an invoke debug context to the JUMP so the
+      // debugger can still see the recursive call in the
+      // trace. The target code pointer uses placeholder
+      // offset 0; patchInvokeTarget resolves it later from
+      // the function registry. No matching return context
+      // is emitted — the tail call folds into the outer
+      // activation's return, per the transform: tailcall
+      // convention.
+      const invokeOptions = term.tailCall
+        ? buildTailCallJumpOptions(term.tailCall)
+        : undefined;
+
       return pipe<S>()
         .peek((state, builder) => {
           const patchIndex = state.instructions.length;
 
           return builder
             .then(PUSH2([0, 0]), { as: "counter" })
-            .then(JUMP())
+            .then(JUMP(invokeOptions))
             .then((newState) => ({
               ...newState,
               patches: [
@@ -396,6 +409,44 @@ function generateReturnEpilogue<S extends Stack>(
 
     return s;
   }) as Transition<S, Stack>;
+}
+
+/**
+ * Build JUMP instruction options carrying an invoke debug
+ * context for a TCO-replaced tail call.
+ *
+ * Mirrors the caller-JUMP invoke emitted by the normal call
+ * terminator: identity + declaration + code target, no
+ * argument pointers. The target uses placeholder offset 0
+ * and is resolved later by patchInvokeTarget.
+ */
+function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
+  debug: { context: Format.Program.Context };
+} {
+  const declaration =
+    tailCall.declarationLoc && tailCall.declarationSourceId
+      ? {
+          source: { id: tailCall.declarationSourceId },
+          range: tailCall.declarationLoc,
+        }
+      : undefined;
+
+  const invoke: Format.Program.Context.Invoke = {
+    invoke: {
+      jump: true as const,
+      identifier: tailCall.function,
+      ...(declaration ? { declaration } : {}),
+      target: {
+        pointer: {
+          location: "code" as const,
+          offset: 0,
+          length: 1,
+        },
+      },
+    },
+  };
+
+  return { debug: { context: invoke as Format.Program.Context } };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
