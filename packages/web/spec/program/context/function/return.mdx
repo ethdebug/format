@@ -9,8 +9,8 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 A return context marks an instruction associated with a successful
 function return. It extends the
 [function identity](/spec/program/context/function) schema with
-a pointer to the return data and, for external calls, the
-success status.
+an optional pointer to the return data and, for external calls,
+the success status.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/return" }}
@@ -18,10 +18,13 @@ success status.
 
 ## Return data
 
-The `data` field is required and contains a pointer to the value
-being returned. For internal calls this typically points to a
-stack location; for external calls it points into the
-`returndata` buffer.
+The `data` field contains a pointer to the value being returned.
+For internal calls this typically points to a stack location;
+for external calls it points into the `returndata` buffer.
+
+`data` is optional. Omit it when no return value is observable
+at this instruction—see
+[Field optionality](#field-optionality) below.
 
 ## Internal return
 
@@ -48,9 +51,28 @@ reverts at the EVM level.
 
 ## Field optionality
 
-The `data` pointer is always required—every return context must
-indicate where the return value can be found. The `success`
-field is optional and only meaningful for external calls.
+All fields on a return context are optional. A bare `return: {}`
+is permitted when the compiler knows a return occurred but has
+no further detail to record.
+
+The `data` pointer is omitted when no return value is observable
+at the marked instruction. This occurs in several legitimate
+cases:
+
+- **Void functions.** The function produces no return value, so
+  there is nothing to point at.
+- **Tail-call-optimized back-edges.** When a tail call is
+  rewritten to a back-edge JUMP, the intermediate return value
+  is not materialized—it would have become the next iteration's
+  argument, which the compiler has already folded into the new
+  call's setup. A return semantically happens, but no pointer
+  records where the value lives (it does not live anywhere).
+- **Lost compiler precision.** The compiler knows a return
+  occurred but has dropped the location tracking for the value.
+
+The `success` field is optional and only meaningful for external
+call returns, where it points to the boolean status placed on
+the stack by CALL/DELEGATECALL/STATICCALL.
 
 Function identity fields (`identifier`, `declaration`, `type`)
 are all optional. A compiler may omit them when it cannot
