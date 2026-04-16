@@ -51,6 +51,16 @@ caller's JUMP has already consumed the destination from the stack, so
 pointer slot values reflect the post-JUMP layout. The target points
 to a code location and arguments are passed on the stack.
 
+The `target` field is optional. It may be omitted when there is no
+meaningful code pointer to record — most notably at the first
+instruction of an inlined function body, where the inlining pass
+has elided the JUMP that would normally carry the target. The
+callee identity (`identifier`, `declaration`, `type`) remains
+meaningful in this case; a separate transform annotation
+(typically via [`gather`](/spec/program/context/gather)) can
+indicate that the call was inlined rather than physically
+invoked.
+
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
   pointer="#/$defs/InternalCall"
