@@ -501,7 +501,9 @@ export function patchFunctionCalls(
  * Resolve placeholder code pointer offsets in invoke debug
  * contexts. The codegen emits `{ location: "code", offset: 0 }`
  * as a placeholder; this replaces offset with the actual
- * function entry address from the registry.
+ * function entry address from the registry. Walks into
+ * gather contexts so TCO back-edge JUMPs (which pair an
+ * invoke with a return) are patched too.
  */
 function patchInvokeTarget(
   inst: Evm.Instruction,
@@ -509,6 +511,19 @@ function patchInvokeTarget(
 ): void {
   const ctx = inst.debug?.context;
   if (!ctx) return;
+  patchInvokeInContext(ctx, functionRegistry);
+}
+
+function patchInvokeInContext(
+  ctx: Format.Program.Context,
+  functionRegistry: Record<string, number>,
+): void {
+  if (Format.Program.Context.isGather(ctx)) {
+    for (const sub of ctx.gather) {
+      patchInvokeInContext(sub, functionRegistry);
+    }
+    return;
+  }
 
   if (!Format.Program.Context.isInvoke(ctx)) return;
 

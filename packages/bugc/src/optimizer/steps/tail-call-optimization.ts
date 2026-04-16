@@ -146,10 +146,23 @@ export class TailCallOptimizationStep extends BaseOptimizationStep {
             }
           }
 
+          // Preserve the logical "invoke" identity of the
+          // recursive call. Codegen uses this to attach an
+          // invoke debug context to the TCO JUMP so the
+          // debugger can still see the recursive call in
+          // the trace, even though the implementation is
+          // now a block-internal jump.
+          const tailCall: Ir.Block.TailCall = {
+            function: funcName,
+            ...(func.loc ? { declarationLoc: func.loc } : {}),
+            ...(func.sourceId ? { declarationSourceId: func.sourceId } : {}),
+          };
+
           block.terminator = {
             kind: "jump",
             target: origEntryId,
             operationDebug: callTerm.operationDebug,
+            tailCall,
           };
 
           context.trackTransformation({

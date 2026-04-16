@@ -67,13 +67,23 @@ export function generateTerminator<S extends Stack>(
     }
 
     case "jump": {
+      // When this jump replaces a tail-recursive call (TCO),
+      // attach a gather context to the JUMP combining the
+      // previous iteration's return and the new iteration's
+      // invoke. Depth stays constant: one pops, one pushes,
+      // on the same instruction. The function's terminal
+      // RETURN pops the final iteration's frame normally.
+      const invokeOptions = term.tailCall
+        ? buildTailCallJumpOptions(term.tailCall)
+        : undefined;
+
       return pipe<S>()
         .peek((state, builder) => {
           const patchIndex = state.instructions.length;
 
           return builder
             .then(PUSH2([0, 0]), { as: "counter" })
-            .then(JUMP())
+            .then(JUMP(invokeOptions))
             .then((newState) => ({
               ...newState,
               patches: [
@@ -396,6 +406,68 @@ function generateReturnEpilogue<S extends Stack>(
 
     return s;
   }) as Transition<S, Stack>;
+}
+
+/**
+ * Build JUMP instruction options for a TCO-replaced tail call.
+ *
+ * The JUMP carries BOTH contexts in a gather:
+ *   - return: the previous iteration's return
+ *   - invoke: the new iteration's call
+ *
+ * Semantically the debugger sees frame depth stay constant
+ * across the back-edge JUMP: the previous frame pops, the
+ * new one pushes, on the same instruction. The function's
+ * terminal RETURN (elsewhere) emits a return context
+ * normally, popping the final iteration's frame.
+ *
+ * The invoke mirrors the normal caller-JUMP invoke
+ * (identity + declaration + code target, no argument
+ * pointers). The return omits `data` because TCO does not
+ * materialize the intermediate return value — the actual
+ * return happens later at the function's terminal RETURN.
+ *
+ * The invoke target uses placeholder offset 0 and is
+ * resolved later by patchInvokeTarget.
+ */
+function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
+  debug: { context: Format.Program.Context };
+} {
+  const declaration =
+    tailCall.declarationLoc && tailCall.declarationSourceId
+      ? {
+          source: { id: tailCall.declarationSourceId },
+          range: tailCall.declarationLoc,
+        }
+      : undefined;
+
+  const returnCtx: Format.Program.Context.Return = {
+    return: {
+      identifier: tailCall.function,
+      ...(declaration ? { declaration } : {}),
+    },
+  };
+
+  const invoke: Format.Program.Context.Invoke = {
+    invoke: {
+      jump: true as const,
+      identifier: tailCall.function,
+      ...(declaration ? { declaration } : {}),
+      target: {
+        pointer: {
+          location: "code" as const,
+          offset: 0,
+          length: 1,
+        },
+      },
+    },
+  };
+
+  const gather: Format.Program.Context.Gather = {
+    gather: [returnCtx, invoke],
+  };
+
+  return { debug: { context: gather as Format.Program.Context } };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
