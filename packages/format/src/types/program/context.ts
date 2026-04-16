@@ -239,7 +239,7 @@ export namespace Context {
 
   export namespace Return {
     export interface Info extends Function.Identity {
-      data: Function.PointerRef;
+      data?: Function.PointerRef;
       success?: Function.PointerRef;
     }
 
@@ -247,8 +247,7 @@ export namespace Context {
       Function.isIdentity(value) &&
       typeof value === "object" &&
       !!value &&
-      "data" in value &&
-      Function.isPointerRef(value.data) &&
+      (!("data" in value) || Function.isPointerRef(value.data)) &&
       (!("success" in value) || Function.isPointerRef(value.success));
   }
 

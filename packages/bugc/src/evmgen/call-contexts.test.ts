@@ -126,7 +126,8 @@ code {
 
     // Should have data pointer to return value at
     // TOS (stack slot 0)
-    expect(ret.data.pointer).toEqual({
+    expect(ret.data).toBeDefined();
+    expect(ret.data!.pointer).toEqual({
       location: "stack",
       slot: 0,
     });
