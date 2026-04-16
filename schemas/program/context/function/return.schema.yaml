@@ -5,8 +5,14 @@ title: ethdebug/format/program/context/function/return
 description: |
   This context indicates that the marked instruction is
   associated with a successful function return. Extends the
-  function identity schema with a pointer to the return data
-  and, for external calls, the success status.
+  function identity schema with an optional pointer to the
+  return data and, for external calls, the success status.
+
+  All fields are optional. A bare `return: {}` is permitted
+  when the compiler knows a return occurred but has no further
+  detail—for example, at a tail-call-optimized back-edge where
+  the intermediate return value is not materialized, or for a
+  void function with no return value.
 
 type: object
 properties:
@@ -21,6 +27,10 @@ properties:
         title: Return data
         description: |
           Pointer to the data being returned from the function.
+          Optional: may be omitted when no return value is
+          observable at this instruction (e.g., void functions,
+          tail-call-optimized returns where the intermediate
+          value is not materialized).
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -38,9 +48,6 @@ properties:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
-
-    required:
-      - data
 
     unevaluatedProperties: false
 
@@ -103,3 +110,22 @@ examples:
         pointer:
           location: stack
           slot: 0
+
+  # -----------------------------------------------------------
+  # Return without observable data: TCO back-edge
+  # -----------------------------------------------------------
+  # At a tail-call-optimized back-edge JUMP, the intermediate
+  # return value is not materialized on the stack — it would
+  # have been the argument to the next iteration, which the
+  # compiler has already folded into the new call's setup.
+  # A return semantically happens (the outer activation's
+  # iteration N is returning), but there is no pointer to
+  # record for `data`.
+  - return:
+      identifier: "fact"
+      declaration:
+        source:
+          id: 0
+        range:
+          offset: 64
+          length: 120
