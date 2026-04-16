@@ -12,10 +12,10 @@
  * asserts the resulting bytecode still runs correctly, and
  * verifies the expected invoke/return contexts are present
  * with the right identifiers. TCO is a special case: the
- * invoke context is preserved on the jump that replaces the
- * recursive call, but no matching return context is emitted
- * because the tail call folds into the outer activation's
- * return.
+ * back-edge JUMP that replaces the recursive call carries a
+ * gather context with BOTH the previous iteration's return
+ * and the new iteration's invoke, so frame depth stays
+ * constant across the optimization.
  */
 import { describe, it, expect } from "vitest";
 
@@ -25,6 +25,7 @@ import type * as Format from "@ethdebug/format";
 import { Program } from "@ethdebug/format";
 
 const { Context } = Program;
+const { Invocation } = Context.Invoke;
 
 type OptLevel = 0 | 1 | 2 | 3;
 
@@ -60,17 +61,37 @@ interface CallSiteCounts {
   invokeJumpdest: Record<string, number>;
   /** Continuation JUMPDEST with return context. */
   returnJumpdest: Record<string, number>;
+  /**
+   * JUMP carrying a return context (TCO back-edge, where
+   * the previous iteration's return is paired with the new
+   * iteration's invoke in a gather).
+   */
+  returnJump: Record<string, number>;
+}
+
+/**
+ * Flatten a context into its direct invoke/return leaves,
+ * unwrapping any enclosing gather.
+ */
+function unwrapLeaves(ctx: Format.Program.Context): Format.Program.Context[] {
+  if (Context.isGather(ctx)) {
+    return ctx.gather.flatMap(unwrapLeaves);
+  }
+  return [ctx];
 }
 
 /**
  * Scan a program and count invoke/return contexts by
- * instruction type and function identifier.
+ * instruction type and function identifier. Handles gather
+ * contexts so TCO's (return + invoke) JUMPs get counted in
+ * both the invokeJump and returnJump buckets.
  */
 function countCallSites(program: Format.Program): CallSiteCounts {
   const counts: CallSiteCounts = {
     invokeJump: {},
     invokeJumpdest: {},
     returnJumpdest: {},
+    returnJump: {},
   };
 
   for (const instr of program.instructions) {
@@ -79,17 +100,22 @@ function countCallSites(program: Format.Program): CallSiteCounts {
 
     const mn = instr.operation?.mnemonic;
 
-    if (Context.isInvoke(ctx)) {
-      const invoke = ctx.invoke;
-      const id = invoke.identifier ?? "?";
-      if (mn === "JUMP") {
-        counts.invokeJump[id] = (counts.invokeJump[id] ?? 0) + 1;
-      } else if (mn === "JUMPDEST") {
-        counts.invokeJumpdest[id] = (counts.invokeJumpdest[id] ?? 0) + 1;
+    for (const leaf of unwrapLeaves(ctx)) {
+      if (Context.isInvoke(leaf)) {
+        const id = leaf.invoke.identifier ?? "?";
+        if (mn === "JUMP") {
+          counts.invokeJump[id] = (counts.invokeJump[id] ?? 0) + 1;
+        } else if (mn === "JUMPDEST") {
+          counts.invokeJumpdest[id] = (counts.invokeJumpdest[id] ?? 0) + 1;
+        }
+      } else if (Context.isReturn(leaf)) {
+        const id = leaf.return.identifier ?? "?";
+        if (mn === "JUMPDEST") {
+          counts.returnJumpdest[id] = (counts.returnJumpdest[id] ?? 0) + 1;
+        } else if (mn === "JUMP") {
+          counts.returnJump[id] = (counts.returnJump[id] ?? 0) + 1;
+        }
       }
-    } else if (Context.isReturn(ctx) && mn === "JUMPDEST") {
-      const id = ctx.return.identifier ?? "?";
-      counts.returnJumpdest[id] = (counts.returnJumpdest[id] ?? 0) + 1;
     }
   }
 
@@ -379,18 +405,17 @@ code { r = check(3, 4); }`;
     }
   });
 
-  describe("tail call optimization preserves invoke contexts", () => {
+  describe("tail call optimization preserves invoke and return", () => {
     // `count` is tail-recursive: the recursive call is in
     // return position. At levels 2 and 3, TCO rewrites the
-    // recursive call into a jump, but the invoke context
-    // must still be emitted on that jump so debuggers can
-    // see "this was a recursive call" in the trace.
+    // recursive call into a back-edge JUMP. That JUMP
+    // carries a gather context with BOTH:
+    //   - return: previous iteration's return
+    //   - invoke: new iteration's call
     //
-    // No return context is emitted for the TCO'd call —
-    // the tail call folds into the outer activation's
-    // return. A future `transform: tailcall` marker will
-    // let the debugger reconcile the missing return with
-    // the eventual outer return popping all tail frames.
+    // Depth stays constant across the JUMP — one frame pops,
+    // one pushes. The function's terminal RETURN emits a
+    // return context normally, popping the final frame.
     const source = `name TailCall;
 
 define {
@@ -416,33 +441,65 @@ code { r = count(0, 5); }`;
       expect(counts.invokeJump).toEqual({ count: 2, succ: 1 });
       expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
       expect(counts.returnJumpdest).toEqual({ count: 2, succ: 1 });
+      // At level 1 there are no TCO back-edge JUMPs.
+      expect(counts.returnJump).toEqual({});
     });
 
     for (const level of [2, 3] as const) {
       it(
-        `preserves invoke on TCO'd jump but drops its ` +
-          `return context at level ${level}`,
+        `preserves invoke and return on TCO back-edge ` +
+          `JUMP at level ${level}`,
         async () => {
           const program = await compileAt(source, level);
           const counts = countCallSites(program);
 
           // Both count invokes are still present: the
-          // initial call JUMP and the TCO'd recursive
-          // JUMP (which targets the loop header). `succ`
-          // keeps its call/return contexts since it's
-          // invoked each iteration.
+          // initial call JUMP and the TCO'd back-edge JUMP.
+          // `succ` keeps its call/return contexts since
+          // it's invoked each iteration.
           expect(counts.invokeJump).toEqual({ count: 2, succ: 1 });
 
           // Only one callee-entry JUMPDEST per function:
           // count's is shared between first entry (from
           // the TCO trampoline) and subsequent iterations
-          // (from the TCO'd jump).
+          // (from the TCO'd JUMP).
           expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
 
-          // Only the initial count call has a continuation
-          // JUMPDEST; the TCO'd call has no return because
-          // it folds into the outer activation's return.
+          // The initial count call's continuation JUMPDEST
+          // and succ's continuation JUMPDEST both carry
+          // return contexts as usual.
           expect(counts.returnJumpdest).toEqual({ count: 1, succ: 1 });
+
+          // The TCO back-edge JUMP additionally carries a
+          // return context for `count` (the previous
+          // iteration's return), paired with its invoke in
+          // a gather. This keeps the debugger's logical
+          // frame depth constant across the back-edge.
+          expect(counts.returnJump).toEqual({ count: 1 });
+
+          // The invoke target inside the gather must be
+          // patched to the actual count entry, not left as
+          // the placeholder offset 0. This guards against
+          // patchInvokeTarget failing to walk into gather.
+          const tcoJump = program.instructions.find(
+            (instr) =>
+              instr.operation?.mnemonic === "JUMP" &&
+              instr.context !== undefined &&
+              Context.isGather(instr.context),
+          );
+          expect(tcoJump).toBeDefined();
+          const gather = tcoJump!.context as Format.Program.Context.Gather;
+          const invokeLeaf = gather.gather.find(Context.isInvoke);
+          expect(invokeLeaf).toBeDefined();
+          const invocation = invokeLeaf!.invoke;
+          expect(Invocation.isInternalCall(invocation)).toBe(true);
+          const internalCall =
+            invocation as Format.Program.Context.Invoke.Invocation.InternalCall;
+          const invokeTarget = internalCall.target.pointer;
+          expect(invokeTarget).toBeDefined();
+          expect(
+            "offset" in invokeTarget ? invokeTarget.offset : undefined,
+          ).not.toBe(0);
 
           // Still correct end-to-end.
           const result = await executeProgram(source, {

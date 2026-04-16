@@ -68,14 +68,11 @@ export function generateTerminator<S extends Stack>(
 
     case "jump": {
       // When this jump replaces a tail-recursive call (TCO),
-      // attach an invoke debug context to the JUMP so the
-      // debugger can still see the recursive call in the
-      // trace. The target code pointer uses placeholder
-      // offset 0; patchInvokeTarget resolves it later from
-      // the function registry. No matching return context
-      // is emitted — the tail call folds into the outer
-      // activation's return, per the transform: tailcall
-      // convention.
+      // attach a gather context to the JUMP combining the
+      // previous iteration's return and the new iteration's
+      // invoke. Depth stays constant: one pops, one pushes,
+      // on the same instruction. The function's terminal
+      // RETURN pops the final iteration's frame normally.
       const invokeOptions = term.tailCall
         ? buildTailCallJumpOptions(term.tailCall)
         : undefined;
@@ -412,13 +409,28 @@ function generateReturnEpilogue<S extends Stack>(
 }
 
 /**
- * Build JUMP instruction options carrying an invoke debug
- * context for a TCO-replaced tail call.
+ * Build JUMP instruction options for a TCO-replaced tail call.
  *
- * Mirrors the caller-JUMP invoke emitted by the normal call
- * terminator: identity + declaration + code target, no
- * argument pointers. The target uses placeholder offset 0
- * and is resolved later by patchInvokeTarget.
+ * The JUMP carries BOTH contexts in a gather:
+ *   - return: the previous iteration's return
+ *   - invoke: the new iteration's call
+ *
+ * Semantically the debugger sees frame depth stay constant
+ * across the back-edge JUMP: the previous frame pops, the
+ * new one pushes, on the same instruction. The function's
+ * terminal RETURN (elsewhere) emits a return context
+ * normally, popping the final iteration's frame.
+ *
+ * The invoke mirrors the normal caller-JUMP invoke
+ * (identity + declaration + code target, no argument
+ * pointers). The return uses stack slot 0 as a placeholder
+ * pointer — TCO does not materialize the intermediate
+ * return value, so this is best-effort; a future
+ * `transform: tailcall` marker will let debuggers
+ * special-case it.
+ *
+ * The invoke target uses placeholder offset 0 and is
+ * resolved later by patchInvokeTarget.
  */
 function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
   debug: { context: Format.Program.Context };
@@ -430,6 +442,19 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
           range: tailCall.declarationLoc,
         }
       : undefined;
+
+  const returnCtx: Format.Program.Context.Return = {
+    return: {
+      identifier: tailCall.function,
+      ...(declaration ? { declaration } : {}),
+      data: {
+        pointer: {
+          location: "stack" as const,
+          slot: 0,
+        },
+      },
+    },
+  };
 
   const invoke: Format.Program.Context.Invoke = {
     invoke: {
@@ -446,7 +471,11 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
     },
   };
 
-  return { debug: { context: invoke as Format.Program.Context } };
+  const gather: Format.Program.Context.Gather = {
+    gather: [returnCtx, invoke],
+  };
+
+  return { debug: { context: gather as Format.Program.Context } };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
