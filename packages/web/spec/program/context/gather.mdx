@@ -6,6 +6,34 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Gather multiple contexts
 
+A `gather` context asserts that every one of its child contexts
+holds at the marked instruction. It is the tool for composing
+multiple context facts that cannot coexist as sibling keys on a
+single object.
+
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/gather" }}
 />
+
+## When to use `gather`
+
+The context schema is open: a single context object may carry
+any number of discriminator keys together — `code`, `variables`,
+`invoke`, `return`, `transform`, and so on all compose as
+siblings on the same object. Prefer the flat form when it
+works.
+
+Reach for `gather` only when two or more facts would collide on
+the same key. The canonical cases are:
+
+- **Multiple `frame`s** — an instruction that maps
+  simultaneously to an IR step and a source step needs one
+  entry per frame, each with its own `code` range.
+- **Multiple `variables` blocks** — when separate pipeline
+  passes each contribute variable information (e.g., one
+  names the variable, the other supplies its pointer), each
+  set lives in its own context.
+
+If every child context uses a different discriminator key, a
+`gather` can be collapsed into a single flat object with the
+same meaning — and that flat form is the preferred style.
