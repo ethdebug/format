@@ -423,11 +423,9 @@ function generateReturnEpilogue<S extends Stack>(
  *
  * The invoke mirrors the normal caller-JUMP invoke
  * (identity + declaration + code target, no argument
- * pointers). The return uses stack slot 0 as a placeholder
- * pointer — TCO does not materialize the intermediate
- * return value, so this is best-effort; a future
- * `transform: tailcall` marker will let debuggers
- * special-case it.
+ * pointers). The return omits `data` because TCO does not
+ * materialize the intermediate return value — the actual
+ * return happens later at the function's terminal RETURN.
  *
  * The invoke target uses placeholder offset 0 and is
  * resolved later by patchInvokeTarget.
@@ -447,12 +445,6 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
-      data: {
-        pointer: {
-          location: "stack" as const,
-          slot: 0,
-        },
-      },
     },
   };
 
