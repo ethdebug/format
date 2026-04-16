@@ -16,6 +16,11 @@ description: |
   source-level call stack remains coherent. The transform
   context tells debuggers **how** the call was realized.
 
+  Combine a transform with other discriminator keys (`invoke`,
+  `return`, `code`, etc.) by placing them side-by-side on the
+  same context object — `gather` is only needed when two
+  contexts would collide on the same key.
+
   Consumers that ignore transform contexts still get a sound
   source-level view from the invoke/return contexts alone.
   Consumers that understand transform contexts can offer

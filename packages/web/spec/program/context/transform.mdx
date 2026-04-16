@@ -48,9 +48,9 @@ Four identifiers are recognized in v1:
 - **`"tailcall"`** — the marked instruction is a
   tail-call-optimized back-edge JUMP or continuation, where the
   call was realized without pushing/popping a full activation.
-  A JUMP carrying a `tailcall` transform often co-occurs with a
-  `gather` context combining a return (from the previous
-  iteration) and an invoke (of the new iteration).
+  A JUMP carrying a `tailcall` transform typically sits on a
+  context that also carries both a `return` (from the previous
+  iteration) and an `invoke` (of the new iteration).
 - **`"fold"`** — the marked instruction carries the result of
   a compile-time constant fold. Typically a PUSH of the folded
   value replacing a compute sequence (e.g., `ADD` over two
@@ -90,22 +90,30 @@ multiset of identifiers matters.
 
 ## Composing with other contexts
 
-To carry a transform context alongside other contexts at the
-same instruction, use `gather`. A TCO back-edge JUMP, for
-example, typically combines three facts:
+A context object can carry several discriminator keys at once —
+`code`, `variables`, `invoke`, `return`, `transform`, and so on
+all live in the same object. A TCO back-edge JUMP, for example,
+typically combines three facts as sibling keys on a single
+context:
 
 ```yaml
-gather:
-  - return:
-      identifier: "fact"
-      declaration: { ... }
-  - invoke:
-      jump: true
-      identifier: "fact"
-      target: { pointer: { location: code, offset: ... } }
-  - transform: ["tailcall"]
+return:
+  identifier: "fact"
+  declaration: { ... }
+invoke:
+  jump: true
+  identifier: "fact"
+  target: { pointer: { location: code, offset: ... } }
+transform: ["tailcall"]
 ```
 
-The return and invoke state the source-level facts (iteration N
-returned, iteration N+1 was invoked); the transform explains
-how the compiler realized that pair as a single JUMP.
+The `return` and `invoke` state the source-level facts
+(iteration N returned, iteration N+1 was invoked); the
+`transform` explains how the compiler realized that pair as a
+single JUMP.
+
+Reach for [`gather`](/spec/program/context/gather) only when
+two contexts would collide on the same key — e.g., two
+independent `variables` blocks or two `frame`s from different
+pipeline stages. When keys don't collide, the flat form is
+preferred.
