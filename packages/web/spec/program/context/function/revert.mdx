@@ -1,0 +1,58 @@
+---
+sidebar_position: 3
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Revert contexts
+
+A revert context marks an instruction associated with a function
+revert. It extends the
+[function identity](/spec/program/context/function) schema with
+an optional pointer to revert reason data and/or a numeric
+panic code for built-in assertion failures.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/revert" }}
+/>
+
+## Reason-based revert
+
+The `reason` field contains a pointer to the revert reason data
+in memory or, for external calls, in the returndata buffer.
+This typically holds an ABI-encoded error: a `require()` failure
+produces an `Error(string)` payload, while custom errors produce
+their own ABI-encoded selector and arguments.
+
+For an internal revert, `reason` points into memory where the
+compiler has written the encoded error. For an external call
+that reverted, `reason` points into the `returndata` buffer
+containing the callee's revert output.
+
+## Panic codes
+
+The `panic` field carries a numeric code for built-in assertion
+failures that the compiler inserts automatically. These do not
+originate from explicit `revert` or `require` statements—they
+guard against conditions like arithmetic overflow or
+out-of-bounds array access.
+
+Languages define their own panic code conventions. For example,
+Solidity uses `0x01` for failed `assert()`, `0x11` for
+arithmetic overflow, and `0x32` for out-of-bounds indexing.
+
+A revert context may include `panic` alone (when no reason
+pointer is needed), `reason` alone, or both.
+
+## Field optionality
+
+Both `reason` and `panic` are optional. A revert context is
+valid with either, both, or neither—a bare `revert: {}` is
+permitted when the compiler knows a revert occurred but has no
+further detail.
+
+Function identity fields (`identifier`, `declaration`, `type`)
+are also optional. A compiler may omit them when the revert
+cannot be attributed to a specific function, such as a
+top-level `require` guard or an unattributed external call
+failure.

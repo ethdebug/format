@@ -72,6 +72,9 @@ export function* buildModule(
         buildFunction(funcDecl.name, parameters, funcDecl.body),
       );
       if (func) {
+        const moduleState = yield* Process.Modules.current();
+        func.loc = funcDecl.loc ?? undefined;
+        func.sourceId = moduleState.sourceId;
         yield* Process.Functions.addToModule(funcDecl.name, func);
       }
     }

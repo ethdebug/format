@@ -12,6 +12,8 @@ import {
   TraceProgress,
   VariableInspector,
   StackInspector,
+  CallStackDisplay,
+  CallInfoPanel,
   useTraceContext,
   type TraceStep,
 } from "@ethdebug/programs-react";
@@ -20,6 +22,8 @@ import {
 import "./TraceViewer.css";
 import "./TraceControls.css";
 import "./VariableInspector.css";
+import "./CallStackDisplay.css";
+import "./CallInfoPanel.css";
 
 export interface TraceViewerProps {
   /** The execution trace */
@@ -97,6 +101,7 @@ function TraceViewerContent({
       <div className="trace-viewer-header">
         <TraceControls showStepCount={true} showOpcode={true} />
         <TraceProgress />
+        <CallStackDisplay />
       </div>
 
       <div className="trace-viewer-body">
@@ -118,6 +123,8 @@ function TraceViewerContent({
         </div>
 
         <div className="trace-viewer-right">
+          <CallInfoPanel />
+
           {showVariables && (
             <div className="trace-viewer-panel variables-panel">
               <h4 className="panel-title">Variables</h4>

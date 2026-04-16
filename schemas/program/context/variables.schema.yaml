@@ -58,12 +58,10 @@ $defs:
 
       type:
         description: |
-          The variable's static type, if it exists. This **must** be specified
-          either as a full **ethdebug/format/type** representation, or an
-          `{ "id": "..." }` type reference object.
-        oneOf:
-          - $ref: "schema:ethdebug/format/type"
-          - $ref: "schema:ethdebug/format/type/reference"
+          The variable's static type, if it exists. This **must** be
+          specified either as a full **ethdebug/format/type**
+          representation, or an `{ "id": "..." }` type reference.
+        $ref: "schema:ethdebug/format/type/specifier"
 
       pointer:
         description: |

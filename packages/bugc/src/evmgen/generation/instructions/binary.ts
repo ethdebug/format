@@ -6,8 +6,22 @@ import { type Transition, operations, pipe, rebrand } from "#evmgen/operations";
 
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
 
-const { ADD, SUB, MUL, DIV, MOD, EQ, LT, GT, AND, OR, ISZERO, SHL, SHR } =
-  operations;
+const {
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  EQ,
+  LT,
+  GT,
+  AND,
+  OR,
+  ISZERO,
+  SHL,
+  SHR,
+  SWAP1,
+} = operations;
 
 /**
  * Generate code for binary operations
@@ -23,10 +37,25 @@ export function generateBinary<S extends Stack>(
     ) => State<readonly [Stack.Brand, ...S]>;
   } = {
     add: ADD({ debug }),
-    sub: SUB({ debug }),
+    // Non-commutative ops: operands load as [right=a,
+    // left=b] but EVM computes TOS op TOS-1 = right op
+    // left. SWAP1 puts left on TOS before the operation.
+    sub: pipe<readonly ["a", "b", ...S]>()
+      .then(SWAP1({ debug }))
+      .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
+      .then(SUB({ debug }))
+      .done(),
     mul: MUL({ debug }),
-    div: DIV({ debug }),
-    mod: MOD({ debug }),
+    div: pipe<readonly ["a", "b", ...S]>()
+      .then(SWAP1({ debug }))
+      .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
+      .then(DIV({ debug }))
+      .done(),
+    mod: pipe<readonly ["a", "b", ...S]>()
+      .then(SWAP1({ debug }))
+      .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
+      .then(MOD({ debug }))
+      .done(),
     shl: pipe<readonly ["a", "b", ...S]>()
       .then(rebrand<"a", "shift", "b", "value">({ 1: "shift", 2: "value" }))
       .then(SHL({ debug }))

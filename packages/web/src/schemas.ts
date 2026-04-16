@@ -14,6 +14,10 @@ const typeSchemaIndex: SchemaIndex = {
     title: "Base type wrapper schema",
     href: "/spec/type/base#base-type-wrapper-schema",
   },
+  "schema:ethdebug/format/type/specifier": {
+    title: "Type specifier schema",
+    href: "/spec/type/concepts#type-specifier-schema",
+  },
   "schema:ethdebug/format/type/wrapper": {
     title: "Type wrapper schema",
     href: "/spec/type/concepts#type-wrapper-schema",
@@ -231,6 +235,37 @@ const programSchemaIndex: SchemaIndex = {
       },
     }))
     .reduce((a, b) => ({ ...a, ...b }), {}),
+
+  "schema:ethdebug/format/program/context/function": {
+    title: "Function identity schema",
+    href: "/spec/program/context/function",
+  },
+
+  ...["invoke", "return", "revert"]
+    .map((name) => ({
+      [`schema:ethdebug/format/program/context/function/${name}`]: {
+        href: `/spec/program/context/function/${name}`,
+      },
+    }))
+    .reduce((a, b) => ({ ...a, ...b }), {}),
+
+  "schema:ethdebug/format/program/context/function/invoke#/$defs/InternalCall":
+    {
+      title: "Internal call schema",
+      href: "/spec/program/context/function/invoke#internal-call",
+    },
+
+  "schema:ethdebug/format/program/context/function/invoke#/$defs/ExternalCall":
+    {
+      title: "External call schema",
+      href: "/spec/program/context/function/invoke#external-call",
+    },
+
+  "schema:ethdebug/format/program/context/function/invoke#/$defs/ContractCreation":
+    {
+      title: "Contract creation schema",
+      href: "/spec/program/context/function/invoke#contract-creation",
+    },
 };
 
 const infoSchemaIndex: SchemaIndex = {

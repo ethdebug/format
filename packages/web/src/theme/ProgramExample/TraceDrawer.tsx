@@ -8,7 +8,13 @@
  * - Step-through trace visualization
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import { compile as bugCompile, Severity, type Evm } from "@ethdebug/bugc";
 import {
@@ -18,6 +24,7 @@ import {
   extractSourceRange,
 } from "@ethdebug/bugc-react";
 import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
+import { dereference, Data, type Machine } from "@ethdebug/pointers";
 import { Drawer } from "@theme/Drawer";
 import { useTracePlayground } from "./TracePlaygroundContext";
 
@@ -84,6 +91,151 @@ function TraceDrawerContent(): JSX.Element {
 
     return extractVariables(instruction.debug.context);
   }, [trace, currentStep, pcToInstruction]);
+
+  // Extract call info from current instruction context
+  const currentCallInfo = useMemo(() => {
+    if (trace.length === 0 || currentStep >= trace.length) {
+      return undefined;
+    }
+
+    const step = trace[currentStep];
+    const instruction = pcToInstruction.get(step.pc);
+    if (!instruction?.debug?.context) return undefined;
+
+    return extractCallInfo(instruction.debug.context);
+  }, [trace, currentStep, pcToInstruction]);
+
+  // Build call stack by scanning invoke/return/revert up to
+  // current step
+  const callStack = useMemo(() => {
+    const frames: Array<{
+      identifier?: string;
+      stepIndex: number;
+      callType?: string;
+      argumentNames?: string[];
+      argumentPointers?: unknown[];
+    }> = [];
+
+    for (let i = 0; i <= currentStep && i < trace.length; i++) {
+      const step = trace[i];
+      const instruction = pcToInstruction.get(step.pc);
+      if (!instruction?.debug?.context) continue;
+
+      const info = extractCallInfo(instruction.debug.context);
+      if (!info) continue;
+
+      if (info.kind === "invoke") {
+        // The compiler emits invoke on both the caller
+        // JUMP and callee entry JUMPDEST for the same
+        // call. These occur on consecutive trace steps.
+        // Only skip if the top frame matches AND was
+        // pushed on the immediately preceding step —
+        // otherwise this is a new call (e.g. recursion).
+        const top = frames[frames.length - 1];
+        const isDuplicate =
+          top &&
+          top.identifier === info.identifier &&
+          top.callType === info.callType &&
+          top.stepIndex === i - 1;
+        if (isDuplicate) {
+          // Use the callee entry step for resolution —
+          // argument pointers reference stack slots
+          // valid at the JUMPDEST, not the JUMP.
+          // Argument names also live on the callee entry.
+          top.stepIndex = i;
+          top.argumentNames = info.argumentNames ?? top.argumentNames;
+          top.argumentPointers = info.argumentPointers;
+        } else {
+          frames.push({
+            identifier: info.identifier,
+            stepIndex: i,
+            callType: info.callType,
+            argumentNames: info.argumentNames,
+            argumentPointers: info.argumentPointers,
+          });
+        }
+      } else if (info.kind === "return" || info.kind === "revert") {
+        if (frames.length > 0) {
+          frames.pop();
+        }
+      }
+    }
+
+    return frames;
+  }, [trace, currentStep, pcToInstruction]);
+
+  // Resolve argument values for call stack frames
+  const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
+
+  const [resolvedArgs, setResolvedArgs] = useState<Map<number, ResolvedArg[]>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    if (callStack.length === 0) {
+      setResolvedArgs(new Map());
+      return;
+    }
+
+    // Initialize with cached values
+    const initial = new Map<number, ResolvedArg[]>();
+    for (const frame of callStack) {
+      const cached = argCacheRef.current.get(frame.stepIndex);
+      if (cached) {
+        initial.set(frame.stepIndex, cached);
+      }
+    }
+    setResolvedArgs(new Map(initial));
+
+    let cancelled = false;
+
+    const promises = callStack.map(async (frame) => {
+      if (argCacheRef.current.has(frame.stepIndex)) {
+        return;
+      }
+
+      const ptrs = frame.argumentPointers;
+      const names = frame.argumentNames;
+      if (!ptrs || ptrs.length === 0) return;
+
+      const step = trace[frame.stepIndex];
+      if (!step) return;
+
+      const state = traceStepToState(step, storage);
+      const args: ResolvedArg[] = ptrs.map((_, i) => ({
+        name: names?.[i] ?? `_${i}`,
+      }));
+
+      const resolvePromises = ptrs.map(async (ptr, i) => {
+        try {
+          const value = await resolvePointer(ptr, state);
+          args[i] = { ...args[i], value };
+        } catch (err) {
+          args[i] = {
+            ...args[i],
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
+      });
+
+      await Promise.all(resolvePromises);
+
+      if (!cancelled) {
+        argCacheRef.current.set(frame.stepIndex, args);
+        setResolvedArgs((prev) => {
+          const next = new Map(prev);
+          next.set(frame.stepIndex, args);
+          return next;
+        });
+      }
+    });
+
+    Promise.all(promises).catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callStack, trace, storage]);
 
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
@@ -196,6 +348,45 @@ function TraceDrawerContent(): JSX.Element {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  const rangeKey = (stepIdx: number): string => {
+    const step = trace[stepIdx];
+    if (!step) return "";
+    const instr = pcToInstruction.get(step.pc);
+    if (!instr?.debug?.context) return "";
+    const ranges = extractSourceRange(instr.debug.context);
+    if (ranges.length === 0) return "";
+    return ranges.map((r) => `${r.offset}:${r.length}`).join(",");
+  };
+
+  const stepToNextSource = () => {
+    setCurrentStep((prev) => {
+      const currentKey = rangeKey(prev);
+      for (let i = prev + 1; i < trace.length; i++) {
+        const key = rangeKey(i);
+        if (key !== currentKey && key !== "") return i;
+      }
+      return trace.length - 1;
+    });
+  };
+
+  const stepToPrevSource = () => {
+    setCurrentStep((prev) => {
+      const currentKey = rangeKey(prev);
+      let i = prev - 1;
+      while (i > 0) {
+        const key = rangeKey(i);
+        if (key !== currentKey && key !== "") break;
+        i--;
+      }
+      const targetKey = rangeKey(i);
+      while (i > 0) {
+        if (rangeKey(i - 1) !== targetKey) break;
+        i--;
+      }
+      return Math.max(0, i);
+    });
+  };
+
   const jumpToStart = () => setCurrentStep(0);
   const jumpToEnd = () => setCurrentStep(trace.length - 1);
 
@@ -270,12 +461,20 @@ function TraceDrawerContent(): JSX.Element {
                   &#x23EE;
                 </button>
                 <button
-                  onClick={stepBackward}
+                  onClick={stepToPrevSource}
                   disabled={currentStep === 0}
                   className="trace-nav-btn"
-                  title="Step backward"
+                  title="Previous source location"
                 >
                   &#x25C0;
+                </button>
+                <button
+                  onClick={stepBackward}
+                  disabled={currentStep === 0}
+                  className="trace-nav-btn trace-nav-btn-step"
+                  title="Previous trace step"
+                >
+                  &#x25C1;
                 </button>
                 <span className="trace-step-info">
                   {currentStep + 1} / {trace.length}
@@ -283,8 +482,16 @@ function TraceDrawerContent(): JSX.Element {
                 <button
                   onClick={stepForward}
                   disabled={currentStep >= trace.length - 1}
+                  className="trace-nav-btn trace-nav-btn-step"
+                  title="Next trace step"
+                >
+                  &#x25B7;
+                </button>
+                <button
+                  onClick={stepToNextSource}
+                  disabled={currentStep >= trace.length - 1}
                   className="trace-nav-btn"
-                  title="Step forward"
+                  title="Next source location"
                 >
                   &#x25B6;
                 </button>
@@ -297,6 +504,37 @@ function TraceDrawerContent(): JSX.Element {
                   &#x23ED;
                 </button>
               </div>
+
+              <div className="call-stack-bar">
+                <span className="call-stack-label">Call Stack:</span>
+                {callStack.length === 0 ? (
+                  <span className="call-stack-toplevel">(top level)</span>
+                ) : (
+                  callStack.map((frame, i) => (
+                    <React.Fragment key={frame.stepIndex}>
+                      {i > 0 && (
+                        <span className="call-stack-sep">&#x203A;</span>
+                      )}
+                      <button
+                        className="call-stack-frame-btn"
+                        onClick={() => setCurrentStep(frame.stepIndex)}
+                        type="button"
+                      >
+                        {frame.identifier || "(anonymous)"}(
+                        {formatFrameArgs(frame, resolvedArgs)})
+                      </button>
+                    </React.Fragment>
+                  ))
+                )}
+              </div>
+
+              {currentCallInfo && (
+                <div
+                  className={`call-info-bar call-info-${currentCallInfo.kind}`}
+                >
+                  {formatCallBanner(currentCallInfo)}
+                </div>
+              )}
 
               <div className="trace-panels">
                 <div className="trace-panel opcodes-panel">
@@ -469,6 +707,130 @@ function VariablesDisplay({ variables }: VariablesDisplayProps): JSX.Element {
 }
 
 /**
+ * Info about a call context (invoke/return/revert).
+ */
+interface CallInfoResult {
+  kind: "invoke" | "return" | "revert";
+  identifier?: string;
+  callType?: string;
+  argumentNames?: string[];
+  argumentPointers?: unknown[];
+}
+
+/**
+ * Extract call info from an ethdebug format context object.
+ */
+function extractCallInfo(context: unknown): CallInfoResult | undefined {
+  if (!context || typeof context !== "object") {
+    return undefined;
+  }
+
+  const ctx = context as Record<string, unknown>;
+
+  if ("invoke" in ctx && ctx.invoke) {
+    const inv = ctx.invoke as Record<string, unknown>;
+    let callType: string | undefined;
+    if ("jump" in inv) callType = "internal";
+    else if ("message" in inv) callType = "external";
+    else if ("create" in inv) callType = "create";
+
+    const argInfo = extractArgInfoFromInvoke(inv);
+    return {
+      kind: "invoke",
+      identifier: inv.identifier as string | undefined,
+      callType,
+      argumentNames: argInfo?.names,
+      argumentPointers: argInfo?.pointers,
+    };
+  }
+
+  if ("return" in ctx && ctx.return) {
+    const ret = ctx.return as Record<string, unknown>;
+    return {
+      kind: "return",
+      identifier: ret.identifier as string | undefined,
+    };
+  }
+
+  if ("revert" in ctx && ctx.revert) {
+    const rev = ctx.revert as Record<string, unknown>;
+    return {
+      kind: "revert",
+      identifier: rev.identifier as string | undefined,
+    };
+  }
+
+  // Walk gather/pick
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    for (const sub of ctx.gather) {
+      const info = extractCallInfo(sub);
+      if (info) return info;
+    }
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    for (const sub of ctx.pick) {
+      const info = extractCallInfo(sub);
+      if (info) return info;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Format a call info banner string.
+ */
+function formatCallBanner(info: CallInfoResult): string {
+  const name = info.identifier || "(anonymous)";
+  const params = info.argumentNames
+    ? `(${info.argumentNames.join(", ")})`
+    : "()";
+  switch (info.kind) {
+    case "invoke": {
+      const prefix = info.callType === "create" ? "Creating" : "Calling";
+      return `${prefix} ${name}${params}`;
+    }
+    case "return":
+      return `Returned from ${name}()`;
+    case "revert":
+      return `Reverted in ${name}()`;
+  }
+}
+
+function extractArgInfoFromInvoke(
+  inv: Record<string, unknown>,
+): { names?: string[]; pointers?: unknown[] } | undefined {
+  const args = inv.arguments as Record<string, unknown> | undefined;
+  if (!args) return undefined;
+
+  const pointer = args.pointer as Record<string, unknown> | undefined;
+  if (!pointer) return undefined;
+
+  const group = pointer.group as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(group)) return undefined;
+
+  const names: string[] = [];
+  const pointers: unknown[] = [];
+  let hasAnyName = false;
+  for (const entry of group) {
+    const name = entry.name as string | undefined;
+    if (name) {
+      names.push(name);
+      hasAnyName = true;
+    } else {
+      names.push("_");
+    }
+    pointers.push(entry);
+  }
+
+  return {
+    names: hasAnyName ? names : undefined,
+    pointers,
+  };
+}
+
+/**
  * Extract variables from an ethdebug format context object.
  */
 function extractVariables(context: unknown): Variable[] {
@@ -539,6 +901,166 @@ function formatType(type: unknown): string {
   }
 
   return JSON.stringify(type);
+}
+
+function formatFrameArgs(
+  frame: {
+    stepIndex: number;
+    argumentNames?: string[];
+  },
+  resolved: Map<number, ResolvedArg[]>,
+): string {
+  const args = resolved.get(frame.stepIndex);
+  if (!args) {
+    return frame.argumentNames ? frame.argumentNames.join(", ") : "";
+  }
+  return args
+    .map((arg) => {
+      if (arg.value === undefined) return arg.name;
+      const decimal = formatAsDecimal(arg.value);
+      return `${arg.name}: ${decimal}`;
+    })
+    .join(", ");
+}
+
+function formatAsDecimal(hex: string): string {
+  try {
+    const n = BigInt(hex);
+    if (n <= 9999n) return n.toString();
+    return hex;
+  } catch {
+    return hex;
+  }
+}
+
+/**
+ * Convert an evm TraceStep + storage into a Machine.State
+ * for pointer dereferencing.
+ */
+function traceStepToState(
+  step: TraceStep,
+  storage: Record<string, string>,
+): Machine.State {
+  const stackEntries = step.stack.map((v) =>
+    Data.fromUint(v).padUntilAtLeast(32),
+  );
+
+  const memoryData = step.memory ? Data.fromBytes(step.memory) : Data.zero();
+
+  const storageMap = new Map<string, Data>();
+  for (const [slot, value] of Object.entries(storage)) {
+    const key = Data.fromHex(slot).padUntilAtLeast(32).toHex();
+    storageMap.set(key, Data.fromHex(value).padUntilAtLeast(32));
+  }
+
+  const stack: Machine.State.Stack = {
+    get length() {
+      return Promise.resolve(BigInt(stackEntries.length));
+    },
+    async peek({ depth, slice }) {
+      const index = stackEntries.length - 1 - Number(depth);
+      if (index < 0 || index >= stackEntries.length) {
+        throw new Error(`Stack underflow: depth ${depth}`);
+      }
+      const entry = stackEntries[index];
+      if (!slice) return entry;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        entry.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  const makeBytesReader = (data: Data): Machine.State.Bytes => ({
+    get length() {
+      return Promise.resolve(BigInt(data.length));
+    },
+    async read({ slice }) {
+      const { offset, length } = slice;
+      const start = Number(offset);
+      const end = start + Number(length);
+      if (end > data.length) {
+        const result = new Uint8Array(Number(length));
+        const available = Math.max(0, data.length - start);
+        if (available > 0 && start < data.length) {
+          result.set(data.slice(start, start + available), 0);
+        }
+        return Data.fromBytes(result);
+      }
+      return Data.fromBytes(data.slice(start, end));
+    },
+  });
+
+  const storageReader: Machine.State.Words = {
+    async read({ slot, slice }) {
+      const key = slot.padUntilAtLeast(32).toHex();
+      const value = storageMap.get(key) || Data.zero().padUntilAtLeast(32);
+      if (!slice) return value;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  const emptyWords: Machine.State.Words = {
+    async read({ slice }) {
+      const value = Data.zero().padUntilAtLeast(32);
+      if (!slice) return value;
+      const { offset, length } = slice;
+      return Data.fromBytes(
+        value.slice(Number(offset), Number(offset + length)),
+      );
+    },
+  };
+
+  return {
+    get traceIndex() {
+      return Promise.resolve(0n);
+    },
+    get programCounter() {
+      return Promise.resolve(BigInt(step.pc));
+    },
+    get opcode() {
+      return Promise.resolve(step.opcode);
+    },
+    stack,
+    memory: makeBytesReader(memoryData),
+    storage: storageReader,
+    calldata: makeBytesReader(Data.zero()),
+    returndata: makeBytesReader(Data.zero()),
+    code: makeBytesReader(Data.zero()),
+    transient: emptyWords,
+  };
+}
+
+/**
+ * Resolve a single pointer against a machine state.
+ */
+async function resolvePointer(
+  pointer: unknown,
+  state: Machine.State,
+): Promise<string> {
+  const cursor = await dereference(
+    pointer as Parameters<typeof dereference>[0],
+    { state, templates: {} },
+  );
+  const view = await cursor.view(state);
+
+  const values: Data[] = [];
+  for (const region of view.regions) {
+    values.push(await view.read(region));
+  }
+
+  if (values.length === 0) return "0x";
+  if (values.length === 1) return values[0].toHex();
+  return values.map((d) => d.toHex()).join(", ");
+}
+
+interface ResolvedArg {
+  name: string;
+  value?: string;
+  error?: string;
 }
 
 export default TraceDrawer;

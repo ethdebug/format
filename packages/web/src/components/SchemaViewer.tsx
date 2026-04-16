@@ -1,16 +1,18 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { URL } from "url";
 import type { JSONSchema } from "json-schema-typed/draft-2020-12";
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
 import CodeBlock from "@theme/CodeBlock";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 import { type DescribeSchemaOptions, describeSchema } from "@ethdebug/format";
 import { schemaIndex } from "@site/src/schemas";
 import { SchemaContext, internalIdKey } from "@site/src/contexts/SchemaContext";
 import ReactMarkdown from "react-markdown";
 import SchemaListing from "./SchemaListing";
-import Playground from "./Playground";
+
+const Playground = React.lazy(() => import("./Playground"));
 
 export interface SchemaViewerProps extends DescribeSchemaOptions {}
 
@@ -83,7 +85,13 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
         <SchemaListing schema={props.schema} pointer={props.pointer} />
       </TabItem>
       <TabItem value="playground" label="Playground">
-        <Playground schema={props.schema} pointer={props.pointer} />
+        <BrowserOnly fallback={<div>Loading playground...</div>}>
+          {() => (
+            <Suspense fallback={<div>Loading playground...</div>}>
+              <Playground schema={props.schema} pointer={props.pointer} />
+            </Suspense>
+          )}
+        </BrowserOnly>
       </TabItem>
     </Tabs>
   );

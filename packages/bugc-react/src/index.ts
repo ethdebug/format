@@ -50,6 +50,12 @@ export {
   extractSourceRange,
   formatDebugContext,
   hasSourceRange,
+  classifyContext,
+  summarizeContext,
+  formatCallSignature,
+  type ContextKind,
+  type ContextSummary,
+  type DeclarationRange,
   // IR debug utilities
   extractInstructionDebug,
   extractTerminatorDebug,

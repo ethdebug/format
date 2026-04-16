@@ -30,11 +30,24 @@ export { MemoryError as Error };
  * EVM memory layout following Solidity conventions
  */
 export const regions = {
-  SCRATCH_SPACE_1: 0x00, // 0x00-0x1f: First scratch space slot
-  SCRATCH_SPACE_2: 0x20, // 0x20-0x3f: Second scratch space slot
-  FREE_MEMORY_POINTER: 0x40, // 0x40-0x5f: Dynamic memory pointer
-  ZERO_SLOT: 0x60, // 0x60-0x7f: Zero slot (reserved)
-  STATIC_MEMORY_START: 0x80, // 0x80+: Static allocations start here
+  SCRATCH_SPACE_1: 0x00, // 0x00-0x1f: First scratch space
+  SCRATCH_SPACE_2: 0x20, // 0x20-0x3f: Second scratch space
+  FREE_MEMORY_POINTER: 0x40, // 0x40-0x5f: Dynamic memory ptr
+  RETURN_PC_SCRATCH: 0x60, // 0x60-0x7f: Caller→callee return PC
+  FRAME_POINTER: 0x80, // 0x80-0x9f: Current frame base address
+  STATIC_MEMORY_START: 0xa0, // 0xa0+: Static allocations
+} as const;
+
+/**
+ * Call frame header layout (relative to frame base).
+ * Each user-function call allocates a frame from FMP;
+ * the first two slots store the saved frame pointer
+ * and saved return PC.
+ */
+export const frameHeader = {
+  SAVED_FP: 0x00,
+  SAVED_RETURN_PC: 0x20,
+  LOCALS_START: 0x40,
 } as const;
 
 export interface Allocation {
@@ -93,10 +106,10 @@ export namespace Module {
     result.main = mainMemory.value;
 
     // Process user-defined functions.
-    // Each function's allocations start after the previous
-    // function's end, so all simultaneously-active frames
-    // have non-overlapping memory.
-    let nextFuncOffset = result.main.nextStaticOffset;
+    // Each function gets its own call frame allocated from
+    // FMP at runtime. Offsets are relative to the frame
+    // base, starting after the frame header (saved FP +
+    // saved return PC).
     for (const [name, func] of module.functions) {
       const funcLiveness = liveness.functions[name];
       if (!funcLiveness) {
@@ -109,13 +122,12 @@ export namespace Module {
       }
       const funcMemory = Function.plan(func, funcLiveness, {
         isUserFunction: true,
-        startOffset: nextFuncOffset,
+        startOffset: frameHeader.LOCALS_START,
       });
       if (!funcMemory.success) {
         return funcMemory;
       }
       result.functions[name] = funcMemory.value;
-      nextFuncOffset = funcMemory.value.nextStaticOffset;
     }
 
     return Result.ok(result);
@@ -124,16 +136,22 @@ export namespace Module {
 
 export namespace Function {
   export interface Info {
-    /** Memory allocation info for each value that needs allocation */
+    /** Memory allocation info for each value */
     allocations: Record<string, Allocation>;
-    /** Next available memory offset after all static allocations */
+    /** Next available memory offset after static allocations */
     nextStaticOffset: number;
     /**
-     * Offset where this function saves its return PC.
-     * Only set for user-defined functions that need to
-     * preserve their return address across internal calls.
+     * Frame-relative offset for saved return PC.
+     * Only set for user-defined functions.
      */
     savedReturnPcOffset?: number;
+    /**
+     * Total frame size in bytes. When set, all allocation
+     * offsets are relative to the frame base (loaded from
+     * FRAME_POINTER at 0x80). Frames are allocated from
+     * FMP on entry and deallocated on return.
+     */
+    frameSize?: number;
   }
 
   /**
@@ -212,19 +230,22 @@ export namespace Function {
         nextStaticOffset = currentSlotOffset;
       }
 
-      // Reserve a slot for the saved return PC in user
-      // functions. This is needed because nested calls
-      // overwrite memory[0x60] with their own return PC.
+      // For user functions, the saved return PC lives at a
+      // fixed offset in the frame header. frameSize is the
+      // total frame allocation (header + locals), rounded
+      // up to a slot boundary.
       let savedReturnPcOffset: number | undefined;
+      let frameSize: number | undefined;
       if (options.isUserFunction) {
-        savedReturnPcOffset = nextStaticOffset;
-        nextStaticOffset += SLOT_SIZE;
+        savedReturnPcOffset = frameHeader.SAVED_RETURN_PC;
+        frameSize = nextStaticOffset;
       }
 
       return Result.ok({
         allocations,
         nextStaticOffset,
         savedReturnPcOffset,
+        frameSize,
       });
     } catch (error) {
       return Result.err(

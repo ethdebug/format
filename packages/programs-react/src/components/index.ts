@@ -22,6 +22,9 @@ export {
   type TraceState,
   type TraceProviderProps,
   type ResolvedVariable,
+  type ResolvedCallInfo,
+  type ResolvedCallFrame,
+  type ResolvedPointerRef,
 } from "./TraceContext.js";
 
 export {
@@ -37,3 +40,10 @@ export {
   type VariableInspectorProps,
   type StackInspectorProps,
 } from "./VariableInspector.js";
+
+export {
+  CallStackDisplay,
+  type CallStackDisplayProps,
+} from "./CallStackDisplay.js";
+
+export { CallInfoPanel, type CallInfoPanelProps } from "./CallInfoPanel.js";

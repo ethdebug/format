@@ -1,0 +1,52 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/function"
+
+title: ethdebug/format/program/context/function
+description: |
+  Properties for identifying a source-language function. Function
+  context schemas (invoke, return, revert) extend this schema so
+  that each context can optionally indicate which function it
+  pertains to.
+
+  All properties are optional so that compilers may provide as
+  much or as little detail as is available.
+
+type: object
+properties:
+  identifier:
+    type: string
+    minLength: 1
+    description: |
+      The function's name in the source language.
+
+  declaration:
+    description: |
+      Source range where the function is declared.
+    $ref: "schema:ethdebug/format/materials/source-range"
+
+  type:
+    description: |
+      The function's type, specified either as a full
+      ethdebug/format/type representation or a type reference.
+    $ref: "schema:ethdebug/format/type/specifier"
+
+examples:
+  # All three identity fields provided: the compiler knows the
+  # function name, where it was declared, and its type.
+  - identifier: "transfer"
+    declaration:
+      source:
+        id: 0
+      range:
+        offset: 128
+        length: 95
+    type:
+      id: 7
+
+  # Only the function name is known.
+  - identifier: "balanceOf"
+
+  # No identity information. The compiler knows that a function
+  # context applies but cannot attribute it to a specific
+  # function (e.g., an indirect call through a function pointer).
+  - {}

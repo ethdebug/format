@@ -1,6 +1,9 @@
+import type * as Format from "@ethdebug/format";
 import type * as Ir from "#ir";
+import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
+import { Memory } from "#evmgen/analysis";
 
 import { type Transition, operations, pipe } from "#evmgen/operations";
 
@@ -13,8 +16,8 @@ export function generateTerminator<S extends Stack>(
   term: Ir.Block.Terminator,
   isLastBlock: boolean = false,
   isUserFunction: boolean = false,
-): Transition<S, S> {
-  const { PUSHn, PUSH2, MSTORE, MLOAD, RETURN, STOP, JUMP, JUMPI } = operations;
+): Transition<S, Stack> {
+  const { PUSHn, PUSH2, MSTORE, RETURN, STOP, JUMP, JUMPI } = operations;
 
   switch (term.kind) {
     case "return": {
@@ -23,28 +26,12 @@ export function generateTerminator<S extends Stack>(
       // on TOS from the previous instruction in the block. This avoids an
       // unnecessary DUP that would leave an extra value on the stack.
       if (isUserFunction) {
-        // Load return PC from the saved slot (not 0x60,
-        // which may have been overwritten by nested calls).
-        return pipe<S>()
-          .peek((state, builder) => {
-            const pcOffset = state.memory.savedReturnPcOffset ?? 0x60;
-            const returnDebug = {
-              context: {
-                remark: term.value
-                  ? "function-return: return with value"
-                  : "function-return: void return",
-              },
-            };
-            return builder
-              .then(PUSHn(BigInt(pcOffset), { debug: returnDebug }), {
-                as: "offset",
-              })
-              .then(MLOAD({ debug: returnDebug }), {
-                as: "counter",
-              })
-              .then(JUMP({ debug: returnDebug }));
-          })
-          .done() as unknown as Transition<S, S>;
+        // Internal function return epilogue.
+        // Uses the same imperative pattern as
+        // generateCallTerminator — returns
+        // Transition<S, Stack> to erase output type.
+        const debug = term.operationDebug;
+        return generateReturnEpilogue(term.value, debug);
       }
 
       // Contract return (main function or create)
@@ -146,17 +133,24 @@ export function generateTerminator<S extends Stack>(
 }
 
 /**
- * Generate code for a call terminator - handled specially since it crosses function boundaries
+ * Generate code for a call terminator - handled specially
+ * since it crosses function boundaries
  */
 export function generateCallTerminator<S extends Stack>(
   term: Extract<Ir.Block.Terminator, { kind: "call" }>,
+  functions?: Map<string, Ir.Function>,
 ): Transition<S, Stack> {
   const funcName = term.function;
   const args = term.arguments;
   const cont = term.continuation;
+  const targetFunc = functions?.get(funcName);
 
   return ((state: State<S>): State<Stack> => {
     let currentState: State<Stack> = state as State<Stack>;
+
+    // All call setup instructions map back to the call
+    // expression source location via operationDebug.
+    const debug = term.operationDebug;
 
     // Clean the stack before setting up the call.
     // Values produced by block instructions that are only
@@ -165,17 +159,12 @@ export function generateCallTerminator<S extends Stack>(
     // block terminator, all current stack values are dead
     // after the call — POP them so the function receives a
     // clean stack with only its arguments.
-    const cleanupDebug = {
-      context: {
-        remark: `call-preparation: clean stack for ${funcName}`,
-      },
-    };
     while (currentState.stack.length > 0) {
       currentState = {
         ...currentState,
         instructions: [
           ...currentState.instructions,
-          { mnemonic: "POP", opcode: 0x50, debug: cleanupDebug },
+          { mnemonic: "POP", opcode: 0x50, debug },
         ],
         stack: currentState.stack.slice(1),
         brands: currentState.brands.slice(1) as Stack,
@@ -185,11 +174,6 @@ export function generateCallTerminator<S extends Stack>(
     const returnPcPatchIndex = currentState.instructions.length;
 
     // Store return PC to memory at 0x60
-    const returnPcDebug = {
-      context: {
-        remark: `call-preparation: store return address for ${funcName}`,
-      },
-    };
     currentState = {
       ...currentState,
       instructions: [
@@ -198,10 +182,15 @@ export function generateCallTerminator<S extends Stack>(
           mnemonic: "PUSH2",
           opcode: 0x61,
           immediates: [0, 0],
-          debug: returnPcDebug,
+          debug,
         },
-        { mnemonic: "PUSH1", opcode: 0x60, immediates: [0x60] },
-        { mnemonic: "MSTORE", opcode: 0x52 },
+        {
+          mnemonic: "PUSH1",
+          opcode: 0x60,
+          immediates: [0x60],
+          debug,
+        },
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
       ],
       patches: [
         ...currentState.patches,
@@ -216,22 +205,43 @@ export function generateCallTerminator<S extends Stack>(
     // Push arguments using loadValue.
     // Stack is clean, so loadValue will reload from memory
     // (for temps) or re-push (for consts).
-    const argsDebug = {
-      context: {
-        remark: `call-arguments: push ${args.length} argument(s) for ${funcName}`,
-      },
-    };
     for (const arg of args) {
-      currentState = loadValue(arg, { debug: argsDebug })(currentState);
+      currentState = loadValue(arg, { debug })(currentState);
     }
 
-    // Push function address and jump
+    // Push function address and jump.
+    // The JUMP gets a simplified invoke context with
+    // identity and code target only; the full invoke
+    // with arg pointers lives on the callee JUMPDEST.
     const funcAddrPatchIndex = currentState.instructions.length;
-    const invocationDebug = {
-      context: {
-        remark: `call-invocation: jump to function ${funcName}`,
+
+    // Build declaration source range if available
+    const declaration =
+      targetFunc?.loc && targetFunc?.sourceId
+        ? {
+            source: { id: targetFunc.sourceId },
+            range: targetFunc.loc,
+          }
+        : undefined;
+
+    const invoke: Format.Program.Context.Invoke = {
+      invoke: {
+        jump: true as const,
+        identifier: funcName,
+        ...(declaration ? { declaration } : {}),
+        target: {
+          pointer: {
+            location: "code" as const,
+            offset: 0,
+            length: 1,
+          },
+        },
       },
     };
+    const invokeContext = {
+      context: invoke as Format.Program.Context,
+    };
+
     currentState = {
       ...currentState,
       instructions: [
@@ -240,9 +250,9 @@ export function generateCallTerminator<S extends Stack>(
           mnemonic: "PUSH2",
           opcode: 0x61,
           immediates: [0, 0],
-          debug: invocationDebug,
+          debug,
         },
-        { mnemonic: "JUMP", opcode: 0x56 },
+        { mnemonic: "JUMP", opcode: 0x56, debug: invokeContext },
       ],
       patches: [
         ...currentState.patches,
@@ -273,4 +283,139 @@ export function generateCallTerminator<S extends Stack>(
 
     return currentState;
   }) as Transition<S, Stack>;
+}
+
+/**
+ * Generate return epilogue for user-defined functions.
+ *
+ * Loads the return value (if any), cleans stale stack
+ * values from predecessor blocks, then loads the saved
+ * return PC and jumps back to the caller.
+ */
+function generateReturnEpilogue<S extends Stack>(
+  value: Ir.Value | undefined,
+  debug: Ir.Block.Debug,
+): Transition<S, Stack> {
+  return ((state: State<S>): State<Stack> => {
+    let s: State<Stack> = state as State<Stack>;
+
+    // Load return value onto the stack if present.
+    if (value) {
+      s = loadValue(value, { debug })(s);
+    }
+
+    // Pop stale values, keeping only the return value
+    // (if any). Multi-block functions can accumulate
+    // leftover values (e.g. branch condition results)
+    // from predecessor blocks.
+    const keep = value ? 1 : 0;
+    while (s.stack.length > keep) {
+      if (keep > 0 && s.stack.length > 1) {
+        const depth = s.stack.length - 1;
+        s = {
+          ...s,
+          instructions: [
+            ...s.instructions,
+            {
+              mnemonic: `SWAP${depth}`,
+              opcode: 0x8f + depth,
+              debug,
+            },
+          ],
+          stack: [s.stack[depth], ...s.stack.slice(1, depth), s.stack[0]],
+          brands: [
+            s.brands[depth],
+            ...s.brands.slice(1, depth),
+            s.brands[0],
+          ] as Stack,
+        };
+      }
+      s = {
+        ...s,
+        instructions: [
+          ...s.instructions,
+          { mnemonic: "POP", opcode: 0x50, debug },
+        ],
+        stack: s.stack.slice(1),
+        brands: s.brands.slice(1) as Stack,
+      };
+    }
+
+    // Deallocate frame and jump to saved return PC.
+    //
+    // fp = mem[FRAME_POINTER]
+    // return_pc = mem[fp + SAVED_RETURN_PC]
+    // old_fp = mem[fp + SAVED_FP]  (= mem[fp])
+    // mem[FRAME_POINTER] = old_fp
+    // mem[FREE_MEMORY_POINTER] = fp  (deallocate)
+    // JUMP return_pc
+    const FP = Memory.regions.FRAME_POINTER;
+    const FMP = Memory.regions.FREE_MEMORY_POINTER;
+    const pcOff = Memory.frameHeader.SAVED_RETURN_PC;
+
+    s = {
+      ...s,
+      instructions: [
+        ...s.instructions,
+        // fp
+        ...pushImm(FP, debug),
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [fp, ...]
+
+        // return_pc = mem[fp + SAVED_RETURN_PC]
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        ...pushImm(pcOff, debug),
+        { mnemonic: "ADD", opcode: 0x01, debug },
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [return_pc, fp, ...]
+
+        // old_fp = mem[fp] (SAVED_FP offset is 0)
+        { mnemonic: "SWAP1", opcode: 0x90, debug },
+        // Stack: [fp, return_pc, ...]
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        { mnemonic: "MLOAD", opcode: 0x51, debug },
+        // Stack: [old_fp, fp, return_pc, ...]
+
+        // mem[FRAME_POINTER] = old_fp
+        { mnemonic: "DUP1", opcode: 0x80, debug },
+        ...pushImm(FP, debug),
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        // Stack: [old_fp, fp, return_pc, ...]
+
+        // mem[FREE_MEMORY_POINTER] = fp (deallocate)
+        { mnemonic: "POP", opcode: 0x50, debug },
+        // Stack: [fp, return_pc, ...]
+        ...pushImm(FMP, debug),
+        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        // Stack: [return_pc, ...]
+
+        // JUMP
+        { mnemonic: "JUMP", opcode: 0x56, debug },
+      ],
+    };
+
+    return s;
+  }) as Transition<S, Stack>;
+}
+
+/** PUSH an integer as the smallest PUSHn. */
+function pushImm(value: number, debug: Ir.Block.Debug): Evm.Instruction[] {
+  if (value === 0) {
+    return [{ mnemonic: "PUSH0", opcode: 0x5f, debug }];
+  }
+  const bytes: number[] = [];
+  let v = value;
+  while (v > 0) {
+    bytes.unshift(v & 0xff);
+    v >>= 8;
+  }
+  const n = bytes.length;
+  return [
+    {
+      mnemonic: `PUSH${n}`,
+      opcode: 0x5f + n,
+      immediates: bytes,
+      debug,
+    },
+  ];
 }

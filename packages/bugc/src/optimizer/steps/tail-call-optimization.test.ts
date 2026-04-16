@@ -78,25 +78,35 @@ describe("TailCallOptimizationStep", () => {
 
     // Count call terminators after optimization
     let callsAfterCount = 0;
-    let hasLoopHeader = false;
+    let hasPreEntry = false;
 
     for (const [blockId, block] of optimizedFunc.blocks) {
       if (block.terminator.kind === "call") {
         callsAfterCount++;
       }
-      // Look for the loop header block
-      if (blockId.includes("_loop")) {
-        hasLoopHeader = true;
-        // Loop header should have phi nodes for parameters
-        expect(block.phis.length).toBe(factorialFunc.parameters.length);
+      // Look for the pre_entry trampoline block
+      if (blockId.includes("_pre")) {
+        hasPreEntry = true;
       }
     }
 
     // Tail-recursive calls should be eliminated
     expect(callsAfterCount).toBe(0);
 
-    // Should have created a loop header
-    expect(hasLoopHeader).toBe(true);
+    // Should have created a pre_entry trampoline
+    expect(hasPreEntry).toBe(true);
+
+    // Original entry block should have phi nodes
+    // for parameters
+    const origEntry = optimizedFunc.blocks.get(optimizedFunc.entry);
+    const origEntryTarget =
+      origEntry?.terminator.kind === "jump"
+        ? origEntry.terminator.target
+        : undefined;
+    const entryBlock = origEntryTarget
+      ? optimizedFunc.blocks.get(origEntryTarget)
+      : undefined;
+    expect(entryBlock?.phis.length).toBe(factorialFunc.parameters.length);
 
     // Should have recorded transformations
     const transformations = context.getTransformations();

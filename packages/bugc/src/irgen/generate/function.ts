@@ -46,12 +46,16 @@ export function* buildFunction(
   // Collect SSA variable metadata
   const ssaVariables = yield* Process.Functions.collectSsaMetadata();
 
+  const module_ = yield* Process.Modules.current();
+
   const function_: Ir.Function = {
     name,
     parameters: params,
     entry: "entry",
     blocks,
     ssaVariables: ssaVariables.size > 0 ? ssaVariables : undefined,
+    loc: body.loc ?? undefined,
+    sourceId: module_.sourceId,
   };
 
   return function_;

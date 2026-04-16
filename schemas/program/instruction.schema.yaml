@@ -43,6 +43,11 @@ properties:
   context:
     description: |
       The context known to exist following the execution of this instruction.
+      "Following execution" means the context's semantic facts (source
+      location, variables in scope, function invocation, etc.) hold from
+      this point forward. Pointers within the context reference the machine
+      state at this instruction's trace step, which is the state a debugger
+      observes when it encounters the instruction.
 
       This field is **optional**. Omitting it is equivalent to specifying the
       empty context value (`{}`).

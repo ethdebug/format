@@ -1,0 +1,79 @@
+---
+sidebar_position: 1
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Invocation contexts
+
+An invoke context marks an instruction that enters a function.
+The schema distinguishes three kinds of invocation — internal
+calls (via JUMP), external message calls (CALL/DELEGATECALL/
+STATICCALL), and contract creations (CREATE/CREATE2) — each
+with fields appropriate to the call mechanism.
+
+All variants extend the [function identity](/spec/program/context/function)
+schema and may include pointers to the call target, arguments,
+gas, value, and input data as applicable. See
+[Tracing execution](/docs/core-schemas/programs/tracing) for
+worked examples showing how debuggers use invoke and return
+contexts to reconstruct call stacks.
+
+## Pointer evaluation and instruction placement
+
+An instruction's context describes what is known _following_
+that instruction's execution: the fact that a function was
+invoked holds from that point forward. Pointers within the
+context reference the machine state at the instruction's trace
+step — the state a debugger observes when it encounters the
+instruction.
+
+For **internal calls**, this context is typically placed on the
+callee's entry JUMPDEST rather than the caller's JUMP. JUMP
+consumes its destination operand from the stack; at the entry
+JUMPDEST, the remaining stack (return address followed by
+arguments) is stable and directly addressable.
+
+For **external calls** and **contract creations**, this context
+marks the CALL/DELEGATECALL/STATICCALL/CREATE/CREATE2
+instruction itself, where the call parameters are visible on
+the stack.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+/>
+
+## Internal call
+
+An internal call represents a function call within the same contract.
+This context is typically placed on the callee's entry JUMPDEST; the
+caller's JUMP has already consumed the destination from the stack, so
+pointer slot values reflect the post-JUMP layout. The target points
+to a code location and arguments are passed on the stack.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/InternalCall"
+/>
+
+## External call
+
+An external call represents a call to another contract via CALL,
+DELEGATECALL, or STATICCALL. The type of call may be indicated by
+setting `delegate` or `static` to `true`. If neither flag is present,
+the invocation represents a regular CALL.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/ExternalCall"
+/>
+
+## Contract creation
+
+A contract creation represents a CREATE or CREATE2 operation. The
+presence of `salt` implies CREATE2.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
+  pointer="#/$defs/ContractCreation"
+/>

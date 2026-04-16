@@ -2,17 +2,23 @@ import type * as Ir from "#ir";
 import * as Evm from "#evm";
 import type { Stack } from "#evm";
 import { type Transition, operations, pipe } from "#evmgen/operations";
+import { Memory } from "#evmgen/analysis";
 
 import { valueId, annotateTop } from "./identify.js";
 
 /**
- * Load a value onto the stack
+ * Load a value onto the stack.
+ *
+ * When the function uses call frames (memory.frameSize is
+ * set), allocation offsets are relative to the frame base
+ * stored at FRAME_POINTER (0x80). The load sequence becomes
+ * PUSH 0x80 / MLOAD / PUSH offset / ADD / MLOAD.
  */
 export const loadValue = <S extends Stack>(
   value: Ir.Value,
   options?: Evm.InstructionOptions,
 ): Transition<S, readonly ["value", ...S]> => {
-  const { PUSHn, DUPn, MLOAD } = operations;
+  const { PUSHn, DUPn, ADD, MLOAD } = operations;
 
   const id = valueId(value);
 
@@ -35,6 +41,18 @@ export const loadValue = <S extends Stack>(
       // Check if in memory
       if (id in state.memory.allocations) {
         const offset = state.memory.allocations[id].offset;
+        if (state.memory.frameSize !== undefined) {
+          // FP-relative: load frame base, add offset
+          return builder
+            .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER), options), {
+              as: "offset",
+            })
+            .then(MLOAD(options), { as: "b" })
+            .then(PUSHn(BigInt(offset), options), { as: "a" })
+            .then(ADD(options), { as: "offset" })
+            .then(MLOAD(options))
+            .then(annotateTop(id));
+        }
         return builder
           .then(PUSHn(BigInt(offset), options), { as: "offset" })
           .then(MLOAD(options))

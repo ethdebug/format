@@ -9,14 +9,7 @@ description:
 type: object
 properties:
   type:
-    # Discriminate between reference and type based on presence of `id`
-    if:
-      required:
-        - id
-    then:
-      $ref: "schema:ethdebug/format/type/reference"
-    else:
-      $ref: "schema:ethdebug/format/type"
+    $ref: "schema:ethdebug/format/type/specifier"
 
 required:
   - type

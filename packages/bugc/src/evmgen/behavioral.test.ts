@@ -196,6 +196,76 @@ code {
       expect(await result.getStorage(1n)).toBe(15n);
     });
 
+    it("should return correct value from if/else branches", async () => {
+      const source = `name MultiBlockReturn;
+
+define {
+  function max(a: uint256, b: uint256) -> uint256 {
+    if (a > b) {
+      return a;
+    } else {
+      return b;
+    }
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = max(10, 20);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(20n);
+    });
+
+    it("should return correct value from both branches", async () => {
+      const source = `name BothBranches;
+
+define {
+  function max(a: uint256, b: uint256) -> uint256 {
+    if (a > b) {
+      return a;
+    } else {
+      return b;
+    }
+  };
+}
+
+storage {
+  [0] r1: uint256;
+  [1] r2: uint256;
+}
+
+create {
+  r1 = 0;
+  r2 = 0;
+}
+
+code {
+  r1 = max(10, 20);
+  r2 = max(30, 5);
+}`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(20n);
+      expect(await result.getStorage(1n)).toBe(30n);
+    });
+
     it("should call a function from another function", async () => {
       const source = `name FuncFromFunc;
 
@@ -259,6 +329,153 @@ code {
 
       expect(result.callSuccess).toBe(true);
       expect(await result.getStorage(0n)).toBe(3n);
+    });
+  });
+
+  describe("recursion", () => {
+    it("should support recursive function calls", async () => {
+      const source = `name RecursionTest;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(
+    n: uint256, target: uint256
+  ) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = count(0, 5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(5n);
+    });
+
+    // Known bug: nested call arguments (e.g. count(succ(n), target))
+    // fail at optimizer level 2+. Tracked separately.
+    it.skip("should support recursion at optimization level 2", async () => {
+      const source = `name RecursionOpt;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(
+    n: uint256, target: uint256
+  ) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = count(0, 5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: 2,
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(5n);
+    });
+
+    it("should support simple self-recursion", async () => {
+      const source = `name SimpleRecursion;
+
+define {
+  function factorial(n: uint256) -> uint256 {
+    if (n < 2) {
+      return 1;
+    } else {
+      return n * factorial(n - 1);
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = factorial(5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(120n);
+    });
+
+    it("should support recursion at optimization level 2", async () => {
+      const source = `name RecursionOpt;
+
+define {
+  function succ(n: uint256) -> uint256 {
+    return n + 1;
+  };
+  function count(
+    n: uint256, target: uint256
+  ) -> uint256 {
+    if (n < target) {
+      return count(succ(n), target);
+    } else {
+      return n;
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = count(0, 5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: 2,
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(5n);
+    });
+
+    it("should support factorial at optimization level 3", async () => {
+      const source = `name FactorialOpt;
+
+define {
+  function factorial(n: uint256) -> uint256 {
+    if (n < 2) {
+      return 1;
+    } else {
+      return n * factorial(n - 1);
+    }
+  };
+}
+
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = factorial(5); }`;
+
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: 3,
+      });
+
+      expect(result.callSuccess).toBe(true);
+      expect(await result.getStorage(0n)).toBe(120n);
     });
   });
 
