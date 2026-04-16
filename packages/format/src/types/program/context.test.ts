@@ -46,4 +46,8 @@ testSchemaGuards("ethdebug/format/program/context", [
     schema: "schema:ethdebug/format/program/context/function/revert",
     guard: Context.isRevert,
   },
+  {
+    schema: "schema:ethdebug/format/program/context/transform",
+    guard: Context.isTransform,
+  },
 ] as const);

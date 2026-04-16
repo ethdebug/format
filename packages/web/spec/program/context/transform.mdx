@@ -1,0 +1,91 @@
+---
+sidebar_position: 8
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Transform contexts
+
+A transform context annotates an instruction with the compiler
+transformations that produced it. The value is a list of short
+identifiers; the list may repeat the same identifier when the
+transformation has been applied multiple times—for example,
+doubly-inlined code carries `transform: ["inline", "inline"]`.
+
+<SchemaViewer
+  schema={{ id: "schema:ethdebug/format/program/context/transform" }}
+/>
+
+## Role: additional annotation
+
+A transform context does not replace semantic contexts. When the
+compiler inlines a function, the caller's debug info should still
+carry invoke/return contexts naming the inlined callee at the
+call boundary—so the debugger's logical call stack reflects the
+source-level structure. The transform context is _additional_
+information telling the debugger **how** the call was realized.
+
+Consumers are free to ignore transform contexts entirely; the
+invoke/return contexts alone always give a sound source-level
+view. Consumers that understand transform contexts can offer
+optimization-aware presentations:
+
+- Render inlined code as a collapsible block tied to the
+  original callee's source location.
+- Show which call sites were tail-call-optimized vs. realized as
+  full call/return sequences.
+- Explain apparent anomalies in the trace (e.g., a JUMP that
+  carries an invoke context is a TCO back-edge).
+
+## v1 identifiers
+
+Two identifiers are recognized in v1:
+
+- **`"inline"`** — the marked instruction is part of an inlined
+  function body. Surrounding invoke/return contexts name the
+  inlined callee; this marker tells the debugger the physical
+  code does not correspond to a separate activation record.
+- **`"tailcall"`** — the marked instruction is a
+  tail-call-optimized back-edge JUMP or continuation, where the
+  call was realized without pushing/popping a full activation.
+  A JUMP carrying a `tailcall` transform often co-occurs with a
+  `gather` context combining a return (from the previous
+  iteration) and an invoke (of the new iteration).
+
+The identifier set is extensible. Compilers may emit additional
+identifiers for optimizations not yet standardized; debuggers
+should preserve unfamiliar identifiers as opaque labels rather
+than rejecting them.
+
+## Repetition and composition
+
+Identifiers may repeat. A function inlined into another inlined
+function produces `transform: ["inline", "inline"]`. Different
+transformations compose:
+`transform: ["inline", "tailcall"]` marks an instruction inside
+an inlined body that was itself a TCO back-edge in the callee.
+
+Order in the array is not semantically significant—only the
+multiset of identifiers matters.
+
+## Composing with other contexts
+
+To carry a transform context alongside other contexts at the
+same instruction, use `gather`. A TCO back-edge JUMP, for
+example, typically combines three facts:
+
+```yaml
+gather:
+  - return:
+      identifier: "fact"
+      declaration: { ... }
+  - invoke:
+      jump: true
+      identifier: "fact"
+      target: { pointer: { location: code, offset: ... } }
+  - transform: ["tailcall"]
+```
+
+The return and invoke state the source-level facts (iteration N
+returned, iteration N+1 was invoked); the transform explains
+how the compiler realized that pair as a single JUMP.

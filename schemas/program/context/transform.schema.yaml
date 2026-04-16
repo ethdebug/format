@@ -1,0 +1,62 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/program/context/transform"
+
+title: ethdebug/format/program/context/transform
+description: |
+  Annotates an instruction with compiler transformations that
+  produced it. The value is a list of short identifiers naming
+  each transformation; the list may repeat an identifier when
+  the same transformation has been applied more than once (e.g.,
+  `["inline", "inline"]` for doubly-inlined code).
+
+  A transform context is *additional* annotation — it does not
+  replace semantic contexts. When the compiler inlines a
+  function, the invoke/return contexts for the logical call
+  should still be emitted at the call boundary so the debugger's
+  source-level call stack remains coherent. The transform
+  context tells debuggers **how** the call was realized.
+
+  Consumers that ignore transform contexts still get a sound
+  source-level view from the invoke/return contexts alone.
+  Consumers that understand transform contexts can offer
+  optimization-aware presentations — e.g., rendering inlined
+  code as a collapsible block, or reconciling tail-call-optimized
+  back-edges with the logical call stack.
+
+  The identifier set is extensible. v1 defines:
+
+  - `"inline"` — the marked instruction is part of an inlined
+    function body. Surrounding invoke/return contexts name the
+    inlined callee.
+  - `"tailcall"` — the marked instruction is a
+    tail-call-optimized back-edge JUMP or continuation, where
+    the call was realized as a direct jump (or reuse of the
+    caller's frame) rather than a standard call/return sequence.
+
+  Debuggers unfamiliar with a given identifier should preserve
+  it as an opaque label.
+
+  Order in the array is not semantically significant — only the
+  multiset of identifiers matters.
+
+type: object
+properties:
+  transform:
+    title: Applied transformations
+    description: |
+      List of transformation identifiers. Identifiers may
+      repeat; order is not semantically significant.
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 1
+
+required:
+  - transform
+
+examples:
+  - transform: ["inline"]
+  - transform: ["tailcall"]
+  - transform: ["inline", "inline"]
+  - transform: ["inline", "tailcall"]
