@@ -13,9 +13,9 @@
  * verifies the expected invoke/return contexts are present
  * with the right identifiers. TCO is a special case: the
  * back-edge JUMP that replaces the recursive call carries a
- * gather context with BOTH the previous iteration's return
- * and the new iteration's invoke, so frame depth stays
- * constant across the optimization.
+ * single flat context with BOTH the previous iteration's
+ * return and the new iteration's invoke discriminators, so
+ * frame depth stays constant across the optimization.
  */
 import { describe, it, expect } from "vitest";
 
@@ -64,7 +64,7 @@ interface CallSiteCounts {
   /**
    * JUMP carrying a return context (TCO back-edge, where
    * the previous iteration's return is paired with the new
-   * iteration's invoke in a gather).
+   * iteration's invoke on a single flat context).
    */
   returnJump: Record<string, number>;
 }
@@ -82,9 +82,13 @@ function unwrapLeaves(ctx: Format.Program.Context): Format.Program.Context[] {
 
 /**
  * Scan a program and count invoke/return contexts by
- * instruction type and function identifier. Handles gather
- * contexts so TCO's (return + invoke) JUMPs get counted in
- * both the invokeJump and returnJump buckets.
+ * instruction type and function identifier. Each leaf is
+ * checked for invoke and return independently (not as an
+ * either/or) so a flat multi-discriminator context — like
+ * the TCO back-edge JUMP carrying both `invoke` and
+ * `return` — gets counted in both buckets. Enclosing
+ * gather wrappers are still unwrapped for defensive
+ * coverage.
  */
 function countCallSites(program: Format.Program): CallSiteCounts {
   const counts: CallSiteCounts = {
@@ -108,7 +112,8 @@ function countCallSites(program: Format.Program): CallSiteCounts {
         } else if (mn === "JUMPDEST") {
           counts.invokeJumpdest[id] = (counts.invokeJumpdest[id] ?? 0) + 1;
         }
-      } else if (Context.isReturn(leaf)) {
+      }
+      if (Context.isReturn(leaf)) {
         const id = leaf.return.identifier ?? "?";
         if (mn === "JUMPDEST") {
           counts.returnJumpdest[id] = (counts.returnJumpdest[id] ?? 0) + 1;
@@ -409,7 +414,7 @@ code { r = check(3, 4); }`;
     // `count` is tail-recursive: the recursive call is in
     // return position. At levels 2 and 3, TCO rewrites the
     // recursive call into a back-edge JUMP. That JUMP
-    // carries a gather context with BOTH:
+    // carries a single flat context with BOTH discriminators:
     //   - return: previous iteration's return
     //   - invoke: new iteration's call
     //
@@ -472,26 +477,28 @@ code { r = count(0, 5); }`;
 
           // The TCO back-edge JUMP additionally carries a
           // return context for `count` (the previous
-          // iteration's return), paired with its invoke in
-          // a gather. This keeps the debugger's logical
-          // frame depth constant across the back-edge.
+          // iteration's return), paired with its invoke on
+          // a single flat context. This keeps the debugger's
+          // logical frame depth constant across the
+          // back-edge.
           expect(counts.returnJump).toEqual({ count: 1 });
 
-          // The invoke target inside the gather must be
-          // patched to the actual count entry, not left as
-          // the placeholder offset 0. This guards against
-          // patchInvokeTarget failing to walk into gather.
+          // The TCO back-edge JUMP is the one carrying both
+          // invoke and return discriminators on the same
+          // context object. Its invoke target must be patched
+          // to the actual count entry, not left as the
+          // placeholder offset 0 — this guards against
+          // patchInvokeTarget missing flat combined contexts.
           const tcoJump = program.instructions.find(
             (instr) =>
               instr.operation?.mnemonic === "JUMP" &&
               instr.context !== undefined &&
-              Context.isGather(instr.context),
+              Context.isInvoke(instr.context) &&
+              Context.isReturn(instr.context),
           );
           expect(tcoJump).toBeDefined();
-          const gather = tcoJump!.context as Format.Program.Context.Gather;
-          const invokeLeaf = gather.gather.find(Context.isInvoke);
-          expect(invokeLeaf).toBeDefined();
-          const invocation = invokeLeaf!.invoke;
+          const ctx = tcoJump!.context as Format.Program.Context.Invoke;
+          const invocation = ctx.invoke;
           expect(Invocation.isInternalCall(invocation)).toBe(true);
           const internalCall =
             invocation as Format.Program.Context.Invoke.Invocation.InternalCall;

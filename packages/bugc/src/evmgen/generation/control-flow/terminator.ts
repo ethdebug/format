@@ -411,7 +411,8 @@ function generateReturnEpilogue<S extends Stack>(
 /**
  * Build JUMP instruction options for a TCO-replaced tail call.
  *
- * The JUMP carries BOTH contexts in a gather:
+ * The JUMP carries BOTH discriminators on a single flat
+ * context object:
  *   - return: the previous iteration's return
  *   - invoke: the new iteration's call
  *
@@ -441,14 +442,12 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         }
       : undefined;
 
-  const returnCtx: Format.Program.Context.Return = {
+  const combined: Format.Program.Context.Return &
+    Format.Program.Context.Invoke = {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
     },
-  };
-
-  const invoke: Format.Program.Context.Invoke = {
     invoke: {
       jump: true as const,
       identifier: tailCall.function,
@@ -463,11 +462,7 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
     },
   };
 
-  const gather: Format.Program.Context.Gather = {
-    gather: [returnCtx, invoke],
-  };
-
-  return { debug: { context: gather as Format.Program.Context } };
+  return { debug: { context: combined as Format.Program.Context } };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
