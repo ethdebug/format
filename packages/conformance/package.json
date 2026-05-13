@@ -1,0 +1,57 @@
+{
+  "name": "@ethdebug/conformance",
+  "version": "0.1.0-0",
+  "description": "Reusable ETHDebug conformance runner and adapters",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "imports": {
+    "#adapters/anvil": {
+      "types": "./src/adapters/anvil.ts",
+      "default": "./dist/src/adapters/anvil.js"
+    },
+    "#adapters/bugc": {
+      "types": "./src/adapters/bugc.ts",
+      "default": "./dist/src/adapters/bugc.js"
+    },
+    "#adapters/soldb": {
+      "types": "./src/adapters/soldb.ts",
+      "default": "./dist/src/adapters/soldb.js"
+    },
+    "#adapters/solc": {
+      "types": "./src/adapters/solc.ts",
+      "default": "./dist/src/adapters/solc.js"
+    },
+    "#runner": {
+      "types": "./src/runner.ts",
+      "default": "./dist/src/runner.js"
+    },
+    "#types": {
+      "types": "./src/types.ts",
+      "default": "./dist/src/types.js"
+    }
+  },
+  "scripts": {
+    "prepare": "tsc",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:external": "vitest run --no-file-parallelism --maxWorkers=1"
+  },
+  "dependencies": {
+    "@ethdebug/bugc": "^0.1.0-0",
+    "@ethdebug/format": "^0.1.0-0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

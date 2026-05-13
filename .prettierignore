@@ -9,6 +9,9 @@ package-lock.json
 # Auto-generated files
 packages/format/src/schemas/yamls.ts
 
+# Solidity fixtures are compiler inputs; this repo has no Solidity Prettier parser.
+packages/conformance/test/fixtures/solc/**/*.sol
+
 # Docusaurus build output
 packages/web/.docusaurus/
 packages/web/build/

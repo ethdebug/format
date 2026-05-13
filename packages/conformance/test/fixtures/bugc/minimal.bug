@@ -1,0 +1,12 @@
+name MinimalConformance;
+
+storage {
+  [0] value: uint256;
+}
+
+create {
+  value = 1;
+}
+
+code {
+}
