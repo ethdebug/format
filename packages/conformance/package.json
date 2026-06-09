@@ -44,7 +44,8 @@
   },
   "dependencies": {
     "@ethdebug/bugc": "^0.1.0-0",
-    "@ethdebug/format": "^0.1.0-0"
+    "@ethdebug/format": "^0.1.0-0",
+    "@hyperjump/json-schema": "^1.17.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

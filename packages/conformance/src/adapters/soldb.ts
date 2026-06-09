@@ -67,6 +67,21 @@ export async function runSoldb(command: SoldbCommand): Promise<SoldbResult> {
   });
 }
 
+export function sourceBreakpointScript(target: string): string {
+  return `break ${target}\ncontinue\nq\n`;
+}
+
+export function observeSourceBreakpoint(
+  result: SoldbResult,
+  target: string,
+): { set: boolean; hit: boolean; stoppedAtTarget: boolean } {
+  return {
+    set: result.stdout.includes(`Breakpoint set at ${target}, PC`),
+    hit: result.stdout.includes("Breakpoint hit at step"),
+    stoppedAtTarget: result.stdout.includes(`${target}, PC`),
+  };
+}
+
 function contractName(artifact: EthdebugArtifact, fallback?: string): string {
   return (
     fallback ??

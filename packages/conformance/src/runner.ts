@@ -1,4 +1,11 @@
-import { Materials, isProgram } from "@ethdebug/format";
+import { Materials, isProgram, schemas } from "@ethdebug/format";
+import {
+  addSchema,
+  setMetaSchemaOutputFormat,
+  validate,
+  type OutputUnit,
+} from "@hyperjump/json-schema/draft-2020-12";
+import { BASIC } from "@hyperjump/json-schema/experimental";
 
 import { compileBugc } from "./adapters/bugc.js";
 import { runSoldb } from "./adapters/soldb.js";
@@ -14,6 +21,52 @@ import type {
 
 function issue(path: string, message: string): StaticConformanceIssue {
   return { path, message };
+}
+
+let schemasRegistered = false;
+
+function registerSchemas(): void {
+  if (schemasRegistered) {
+    return;
+  }
+
+  setMetaSchemaOutputFormat(BASIC);
+  for (const schema of Object.values(schemas)) {
+    addSchema(schema as any);
+  }
+  schemasRegistered = true;
+}
+
+function schemaErrors(output: { errors?: OutputUnit[] }): string {
+  const errors = output.errors ?? [];
+  const messages = errors
+    .map((error) => {
+      if (error.valid || error.keyword.endsWith("#validate")) {
+        return undefined;
+      }
+      return `${error.instanceLocation} fails ${error.absoluteKeywordLocation}`;
+    })
+    .filter((message): message is string => !!message);
+
+  return messages.length > 0 ? messages.join("; ") : "schema validation failed";
+}
+
+async function validateSchema(
+  schemaId: string,
+  value: unknown,
+  path: string,
+  issues: StaticConformanceIssue[],
+): Promise<void> {
+  registerSchemas();
+  const output = await validate(schemaId, value as any, BASIC);
+  if (!output.valid) {
+    issues.push(
+      issue(
+        path,
+        `does not validate against ${schemaId}: ${schemaErrors(output)}`,
+      ),
+    );
+  }
 }
 
 function sourceIds(artifact: EthdebugArtifact): Set<Materials.Id> {
@@ -69,9 +122,9 @@ export async function compileEthdebug(
   }
 }
 
-export function validateStaticConformance(
+export async function validateStaticConformance(
   artifact: EthdebugArtifact,
-): StaticConformanceResult {
+): Promise<StaticConformanceResult> {
   const issues: StaticConformanceIssue[] = [];
 
   if (artifact.programs.length === 0) {
@@ -87,10 +140,26 @@ export function validateStaticConformance(
       );
     }
   });
+  for (const [index, program] of artifact.programs.entries()) {
+    await validateSchema(
+      "schema:ethdebug/format/program",
+      program.program,
+      `programs[${index}]`,
+      issues,
+    );
+  }
 
   if (artifact.compilation && !Materials.isCompilation(artifact.compilation)) {
     issues.push(
       issue("compilation", "compilation is not valid materials/compilation"),
+    );
+  }
+  if (artifact.compilation) {
+    await validateSchema(
+      "schema:ethdebug/format/materials/compilation",
+      artifact.compilation,
+      "compilation",
+      issues,
     );
   }
 
@@ -105,22 +174,28 @@ export function validateStaticConformance(
       ),
     );
   }
+  if (artifact.resources) {
+    await validateSchema(
+      "schema:ethdebug/format/info/resources",
+      artifact.resources,
+      "resources",
+      issues,
+    );
+  }
 
   const knownSourceIds = sourceIds(artifact);
-  if (knownSourceIds.size > 0) {
-    artifact.programs.forEach((program, programIndex) => {
-      referencedSourceIds(program.program).forEach((sourceId) => {
-        if (!knownSourceIds.has(sourceId)) {
-          issues.push(
-            issue(
-              `programs[${programIndex}]`,
-              `${program.name} references unknown source id ${String(sourceId)}`,
-            ),
-          );
-        }
-      });
+  artifact.programs.forEach((program, programIndex) => {
+    referencedSourceIds(program.program).forEach((sourceId) => {
+      if (!knownSourceIds.has(sourceId)) {
+        issues.push(
+          issue(
+            `programs[${programIndex}]`,
+            `${program.name} references unknown source id ${String(sourceId)}`,
+          ),
+        );
+      }
     });
-  }
+  });
 
   return {
     ok: issues.length === 0,
@@ -136,7 +211,7 @@ export async function runConformanceFixture(
   soldb?: SoldbResult;
 }> {
   const artifact = await compileEthdebug(fixture.compile);
-  const staticResult = validateStaticConformance(artifact);
+  const staticResult = await validateStaticConformance(artifact);
   const soldb = fixture.soldb ? await runSoldb(fixture.soldb) : undefined;
 
   return {

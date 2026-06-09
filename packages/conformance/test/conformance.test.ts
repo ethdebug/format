@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { accessSync, constants } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,8 +11,14 @@ import {
   sendContractTransaction,
   startAnvil,
 } from "../src/adapters/anvil.js";
-import { runSoldb, writeSoldbDebugDir } from "../src/adapters/soldb.js";
+import {
+  observeSourceBreakpoint,
+  runSoldb,
+  sourceBreakpointScript,
+  writeSoldbDebugDir,
+} from "../src/adapters/soldb.js";
 import { compileEthdebug, validateStaticConformance } from "../src/runner.js";
+import type { EthdebugArtifact } from "../src/types.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const solc = process.env.ETHDEBUG_CONFORMANCE_SOLC;
@@ -36,6 +43,105 @@ function hasFoundry(): boolean {
   return executableExists(anvilExecutable) && executableExists(castExecutable);
 }
 
+function validCompilation() {
+  return {
+    id: "test-compilation",
+    compiler: {
+      name: "testc",
+      version: "0.0.0",
+    },
+    sources: [
+      {
+        id: 5,
+        path: "Counter.test",
+        contents: "contract Counter {}",
+        language: "Test",
+      },
+    ],
+  };
+}
+
+function validProgram() {
+  return {
+    contract: {
+      name: "Counter",
+      definition: {
+        source: {
+          id: 5,
+        },
+        range: {
+          offset: 0,
+          length: 19,
+        },
+      },
+    },
+    environment: "call",
+    instructions: [
+      {
+        offset: 0,
+        operation: {
+          mnemonic: "STOP",
+        },
+        context: {
+          code: {
+            source: {
+              id: 5,
+            },
+            range: {
+              offset: 0,
+              length: 19,
+            },
+          },
+        },
+      },
+    ],
+  };
+}
+
+function validResources() {
+  return {
+    compilation: validCompilation(),
+    types: {
+      CounterSlot: {
+        kind: "uint",
+        bits: 256,
+      },
+    },
+    pointers: {
+      CounterSlotStorage: {
+        expect: ["slot"],
+        for: {
+          location: "storage",
+          slot: "slot",
+        },
+      },
+    },
+  };
+}
+
+function validArtifact(
+  overrides: Partial<EthdebugArtifact> = {},
+): EthdebugArtifact {
+  return {
+    compiler: "solc",
+    sources: [
+      {
+        path: "Counter.test",
+        contents: "contract Counter {}",
+        language: "Test",
+      },
+    ],
+    programs: [
+      {
+        name: "Counter:runtime",
+        program: validProgram() as any,
+      },
+    ],
+    compilation: validCompilation() as any,
+    ...overrides,
+  };
+}
+
 describe("@ethdebug/conformance", () => {
   it("[bug] compiles BUG fixtures into valid ETHDebug programs", async () => {
     const artifact = await compileEthdebug({
@@ -43,7 +149,7 @@ describe("@ethdebug/conformance", () => {
       sourcePath: path.join(root, "test/fixtures/bugc/minimal.bug"),
     });
 
-    const result = validateStaticConformance(artifact);
+    const result = await validateStaticConformance(artifact);
     expect(result.issues).toEqual([]);
     expect(result.ok).toBe(true);
     expect(artifact.programs.length).toBeGreaterThan(0);
@@ -58,7 +164,7 @@ describe("@ethdebug/conformance", () => {
         sourcePath: path.join(root, "test/fixtures/solc/Counter.sol"),
       });
 
-      const result = validateStaticConformance(artifact);
+      const result = await validateStaticConformance(artifact);
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
       expect(
@@ -109,7 +215,7 @@ describe("@ethdebug/conformance", () => {
           path.join(sourceDir, "Math.sol"),
         ],
       });
-      const result = validateStaticConformance(artifact);
+      const result = await validateStaticConformance(artifact);
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
 
@@ -184,18 +290,121 @@ describe("@ethdebug/conformance", () => {
             debugDir.spec,
             "--interactive",
           ],
-          stdin: "break Counter.sol:8\ncontinue\nq\n",
+          stdin: sourceBreakpointScript("Counter.sol:8"),
         });
 
         expect(interactive.exitCode).toBe(0);
-        expect(interactive.stdout).toContain(
-          "Breakpoint set at Counter.sol:8, PC",
-        );
-        expect(interactive.stdout).toContain("Breakpoint hit at step");
-        expect(interactive.stdout).toContain("Counter.sol:8, PC");
+        expect(observeSourceBreakpoint(interactive, "Counter.sol:8")).toEqual({
+          set: true,
+          hit: true,
+          stoppedAtTarget: true,
+        });
       } finally {
         await anvil.stop();
       }
     },
   );
+
+  it("rejects malformed ETHDebug programs through JSON-Schema validation", async () => {
+    const artifact = validArtifact({
+      programs: [
+        {
+          name: "Counter:runtime",
+          program: {
+            ...validProgram(),
+            instructions: "not an instruction array",
+          } as any,
+        },
+      ],
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "programs[0]")).toBe(
+      true,
+    );
+    expect(
+      result.issues.some((issue) =>
+        issue.message.includes("schema:ethdebug/format/program"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects program source references when no compilation source table is present", async () => {
+    const result = await validateStaticConformance(
+      validArtifact({
+        compilation: undefined,
+        resources: undefined,
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.issues.some((issue) =>
+        issue.message.includes("references unknown source id 5"),
+      ),
+    ).toBe(true);
+  });
+
+  it("validates resources lookup tables for types and pointer templates", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      resources: validResources() as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects malformed resources lookup tables through JSON-Schema validation", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      resources: {
+        ...validResources(),
+        pointers: {
+          CounterSlotStorage: {
+            expect: ["slot"],
+          },
+        },
+      } as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "resources")).toBe(
+      true,
+    );
+  });
+
+  it("materializes non-empty resources into SolDB debug directories", async () => {
+    const debugDir = await writeSoldbDebugDir(
+      validArtifact({
+        compilation: undefined,
+        resources: validResources() as any,
+      }),
+      {
+        contractName: "Counter",
+      },
+    );
+
+    const resources = JSON.parse(
+      await readFile(path.join(debugDir.debugDir, "ethdebug.json"), "utf8"),
+    );
+
+    expect(resources.types.CounterSlot).toEqual({
+      kind: "uint",
+      bits: 256,
+    });
+    expect(resources.pointers.CounterSlotStorage).toEqual({
+      expect: ["slot"],
+      for: {
+        location: "storage",
+        slot: "slot",
+      },
+    });
+  });
 });

@@ -2,11 +2,19 @@ name: ETHDebug
 
 on:
   pull_request:
+    paths:
+      - ".github/workflows/ethdebug.yml"
+      - "package.json"
+      - "yarn.lock"
+      - "tsconfig*.json"
+      - "schemas/**"
+      - "packages/format/**"
+      - "packages/conformance/**"
   workflow_dispatch:
     inputs:
       solidity_ref:
         description: Solidity ref to build for solc
-        default: feature/ethdebug
+        default: develop
         required: true
       soldb_ref:
         description: SolDB ref to build
@@ -19,7 +27,7 @@ concurrency:
 
 env:
   FOUNDRY_VERSION: v1.0.0
-  SOLIDITY_REF: ${{ github.event.inputs.solidity_ref || 'feature/ethdebug' }}
+  SOLIDITY_REF: ${{ github.event.inputs.solidity_ref || 'develop' }}
   SOLDB_REF: ${{ github.event.inputs.soldb_ref || 'main' }}
 
 jobs:
@@ -32,14 +40,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: format
-
-      - name: Checkout Solidity
-        uses: actions/checkout@v4
-        with:
-          repository: walnuthq/solidity
-          ref: ${{ env.SOLIDITY_REF }}
-          path: solidity
-          submodules: recursive
 
       - name: Checkout SolDB
         uses: actions/checkout@v4
@@ -58,6 +58,23 @@ jobs:
       - name: Install format dependencies
         run: yarn install --frozen-lockfile
         working-directory: format
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch prebuilt solc with ETHDebug support
+        id: fetch-solc
+        continue-on-error: true
+        env:
+          CIRCLECI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install git+https://github.com/argotorg/solc-bench.git
+          solc-bench fetch "${SOLIDITY_REF}" \
+            --output "${GITHUB_WORKSPACE}/solidity/build/solc/solc" \
+            --force
 
       - name: Install Rust toolchain
         run: |
@@ -79,7 +96,17 @@ jobs:
         run: cargo build --bin soldb
         working-directory: soldb
 
+      - name: Checkout Solidity
+        if: steps.fetch-solc.outcome != 'success'
+        uses: actions/checkout@v4
+        with:
+          repository: argotorg/solidity
+          ref: ${{ env.SOLIDITY_REF }}
+          path: solidity
+          submodules: recursive
+
       - name: Install Solidity build dependencies
+        if: steps.fetch-solc.outcome != 'success'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -94,6 +121,7 @@ jobs:
             ninja-build
 
       - name: Cache Solidity ccache
+        if: steps.fetch-solc.outcome != 'success'
         uses: actions/cache@v4
         with:
           path: ~/.ccache
@@ -102,6 +130,7 @@ jobs:
             ${{ runner.os }}-solidity-ccache-
 
       - name: Build solc with ETHDebug support
+        if: steps.fetch-solc.outcome != 'success'
         run: |
           cmake \
             -S solidity \

@@ -18,6 +18,11 @@ The first layer checks the contract that every compiler should satisfy:
 - resources and compilations are valid when present,
 - source references used by programs resolve to compilation sources.
 
+Static validation uses both the package's TypeScript type guards and the
+published JSON-Schemas. The schemas are normative; the type guards remain as an
+extra compatibility signal for TypeScript consumers. Negative fixtures are kept
+alongside positive fixtures to prove the validator rejects malformed artifacts.
+
 The second layer checks real debugger consumers: tests can run a debugger,
 parse its output, and assert resources, source steps, frames, or values. SolDB
 is the first consumer backend, but the runner is not tied to SolDB. The SolDB
@@ -26,6 +31,11 @@ and then drive `soldb info resources` over it. The optional Foundry adapter
 starts a local `anvil --steps-tracing` node, deploys a compiled contract with
 `cast`, sends a transaction, and scripts SolDB's interactive REPL to assert
 source-line breakpoint set/hit behavior.
+
+Consumer adapters are black-box by default so the same harness can test CLIs,
+libraries, or services. The current SolDB adapter shells out to the CLI because
+that is the stable public integration point; a future SolDB library adapter can
+be added without changing the compiler conformance layer.
 
 External adapters are opt-in in tests:
 
