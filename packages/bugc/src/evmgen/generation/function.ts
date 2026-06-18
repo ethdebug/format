@@ -537,6 +537,8 @@ function patchInvokeInContext(
   const offset = functionRegistry[invoke.identifier];
   if (offset === undefined) return;
 
+  if (!invoke.target) return;
+
   const ptr = invoke.target.pointer;
   if (Format.Pointer.Region.isCode(ptr)) {
     ptr.offset = `0x${offset.toString(16)}`;

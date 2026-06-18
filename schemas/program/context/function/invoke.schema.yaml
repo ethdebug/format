@@ -88,6 +88,13 @@ $defs:
         description: |
           Pointer to the target of the invocation. For internal
           calls, this typically points to a code location.
+          Optional: may be omitted when there is no meaningful
+          target pointer to record, e.g., at the first
+          instruction of an inlined function body where the
+          inlining pass has elided the JUMP that would normally
+          carry this pointer. The callee identity
+          (`identifier`, `declaration`, `type`) is still
+          meaningful in this case.
         properties:
           pointer:
             $ref: "schema:ethdebug/format/pointer"
@@ -107,7 +114,7 @@ $defs:
           - pointer
         additionalProperties: false
 
-    required: [jump, target]
+    required: [jump]
 
   ExternalCall:
     title: External call
@@ -283,6 +290,26 @@ examples:
             - name: "amount"
               location: stack
               slot: 2
+
+  # -----------------------------------------------------------
+  # Inlined internal call: no target pointer
+  # -----------------------------------------------------------
+  # When the compiler inlines a function, the JUMP that would
+  # normally carry the invoke context has been elided — there
+  # is no physical call instruction and no code target to
+  # point at. The invoke context still records the callee's
+  # identity so the debugger can maintain a source-level call
+  # stack, and a `transform: ["inline"]` context (typically
+  # via `gather`) annotates the inlining.
+  - invoke:
+      identifier: "transfer"
+      declaration:
+        source:
+          id: 0
+        range:
+          offset: 128
+          length: 95
+      jump: true
 
   # -----------------------------------------------------------
   # External CALL: token.balanceOf(account)
