@@ -11,10 +11,22 @@ properties:
     $ref: "schema:ethdebug/format/pointer/identifier"
 
   location:
-    type: string
+    $ref: "#/$defs/Location"
 
 required:
   - location
+
+$defs:
+  Location:
+    type: string
+    enum:
+      - stack
+      - memory
+      - storage
+      - calldata
+      - returndata
+      - transient
+      - code
 
 examples:
   - name: "array-item"
