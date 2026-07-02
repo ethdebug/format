@@ -1,0 +1,80 @@
+---
+sidebar_position: 3
+---
+
+import { TracePlayground, TraceExample } from "@theme/ProgramExample";
+import {
+  counterIncrement,
+  functionCallAndReturn,
+  tailRecursiveSum,
+  tailRecursiveFactorial,
+} from "../core-schemas/programs/tracing-examples";
+
+# Trace playground
+
+See **ethdebug/format** in motion. Each example below compiles a small
+BUG program and lets you step through its execution trace — watching the
+source line, in-scope variables, call stack, and instruction context
+light up at every step.
+
+Click **"Try it"** on an example to open the trace drawer, then use the
+step controls to walk through execution. The examples build on each
+other: start at the top and work down, picking up one idea at a time.
+
+<TracePlayground>
+
+## Start here: a storage write
+
+`Counter` increments a single storage slot. Step through it to get a feel
+for the drawer — the highlighted source line, the value in storage, and
+the context attached to each instruction.
+
+<TraceExample
+  title="Counter increment"
+  description="Increments count from 0 to 1, storing the result"
+  source={counterIncrement}
+/>
+
+## Following a function call
+
+Real programs call functions, and the debugger follows them. Watch the
+call stack push a frame on the JUMP into `add` (an **invoke** context)
+and pop it on the JUMP back (a **return** context).
+
+<TraceExample
+  title="Function call and return"
+  description="Calls an internal add function and stores the result"
+  source={functionCallAndReturn}
+/>
+
+For the exact shape of invoke, return, and revert contexts, see the
+[function call spec](/spec/program/context/function/invoke) and the
+[tracing reference](/docs/core-schemas/programs/tracing).
+
+## Watching the optimizer
+
+Compilers rewrite code as they optimize, and **transform** contexts
+record what they did. Set the **Opt** selector to **O2** and step through
+these tail-recursive programs: the recursive call folds into a loop, and
+the back-edge JUMP carries `transform: ["tailcall"]` next to its invoke
+and return. The call stack stays flat instead of growing one frame per
+iteration.
+
+<TraceExample
+  title="Tail-recursive sum"
+  description="Sums 1..5 with an accumulator; TCO folds it into a loop"
+  source={tailRecursiveSum}
+/>
+
+<TraceExample
+  title="Tail-recursive factorial"
+  description="Computes 5! with an accumulator; TCO folds it into a loop"
+  source={tailRecursiveFactorial}
+/>
+
+Flip the **Opt** selector between **O0** and **O2** to see the call stack
+change. For how the `tailcall` transform composes with invoke/return, see
+the [transform context spec](/spec/program/context/transform) and the
+[tail-call optimization walkthrough](/docs/core-schemas/programs/tracing).
+
+</TracePlayground>
