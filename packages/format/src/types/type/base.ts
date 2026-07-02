@@ -36,7 +36,7 @@ export const isComplex = (value: unknown): value is Complex =>
   "contains" in value &&
   !!value.contains &&
   (isWrapper(value.contains) ||
-    (value.contains instanceof Array && value.contains.every(isWrapper)) ||
+    (Array.isArray(value.contains) && value.contains.every(isWrapper)) ||
     (typeof value.contains === "object" &&
       Object.values(value.contains).every(isWrapper)));
 

@@ -128,7 +128,7 @@ export namespace Pointer {
       typeof value === "object" &&
       Object.keys(value).length === 1 &&
       "group" in value &&
-      value.group instanceof Array &&
+      Array.isArray(value.group) &&
       value.group.length >= 1 &&
       value.group.every(isPointer);
 
@@ -290,7 +290,7 @@ export namespace Pointer {
 
     export type Operands = Expression[];
     export const isOperands = (value: unknown): value is Expression[] =>
-      value instanceof Array && value.every(isExpression);
+      Array.isArray(value) && value.every(isExpression);
 
     export namespace Arithmetic {
       export type Operation =
@@ -472,7 +472,7 @@ export namespace Pointer {
     typeof value === "object" &&
     Object.keys(value).length === 2 &&
     "expect" in value &&
-    value.expect instanceof Array &&
+    Array.isArray(value.expect) &&
     value.expect.every(isIdentifier) &&
     "for" in value &&
     isPointer(value.for);
