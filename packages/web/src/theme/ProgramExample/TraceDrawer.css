@@ -25,6 +25,61 @@
   overflow: hidden;
 }
 
+/* Header actions */
+.trace-drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opt-level-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: 6px;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.opt-level-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-content-secondary);
+  margin-right: 2px;
+}
+
+.opt-level-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-color-content-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--ifm-font-family-monospace);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.opt-level-btn:hover:not(:disabled) {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.opt-level-btn.active {
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: white;
+}
+
+.opt-level-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Header buttons */
 .trace-drawer-btn {
   padding: 6px 14px;
@@ -204,11 +259,37 @@
   border-left: 3px solid var(--ifm-color-danger);
 }
 
+/* Transform / tail-call accent (no ifm purple semantic, so
+   a theme-tolerant purple tint with content-colored text). */
+.call-info-tailcall {
+  background: rgba(130, 80, 223, 0.12);
+  color: var(--ifm-color-content);
+  border-left: 3px solid #8250df;
+}
+
+.call-stack-tailcall {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(130, 80, 223, 0.15);
+  color: var(--ifm-color-content);
+  border: 1px solid rgba(130, 80, 223, 0.45);
+}
+
 /* Trace panels */
 .trace-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Single row that fills the flex height, so the panels
+     absorb vertical space when the drawer is drag-expanded
+     (an `auto` row would size to content and leave dead
+     space below). */
+  grid-template-rows: 1fr;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   gap: 1px;
   background: var(--ifm-color-emphasis-200);
@@ -216,6 +297,9 @@
 
 .trace-panel {
   background: var(--ifm-background-color);
+  /* min-height:0 lets the grid item shrink so its own
+     overflow scrolls instead of expanding the grid. */
+  min-height: 0;
   overflow: auto;
 }
 
@@ -246,6 +330,72 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--ifm-color-primary-darkest);
+}
+
+.opcode-gas {
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ifm-color-content-secondary);
+}
+
+/* Collapsible right-column sections */
+.trace-section {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.trace-section-summary {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-content-secondary);
+  background: var(--ifm-background-surface-color);
+  cursor: pointer;
+  user-select: none;
+  list-style-position: inside;
+}
+
+.trace-section-summary:hover {
+  color: var(--ifm-color-content);
+}
+
+/* Transform annotations */
+.transform-list {
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transform-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.transform-tag {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--ifm-color-content);
+  background: rgba(130, 80, 223, 0.15);
+  border: 1px solid rgba(130, 80, 223, 0.45);
+}
+
+.transform-gloss {
+  color: var(--ifm-color-content-secondary);
+}
+
+.variable-value {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-content);
+  word-break: break-all;
 }
 
 .current-opcode .opcode-pc {
