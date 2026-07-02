@@ -88,9 +88,11 @@ the debugger's call stack: the debugger reconstructs a **virtual
 activation** for it (see
 [Reconstructing activations](#reconstructing-activations)).
 
-Because inlining may copy a small callee into several call sites,
-the _same_ callee can produce several independent virtual
-activations across a trace — one per inlined site.
+Compilers typically inline small or leaf non-recursive callees at
+every call site, so the _same_ callee can produce several
+independent virtual activations across a trace — one per inlined
+site. (The precise eligibility rule is a compiler choice; the
+format is the same however inlining decisions are made.)
 
 ## External call
 
