@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-229/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-229/assets/css/styles.9592130c.css">
-<script src="/format/pr-preview/pr-229/assets/js/runtime~main.f3ec0a48.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-229/assets/js/runtime~main.c1b32457.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-229/assets/js/main.af0a3b44.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -135,11 +135,12 @@ would be unsound.</p>
 <code>type</code>) is optional, so a virtual activation degrades gracefully —
 from full identity down to an anonymous inlined frame — with no
 fabricated data. A debugger renders whatever is present.</p>
-<p>A virtual activation reliably carries structural information
-(identity, declaration, and per-instruction source ranges) and can
-resolve inlined locals that the compiler homed in addressable
-memory, via <a class="" href="/format/pr-preview/pr-229/spec/program/context/variables"><code>variables</code></a>
-contexts. It does <strong>not</strong> carry <code>invoke.arguments</code> or
+<p>An inlining compiler typically preserves the callee&#x27;s declaration
+and per-instruction source ranges for a virtual activation, and can
+resolve inlined locals that it homed in addressable memory, via
+<a class="" href="/format/pr-preview/pr-229/spec/program/context/variables"><code>variables</code></a> contexts. Identity
+fields remain optional and degrade gracefully as described above.
+Such a compiler does <strong>not</strong> emit <code>invoke.arguments</code> or
 <code>return.data</code> pointers in this first version; individual parameter
 values may still be inspectable as locals inside the body where
 they are memory-homed. A virtual activation with no resolvable
