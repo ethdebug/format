@@ -208,7 +208,13 @@
 .trace-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Single row that fills the flex height, so the panels
+     absorb vertical space when the drawer is drag-expanded
+     (an `auto` row would size to content and leave dead
+     space below). */
+  grid-template-rows: 1fr;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   gap: 1px;
   background: var(--ifm-color-emphasis-200);
@@ -216,6 +222,9 @@
 
 .trace-panel {
   background: var(--ifm-background-color);
+  /* min-height:0 lets the grid item shrink so its own
+     overflow scrolls instead of expanding the grid. */
+  min-height: 0;
   overflow: auto;
 }
 
