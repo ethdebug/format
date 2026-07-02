@@ -4,6 +4,11 @@ sidebar_position: 4
 
 import SpecLink from "@site/src/components/SpecLink";
 import SchemaExample from "@site/src/components/SchemaExample";
+import { TraceExample } from "@theme/ProgramExample";
+import {
+  tailRecursiveSum,
+  tailRecursiveFactorial,
+} from "./tracing-examples";
 
 # Tracing execution
 
@@ -172,6 +177,75 @@ instead of (or alongside) a reason pointer:
   }
 }`}
 </SchemaExample>
+
+## Tail-call optimization
+
+The recursion examples above push a new frame for every call — step
+through them and watch the call stack grow. A compiler can often avoid
+that. When a recursive call sits in **tail position** — its result is
+returned directly, with no further work after it — the compiler can
+reuse the current frame instead of pushing a new one. This is
+**tail-call optimization** (TCO), and it turns recursion into a loop.
+
+The two programs below are written so bugc's optimizer folds them. Each
+accumulates its result in an `acc` parameter and hands it to the next
+call in tail position, so no work is left pending on the stack.
+
+Use the optimizer control on each example to switch between level 0
+(no optimization) and level 2 (TCO on), then step through and compare
+the call stack.
+
+<TraceExample
+  title="Tail-recursive sum"
+  description="Sums 1..5 with an accumulator; TCO folds it into a loop"
+  source={tailRecursiveSum}
+/>
+
+<TraceExample
+  title="Tail-recursive factorial"
+  description="Computes 5! with an accumulator; TCO folds it into a loop"
+  source={tailRecursiveFactorial}
+/>
+
+At level 0, each `sum`/`fact` call is a real invoke/return pair and the
+call stack grows one frame per iteration. At level 2, the recursive
+call becomes a **back-edge**: a single JUMP that ends one iteration and
+begins the next without pushing a frame. The call stack stays flat.
+
+That one JUMP carries three facts at once, composed as sibling keys on a
+single context — the flat form described on the
+[transform context](/spec/program/context/transform) page:
+
+<SchemaExample
+  schema="program/context/transform"
+  href="/spec/program/context/transform"
+  title="TCO back-edge: return + invoke + transform"
+>
+  {`{
+  "return": {
+    "identifier": "sum"
+  },
+  "invoke": {
+    "jump": true,
+    "identifier": "sum",
+    "target": {
+      "pointer": { "location": "code", "offset": "0x33", "length": 1 }
+    }
+  },
+  "transform": ["tailcall"]
+}`}
+</SchemaExample>
+
+The `return` and `invoke` state the source-level facts — the previous
+iteration returned, the next was invoked — and `transform: ["tailcall"]`
+explains how the compiler realized that pair as one JUMP. Because no
+value crosses a frame boundary here, the `return` carries no `data` and
+the `invoke` no `arguments`: the accumulator is threaded through the
+loop directly, and the invoke `target` points at the loop header the
+JUMP re-enters. A debugger that ignores the transform still reads a
+coherent invoke/return sequence; one that understands it can show that
+the call stack isn't really growing, and present the recursion as the
+loop it compiled to.
 
 ## Trace data structure
 
