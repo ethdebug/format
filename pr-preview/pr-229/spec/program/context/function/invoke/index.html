@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-229/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-229/assets/css/styles.9592130c.css">
-<script src="/format/pr-preview/pr-229/assets/js/runtime~main.048168e5.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-229/assets/js/runtime~main.d29b60a7.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-229/assets/js/main.af0a3b44.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -76,9 +76,11 @@ optional) is preserved, so the inlined function still appears on
 the debugger&#x27;s call stack: the debugger reconstructs a <strong>virtual
 activation</strong> for it (see
 <a href="#reconstructing-activations" class="">Reconstructing activations</a>).</p>
-<p>Because inlining may copy a small callee into several call sites,
-the <em>same</em> callee can produce several independent virtual
-activations across a trace — one per inlined site.</p>
+<p>Compilers typically inline small or leaf non-recursive callees at
+every call site, so the <em>same</em> callee can produce several
+independent virtual activations across a trace — one per inlined
+site. (The precise eligibility rule is a compiler choice; the
+format is the same however inlining decisions are made.)</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="external-call">External call<a href="#external-call" class="hash-link" aria-label="Direct link to External call" title="Direct link to External call" translate="no">​</a></h2>
 <p>An external call represents a call to another contract via CALL,
 DELEGATECALL, or STATICCALL. The type of call may be indicated by
