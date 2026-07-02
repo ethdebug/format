@@ -51,6 +51,16 @@ interface CompileResult {
   bytecode?: BytecodeOutput;
 }
 
+/** bugc optimizer levels the tracer can compile at. */
+type OptLevel = 0 | 1 | 2 | 3;
+const OPT_LEVELS: readonly OptLevel[] = [0, 1, 2, 3];
+const OPT_LEVEL_TITLES: Record<OptLevel, string> = {
+  0: "No optimization",
+  1: "Level 1 — constant folding, propagation, dead-code elimination",
+  2: "Level 2 — adds CSE, tail-call optimization, jump optimization",
+  3: "Level 3 — adds block/return/read-write merging",
+};
+
 function TraceDrawerContent(): JSX.Element {
   const { example, isOpen, toggleDrawer, closeDrawer, setSource } =
     useTracePlayground();
@@ -70,8 +80,8 @@ function TraceDrawerContent(): JSX.Element {
   // annotation on TCO back-edges) appear. A ref mirrors it
   // so the example-load effect can read the current value
   // without re-running when only the level changes.
-  const [optimizerLevel, setOptimizerLevel] = useState<0 | 2>(0);
-  const optimizerLevelRef = useRef<0 | 2>(optimizerLevel);
+  const [optimizerLevel, setOptimizerLevel] = useState<OptLevel>(0);
+  const optimizerLevelRef = useRef<OptLevel>(optimizerLevel);
   optimizerLevelRef.current = optimizerLevel;
 
   // Build PC -> instruction map for source highlighting
@@ -282,7 +292,7 @@ function TraceDrawerContent(): JSX.Element {
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
   const compileAndTrace = useCallback(
-    async (sourceCode: string, level: 0 | 2) => {
+    async (sourceCode: string, level: OptLevel) => {
       setIsCompiling(true);
       setCompileResult(null);
       setTrace([]);
@@ -386,7 +396,7 @@ function TraceDrawerContent(): JSX.Element {
   }, [source, compileAndTrace, optimizerLevel]);
 
   const handleLevelChange = useCallback(
-    (level: 0 | 2) => {
+    (level: OptLevel) => {
       if (level === optimizerLevel) return;
       setOptimizerLevel(level);
       compileAndTrace(source, level);
@@ -456,26 +466,21 @@ function TraceDrawerContent(): JSX.Element {
         aria-label="Optimizer level"
       >
         <span className="opt-level-label">Opt</span>
-        <button
-          className={`opt-level-btn ${optimizerLevel === 0 ? "active" : ""}`}
-          onClick={() => handleLevelChange(0)}
-          disabled={isBusy}
-          type="button"
-          title="Compile without optimizations"
-          aria-pressed={optimizerLevel === 0}
-        >
-          O0
-        </button>
-        <button
-          className={`opt-level-btn ${optimizerLevel === 2 ? "active" : ""}`}
-          onClick={() => handleLevelChange(2)}
-          disabled={isBusy}
-          type="button"
-          title="Compile with optimizations (level 2 — enables TCO)"
-          aria-pressed={optimizerLevel === 2}
-        >
-          O2
-        </button>
+        {OPT_LEVELS.map((level) => (
+          <button
+            key={level}
+            className={`opt-level-btn ${
+              optimizerLevel === level ? "active" : ""
+            }`}
+            onClick={() => handleLevelChange(level)}
+            disabled={isBusy}
+            type="button"
+            title={OPT_LEVEL_TITLES[level]}
+            aria-pressed={optimizerLevel === level}
+          >
+            O{level}
+          </button>
+        ))}
       </div>
       <button
         className="trace-drawer-btn trace-btn"
