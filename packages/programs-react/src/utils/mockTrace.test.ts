@@ -115,3 +115,76 @@ describe("buildCallStack TCO frame replacement", () => {
     expect(stack[0].isTailCall).toBeFalsy();
   });
 });
+
+// The compiler (bugc #217) emits the TCO back-edge as a
+// single FLAT context object carrying return + invoke +
+// transform keys together (not a gather). This is the
+// actual production shape, so it needs direct coverage.
+describe("flat (production) TCO back-edge shape", () => {
+  const flatBackEdge = {
+    return: { identifier: "sum" },
+    invoke: {
+      jump: true,
+      identifier: "sum",
+      target: { pointer: { location: "code", offset: 0, length: 1 } },
+    },
+    transform: ["tailcall"],
+  };
+
+  it("extracts the tailcall transform from the flat object", () => {
+    expect(extractTransformFromInstruction(instr(0, flatBackEdge))).toEqual([
+      "tailcall",
+    ]);
+  });
+
+  it("marks isTailCall on the flat back-edge", () => {
+    const info = extractCallInfoFromInstruction(instr(0, flatBackEdge));
+    expect(info?.isTailCall).toBe(true);
+  });
+
+  it("replaces the frame in place for a flat back-edge", () => {
+    const trace: TraceStep[] = [
+      { pc: 0, opcode: "JUMPDEST" },
+      { pc: 10, opcode: "JUMP" },
+    ];
+    const program = {
+      instructions: [
+        instr(0, { invoke: { jump: true, identifier: "sum" } }),
+        instr(10, flatBackEdge),
+      ],
+    } as unknown as Program;
+    const pcToInstruction = buildPcToInstructionMap(program);
+
+    const stack = buildCallStack(trace, pcToInstruction, 1);
+    expect(stack).toHaveLength(1);
+    expect(stack[0].identifier).toBe("sum");
+    expect(stack[0].isTailCall).toBe(true);
+    expect(stack[0].callType).toBe("internal");
+  });
+
+  it("loses tail-call handling when the marker is stripped", () => {
+    // Guards the task #10 failure mode: with the transform
+    // marker gone, the flat {return, invoke} back-edge is
+    // treated as a plain invoke — the frame-replacement path
+    // never runs, so no frame is flagged as a tail call and
+    // the widget can no longer render it as a frame reuse.
+    const stripped = {
+      return: { identifier: "sum" },
+      invoke: { jump: true, identifier: "sum" },
+    };
+    const trace: TraceStep[] = [
+      { pc: 0, opcode: "JUMPDEST" },
+      { pc: 10, opcode: "JUMP" },
+    ];
+    const program = {
+      instructions: [
+        instr(0, { invoke: { jump: true, identifier: "sum" } }),
+        instr(10, stripped),
+      ],
+    } as unknown as Program;
+    const pcToInstruction = buildPcToInstructionMap(program);
+
+    const stack = buildCallStack(trace, pcToInstruction, 1);
+    expect(stack.some((f) => f.isTailCall)).toBe(false);
+  });
+});
