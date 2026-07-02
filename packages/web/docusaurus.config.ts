@@ -144,12 +144,6 @@ const config: Config = {
           label: "Documentation",
         },
         {
-          to: "/docs/explore",
-          label: "Playground",
-          position: "left",
-          activeBaseRegex: `/docs/explore`,
-        },
-        {
           to: "/spec/overview",
           label: "Specification",
           position: "left",
