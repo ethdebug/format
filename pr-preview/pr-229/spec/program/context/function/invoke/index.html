@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-229/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-229/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-229/assets/css/styles.9592130c.css">
-<script src="/format/pr-preview/pr-229/assets/js/runtime~main.d29b60a7.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-229/assets/js/runtime~main.f3ec0a48.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-229/assets/js/main.af0a3b44.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -103,21 +103,29 @@ encountered, in trace order.</li>
 </ul>
 <p>An inlined callee therefore appears on the call stack exactly as a
 non-inlined one does. Two kinds of activation differ only in how
-they are backed:</p>
+they are backed, distinguished by the presence of an <code>inline</code>
+transform marker — <strong>not</strong> by whether <code>target</code> is present:</p>
 <ul>
-<li class="">A <strong>real activation</strong> comes from an <code>invoke</code> that carries a
-<code>target</code>. It is corroborated by runtime state — a return address
-on the EVM stack — and occupies a real stack region.</li>
-<li class="">A <strong>virtual activation</strong> comes from an <code>invoke</code> with <strong>no
-<code>target</code></strong> carrying <code>transform: [&quot;inline&quot;]</code>. It has <strong>no runtime
-corroboration</strong> and occupies no EVM stack region; it exists only
-in the debug annotations.</li>
+<li class="">A <strong>real activation</strong> comes from an <code>invoke</code> <strong>without</strong> an
+<code>inline</code> transform marker. It corresponds to an actual call at
+runtime, corroborated by machine state — a return address on the
+EVM stack — and occupies a real stack region.</li>
+<li class="">A <strong>virtual activation</strong> comes from an <code>invoke</code> whose context
+carries <code>transform: [&quot;inline&quot;]</code> (an <code>inline</code> identifier in its
+transform list). It has <strong>no runtime corroboration</strong> and occupies
+no EVM stack region; it exists only in the debug annotations. Its
+<code>target</code> is typically omitted (the JUMP was elided), but
+<code>target</code>-absence is not itself the signal — a real internal call
+may also omit <code>target</code> (see <a href="#internal-call" class="">Internal call</a>). The
+reliable discriminator is the <code>inline</code> marker.</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="activation-membership">Activation membership<a href="#activation-membership" class="hash-link" aria-label="Direct link to Activation membership" title="Direct link to Activation membership" translate="no">​</a></h3>
 <p>An instruction belongs to the innermost open virtual activation if
-and only if it carries <code>transform: [&quot;inline&quot;]</code>; the nesting depth
-is the number of <code>&quot;inline&quot;</code> occurrences (doubly-inlined code
-carries <code>[&quot;inline&quot;, &quot;inline&quot;]</code>). Membership is determined
+and only if its context carries an <code>inline</code> identifier in its
+transform list — so composed markers such as <code>[&quot;inline&quot;, &quot;fold&quot;]</code>
+still confer membership. The nesting depth is the number of
+<code>&quot;inline&quot;</code> occurrences in the list (doubly-inlined code carries
+<code>[&quot;inline&quot;, &quot;inline&quot;]</code>). Membership is determined
 per-instruction from this marker, <strong>not</strong> from instruction ranges:
 optimization passes may relocate or interleave an inlined body, so
 a positional &quot;everything between the invoke and the return&quot; rule
