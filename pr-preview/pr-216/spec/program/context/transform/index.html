@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Transform contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-216/spec/program/context/transform"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Transform contexts | ethdebug format"><meta data-rh="true" name="description" content="A transform context annotates an instruction with the compiler"><meta data-rh="true" property="og:description" content="A transform context annotates an instruction with the compiler"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-216/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-216/spec/program/context/transform"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-216/spec/program/context/transform" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-216/spec/program/context/transform" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Transform contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-216/spec/program/context/transform"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-216/assets/css/styles.04022388.css">
-<script src="/format/pr-preview/pr-216/assets/js/runtime~main.42773e7c.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-216/assets/js/runtime~main.88ccb745.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-216/assets/js/main.05a8d65b.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -41,9 +41,12 @@ carries an invoke context is a TCO back-edge).</li>
 <p>Four identifiers are recognized in v1:</p>
 <ul>
 <li class=""><strong><code>&quot;inline&quot;</code></strong> — the marked instruction is part of an inlined
-function body. Surrounding invoke/return contexts name the
-inlined callee; this marker tells the debugger the physical
-code does not correspond to a separate activation record.</li>
+function body. A surrounding <code>invoke</code>/<code>return</code> pair names the
+inlined callee, and a debugger reconstructs a <em>virtual
+activation</em> for it (see
+<a class="" href="/format/pr-preview/pr-216/spec/program/context/function/invoke#inlined-internal-calls">inlined internal calls</a>).
+This marker tells the debugger the physical code has no separate
+runtime activation record.</li>
 <li class=""><strong><code>&quot;tailcall&quot;</code></strong> — the marked instruction is a
 tail-call-optimized back-edge JUMP or continuation, where the
 call was realized without pushing/popping a full activation.
@@ -93,6 +96,15 @@ context:</p>
 (iteration N returned, iteration N+1 was invoked); the
 <code>transform</code> explains how the compiler realized that pair as a
 single JUMP.</p>
+<p>An inlined call site combines an invoke with an inline transform.
+The invoke marks the call kind with <code>jump: true</code> but omits
+<code>target</code>, because the JUMP was elided:</p>
+<div class="language-yaml codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-yaml codeBlock_TAPP thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_AdAo"><span class="token-line" style="color:#393A34"><span class="token key atrule" style="color:#00a4db">invoke</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">jump</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token boolean important" style="color:#36acaa">true</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">identifier</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">&quot;square&quot;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">declaration</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">...</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key atrule" style="color:#00a4db">transform</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">[</span><span class="token string" style="color:#e3116c">&quot;inline&quot;</span><span class="token punctuation" style="color:#393A34">]</span><br></span></code></pre></div></div>
+<p>Each instruction of the inlined body also carries
+<code>transform: [&quot;inline&quot;]</code>, and a matching <code>return</code> closes the
+<a class="" href="/format/pr-preview/pr-216/spec/program/context/function/invoke#reconstructing-activations">virtual activation</a>.
+A small helper inlined at several call sites produces one such
+<code>invoke</code>/<code>return</code> pair — and one virtual activation — per site.</p>
 <p>Reach for <a class="" href="/format/pr-preview/pr-216/spec/program/context/gather"><code>gather</code></a> only when
 two contexts would collide on the same key — e.g., two
 independent <code>variables</code> blocks or two
