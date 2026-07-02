@@ -350,3 +350,36 @@ export function preserveSubInstructionDebug(
     ...additionalContexts.map((c) => ({ context: c })),
   );
 }
+
+/**
+ * Add one or more `transform` optimization markers to a debug
+ * context, composing them as a flat sibling key alongside any
+ * existing context discriminators (per the flat-composition
+ * convention: gather is only for same-key collisions).
+ *
+ * Markers are appended to any existing `transform` array on the
+ * context, so an instruction touched by multiple passes
+ * accumulates the multiset — e.g. a folded value later merged
+ * yields `transform: ["fold", "coalesce"]`.
+ */
+export function addTransform(
+  debug: Ir.Instruction.Debug | undefined,
+  ...ids: Format.Program.Context.Transform.Identifier[]
+): Ir.Instruction.Debug {
+  const existing = debug?.context;
+
+  const prior: Format.Program.Context.Transform.Identifier[] =
+    existing &&
+    "transform" in existing &&
+    Array.isArray((existing as Format.Program.Context.Transform).transform)
+      ? (existing as Format.Program.Context.Transform).transform
+      : [];
+
+  const transform = [...prior, ...ids];
+
+  if (!existing) {
+    return { context: { transform } };
+  }
+
+  return { context: { ...existing, transform } };
+}
