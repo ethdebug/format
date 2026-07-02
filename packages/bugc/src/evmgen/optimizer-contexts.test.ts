@@ -513,3 +513,65 @@ code { r = count(0, 5); }`;
     }
   });
 });
+
+/**
+ * Count invoke/return contexts that carry a `declaration`
+ * (source id + range for the called/returning function's
+ * declaration). Walks gather wrappers and flat
+ * multi-discriminator contexts.
+ */
+function countDeclarations(program: Format.Program): {
+  invoke: number;
+  return: number;
+} {
+  let invoke = 0;
+  let ret = 0;
+  for (const instr of program.instructions) {
+    if (!instr.context) continue;
+    for (const leaf of unwrapLeaves(instr.context)) {
+      if (Context.isInvoke(leaf) && leaf.invoke.declaration) invoke += 1;
+      if (Context.isReturn(leaf) && leaf.return.declaration) ret += 1;
+    }
+  }
+  return { invoke, return: ret };
+}
+
+/**
+ * Regression: the optimizer must preserve each function's
+ * `loc`/`sourceId` so evmgen can emit `declaration` source
+ * ranges on invoke/return contexts. cloneFunction used to
+ * drop these fields, so every declaration vanished from
+ * optimization level 1 upward.
+ */
+describe("optimizer preserves function declaration info", () => {
+  const source = `name Recur;
+
+define {
+  function count(n: uint256, target: uint256) -> uint256 {
+    if (n < target) { return count(n + 1, target); }
+    else { return n; }
+  };
+}
+
+storage { [0] r: uint256; }
+create { r = 0; }
+code { r = count(0, 5); }`;
+
+  it("carries declarations at level 0 (baseline)", async () => {
+    const program = await compileAt(source, 0);
+    const decls = countDeclarations(program);
+    expect(decls.invoke).toBeGreaterThan(0);
+    expect(decls.return).toBeGreaterThan(0);
+  });
+
+  for (const level of [1, 2, 3] as const) {
+    it(`preserves declarations through optimization at level ${level}`, async () => {
+      const program = await compileAt(source, level);
+      const decls = countDeclarations(program);
+      // The optimizer must not strip function loc/sourceId:
+      // invoke/return contexts still carry declaration ranges.
+      expect(decls.invoke).toBeGreaterThan(0);
+      expect(decls.return).toBeGreaterThan(0);
+    });
+  }
+});

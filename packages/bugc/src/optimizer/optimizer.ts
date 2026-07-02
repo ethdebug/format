@@ -230,6 +230,12 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
       parameters: [...func.parameters],
       entry: func.entry,
       blocks: clonedBlocks,
+      // Preserve declaration source info so evmgen can emit
+      // `declaration` ranges on invoke/return contexts.
+      // Dropping these here erased all declarations from
+      // optimization level 1 upward.
+      ...(func.loc ? { loc: func.loc } : {}),
+      ...(func.sourceId !== undefined ? { sourceId: func.sourceId } : {}),
     };
   }
 
