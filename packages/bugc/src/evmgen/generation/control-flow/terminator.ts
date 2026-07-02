@@ -1,5 +1,6 @@
 import type * as Format from "@ethdebug/format";
 import type * as Ir from "#ir";
+import { Utils as IrUtils } from "#ir";
 import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
@@ -440,7 +441,7 @@ function generateReturnEpilogue<S extends Stack>(
  * resolved later by patchInvokeTarget.
  */
 function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
-  debug: { context: Format.Program.Context };
+  debug: Ir.Instruction.Debug;
 } {
   const declaration =
     tailCall.declarationLoc && tailCall.declarationSourceId
@@ -451,8 +452,7 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
       : undefined;
 
   const combined: Format.Program.Context.Return &
-    Format.Program.Context.Invoke &
-    Format.Program.Context.Transform = {
+    Format.Program.Context.Invoke = {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
@@ -469,10 +469,18 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         },
       },
     },
-    transform: ["tailcall"],
   };
 
-  return { debug: { context: combined as Format.Program.Context } };
+  // Route through the shared helper so all transform emission
+  // (fold/tailcall/coalesce/...) composes consistently: the
+  // `transform` marker becomes a flat sibling key appended to
+  // any existing transform array.
+  return {
+    debug: IrUtils.addTransform(
+      { context: combined as Format.Program.Context },
+      "tailcall",
+    ),
+  };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
