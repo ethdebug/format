@@ -27,6 +27,12 @@
   border-left: 3px solid var(--programs-revert-accent, #cf222e);
 }
 
+.call-info-banner-tailcall {
+  background: var(--programs-transform-bg, #f3ecff);
+  color: var(--programs-transform-text, #8250df);
+  border-left: 3px solid var(--programs-transform-accent, #a475f9);
+}
+
 .call-info-refs {
   display: flex;
   flex-direction: column;
