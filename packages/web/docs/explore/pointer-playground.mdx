@@ -4,99 +4,244 @@ sidebar_position: 2
 
 import { PointerPlayground, PointerExample } from "@theme/PointersExample";
 
+export const solidityStringPointer = {
+  define: { slot: 0 },
+  in: {
+    group: [
+      {
+        name: "length-flag",
+        location: "storage",
+        slot: "slot",
+        offset: 31,
+        length: 1,
+      },
+      {
+        if: { $remainder: [{ $sum: [{ $read: "length-flag" }, 1] }, 2] },
+        then: {
+          define: {
+            "string-length": { $quotient: [{ $read: "length-flag" }, 2] },
+          },
+          in: {
+            name: "string",
+            location: "storage",
+            slot: "slot",
+            offset: 0,
+            length: "string-length",
+          },
+        },
+        else: {
+          group: [
+            {
+              name: "long-string-length-data",
+              location: "storage",
+              slot: "slot",
+              offset: 0,
+              length: 32,
+            },
+            {
+              define: {
+                "string-length": {
+                  $quotient: [
+                    { $difference: [{ $read: "long-string-length-data" }, 1] },
+                    2,
+                  ],
+                },
+                "start-slot": { $keccak256: [{ $wordsized: "slot" }] },
+                "total-slots": {
+                  $quotient: [
+                    { $sum: ["string-length", { $difference: [32, 1] }] },
+                    32,
+                  ],
+                },
+              },
+              in: {
+                list: {
+                  count: "total-slots",
+                  each: "i",
+                  is: {
+                    define: {
+                      "current-slot": { $sum: ["start-slot", "i"] },
+                      "previous-length": { $product: ["i", 32] },
+                    },
+                    in: {
+                      if: {
+                        $difference: [
+                          "string-length",
+                          { $sum: ["previous-length", 32] },
+                        ],
+                      },
+                      then: {
+                        name: "string",
+                        location: "storage",
+                        slot: "current-slot",
+                      },
+                      else: {
+                        name: "string",
+                        location: "storage",
+                        slot: "current-slot",
+                        offset: 0,
+                        length: {
+                          $difference: ["string-length", "previous-length"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  },
+};
+
 # Pointer playground
 
-A **pointer** is a recipe for finding data in the EVM: it says where bytes
-live and, when needed, how to compute that location from the current
-machine state. The examples below let you watch pointers resolve against
-concrete state — click **"Try it"** on any of them to open the playground
-and see the bytes each one selects.
+A **pointer** is a recipe for finding data in the EVM: where bytes live,
+and how to compute that location from the current machine state. The
+examples below resolve real Solidity storage layouts against concrete
+state — click **"Try it"** to open the playground and watch each pointer
+select its bytes.
 
-These four cover the whole idea, from a fixed byte range to a computed
-one. For the full reference, follow the links under each example.
+They build up from a single packed variable to the full short/long string
+layout, where the format really earns its keep.
 
 <PointerPlayground>
 
-## A byte range in memory
+## A packed storage variable
 
-The simplest pointer names a location and a byte range. Memory, calldata,
-returndata, and code are byte-addressable, so their regions use `offset`
-and `length`.
-
-<PointerExample
-  title="Memory region (slice-based)"
-  pointer={{ location: "memory", offset: "0x40", length: 32 }}
-  state={{
-    memory:
-      "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080",
-  }}
-  description="Reads 32 bytes starting at offset 0x40 (the free memory pointer)"
-/>
-
-## A slot in storage
-
-Storage, transient storage, and the stack are organized in 32-byte slots,
-so their regions use `slot` instead of a byte offset.
+Solidity packs small values so several share a slot. This pointer reads a
+20-byte `address` stored at byte 12 of slot 0 — a sub-slot region, offset
+and length inside a single word.
 
 <PointerExample
-  title="Storage slot (slot-based)"
-  pointer={{ location: "storage", slot: 5 }}
-  state={{
-    storage: {
-      "0x05":
-        "0x00000000000000000000000000000000000000000000000000000000000003e8",
-    },
-  }}
-  description="Reads the full 32-byte word at storage slot 5"
-/>
-
-See [Regions](/docs/core-schemas/pointers/regions) for every location and
-addressing scheme.
-
-## Several fields at once
-
-A **collection** bundles regions together. A `group` names each member —
-ideal for a struct whose fields you want to read as a unit.
-
-<PointerExample
-  title="Struct with two fields"
-  pointer={{
-    group: [
-      { name: "len", location: "storage", slot: 0 },
-      { name: "data", location: "storage", slot: 1 },
-    ],
-  }}
+  title="Packed address (sub-slot)"
+  pointer={{ location: "storage", slot: 0, offset: 12, length: 20 }}
   state={{
     storage: {
       "0x00":
-        "0x0000000000000000000000000000000000000000000000000000000000000005",
-      "0x01":
-        "0x48656c6c6f000000000000000000000000000000000000000000000000000000",
+        "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
     },
   }}
+  description="Reads a 20-byte address packed into the low bytes of slot 0"
 />
 
-See [Collections](/docs/core-schemas/pointers/collections) for groups,
-lists, conditionals, and scopes.
+## A dynamic array element
 
-## A location computed from state
-
-When a location depends on runtime values, an **expression** computes it.
-Here `$sum` adds three numbers to derive a storage slot.
+A `uint256[]` at slot 5 stores its elements starting at `keccak256(5)`, so
+element `i` lives at `keccak256(5) + i`. This pointer computes the slot for
+element 2.
 
 <PointerExample
-  title="Computed storage slot ($sum)"
-  pointer={{ location: "storage", slot: { $sum: [100, 32, 4] } }}
+  title="Dynamic array element"
+  pointer={{
+    define: { "element-index": 2 },
+    in: {
+      name: "element",
+      location: "storage",
+      slot: { $sum: [{ $keccak256: [{ $wordsized: 5 }] }, "element-index"] },
+    },
+  }}
   state={{
     storage: {
-      "0x88":
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2":
         "0x000000000000000000000000000000000000000000000000000000000000002a",
     },
   }}
-  description="Resolves slot 100 + 32 + 4 = 136 (0x88)"
+  description="Computes keccak256(5) + 2 to find element index 2"
 />
 
-See [Expressions](/docs/core-schemas/pointers/expressions) for arithmetic,
-reads, and hashing.
+## A mapping value
+
+A `mapping(address => uint256)` at slot 3 stores each value at
+`keccak256(key, 3)`. This pointer reads the key from the stack, hashes it
+with the slot, and resolves the value's location.
+
+<PointerExample
+  title="Mapping value"
+  pointer={{
+    group: [
+      { name: "key-region", location: "stack", slot: 0 },
+      {
+        name: "value",
+        location: "storage",
+        slot: { $keccak256: [{ $read: "key-region" }, { $wordsized: 3 }] },
+      },
+    ],
+  }}
+  state={{
+    stack: [
+      "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+    ],
+    storage: {
+      "0x8bd687de6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b":
+        "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    },
+  }}
+  description="Computes keccak256(key, 3) — the standard Solidity mapping slot"
+/>
+
+## A Solidity storage string
+
+Strings are the real test. Solidity packs a **short** string (31 bytes or
+fewer) directly into its slot, with `2 × length` in the slot's last byte. A
+**long** string instead stores `2 × length + 1` in the slot and puts the
+data at `keccak256(slot)`, spanning as many following slots as it needs.
+
+One pointer handles both: it reads the last byte, and the parity of that
+flag selects the short branch or the long branch. It's the same pointer in
+both examples below — only the state changes.
+
+### Short string
+
+Slot 0 packs the bytes of `"Hello"` with `0x0a` (that's `2 × 5`) in its
+last byte. The flag is even, so the pointer reads the string straight out
+of the slot.
+
+<PointerExample
+  title="Short string (in-slot)"
+  pointer={solidityStringPointer}
+  state={{
+    storage: {
+      "0x00":
+        "0x48656c6c6f00000000000000000000000000000000000000000000000000000a",
+    },
+  }}
+  description={'Resolves "Hello" — a 5-byte string packed into slot 0'}
+/>
+
+### Long string
+
+Here the flag is `0x51` (`2 × 40 + 1`), so the pointer takes the long
+branch: it computes the length as `(0x51 − 1) / 2 = 40`, finds the data at
+`keccak256(0)`, and reads 40 bytes across that slot and the next.
+
+<PointerExample
+  title="Long string (keccak256 data)"
+  pointer={solidityStringPointer}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000051",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563":
+        "0x657468646562756720666f726d6174206c6f6e672d737472696e672064656d6f",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564":
+        "0x2c20343062797465000000000000000000000000000000000000000000000000",
+    },
+  }}
+  description={
+    'Resolves a 40-byte string across keccak256(0) and the following slot'
+  }
+/>
+
+## Learn more
+
+- [Regions](/docs/core-schemas/pointers/regions) for locations and
+  addressing schemes
+- [Collections](/docs/core-schemas/pointers/collections) for groups,
+  lists, and conditionals
+- [Expressions](/docs/core-schemas/pointers/expressions) for arithmetic,
+  reads, and `$keccak256`
 
 </PointerPlayground>
