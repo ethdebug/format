@@ -3,9 +3,11 @@
  *
  * Replaces calls to eligible internal functions with a copy of
  * the callee's body spliced into the caller, so no runtime
- * JUMP/frame is used. Inlined instructions keep their original
- * source mapping (the callee's `operationDebug`), so inlined code
- * still maps back to the callee.
+ * JUMP/frame is used. Each inlined instruction is annotated with
+ * `transform: ["inline"]` and the body is bracketed by a virtual
+ * invoke/return (identity + declaration, no code target — the
+ * #213 optional-target signal) so a debugger can reconstruct a
+ * virtual activation.
  *
  * v1 eligibility: internal (user-defined), non-recursive callee
  * that is either a leaf (calls nothing) or below a small size
@@ -13,6 +15,7 @@
  * site is inlined is deleted.
  */
 import * as Ir from "#ir";
+import type * as Format from "@ethdebug/format";
 
 import {
   BaseOptimizationStep,
@@ -155,17 +158,46 @@ export class InliningStep extends BaseOptimizationStep {
       return nid ? { ...v, id: nid } : v;
     };
 
+    // Declaration for the callee (for the virtual invoke/return).
+    const declaration =
+      callee.loc && callee.sourceId
+        ? { source: { id: callee.sourceId }, range: callee.loc }
+        : undefined;
+
+    const inlineInvoke: Format.Program.Context.Invoke["invoke"] = {
+      jump: true,
+      identifier: callee.name,
+      ...(declaration ? { declaration } : {}),
+      // no `target` — JUMP is elided (virtual activation)
+    };
+    const inlineReturn: Format.Program.Context.Return["return"] = {
+      identifier: callee.name,
+      ...(declaration ? { declaration } : {}),
+    };
+
     const entryBlockId = blockRename.get(callee.entry)!;
+    const returnBlockIds: string[] = [];
 
     // --- clone + remap callee blocks ---
     for (const [origId, origBlock] of callee.blocks) {
       const newId = blockRename.get(origId)!;
+      const isEntry = origId === callee.entry;
 
-      // Cloned instructions keep their preserved source
-      // `operationDebug` (remapInstruction deep-clones it), so
-      // inlined code still maps back to the callee's source.
       const instructions: Ir.Instruction[] = origBlock.instructions.map(
-        (inst) => remapInstruction(inst, remapValue, idRename),
+        (inst, idx) => {
+          const cloned = remapInstruction(inst, remapValue, idRename);
+          // Mark every inlined instruction for membership.
+          cloned.operationDebug = addInlineMarker(cloned.operationDebug);
+          // Virtual invoke on the first instruction of the entry.
+          if (isEntry && idx === 0) {
+            cloned.operationDebug = mergeDiscriminator(
+              cloned.operationDebug,
+              "invoke",
+              inlineInvoke,
+            );
+          }
+          return cloned;
+        },
       );
 
       const phis: Ir.Block.Phi[] = (origBlock.phis ?? []).map((phi) =>
@@ -175,12 +207,27 @@ export class InliningStep extends BaseOptimizationStep {
       let terminator: Ir.Block.Terminator;
       const t = origBlock.terminator;
       if (t.kind === "return") {
-        // return -> jump to the caller's continuation, preserving
-        // the return's own source mapping.
+        returnBlockIds.push(newId);
+        // Virtual return marker on the last body instruction of
+        // this block (or a synthetic carrier if the block is empty
+        // is not needed — return blocks always have ≥1 emitted
+        // instruction in practice; if empty, the marker rides the
+        // jump's debug below).
+        if (instructions.length > 0) {
+          const last = instructions[instructions.length - 1];
+          last.operationDebug = mergeDiscriminator(
+            last.operationDebug,
+            "return",
+            inlineReturn,
+          );
+        }
+        // return -> jump to the caller's continuation
         terminator = {
           kind: "jump",
           target: call.continuation,
-          operationDebug: t.operationDebug,
+          operationDebug: addInlineMarker(
+            mergeDiscriminator({}, "return", inlineReturn),
+          ),
         };
       } else {
         terminator = remapTerminator(t, remapValue, blockRename);
@@ -477,4 +524,40 @@ function recomputePredecessors(fn: Ir.Function): void {
       fn.blocks.get(tgt)?.predecessors.add(id);
     }
   }
+}
+
+// ---- debug-context composition ----
+
+function addInlineMarker(
+  debug: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  return Ir.Utils.addTransform(debug, "inline");
+}
+
+/**
+ * Attach a discriminator (invoke/return) as a flat sibling key on
+ * a debug context, threading into a gather leaf if present so the
+ * marker never sits as a sibling of `gather`.
+ */
+function mergeDiscriminator(
+  debug: Ir.Instruction.Debug,
+  key: "invoke" | "return",
+  value: unknown,
+): Ir.Instruction.Debug {
+  const existing = debug.context as Record<string, unknown> | undefined;
+  if (existing && "gather" in existing && Array.isArray(existing.gather)) {
+    // Add as a new gather child rather than a sibling of gather.
+    return {
+      context: {
+        ...existing,
+        gather: [...(existing.gather as unknown[]), { [key]: value }],
+      } as Format.Program.Context,
+    };
+  }
+  return {
+    context: {
+      ...(existing ?? {}),
+      [key]: value,
+    } as Format.Program.Context,
+  };
 }

@@ -2,15 +2,21 @@
  * Behavioral + structural tests for the function-inlining pass
  * (level 2).
  *
- * Inlining must (a) preserve runtime behavior exactly, and
- * (b) actually replace eligible calls with the callee's body —
- * a fully-inlined callee is deleted and no `call` to it remains.
+ * Inlining must (a) preserve runtime behavior exactly, (b) actually
+ * replace eligible calls with the callee's body — a fully-inlined
+ * callee is deleted and no `call` to it remains — and (c) emit
+ * `transform: ["inline"]` on the inlined body so the debugger can
+ * reconstruct a virtual activation for the call.
  */
 import { describe, it, expect } from "vitest";
 
 import { compile } from "#compiler";
 import * as Ir from "#ir";
 import { executeProgram } from "#test/evm/behavioral";
+import type * as Format from "@ethdebug/format";
+import { Program } from "@ethdebug/format";
+
+const { Context } = Program;
 
 async function optimizedIr(
   source: string,
@@ -54,6 +60,48 @@ function countCalls(module: Ir.Module, callee: string): number {
   return n;
 }
 
+function leaves(ctx: Format.Program.Context): Format.Program.Context[] {
+  if (Context.isGather(ctx)) return ctx.gather.flatMap(leaves);
+  if ("pick" in ctx && Array.isArray((ctx as { pick: unknown[] }).pick)) {
+    return (ctx as { pick: Format.Program.Context[] }).pick.flatMap(leaves);
+  }
+  return [ctx];
+}
+
+/** Count instructions carrying a `transform: ["inline"]` marker. */
+async function inlineMarks(
+  source: string,
+  level: 0 | 1 | 2 | 3,
+): Promise<number> {
+  const result = await compile({
+    to: "bytecode",
+    source,
+    optimizer: { level },
+  });
+  if (!result.success) {
+    const errors = result.messages.error ?? [];
+    throw new Error(
+      "compile failed:\n" +
+        errors
+          .map((e: { message?: string }) => e.message ?? String(e))
+          .join("\n"),
+    );
+  }
+  let count = 0;
+  for (const instr of result.value.bytecode.runtimeInstructions) {
+    const ctx = instr.debug?.context;
+    if (!ctx) continue;
+    if (
+      [ctx, ...leaves(ctx)].some(
+        (c) => Context.isTransform(c) && c.transform.includes("inline"),
+      )
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 describe("function inlining (level 2)", () => {
   describe("leaf helper, single return", () => {
     const source = `name Demo;
@@ -88,6 +136,14 @@ code { r = add(3, 4); }`;
       expect(countCalls(ir, "add")).toBe(0);
       expect(ir.functions.has("add")).toBe(false);
     });
+
+    it("emits no inline marks at level 0", async () => {
+      expect(await inlineMarks(source, 0)).toBe(0);
+    });
+
+    it("emits inline marks at level 2", async () => {
+      expect(await inlineMarks(source, 2)).toBeGreaterThan(0);
+    });
   });
 
   describe("multiple call sites", () => {
@@ -112,10 +168,11 @@ code {
         expect(res.callSuccess).toBe(true);
         expect(await res.getStorage(0n)).toBe(30n);
       }
-      // Both sites inlined; callee deleted.
+      // Both sites inlined; callee deleted; body marked.
       const ir = await optimizedIr(source, 2);
       expect(countCalls(ir, "dbl")).toBe(0);
       expect(ir.functions.has("dbl")).toBe(false);
+      expect(await inlineMarks(source, 2)).toBeGreaterThan(0);
     });
   });
 
@@ -152,6 +209,8 @@ code { r = count(0, 5); }`;
       const ir = await optimizedIr(source, 2);
       expect(ir.functions.has("succ")).toBe(true);
       expect(countCalls(ir, "succ")).toBeGreaterThan(0);
+      // And no inline markers: succ was not inlined.
+      expect(await inlineMarks(source, 2)).toBe(0);
     });
   });
 });
