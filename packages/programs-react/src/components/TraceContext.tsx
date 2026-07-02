@@ -118,6 +118,8 @@ export interface ResolvedCallInfo {
   panic?: number;
   /** Resolved pointer refs */
   pointerRefs: ResolvedPointerRef[];
+  /** True when a tailcall transform is present (TCO). */
+  isTailCall?: boolean;
 }
 
 /**
@@ -136,6 +138,8 @@ export interface ResolvedCallFrame {
     value?: string;
     error?: string;
   }>;
+  /** True when this frame was (re)entered via a tail call. */
+  isTailCall?: boolean;
 }
 
 /**
@@ -382,6 +386,7 @@ export function TraceProvider({
       identifier: frame.identifier,
       stepIndex: frame.stepIndex,
       callType: frame.callType,
+      isTailCall: frame.isTailCall,
       resolvedArgs: argCacheRef.current.get(frame.stepIndex),
     }));
     setResolvedCallStack(initial);
@@ -477,6 +482,7 @@ export function TraceProvider({
       callType: extractedCallInfo.callType,
       argumentNames: extractedCallInfo.argumentNames,
       panic: extractedCallInfo.panic,
+      isTailCall: extractedCallInfo.isTailCall,
       pointerRefs: extractedCallInfo.pointerRefs.map((ref) => ({
         label: ref.label,
         pointer: ref.pointer,

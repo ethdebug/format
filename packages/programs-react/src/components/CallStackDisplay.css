@@ -48,3 +48,15 @@
 .call-stack-parens {
   color: var(--programs-text-muted, #888);
 }
+
+.call-stack-tailcall {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 0.8em;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--programs-transform-bg, #f3ecff);
+  color: var(--programs-transform-text, #8250df);
+  border: 1px solid var(--programs-transform-accent, #a475f9);
+}

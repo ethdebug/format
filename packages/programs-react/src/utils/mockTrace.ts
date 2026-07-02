@@ -2,7 +2,7 @@
  * Utilities for creating mock execution traces.
  */
 
-import type { Program } from "@ethdebug/format";
+import { Program } from "@ethdebug/format";
 
 /**
  * A single step in an execution trace.
@@ -119,6 +119,49 @@ export interface CallInfo {
     label: string;
     pointer: unknown;
   }>;
+  /**
+   * True when a `tailcall` transform is present on the same
+   * instruction — the call was realized as a tail-call
+   * (TCO), reusing the current frame rather than nesting.
+   */
+  isTailCall?: boolean;
+}
+
+/**
+ * Extract compiler `transform` annotation identifiers
+ * (e.g. "tailcall", "inline") from an instruction's context
+ * tree, walking gather/pick composites.
+ */
+export function extractTransformFromInstruction(
+  instruction: Program.Instruction,
+): string[] {
+  if (!instruction.context) {
+    return [];
+  }
+  return extractTransformFromContext(instruction.context);
+}
+
+function extractTransformFromContext(context: Program.Context): string[] {
+  if (Program.Context.isTransform(context)) {
+    return context.transform;
+  }
+
+  // gather/pick are still key-probed here, matching the
+  // sibling extractors in this file (a broader guard
+  // migration is tracked separately).
+  const ctx = context as unknown as Record<string, unknown>;
+
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    return (ctx.gather as Program.Context[]).flatMap(
+      extractTransformFromContext,
+    );
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    return (ctx.pick as Program.Context[]).flatMap(extractTransformFromContext);
+  }
+
+  return [];
 }
 
 /**
@@ -131,7 +174,14 @@ export function extractCallInfoFromInstruction(
   if (!instruction.context) {
     return undefined;
   }
-  return extractCallInfoFromContext(instruction.context);
+  const info = extractCallInfoFromContext(instruction.context);
+  if (!info) {
+    return undefined;
+  }
+  const isTailCall = extractTransformFromContext(instruction.context).includes(
+    "tailcall",
+  );
+  return isTailCall ? { ...info, isTailCall: true } : info;
 }
 
 function extractCallInfoFromContext(
@@ -274,6 +324,22 @@ export interface CallFrame {
   argumentNames?: string[];
   /** Individual argument pointers for value resolution */
   argumentPointers?: unknown[];
+  /**
+   * True when this frame was (re)entered via a tail call
+   * (TCO). The frame was reused in place rather than nested.
+   */
+  isTailCall?: boolean;
+}
+
+/**
+ * Determine the call type of a raw invoke record from its
+ * discriminant key.
+ */
+function invokeCallType(inv: Record<string, unknown>): CallFrame["callType"] {
+  if ("jump" in inv) return "internal";
+  if ("message" in inv) return "external";
+  if ("create" in inv) return "create";
+  return undefined;
 }
 
 /**
@@ -296,6 +362,34 @@ export function buildCallStack(
 
     const callInfo = extractCallInfoFromInstruction(instruction);
     if (!callInfo) {
+      continue;
+    }
+
+    if (callInfo.isTailCall) {
+      // A TCO back-edge carries both return and invoke on a
+      // single instruction: the previous iteration returns
+      // and the next iteration is invoked, reusing the same
+      // activation. Replace the top frame in place (depth is
+      // unchanged) rather than popping then pushing. Pull the
+      // new iteration's identity from the invoke leaf, since
+      // the return leaf may be surfaced first.
+      const ctx = instruction.context as Record<string, unknown>;
+      const inv = findInvokeField(ctx);
+      const argResult = extractArgInfo(instruction);
+      const invId = inv?.identifier as string | undefined;
+      const frame: CallFrame = {
+        identifier: invId ?? callInfo.identifier,
+        stepIndex: i,
+        callType: inv ? invokeCallType(inv) : callInfo.callType,
+        argumentNames: argResult?.names,
+        argumentPointers: argResult?.pointers,
+        isTailCall: true,
+      };
+      if (stack.length > 0) {
+        stack[stack.length - 1] = frame;
+      } else {
+        stack.push(frame);
+      }
       continue;
     }
 
