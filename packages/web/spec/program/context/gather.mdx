@@ -26,7 +26,8 @@ works.
 Reach for `gather` only when two or more facts would collide on
 the same key. The canonical cases are:
 
-- **Multiple `frame`s** — an instruction that maps
+- **Multiple [`frame`](/spec/program/context/frame)s** — an instruction
+  that maps
   simultaneously to an IR step and a source step needs one
   entry per frame, each with its own `code` range.
 - **Multiple `variables` blocks** — when separate pipeline
