@@ -359,9 +359,12 @@ export function buildCallStack(
     // instruction. The activation is reused, not nested or
     // unwound, so depth is unchanged: replace the top frame in
     // place rather than pushing a second frame or popping it away.
-    // Identity comes from the invoke leaf. The reused frame is
-    // marked isTailCall so the call-stack chip / info banner can
-    // surface the tailcall transform.
+    // Identity comes from the invoke leaf. Frame reuse is detected
+    // structurally (return + invoke together), independent of any
+    // transform marker, so the call stack stays correct even for
+    // consumers that ignore transforms. The isTailCall *label*
+    // (which drives the call-stack chip / info banner) follows the
+    // `tailcall` transform marker, surfaced via callInfo.isTailCall.
     const ctx = instruction.context as Record<string, unknown> | undefined;
     const backEdgeInvoke = ctx ? findInvokeField(ctx) : undefined;
     if (ctx && backEdgeInvoke && hasReturnContext(ctx)) {
@@ -374,7 +377,7 @@ export function buildCallStack(
         callType: invokeCallType(backEdgeInvoke),
         argumentNames: argResult?.names,
         argumentPointers: argResult?.pointers,
-        isTailCall: true,
+        isTailCall: callInfo.isTailCall,
       };
       if (stack.length > 0) {
         stack[stack.length - 1] = frame;

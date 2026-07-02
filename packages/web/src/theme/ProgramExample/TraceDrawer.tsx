@@ -25,6 +25,15 @@ import {
 } from "@ethdebug/bugc-react";
 import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
 import { dereference, Data, type Machine } from "@ethdebug/pointers";
+import {
+  buildCallStack,
+  extractCallInfoFromInstruction,
+  extractTransformFromInstruction,
+  type CallFrame,
+  type CallInfo,
+  type TraceStep as ProgramsTraceStep,
+} from "@ethdebug/programs-react";
+import type { Program } from "@ethdebug/format";
 import { Drawer } from "@theme/Drawer";
 import { useTracePlayground } from "./TracePlaygroundContext";
 
@@ -48,6 +57,16 @@ interface CompileResult {
   error?: string;
   bytecode?: BytecodeOutput;
 }
+
+/** bugc optimizer levels the tracer can compile at. */
+type OptLevel = 0 | 1 | 2 | 3;
+const OPT_LEVELS: readonly OptLevel[] = [0, 1, 2, 3];
+const OPT_LEVEL_TITLES: Record<OptLevel, string> = {
+  0: "No optimization",
+  1: "Level 1 — constant folding, propagation, dead-code elimination",
+  2: "Level 2 — adds CSE, tail-call optimization, jump optimization",
+  3: "Level 3 — adds block/return/read-write merging",
+};
 
 function TraceDrawerContent(): JSX.Element {
   const { example, isOpen, toggleDrawer, closeDrawer, setSource } =
@@ -131,6 +150,15 @@ function TraceDrawerContent(): JSX.Element {
     return () => observer.disconnect();
   }, [trace.length, clampObjectHeight]);
 
+  // Optimizer level the tracer compiles at. Readers flip
+  // 0 ↔ 2 to watch optimizer transforms (e.g. the tailcall
+  // annotation on TCO back-edges) appear. A ref mirrors it
+  // so the example-load effect can read the current value
+  // without re-running when only the level changes.
+  const [optimizerLevel, setOptimizerLevel] = useState<OptLevel>(0);
+  const optimizerLevelRef = useRef<OptLevel>(optimizerLevel);
+  optimizerLevelRef.current = optimizerLevel;
+
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
     const map = new Map<number, Evm.Instruction>();
@@ -166,18 +194,39 @@ function TraceDrawerContent(): JSX.Element {
     return extractVariables(instruction.debug.context);
   }, [trace, currentStep, pcToInstruction]);
 
-  // Extract call info from current instruction context
-  const currentCallInfo = useMemo(() => {
-    if (trace.length === 0 || currentStep >= trace.length) {
-      return undefined;
+  // Adapt the bugc instruction map + evm trace to the shared
+  // programs-react call-stack helpers, which read the
+  // ethdebug format shape (instruction.context) and a {pc}
+  // trace. This lets the drawer reuse the same tailcall-aware
+  // buildCallStack as the standalone TraceViewer instead of
+  // duplicating the logic.
+  const formatPcToInstruction = useMemo(() => {
+    const m = new Map<number, Program.Instruction>();
+    for (const [pc, inst] of pcToInstruction) {
+      m.set(pc, {
+        offset: pc,
+        context: inst.debug?.context,
+      } as unknown as Program.Instruction);
     }
+    return m;
+  }, [pcToInstruction]);
 
+  const programsTrace = useMemo<ProgramsTraceStep[]>(
+    () => trace.map((s) => ({ pc: s.pc, opcode: s.opcode })),
+    [trace],
+  );
+
+  const currentInstruction = useMemo(() => {
     const step = trace[currentStep];
-    const instruction = pcToInstruction.get(step.pc);
-    if (!instruction?.debug?.context) return undefined;
+    if (!step) return undefined;
+    return formatPcToInstruction.get(step.pc);
+  }, [trace, currentStep, formatPcToInstruction]);
 
-    return extractCallInfo(instruction.debug.context);
-  }, [trace, currentStep, pcToInstruction]);
+  // Extract call info from current instruction context
+  const currentCallInfo = useMemo<CallInfo | undefined>(() => {
+    if (!currentInstruction) return undefined;
+    return extractCallInfoFromInstruction(currentInstruction);
+  }, [currentInstruction]);
 
   // Build the ethdebug/format instruction object for the current step
   const currentFormatInstruction = useMemo(() => {
@@ -190,64 +239,18 @@ function TraceDrawerContent(): JSX.Element {
     return toFormatInstruction(instruction, step.pc);
   }, [trace, currentStep, pcToInstruction]);
 
-  // Build call stack by scanning invoke/return/revert up to
-  // current step
-  const callStack = useMemo(() => {
-    const frames: Array<{
-      identifier?: string;
-      stepIndex: number;
-      callType?: string;
-      argumentNames?: string[];
-      argumentPointers?: unknown[];
-    }> = [];
+  // Compiler transform tags on the current instruction
+  // (e.g. "tailcall"), for the transform annotations panel.
+  const currentTransforms = useMemo<string[]>(() => {
+    if (!currentInstruction) return [];
+    return extractTransformFromInstruction(currentInstruction);
+  }, [currentInstruction]);
 
-    for (let i = 0; i <= currentStep && i < trace.length; i++) {
-      const step = trace[i];
-      const instruction = pcToInstruction.get(step.pc);
-      if (!instruction?.debug?.context) continue;
-
-      const info = extractCallInfo(instruction.debug.context);
-      if (!info) continue;
-
-      if (info.kind === "invoke") {
-        // The compiler emits invoke on both the caller
-        // JUMP and callee entry JUMPDEST for the same
-        // call. These occur on consecutive trace steps.
-        // Only skip if the top frame matches AND was
-        // pushed on the immediately preceding step —
-        // otherwise this is a new call (e.g. recursion).
-        const top = frames[frames.length - 1];
-        const isDuplicate =
-          top &&
-          top.identifier === info.identifier &&
-          top.callType === info.callType &&
-          top.stepIndex === i - 1;
-        if (isDuplicate) {
-          // Use the callee entry step for resolution —
-          // argument pointers reference stack slots
-          // valid at the JUMPDEST, not the JUMP.
-          // Argument names also live on the callee entry.
-          top.stepIndex = i;
-          top.argumentNames = info.argumentNames ?? top.argumentNames;
-          top.argumentPointers = info.argumentPointers;
-        } else {
-          frames.push({
-            identifier: info.identifier,
-            stepIndex: i,
-            callType: info.callType,
-            argumentNames: info.argumentNames,
-            argumentPointers: info.argumentPointers,
-          });
-        }
-      } else if (info.kind === "return" || info.kind === "revert") {
-        if (frames.length > 0) {
-          frames.pop();
-        }
-      }
-    }
-
-    return frames;
-  }, [trace, currentStep, pcToInstruction]);
+  // Build call stack via the shared, tailcall-aware helper.
+  const callStack = useMemo<CallFrame[]>(
+    () => buildCallStack(programsTrace, formatPcToInstruction, currentStep),
+    [programsTrace, formatPcToInstruction, currentStep],
+  );
 
   // Resolve argument values for call stack frames
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
@@ -322,94 +325,147 @@ function TraceDrawerContent(): JSX.Element {
     };
   }, [callStack, trace, storage]);
 
+  // Resolve the current instruction's variable values by
+  // dereferencing each variable's pointer against the step
+  // state (reuses the same machinery as argument resolution).
+  const [resolvedVarValues, setResolvedVarValues] = useState<
+    Map<string, string>
+  >(new Map());
+
+  useEffect(() => {
+    const step = trace[currentStep];
+    if (!step || currentVariables.length === 0) {
+      setResolvedVarValues(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    const state = traceStepToState(step, storage);
+    const next = new Map<string, string>();
+
+    Promise.all(
+      currentVariables.map(async (v) => {
+        if (!v.pointer) return;
+        try {
+          next.set(v.identifier, await resolvePointer(v.pointer, state));
+        } catch {
+          // leave unresolved
+        }
+      }),
+    ).then(() => {
+      if (!cancelled) setResolvedVarValues(next);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentVariables, currentStep, trace, storage]);
+
+  // Gas remaining at the current step plus the delta consumed
+  // reaching it (when the executor reports gas).
+  const gasText = useMemo(() => {
+    const step = trace[currentStep];
+    if (!step || step.gasRemaining === undefined) return "";
+    const rem = step.gasRemaining.toLocaleString();
+    const prev = trace[currentStep - 1];
+    if (prev?.gasRemaining !== undefined) {
+      const delta = prev.gasRemaining - step.gasRemaining;
+      if (delta > 0n) return `gas ${rem} (−${delta.toLocaleString()})`;
+    }
+    return `gas ${rem}`;
+  }, [trace, currentStep]);
+
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
-  const compileAndTrace = useCallback(async (sourceCode: string) => {
-    setIsCompiling(true);
-    setCompileResult(null);
-    setTrace([]);
-    setCurrentStep(0);
-    setTraceError(null);
-    setStorage({});
+  const compileAndTrace = useCallback(
+    async (sourceCode: string, level: OptLevel) => {
+      setIsCompiling(true);
+      setCompileResult(null);
+      setTrace([]);
+      setCurrentStep(0);
+      setTraceError(null);
+      setStorage({});
 
-    let bytecode: BytecodeOutput | undefined;
+      let bytecode: BytecodeOutput | undefined;
 
-    try {
-      const result = await bugCompile({
-        to: "bytecode",
-        source: sourceCode,
-        optimizer: { level: 0 },
-      });
+      try {
+        const result = await bugCompile({
+          to: "bytecode",
+          source: sourceCode,
+          optimizer: { level },
+        });
 
-      if (!result.success) {
-        const errors = result.messages[Severity.Error] || [];
+        if (!result.success) {
+          const errors = result.messages[Severity.Error] || [];
+          setCompileResult({
+            success: false,
+            error: errors[0]?.message || "Compilation failed",
+          });
+          return;
+        }
+
+        bytecode = {
+          runtime: result.value.bytecode.runtime,
+          create: result.value.bytecode.create,
+          runtimeInstructions: result.value.bytecode.runtimeInstructions,
+          createInstructions: result.value.bytecode.createInstructions,
+        };
+
+        setCompileResult({ success: true, bytecode });
+      } catch (e) {
         setCompileResult({
           success: false,
-          error: errors[0]?.message || "Compilation failed",
+          error: e instanceof Error ? e.message : String(e),
         });
         return;
+      } finally {
+        setIsCompiling(false);
       }
 
-      bytecode = {
-        runtime: result.value.bytecode.runtime,
-        create: result.value.bytecode.create,
-        runtimeInstructions: result.value.bytecode.runtimeInstructions,
-        createInstructions: result.value.bytecode.createInstructions,
-      };
+      if (!bytecode) return;
 
-      setCompileResult({ success: true, bytecode });
-    } catch (e) {
-      setCompileResult({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return;
-    } finally {
-      setIsCompiling(false);
-    }
+      setIsTracing(true);
 
-    if (!bytecode) return;
+      try {
+        const executor = new Executor();
 
-    setIsTracing(true);
-
-    try {
-      const executor = new Executor();
-
-      if (bytecode.create) {
-        const createHex = Array.from(bytecode.create)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-        await executor.deploy(createHex);
-      }
-
-      const [handler, getTrace] = createTraceCollector();
-      await executor.execute({}, handler);
-
-      const collectedTrace = getTrace();
-      setTrace(collectedTrace.steps);
-      setCurrentStep(0);
-
-      const storageEntries: Record<string, string> = {};
-      for (let i = 0n; i < 16n; i++) {
-        const value = await executor.getStorage(i);
-        if (value !== 0n) {
-          const slot = `0x${i.toString(16).padStart(2, "0")}`;
-          storageEntries[slot] = `0x${value.toString(16).padStart(64, "0")}`;
+        if (bytecode.create) {
+          const createHex = Array.from(bytecode.create)
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          await executor.deploy(createHex);
         }
+
+        const [handler, getTrace] = createTraceCollector();
+        await executor.execute({}, handler);
+
+        const collectedTrace = getTrace();
+        setTrace(collectedTrace.steps);
+        setCurrentStep(0);
+
+        const storageEntries: Record<string, string> = {};
+        for (let i = 0n; i < 16n; i++) {
+          const value = await executor.getStorage(i);
+          if (value !== 0n) {
+            const slot = `0x${i.toString(16).padStart(2, "0")}`;
+            storageEntries[slot] = `0x${value.toString(16).padStart(64, "0")}`;
+          }
+        }
+        setStorage(storageEntries);
+      } catch (e) {
+        setTraceError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setIsTracing(false);
       }
-      setStorage(storageEntries);
-    } catch (e) {
-      setTraceError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setIsTracing(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Auto compile+trace when a new example is loaded
   useEffect(() => {
     if (example?.source) {
       setLocalSource(example.source);
-      compileAndTrace(example.source);
+      compileAndTrace(example.source, optimizerLevelRef.current);
     }
   }, [example, compileAndTrace]);
 
@@ -422,8 +478,17 @@ function TraceDrawerContent(): JSX.Element {
   );
 
   const handleCompileAndTrace = useCallback(() => {
-    compileAndTrace(source);
-  }, [source, compileAndTrace]);
+    compileAndTrace(source, optimizerLevel);
+  }, [source, compileAndTrace, optimizerLevel]);
+
+  const handleLevelChange = useCallback(
+    (level: OptLevel) => {
+      if (level === optimizerLevel) return;
+      setOptimizerLevel(level);
+      compileAndTrace(source, level);
+    },
+    [source, compileAndTrace, optimizerLevel],
+  );
 
   const stepForward = () => {
     setCurrentStep((prev) => Math.min(prev + 1, trace.length - 1));
@@ -480,18 +545,42 @@ function TraceDrawerContent(): JSX.Element {
   const isBusy = isCompiling || isTracing;
 
   const headerActions = (
-    <button
-      className="trace-drawer-btn trace-btn"
-      onClick={handleCompileAndTrace}
-      disabled={isBusy || !source.trim()}
-      type="button"
-    >
-      {isCompiling
-        ? "Compiling..."
-        : isTracing
-          ? "Running..."
-          : "Compile & Run"}
-    </button>
+    <div className="trace-drawer-actions">
+      <div
+        className="opt-level-toggle"
+        role="group"
+        aria-label="Optimizer level"
+      >
+        <span className="opt-level-label">Opt</span>
+        {OPT_LEVELS.map((level) => (
+          <button
+            key={level}
+            className={`opt-level-btn ${
+              optimizerLevel === level ? "active" : ""
+            }`}
+            onClick={() => handleLevelChange(level)}
+            disabled={isBusy}
+            type="button"
+            title={OPT_LEVEL_TITLES[level]}
+            aria-pressed={optimizerLevel === level}
+          >
+            O{level}
+          </button>
+        ))}
+      </div>
+      <button
+        className="trace-drawer-btn trace-btn"
+        onClick={handleCompileAndTrace}
+        disabled={isBusy || !source.trim()}
+        type="button"
+      >
+        {isCompiling
+          ? "Compiling..."
+          : isTracing
+            ? "Running..."
+            : "Compile & Run"}
+      </button>
+    </div>
   );
 
   return (
@@ -607,6 +696,14 @@ function TraceDrawerContent(): JSX.Element {
                       >
                         {frame.identifier || "(anonymous)"}(
                         {formatFrameArgs(frame, resolvedArgs)})
+                        {frame.isTailCall && (
+                          <span
+                            className="call-stack-tailcall"
+                            title="Tail call: frame reused in place (TCO)"
+                          >
+                            ⮌ tail call
+                          </span>
+                        )}
                       </button>
                     </React.Fragment>
                   ))
@@ -615,7 +712,11 @@ function TraceDrawerContent(): JSX.Element {
 
               {currentCallInfo && (
                 <div
-                  className={`call-info-bar call-info-${currentCallInfo.kind}`}
+                  className={`call-info-bar ${
+                    currentCallInfo.isTailCall
+                      ? "call-info-tailcall"
+                      : `call-info-${currentCallInfo.kind}`
+                  }`}
                 >
                   {formatCallBanner(currentCallInfo)}
                 </div>
@@ -639,23 +740,34 @@ function TraceDrawerContent(): JSX.Element {
                         <span className="opcode-pc">
                           @ 0x{currentTraceStep.pc.toString(16)}
                         </span>
+                        {gasText && (
+                          <span className="opcode-gas">{gasText}</span>
+                        )}
                       </div>
 
-                      <div className="panel-header">Stack</div>
-                      <StackDisplay stack={currentTraceStep.stack} />
+                      {currentTransforms.length > 0 && (
+                        <Section title="Transform">
+                          <TransformList transforms={currentTransforms} />
+                        </Section>
+                      )}
+
+                      <Section title="Stack">
+                        <StackDisplay stack={currentTraceStep.stack} />
+                      </Section>
 
                       {currentVariables.length > 0 && (
-                        <>
-                          <div className="panel-header">Variables</div>
-                          <VariablesDisplay variables={currentVariables} />
-                        </>
+                        <Section title="Variables">
+                          <VariablesDisplay
+                            variables={currentVariables}
+                            resolved={resolvedVarValues}
+                          />
+                        </Section>
                       )}
 
                       {Object.keys(storage).length > 0 && (
-                        <>
-                          <div className="panel-header">Storage</div>
+                        <Section title="Storage" defaultOpen={false}>
                           <StorageDisplay storage={storage} />
-                        </>
+                        </Section>
                       )}
                     </>
                   )}
@@ -858,107 +970,93 @@ function formatBigInt(value: bigint): string {
 interface Variable {
   identifier: string;
   type?: string;
+  pointer?: unknown;
 }
 
 interface VariablesDisplayProps {
   variables: Variable[];
+  resolved: Map<string, string>;
 }
 
-function VariablesDisplay({ variables }: VariablesDisplayProps): JSX.Element {
+function VariablesDisplay({
+  variables,
+  resolved,
+}: VariablesDisplayProps): JSX.Element {
   return (
     <div className="variables-list">
-      {variables.map((variable, i) => (
-        <div key={i} className="variable-item">
-          <span className="variable-name">{variable.identifier}</span>
-          {variable.type && (
-            <span className="variable-type">{variable.type}</span>
-          )}
+      {variables.map((variable, i) => {
+        const value = resolved.get(variable.identifier);
+        return (
+          <div key={i} className="variable-item">
+            <span className="variable-name">{variable.identifier}</span>
+            {value !== undefined && (
+              <code className="variable-value">{formatAsDecimal(value)}</code>
+            )}
+            {variable.type && (
+              <span className="variable-type">{variable.type}</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One-line glosses for known transform identifiers. */
+const TRANSFORM_GLOSS: Record<string, string> = {
+  tailcall: "tail call — frame reused, no new activation (TCO)",
+  inline: "inlined function body",
+  fold: "constant-folded at compile time",
+  coalesce: "merged read/write sequence",
+};
+
+function TransformList({ transforms }: { transforms: string[] }): JSX.Element {
+  return (
+    <div className="transform-list">
+      {transforms.map((t, i) => (
+        <div key={i} className="transform-item">
+          <span className="transform-tag">{t}</span>
+          <span className="transform-gloss">
+            {TRANSFORM_GLOSS[t] ?? "compiler transform"}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
+/** A collapsible right-column section. */
+function Section({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <details className="trace-section" open={defaultOpen}>
+      <summary className="trace-section-summary">{title}</summary>
+      {children}
+    </details>
+  );
+}
+
 /**
  * Info about a call context (invoke/return/revert).
  */
-interface CallInfoResult {
-  kind: "invoke" | "return" | "revert";
-  identifier?: string;
-  callType?: string;
-  argumentNames?: string[];
-  argumentPointers?: unknown[];
-}
-
-/**
- * Extract call info from an ethdebug format context object.
- */
-function extractCallInfo(context: unknown): CallInfoResult | undefined {
-  if (!context || typeof context !== "object") {
-    return undefined;
-  }
-
-  const ctx = context as Record<string, unknown>;
-
-  if ("invoke" in ctx && ctx.invoke) {
-    const inv = ctx.invoke as Record<string, unknown>;
-    let callType: string | undefined;
-    if ("jump" in inv) callType = "internal";
-    else if ("message" in inv) callType = "external";
-    else if ("create" in inv) callType = "create";
-
-    const argInfo = extractArgInfoFromInvoke(inv);
-    return {
-      kind: "invoke",
-      identifier: inv.identifier as string | undefined,
-      callType,
-      argumentNames: argInfo?.names,
-      argumentPointers: argInfo?.pointers,
-    };
-  }
-
-  if ("return" in ctx && ctx.return) {
-    const ret = ctx.return as Record<string, unknown>;
-    return {
-      kind: "return",
-      identifier: ret.identifier as string | undefined,
-    };
-  }
-
-  if ("revert" in ctx && ctx.revert) {
-    const rev = ctx.revert as Record<string, unknown>;
-    return {
-      kind: "revert",
-      identifier: rev.identifier as string | undefined,
-    };
-  }
-
-  // Walk gather/pick
-  if ("gather" in ctx && Array.isArray(ctx.gather)) {
-    for (const sub of ctx.gather) {
-      const info = extractCallInfo(sub);
-      if (info) return info;
-    }
-  }
-
-  if ("pick" in ctx && Array.isArray(ctx.pick)) {
-    for (const sub of ctx.pick) {
-      const info = extractCallInfo(sub);
-      if (info) return info;
-    }
-  }
-
-  return undefined;
-}
-
 /**
  * Format a call info banner string.
  */
-function formatCallBanner(info: CallInfoResult): string {
+function formatCallBanner(info: CallInfo): string {
   const name = info.identifier || "(anonymous)";
   const params = info.argumentNames
     ? `(${info.argumentNames.join(", ")})`
     : "()";
+  if (info.isTailCall) {
+    return `Tail call: ${name} (frame reused)`;
+  }
   switch (info.kind) {
     case "invoke": {
       const prefix = info.callType === "create" ? "Creating" : "Calling";
@@ -969,38 +1067,6 @@ function formatCallBanner(info: CallInfoResult): string {
     case "revert":
       return `Reverted in ${name}()`;
   }
-}
-
-function extractArgInfoFromInvoke(
-  inv: Record<string, unknown>,
-): { names?: string[]; pointers?: unknown[] } | undefined {
-  const args = inv.arguments as Record<string, unknown> | undefined;
-  if (!args) return undefined;
-
-  const pointer = args.pointer as Record<string, unknown> | undefined;
-  if (!pointer) return undefined;
-
-  const group = pointer.group as Array<Record<string, unknown>> | undefined;
-  if (!Array.isArray(group)) return undefined;
-
-  const names: string[] = [];
-  const pointers: unknown[] = [];
-  let hasAnyName = false;
-  for (const entry of group) {
-    const name = entry.name as string | undefined;
-    if (name) {
-      names.push(name);
-      hasAnyName = true;
-    } else {
-      names.push("_");
-    }
-    pointers.push(entry);
-  }
-
-  return {
-    names: hasAnyName ? names : undefined,
-    pointers,
-  };
 }
 
 /**
@@ -1022,6 +1088,7 @@ function extractVariables(context: unknown): Variable[] {
         variables.push({
           identifier: String(variable.identifier),
           type: variable.type ? formatType(variable.type) : undefined,
+          pointer: variable.pointer,
         });
       }
     }
