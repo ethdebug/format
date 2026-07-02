@@ -1,0 +1,102 @@
+---
+sidebar_position: 4
+---
+
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+
+# Pointer playground
+
+A **pointer** is a recipe for finding data in the EVM: it says where bytes
+live and, when needed, how to compute that location from the current
+machine state. The examples below let you watch pointers resolve against
+concrete state — click **"Try it"** on any of them to open the playground
+and see the bytes each one selects.
+
+These four cover the whole idea, from a fixed byte range to a computed
+one. For the full reference, follow the links under each example.
+
+<PointerPlayground>
+
+## A byte range in memory
+
+The simplest pointer names a location and a byte range. Memory, calldata,
+returndata, and code are byte-addressable, so their regions use `offset`
+and `length`.
+
+<PointerExample
+  title="Memory region (slice-based)"
+  pointer={{ location: "memory", offset: "0x40", length: 32 }}
+  state={{
+    memory:
+      "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080",
+  }}
+  description="Reads 32 bytes starting at offset 0x40 (the free memory pointer)"
+/>
+
+## A slot in storage
+
+Storage, transient storage, and the stack are organized in 32-byte slots,
+so their regions use `slot` instead of a byte offset.
+
+<PointerExample
+  title="Storage slot (slot-based)"
+  pointer={{ location: "storage", slot: 5 }}
+  state={{
+    storage: {
+      "0x05":
+        "0x00000000000000000000000000000000000000000000000000000000000003e8",
+    },
+  }}
+  description="Reads the full 32-byte word at storage slot 5"
+/>
+
+See [Regions](/docs/core-schemas/pointers/regions) for every location and
+addressing scheme.
+
+## Several fields at once
+
+A **collection** bundles regions together. A `group` names each member —
+ideal for a struct whose fields you want to read as a unit.
+
+<PointerExample
+  title="Struct with two fields"
+  pointer={{
+    group: [
+      { name: "len", location: "storage", slot: 0 },
+      { name: "data", location: "storage", slot: 1 },
+    ],
+  }}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000005",
+      "0x01":
+        "0x48656c6c6f000000000000000000000000000000000000000000000000000000",
+    },
+  }}
+/>
+
+See [Collections](/docs/core-schemas/pointers/collections) for groups,
+lists, conditionals, and scopes.
+
+## A location computed from state
+
+When a location depends on runtime values, an **expression** computes it.
+Here `$sum` adds three numbers to derive a storage slot.
+
+<PointerExample
+  title="Computed storage slot ($sum)"
+  pointer={{ location: "storage", slot: { $sum: [100, 32, 4] } }}
+  state={{
+    storage: {
+      "0x88":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Resolves slot 100 + 32 + 4 = 136 (0x88)"
+/>
+
+See [Expressions](/docs/core-schemas/pointers/expressions) for arithmetic,
+reads, and hashing.
+
+</PointerPlayground>

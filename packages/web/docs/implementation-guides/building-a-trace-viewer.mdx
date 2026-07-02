@@ -1,0 +1,69 @@
+---
+sidebar_position: 3
+---
+
+# Building a trace viewer
+
+This guide walks through the pieces you need to turn **ethdebug/format**
+data and an execution trace into a working trace viewer. For the conceptual
+reference on how trace data maps to the format, see
+[Tracing execution](/docs/core-schemas/programs/tracing); to see a finished
+viewer in action, try the
+[Trace playground](/docs/explore/trace-playground).
+
+The key components for trace integration:
+
+## 1. Trace source
+
+Get transaction traces from:
+
+- JSON-RPC `debug_traceTransaction`
+- Local simulation (Ganache, Anvil, Hardhat)
+- Historical archive nodes
+
+## 2. Program loader
+
+Load compiled program data containing:
+
+- Instruction list with contexts
+- Source materials
+- Type definitions
+
+## 3. Pointer resolver
+
+Use `@ethdebug/pointers` to resolve variable locations:
+
+```typescript
+import { dereference } from "@ethdebug/pointers";
+
+// For each variable in scope
+const cursor = await dereference(variable.pointer, { state: machineState });
+const view = await cursor.view(machineState);
+const value = await view.read(view.regions[0]);
+```
+
+## 4. Type decoder
+
+Interpret raw bytes according to type:
+
+```typescript
+function decodeValue(bytes: Data, type: Type): string {
+  switch (type.kind) {
+    case "uint":
+      return bytes.asUint().toString();
+    case "bool":
+      return bytes.asUint() !== 0n ? "true" : "false";
+    case "address":
+      return "0x" + bytes.toHex().slice(-40);
+    // ... other types
+  }
+}
+```
+
+## Learn more
+
+- [Tracing execution](/docs/core-schemas/programs/tracing) for how trace
+  data maps to the format
+- [Pointers](/docs/core-schemas/pointers) for resolving variable locations
+- [Trace playground](/docs/explore/trace-playground) for a working viewer
+  you can step through
