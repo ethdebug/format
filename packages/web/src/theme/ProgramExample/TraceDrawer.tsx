@@ -56,6 +56,14 @@ function TraceDrawerContent(): JSX.Element {
   const [isTracing, setIsTracing] = useState(false);
   const [traceError, setTraceError] = useState<string | null>(null);
   const [storage, setStorage] = useState<Record<string, string>>({});
+  // Optimizer level the tracer compiles at. Readers flip
+  // 0 ↔ 2 to watch optimizer transforms (e.g. the tailcall
+  // annotation on TCO back-edges) appear. A ref mirrors it
+  // so the example-load effect can read the current value
+  // without re-running when only the level changes.
+  const [optimizerLevel, setOptimizerLevel] = useState<0 | 2>(0);
+  const optimizerLevelRef = useRef<0 | 2>(optimizerLevel);
+  optimizerLevelRef.current = optimizerLevel;
 
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
@@ -239,92 +247,95 @@ function TraceDrawerContent(): JSX.Element {
 
   // Compile source and run trace in one shot.
   // Takes source directly to avoid stale-state issues.
-  const compileAndTrace = useCallback(async (sourceCode: string) => {
-    setIsCompiling(true);
-    setCompileResult(null);
-    setTrace([]);
-    setCurrentStep(0);
-    setTraceError(null);
-    setStorage({});
+  const compileAndTrace = useCallback(
+    async (sourceCode: string, level: 0 | 2) => {
+      setIsCompiling(true);
+      setCompileResult(null);
+      setTrace([]);
+      setCurrentStep(0);
+      setTraceError(null);
+      setStorage({});
 
-    let bytecode: BytecodeOutput | undefined;
+      let bytecode: BytecodeOutput | undefined;
 
-    try {
-      const result = await bugCompile({
-        to: "bytecode",
-        source: sourceCode,
-        optimizer: { level: 0 },
-      });
+      try {
+        const result = await bugCompile({
+          to: "bytecode",
+          source: sourceCode,
+          optimizer: { level },
+        });
 
-      if (!result.success) {
-        const errors = result.messages[Severity.Error] || [];
+        if (!result.success) {
+          const errors = result.messages[Severity.Error] || [];
+          setCompileResult({
+            success: false,
+            error: errors[0]?.message || "Compilation failed",
+          });
+          return;
+        }
+
+        bytecode = {
+          runtime: result.value.bytecode.runtime,
+          create: result.value.bytecode.create,
+          runtimeInstructions: result.value.bytecode.runtimeInstructions,
+          createInstructions: result.value.bytecode.createInstructions,
+        };
+
+        setCompileResult({ success: true, bytecode });
+      } catch (e) {
         setCompileResult({
           success: false,
-          error: errors[0]?.message || "Compilation failed",
+          error: e instanceof Error ? e.message : String(e),
         });
         return;
+      } finally {
+        setIsCompiling(false);
       }
 
-      bytecode = {
-        runtime: result.value.bytecode.runtime,
-        create: result.value.bytecode.create,
-        runtimeInstructions: result.value.bytecode.runtimeInstructions,
-        createInstructions: result.value.bytecode.createInstructions,
-      };
+      if (!bytecode) return;
 
-      setCompileResult({ success: true, bytecode });
-    } catch (e) {
-      setCompileResult({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return;
-    } finally {
-      setIsCompiling(false);
-    }
+      setIsTracing(true);
 
-    if (!bytecode) return;
+      try {
+        const executor = new Executor();
 
-    setIsTracing(true);
-
-    try {
-      const executor = new Executor();
-
-      if (bytecode.create) {
-        const createHex = Array.from(bytecode.create)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-        await executor.deploy(createHex);
-      }
-
-      const [handler, getTrace] = createTraceCollector();
-      await executor.execute({}, handler);
-
-      const collectedTrace = getTrace();
-      setTrace(collectedTrace.steps);
-      setCurrentStep(0);
-
-      const storageEntries: Record<string, string> = {};
-      for (let i = 0n; i < 16n; i++) {
-        const value = await executor.getStorage(i);
-        if (value !== 0n) {
-          const slot = `0x${i.toString(16).padStart(2, "0")}`;
-          storageEntries[slot] = `0x${value.toString(16).padStart(64, "0")}`;
+        if (bytecode.create) {
+          const createHex = Array.from(bytecode.create)
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          await executor.deploy(createHex);
         }
+
+        const [handler, getTrace] = createTraceCollector();
+        await executor.execute({}, handler);
+
+        const collectedTrace = getTrace();
+        setTrace(collectedTrace.steps);
+        setCurrentStep(0);
+
+        const storageEntries: Record<string, string> = {};
+        for (let i = 0n; i < 16n; i++) {
+          const value = await executor.getStorage(i);
+          if (value !== 0n) {
+            const slot = `0x${i.toString(16).padStart(2, "0")}`;
+            storageEntries[slot] = `0x${value.toString(16).padStart(64, "0")}`;
+          }
+        }
+        setStorage(storageEntries);
+      } catch (e) {
+        setTraceError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setIsTracing(false);
       }
-      setStorage(storageEntries);
-    } catch (e) {
-      setTraceError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setIsTracing(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Auto compile+trace when a new example is loaded
   useEffect(() => {
     if (example?.source) {
       setLocalSource(example.source);
-      compileAndTrace(example.source);
+      compileAndTrace(example.source, optimizerLevelRef.current);
     }
   }, [example, compileAndTrace]);
 
@@ -337,8 +348,17 @@ function TraceDrawerContent(): JSX.Element {
   );
 
   const handleCompileAndTrace = useCallback(() => {
-    compileAndTrace(source);
-  }, [source, compileAndTrace]);
+    compileAndTrace(source, optimizerLevel);
+  }, [source, compileAndTrace, optimizerLevel]);
+
+  const handleLevelChange = useCallback(
+    (level: 0 | 2) => {
+      if (level === optimizerLevel) return;
+      setOptimizerLevel(level);
+      compileAndTrace(source, level);
+    },
+    [source, compileAndTrace, optimizerLevel],
+  );
 
   const stepForward = () => {
     setCurrentStep((prev) => Math.min(prev + 1, trace.length - 1));
@@ -395,18 +415,47 @@ function TraceDrawerContent(): JSX.Element {
   const isBusy = isCompiling || isTracing;
 
   const headerActions = (
-    <button
-      className="trace-drawer-btn trace-btn"
-      onClick={handleCompileAndTrace}
-      disabled={isBusy || !source.trim()}
-      type="button"
-    >
-      {isCompiling
-        ? "Compiling..."
-        : isTracing
-          ? "Running..."
-          : "Compile & Run"}
-    </button>
+    <div className="trace-drawer-actions">
+      <div
+        className="opt-level-toggle"
+        role="group"
+        aria-label="Optimizer level"
+      >
+        <span className="opt-level-label">Opt</span>
+        <button
+          className={`opt-level-btn ${optimizerLevel === 0 ? "active" : ""}`}
+          onClick={() => handleLevelChange(0)}
+          disabled={isBusy}
+          type="button"
+          title="Compile without optimizations"
+          aria-pressed={optimizerLevel === 0}
+        >
+          O0
+        </button>
+        <button
+          className={`opt-level-btn ${optimizerLevel === 2 ? "active" : ""}`}
+          onClick={() => handleLevelChange(2)}
+          disabled={isBusy}
+          type="button"
+          title="Compile with optimizations (level 2 — enables TCO)"
+          aria-pressed={optimizerLevel === 2}
+        >
+          O2
+        </button>
+      </div>
+      <button
+        className="trace-drawer-btn trace-btn"
+        onClick={handleCompileAndTrace}
+        disabled={isBusy || !source.trim()}
+        type="button"
+      >
+        {isCompiling
+          ? "Compiling..."
+          : isTracing
+            ? "Running..."
+            : "Compile & Run"}
+      </button>
+    </div>
   );
 
   return (

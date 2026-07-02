@@ -25,6 +25,61 @@
   overflow: hidden;
 }
 
+/* Header actions */
+.trace-drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opt-level-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: 6px;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.opt-level-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-content-secondary);
+  margin-right: 2px;
+}
+
+.opt-level-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-color-content-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--ifm-font-family-monospace);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.opt-level-btn:hover:not(:disabled) {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.opt-level-btn.active {
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: white;
+}
+
+.opt-level-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Header buttons */
 .trace-drawer-btn {
   padding: 6px 14px;
