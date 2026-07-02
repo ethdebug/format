@@ -129,22 +129,30 @@ uniform whether or not the call was inlined:
 
 An inlined callee therefore appears on the call stack exactly as a
 non-inlined one does. Two kinds of activation differ only in how
-they are backed:
+they are backed, distinguished by the presence of an `inline`
+transform marker — **not** by whether `target` is present:
 
-- A **real activation** comes from an `invoke` that carries a
-  `target`. It is corroborated by runtime state — a return address
-  on the EVM stack — and occupies a real stack region.
-- A **virtual activation** comes from an `invoke` with **no
-  `target`** carrying `transform: ["inline"]`. It has **no runtime
-  corroboration** and occupies no EVM stack region; it exists only
-  in the debug annotations.
+- A **real activation** comes from an `invoke` **without** an
+  `inline` transform marker. It corresponds to an actual call at
+  runtime, corroborated by machine state — a return address on the
+  EVM stack — and occupies a real stack region.
+- A **virtual activation** comes from an `invoke` whose context
+  carries `transform: ["inline"]` (an `inline` identifier in its
+  transform list). It has **no runtime corroboration** and occupies
+  no EVM stack region; it exists only in the debug annotations. Its
+  `target` is typically omitted (the JUMP was elided), but
+  `target`-absence is not itself the signal — a real internal call
+  may also omit `target` (see [Internal call](#internal-call)). The
+  reliable discriminator is the `inline` marker.
 
 ### Activation membership
 
 An instruction belongs to the innermost open virtual activation if
-and only if it carries `transform: ["inline"]`; the nesting depth
-is the number of `"inline"` occurrences (doubly-inlined code
-carries `["inline", "inline"]`). Membership is determined
+and only if its context carries an `inline` identifier in its
+transform list — so composed markers such as `["inline", "fold"]`
+still confer membership. The nesting depth is the number of
+`"inline"` occurrences in the list (doubly-inlined code carries
+`["inline", "inline"]`). Membership is determined
 per-instruction from this marker, **not** from instruction ranges:
 optimization passes may relocate or interleave an inlined body, so
 a positional "everything between the invoke and the return" rule
