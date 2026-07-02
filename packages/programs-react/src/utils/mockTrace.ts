@@ -2,7 +2,7 @@
  * Utilities for creating mock execution traces.
  */
 
-import type { Program } from "@ethdebug/format";
+import { Program } from "@ethdebug/format";
 
 /**
  * A single step in an execution trace.
@@ -119,6 +119,49 @@ export interface CallInfo {
     label: string;
     pointer: unknown;
   }>;
+  /**
+   * True when a `tailcall` transform is present on the same
+   * instruction — the call was realized as a tail-call
+   * (TCO), reusing the current frame rather than nesting.
+   */
+  isTailCall?: boolean;
+}
+
+/**
+ * Extract compiler `transform` annotation identifiers
+ * (e.g. "tailcall", "inline") from an instruction's context
+ * tree, walking gather/pick composites.
+ */
+export function extractTransformFromInstruction(
+  instruction: Program.Instruction,
+): string[] {
+  if (!instruction.context) {
+    return [];
+  }
+  return extractTransformFromContext(instruction.context);
+}
+
+function extractTransformFromContext(context: Program.Context): string[] {
+  if (Program.Context.isTransform(context)) {
+    return context.transform;
+  }
+
+  // gather/pick are still key-probed here, matching the
+  // sibling extractors in this file (a broader guard
+  // migration is tracked separately).
+  const ctx = context as unknown as Record<string, unknown>;
+
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    return (ctx.gather as Program.Context[]).flatMap(
+      extractTransformFromContext,
+    );
+  }
+
+  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+    return (ctx.pick as Program.Context[]).flatMap(extractTransformFromContext);
+  }
+
+  return [];
 }
 
 /**
@@ -131,7 +174,14 @@ export function extractCallInfoFromInstruction(
   if (!instruction.context) {
     return undefined;
   }
-  return extractCallInfoFromContext(instruction.context);
+  const info = extractCallInfoFromContext(instruction.context);
+  if (!info) {
+    return undefined;
+  }
+  const isTailCall = extractTransformFromContext(instruction.context).includes(
+    "tailcall",
+  );
+  return isTailCall ? { ...info, isTailCall: true } : info;
 }
 
 function extractCallInfoFromContext(
@@ -274,6 +324,11 @@ export interface CallFrame {
   argumentNames?: string[];
   /** Individual argument pointers for value resolution */
   argumentPointers?: unknown[];
+  /**
+   * True when this frame was (re)entered via a tail call
+   * (TCO). The frame was reused in place rather than nested.
+   */
+  isTailCall?: boolean;
 }
 
 /**
@@ -304,7 +359,9 @@ export function buildCallStack(
     // instruction. The activation is reused, not nested or
     // unwound, so depth is unchanged: replace the top frame in
     // place rather than pushing a second frame or popping it away.
-    // Identity comes from the invoke leaf.
+    // Identity comes from the invoke leaf. The reused frame is
+    // marked isTailCall so the call-stack chip / info banner can
+    // surface the tailcall transform.
     const ctx = instruction.context as Record<string, unknown> | undefined;
     const backEdgeInvoke = ctx ? findInvokeField(ctx) : undefined;
     if (ctx && backEdgeInvoke && hasReturnContext(ctx)) {
@@ -317,6 +374,7 @@ export function buildCallStack(
         callType: invokeCallType(backEdgeInvoke),
         argumentNames: argResult?.names,
         argumentPointers: argResult?.pointers,
+        isTailCall: true,
       };
       if (stack.length > 0) {
         stack[stack.length - 1] = frame;

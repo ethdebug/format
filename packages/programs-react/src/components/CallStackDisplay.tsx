@@ -94,6 +94,14 @@ export function CallStackDisplay({
               <span className="call-stack-parens">
                 ({formatArgs(frame, resolvedCallStack)})
               </span>
+              {frame.isTailCall && (
+                <span
+                  className="call-stack-tailcall"
+                  title="Tail call: this frame was reused in place (TCO)"
+                >
+                  ⮌ tail call
+                </span>
+              )}
             </button>
           </React.Fragment>
         ))}
