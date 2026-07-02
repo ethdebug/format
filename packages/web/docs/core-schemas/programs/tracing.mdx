@@ -191,9 +191,10 @@ The two programs below are written so bugc's optimizer folds them. Each
 accumulates its result in an `acc` parameter and hands it to the next
 call in tail position, so no work is left pending on the stack.
 
-Use the optimizer control on each example to switch between level 0
-(no optimization) and level 2 (TCO on), then step through and compare
-the call stack.
+Use the **Opt** selector in the trace drawer to set the optimization
+level. Compile at **O0** (no optimization) and again at **O2**
+(optimizations on, including TCO), then step through and compare the
+call stack. TCO kicks in at **O2**.
 
 <TraceExample
   title="Tail-recursive sum"
@@ -207,8 +208,8 @@ the call stack.
   source={tailRecursiveFactorial}
 />
 
-At level 0, each `sum`/`fact` call is a real invoke/return pair and the
-call stack grows one frame per iteration. At level 2, the recursive
+At **O0**, each `sum`/`fact` call is a real invoke/return pair and the
+call stack grows one frame per iteration. At **O2**, the recursive
 call becomes a **back-edge**: a single JUMP that ends one iteration and
 begins the next without pushing a frame. The call stack stays flat.
 
