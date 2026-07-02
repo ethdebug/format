@@ -89,6 +89,14 @@ allOf:
       description: |
         Indicates association with a function revert.
       $ref: "schema:ethdebug/format/program/context/function/revert"
+  - if:
+      required: ["transform"]
+    then:
+      description: |
+        Compiler transformations applied to produce this instruction
+        (e.g., inlining, tail-call optimization). Additional
+        annotation — does not replace semantic contexts.
+      $ref: "schema:ethdebug/format/program/context/transform"
 
 unevaluatedProperties: false
 
