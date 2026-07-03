@@ -23,7 +23,7 @@ export const isProgram = (value: unknown): value is Program =>
   "environment" in value &&
   Program.isEnvironment(value.environment) &&
   "instructions" in value &&
-  value.instructions instanceof Array &&
+  Array.isArray(value.instructions) &&
   value.instructions.every(Program.isInstruction) &&
   (!("compilation" in value) ||
     Materials.isReference<Materials.Compilation>(value.compilation)) &&

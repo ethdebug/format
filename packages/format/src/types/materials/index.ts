@@ -74,7 +74,7 @@ export namespace Materials {
     "version" in value.compiler &&
     typeof value.compiler.version === "string" &&
     "sources" in value &&
-    value.sources instanceof Array &&
+    Array.isArray(value.sources) &&
     value.sources.every(isSource);
 
   export interface Source {

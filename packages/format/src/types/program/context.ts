@@ -45,7 +45,7 @@ export namespace Context {
     typeof value === "object" &&
     !!value &&
     "variables" in value &&
-    value.variables instanceof Array &&
+    Array.isArray(value.variables) &&
     value.variables.length > 0 &&
     value.variables.every(Variables.isVariable);
 

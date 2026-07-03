@@ -27,8 +27,7 @@ export namespace Type {
     "class" in value &&
     (!("contains" in value) ||
       Type.isWrapper(value.contains) ||
-      (value.contains instanceof Array &&
-        value.contains.every(Type.isWrapper)) ||
+      (Array.isArray(value.contains) && value.contains.every(Type.isWrapper)) ||
       (typeof value.contains === "object" &&
         Object.values(value.contains).every(Type.isWrapper)));
 
@@ -262,7 +261,7 @@ export namespace Type {
       mayHaveClass(value, "elementary") &&
       hasKind(value, "enum") &&
       "values" in value &&
-      value.values instanceof Array &&
+      Array.isArray(value.values) &&
       (!("definition" in value) || isDefinition(value.definition));
   }
 
@@ -330,7 +329,7 @@ export namespace Type {
       mayHaveClass(value, "complex") &&
       hasKind(value, "tuple") &&
       "contains" in value &&
-      value.contains instanceof Array &&
+      Array.isArray(value.contains) &&
       value.contains.every(
         (element) =>
           isWrapper(element) &&
@@ -386,7 +385,7 @@ export namespace Type {
       mayHaveClass(value, "complex") &&
       hasKind(value, "struct") &&
       "contains" in value &&
-      value.contains instanceof Array &&
+      Array.isArray(value.contains) &&
       value.contains.every(
         (field) =>
           isWrapper(field) &&

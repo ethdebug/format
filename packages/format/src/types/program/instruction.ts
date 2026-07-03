@@ -28,6 +28,5 @@ export namespace Instruction {
     "mnemonic" in value &&
     typeof value.mnemonic === "string" &&
     (!("arguments" in value) ||
-      (value.arguments instanceof Array &&
-        value.arguments.every(Data.isValue)));
+      (Array.isArray(value.arguments) && value.arguments.every(Data.isValue)));
 }
