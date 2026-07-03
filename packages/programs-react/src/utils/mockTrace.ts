@@ -171,117 +171,136 @@ function extractTransformFromContext(context: Program.Context): string[] {
 }
 
 /**
- * Extract call info (invoke/return/revert) from an
- * instruction's context tree.
+ * Extract the primary call event (invoke/return/revert) from an
+ * instruction's context tree, decorated with transform flags.
+ *
+ * A context can legitimately carry BOTH an invoke and a return
+ * (e.g. a tail-call back-edge, or an inlined body that emits to a
+ * single instruction). This accessor returns just the first event
+ * for display banners; call-stack reconstruction uses
+ * {@link extractCallEvents}, which surfaces every event so a
+ * co-located return is never swallowed by the invoke.
  */
 export function extractCallInfoFromInstruction(
   instruction: Program.Instruction,
 ): CallInfo | undefined {
-  if (!instruction.context) {
-    return undefined;
-  }
-  const info = extractCallInfoFromContext(instruction.context);
-  if (!info) {
-    return undefined;
-  }
-  const transforms = extractTransformFromContext(instruction.context);
-  const decorated: CallInfo = { ...info };
-  if (transforms.includes("tailcall")) {
-    decorated.isTailCall = true;
-  }
-  if (transforms.includes("inline")) {
-    decorated.isInline = true;
-  }
-  return decorated;
+  return extractCallEvents(instruction)[0];
 }
 
-function extractCallInfoFromContext(
-  context: Program.Context,
-): CallInfo | undefined {
+/**
+ * Extract ALL call events (invoke/return/revert) from an
+ * instruction's context tree, in document order (invoke before
+ * return within one context), decorated with the instruction's
+ * transform flags. Returns [] when there is no call context.
+ */
+export function extractCallEvents(
+  instruction: Program.Instruction,
+): CallInfo[] {
+  if (!instruction.context) {
+    return [];
+  }
+  const events = collectCallInfos(instruction.context);
+  if (events.length === 0) {
+    return [];
+  }
+  const transforms = extractTransformFromContext(instruction.context);
+  const isTailCall = transforms.includes("tailcall");
+  const isInline = transforms.includes("inline");
+  if (!isTailCall && !isInline) {
+    return events;
+  }
+  return events.map((e) => ({
+    ...e,
+    ...(isTailCall ? { isTailCall: true } : {}),
+    ...(isInline ? { isInline: true } : {}),
+  }));
+}
+
+/**
+ * Collect the invoke/return/revert events carried by a context
+ * tree, in order. Invoke precedes return within a single context;
+ * gather/pick children are visited in sequence.
+ */
+function collectCallInfos(context: Program.Context): CallInfo[] {
   // Use unknown intermediate to avoid strict type checks
   // on the context union — we discriminate by key presence
   const ctx = context as unknown as Record<string, unknown>;
+  const out: CallInfo[] = [];
 
   if ("invoke" in ctx) {
-    const inv = ctx.invoke as Record<string, unknown>;
-    const pointerRefs: CallInfo["pointerRefs"] = [];
-
-    let callType: CallInfo["callType"];
-    if ("jump" in inv) {
-      callType = "internal";
-      collectPointerRef(pointerRefs, "target", inv.target);
-      collectPointerRef(pointerRefs, "arguments", inv.arguments);
-    } else if ("message" in inv) {
-      callType = "external";
-      collectPointerRef(pointerRefs, "target", inv.target);
-      collectPointerRef(pointerRefs, "gas", inv.gas);
-      collectPointerRef(pointerRefs, "value", inv.value);
-      collectPointerRef(pointerRefs, "input", inv.input);
-    } else if ("create" in inv) {
-      callType = "create";
-      collectPointerRef(pointerRefs, "value", inv.value);
-      collectPointerRef(pointerRefs, "salt", inv.salt);
-      collectPointerRef(pointerRefs, "input", inv.input);
-    }
-
-    // Extract argument names from group entries
-    const argNames = extractArgNamesFromInvoke(inv);
-
-    return {
-      kind: "invoke",
-      identifier: inv.identifier as string | undefined,
-      callType,
-      argumentNames: argNames,
-      pointerRefs,
-    };
+    out.push(parseInvoke(ctx.invoke as Record<string, unknown>));
   }
-
   if ("return" in ctx) {
-    const ret = ctx.return as Record<string, unknown>;
-    const pointerRefs: CallInfo["pointerRefs"] = [];
-    collectPointerRef(pointerRefs, "data", ret.data);
-    collectPointerRef(pointerRefs, "success", ret.success);
-
-    return {
-      kind: "return",
-      identifier: ret.identifier as string | undefined,
-      pointerRefs,
-    };
+    out.push(parseReturn(ctx.return as Record<string, unknown>));
   }
-
   if ("revert" in ctx) {
-    const rev = ctx.revert as Record<string, unknown>;
-    const pointerRefs: CallInfo["pointerRefs"] = [];
-    collectPointerRef(pointerRefs, "reason", rev.reason);
-
-    return {
-      kind: "revert",
-      identifier: rev.identifier as string | undefined,
-      panic: rev.panic as number | undefined,
-      pointerRefs,
-    };
+    out.push(parseRevert(ctx.revert as Record<string, unknown>));
   }
 
-  // Walk gather/pick to find call info
-  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+  if (Array.isArray(ctx.gather)) {
     for (const sub of ctx.gather as Program.Context[]) {
-      const info = extractCallInfoFromContext(sub);
-      if (info) {
-        return info;
-      }
+      out.push(...collectCallInfos(sub));
     }
   }
-
-  if ("pick" in ctx && Array.isArray(ctx.pick)) {
+  if (Array.isArray(ctx.pick)) {
     for (const sub of ctx.pick as Program.Context[]) {
-      const info = extractCallInfoFromContext(sub);
-      if (info) {
-        return info;
-      }
+      out.push(...collectCallInfos(sub));
     }
   }
 
-  return undefined;
+  return out;
+}
+
+function parseInvoke(inv: Record<string, unknown>): CallInfo {
+  const pointerRefs: CallInfo["pointerRefs"] = [];
+
+  let callType: CallInfo["callType"];
+  if ("jump" in inv) {
+    callType = "internal";
+    collectPointerRef(pointerRefs, "target", inv.target);
+    collectPointerRef(pointerRefs, "arguments", inv.arguments);
+  } else if ("message" in inv) {
+    callType = "external";
+    collectPointerRef(pointerRefs, "target", inv.target);
+    collectPointerRef(pointerRefs, "gas", inv.gas);
+    collectPointerRef(pointerRefs, "value", inv.value);
+    collectPointerRef(pointerRefs, "input", inv.input);
+  } else if ("create" in inv) {
+    callType = "create";
+    collectPointerRef(pointerRefs, "value", inv.value);
+    collectPointerRef(pointerRefs, "salt", inv.salt);
+    collectPointerRef(pointerRefs, "input", inv.input);
+  }
+
+  return {
+    kind: "invoke",
+    identifier: inv.identifier as string | undefined,
+    callType,
+    argumentNames: extractArgNamesFromInvoke(inv),
+    pointerRefs,
+  };
+}
+
+function parseReturn(ret: Record<string, unknown>): CallInfo {
+  const pointerRefs: CallInfo["pointerRefs"] = [];
+  collectPointerRef(pointerRefs, "data", ret.data);
+  collectPointerRef(pointerRefs, "success", ret.success);
+  return {
+    kind: "return",
+    identifier: ret.identifier as string | undefined,
+    pointerRefs,
+  };
+}
+
+function parseRevert(rev: Record<string, unknown>): CallInfo {
+  const pointerRefs: CallInfo["pointerRefs"] = [];
+  collectPointerRef(pointerRefs, "reason", rev.reason);
+  return {
+    kind: "revert",
+    identifier: rev.identifier as string | undefined,
+    panic: rev.panic as number | undefined,
+    pointerRefs,
+  };
 }
 
 function extractArgNamesFromInvoke(
@@ -369,36 +388,40 @@ export function buildCallStack(
 
     // Per-instruction inline membership drives the defensive
     // guard below: an inlined body's instructions all carry
-    // transform:["inline"], so a virtual frame is only valid
-    // while that marker holds.
-    const isInlineInstr =
-      extractTransformFromInstruction(instruction).includes("inline");
-    const callInfo = extractCallInfoFromInstruction(instruction);
+    // transform:["inline"] (nested inlining stacks the marker), so
+    // the count bounds how many virtual frames may legitimately be
+    // open on this instruction.
+    const transforms = extractTransformFromInstruction(instruction);
+    const inlineCount = transforms.filter((t) => t === "inline").length;
 
     // A tail-call back-edge carries both a `return` (the previous
     // iteration) and an `invoke` (the next iteration) on a single
     // instruction. The activation is reused, not nested or
     // unwound, so depth is unchanged: replace the top frame in
     // place rather than pushing a second frame or popping it away.
-    // Identity comes from the invoke leaf. Frame reuse is detected
-    // structurally (return + invoke together), independent of any
-    // transform marker, so the call stack stays correct even for
-    // consumers that ignore transforms. The isTailCall *label*
-    // (which drives the call-stack chip / info banner) follows the
-    // `tailcall` transform marker, surfaced via callInfo.isTailCall.
+    // Identity comes from the invoke leaf. Detection is structural
+    // (return + invoke together), so the call stack stays correct
+    // even for consumers that ignore transforms — but an inlined
+    // single-instruction body ALSO carries both; it is a virtual
+    // activation handled by the event loop below, so exclude the
+    // inline marker here. The isTailCall *label* (which drives the
+    // call-stack chip / info banner) follows the `tailcall` marker.
     const ctx = instruction.context as Record<string, unknown> | undefined;
     const backEdgeInvoke = ctx ? findInvokeField(ctx) : undefined;
-    if (ctx && backEdgeInvoke && hasReturnContext(ctx)) {
+    if (
+      ctx &&
+      backEdgeInvoke &&
+      hasReturnContext(ctx) &&
+      !transforms.includes("inline")
+    ) {
       const argResult = extractArgInfo(instruction);
       const frame: CallFrame = {
-        identifier:
-          (backEdgeInvoke.identifier as string | undefined) ??
-          callInfo?.identifier,
+        identifier: backEdgeInvoke.identifier as string | undefined,
         stepIndex: i,
         callType: invokeCallType(backEdgeInvoke),
         argumentNames: argResult?.names,
         argumentPointers: argResult?.pointers,
-        isTailCall: callInfo?.isTailCall,
+        isTailCall: transforms.includes("tailcall"),
       };
       if (stack.length > 0) {
         stack[stack.length - 1] = frame;
@@ -408,58 +431,71 @@ export function buildCallStack(
       continue;
     }
 
-    if (callInfo?.kind === "invoke") {
-      // The compiler emits invoke on both the caller JUMP
-      // and callee entry JUMPDEST for the same call. These
-      // occur on consecutive trace steps. Only skip if the
-      // top frame matches AND was pushed on the immediately
-      // preceding step — otherwise this is a new call (e.g.
-      // recursion with the same function name).
-      const top = stack[stack.length - 1];
-      const isDuplicate =
-        top &&
-        top.identifier === callInfo.identifier &&
-        top.callType === callInfo.callType &&
-        top.stepIndex === i - 1;
-      if (isDuplicate) {
-        // Use the callee entry step for resolution —
-        // the argument pointers reference stack slots
-        // that are valid at the JUMPDEST, not the JUMP.
-        // Argument names also live on the callee entry.
-        const argResult = extractArgInfo(instruction);
-        top.stepIndex = i;
-        top.argumentNames = argResult?.names ?? top.argumentNames;
-        top.argumentPointers = argResult?.pointers;
-      } else {
-        const argResult = extractArgInfo(instruction);
-        stack.push({
-          identifier: callInfo.identifier,
-          stepIndex: i,
-          callType: callInfo.callType,
-          argumentNames: argResult?.names,
-          argumentPointers: argResult?.pointers,
-          // Tag virtual activations so the widget can render
-          // them distinctly from real calls.
-          ...(callInfo.isInline ? { isInline: true } : {}),
-        });
-      }
-    } else if (callInfo?.kind === "return" || callInfo?.kind === "revert") {
-      // Pop the matching frame
-      if (stack.length > 0) {
-        stack.pop();
+    // A context may carry more than one event (invoke + return),
+    // e.g. an inlined body that emits to a single instruction.
+    // Process them in order: an invoke opens a frame INCLUSIVE of
+    // its instruction; a return closes it AFTER its instruction
+    // (close-after) — so the frame is still shown while parked on
+    // the return-bearing instruction and popped only on advance.
+    for (const event of extractCallEvents(instruction)) {
+      if (event.kind === "invoke") {
+        // The compiler emits invoke on both the caller JUMP and
+        // callee entry JUMPDEST for a REAL call, on consecutive
+        // steps — collapse that double. Key the dedup on the
+        // inline marker so a virtual invoke never merges with an
+        // adjacent real invoke of the same name (and vice versa).
+        const top = stack[stack.length - 1];
+        const isDuplicate =
+          top &&
+          top.identifier === event.identifier &&
+          top.callType === event.callType &&
+          top.stepIndex === i - 1 &&
+          !!top.isInline === !!event.isInline;
+        if (isDuplicate) {
+          // Use the callee entry step for resolution — argument
+          // pointers/names live on the JUMPDEST, not the JUMP.
+          const argResult = extractArgInfo(instruction);
+          top.stepIndex = i;
+          top.argumentNames = argResult?.names ?? top.argumentNames;
+          top.argumentPointers = argResult?.pointers;
+        } else {
+          const argResult = extractArgInfo(instruction);
+          stack.push({
+            identifier: event.identifier,
+            stepIndex: i,
+            callType: event.callType,
+            argumentNames: argResult?.names,
+            argumentPointers: argResult?.pointers,
+            // Tag virtual activations so the widget can render
+            // them distinctly from real calls.
+            ...(event.isInline ? { isInline: true } : {}),
+          });
+        }
+      } else if (event.kind === "return" || event.kind === "revert") {
+        // close-after: defer the pop until we advance past this
+        // step, so the frame is visible AT its return instruction.
+        if (i < upToStep && stack.length > 0) {
+          stack.pop();
+        }
       }
     }
 
-    // Defensive membership guard: a virtual (inline) frame must
-    // not stay open once execution leaves the inlined body. If
-    // the current instruction carries no inline marker, tear down
-    // any trailing virtual frames — belt-and-suspenders against a
-    // dropped or incomplete virtual return so a phantom activation
-    // can never leak into caller code.
-    if (!isInlineInstr) {
-      while (stack.length > 0 && stack[stack.length - 1].isInline) {
-        stack.pop();
-      }
+    // Defensive membership guard: virtual frames beyond the
+    // instruction's inline-marker count are stale — belt-and-
+    // suspenders against a dropped or incomplete virtual return so
+    // a phantom activation can never leak into caller code (or
+    // linger after an inner inlined body has ended).
+    let trailingVirtual = 0;
+    for (let k = stack.length - 1; k >= 0 && stack[k].isInline; k--) {
+      trailingVirtual++;
+    }
+    while (
+      trailingVirtual > inlineCount &&
+      stack.length > 0 &&
+      stack[stack.length - 1].isInline
+    ) {
+      stack.pop();
+      trailingVirtual--;
     }
   }
 
