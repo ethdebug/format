@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-227/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-227/assets/css/styles.630cff0c.css">
-<script src="/format/pr-preview/pr-227/assets/js/runtime~main.e6100e0d.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-227/assets/js/main.6a1db61e.js" defer="defer"></script>
+<title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-227/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-227/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-227/assets/css/styles.2570a71a.css">
+<script src="/format/pr-preview/pr-227/assets/js/runtime~main.7063d5f2.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-227/assets/js/main.04ae6d39.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -99,8 +99,23 @@ uniform whether or not the call was inlined:</p>
 <ul>
 <li class=""><strong>Push</strong> an activation when an <code>invoke</code> context is encountered
 and <strong>pop</strong> it when the matching <code>return</code> context is
-encountered, in trace order.</li>
+encountered, in trace order. The <code>invoke</code> opens the activation
+inclusive of its instruction; the <code>return</code> closes it after its
+instruction, so the instruction bearing <code>return</code> is still inside
+the activation.</li>
 </ul>
+<p>Because push/pop is driven by where the <code>invoke</code> and <code>return</code>
+contexts sit, a compiler must emit them as a <strong>bracket</strong>: the
+<code>invoke</code> on the first instruction of the body and the <code>return</code> on
+its last. A compiler must <strong>not</strong> duplicate <code>invoke</code> or <code>return</code>
+across a body&#x27;s interior instructions — repeating them would push
+or pop spurious activations. The sole exception is a body that
+compiles to a <strong>single instruction</strong>, whose entry and exit
+coincide: that one instruction legitimately carries both <code>invoke</code>
+and <code>return</code>, and a debugger processes them in order (push, then
+pop). This bracket rule is what keeps the guarantee below —
+that a debugger ignoring <code>transform</code> still sees a coherent
+<code>invoke</code>/<code>return</code> pair — true for inlined calls.</p>
 <p>An inlined callee therefore appears on the call stack exactly as a
 non-inlined one does. Two kinds of activation differ only in how
 they are backed, distinguished by the presence of an <code>inline</code>
@@ -120,6 +135,11 @@ may also omit <code>target</code> (see <a href="#internal-call" class="">Interna
 reliable discriminator is the <code>inline</code> marker.</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="activation-membership">Activation membership<a href="#activation-membership" class="hash-link" aria-label="Direct link to Activation membership" title="Direct link to Activation membership" translate="no">​</a></h3>
+<p>Push/pop and membership answer two different questions. Push/pop
+(above) determines <strong>when</strong> a virtual activation is open — its
+lifetime on the call stack. Membership determines <strong>which</strong> open
+activation a given instruction belongs to. The two are
+independent, and a debugger uses both.</p>
 <p>An instruction belongs to the innermost open virtual activation if
 and only if its context carries an <code>inline</code> identifier in its
 transform list — so composed markers such as <code>[&quot;inline&quot;, &quot;fold&quot;]</code>
@@ -130,6 +150,47 @@ per-instruction from this marker, <strong>not</strong> from instruction ranges:
 optimization passes may relocate or interleave an inlined body, so
 a positional &quot;everything between the invoke and the return&quot; rule
 would be unsound.</p>
+<p>This is why membership is separate from lifetime. An activation
+opened by an <code>invoke</code> stays open until its <code>return</code>, even across
+instructions that are <strong>not</strong> its members — for example, caller
+code an optimizer interleaved into the body&#x27;s trace span. Such a
+non-member instruction (no <code>inline</code> marker for that depth) is
+attributed to the enclosing activation, not the inlined one, even
+while the virtual activation remains on the stack.</p>
+<h3 class="anchor anchorTargetStickyNavbar_SAay" id="correlating-with-name">Correlating with <code>name</code><a href="#correlating-with-name" class="hash-link" aria-label="Direct link to correlating-with-name" title="Direct link to correlating-with-name" translate="no">​</a></h3>
+<p>The push/pop and membership rules above reconstruct activations
+without any correlation identifier: they rely on <code>invoke</code>/<code>return</code>
+appearing in a well-nested order and on the <code>inline</code> marker to
+attribute instructions. That is sufficient for typical compiler
+output. It has two blind spots, both arising because the marker
+alone can&#x27;t tell one activation from another of the same function:</p>
+<ul>
+<li class=""><strong>Adjacent activations of the same function.</strong> Two inlined
+copies of the same callee placed back-to-back, with no
+intervening caller instruction, read as one activation to a
+debugger that groups a consecutive run of <code>inline</code>-marked
+instructions.</li>
+<li class=""><strong>Reordered or interleaved bodies.</strong> An optimizer that moves a
+<code>return</code> marker ahead of its <code>invoke</code>, or interleaves two
+activations non-nested, defeats strict push/pop pairing.</li>
+</ul>
+<p>A <a class="" href="/format/pr-preview/pr-227/spec/program/context/name"><code>name</code></a> closes both. When an
+<code>invoke</code> context carries a <code>name</code>, it <strong>declares</strong> that activation;
+the matching <code>return</code>, and the body instructions that belong to it,
+carry the same <code>name</code> to <strong>reference</strong> it. Because each name is
+declared by exactly one <code>invoke</code>, the pairing is explicit and
+order-independent: adjacent same-function activations have distinct
+names, and a reference resolves to its declaration regardless of
+trace order.</p>
+<p>When names are present they are <strong>authoritative</strong> for activation
+structure — which <code>invoke</code> pairs with which <code>return</code>, and which
+instructions belong to which activation. Push/pop, the <code>inline</code>
+marker, and the marker-count depth remain the fallback a name-less
+debugger uses; in well-nested output the two agree. Where they
+cannot — the two blind spots above — the names are correct. A
+compiler that emits names should therefore keep them consistent
+with the push/pop structure wherever both are determinate, so the
+two views never silently disagree.</p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="identity-and-values">Identity and values<a href="#identity-and-values" class="hash-link" aria-label="Direct link to Identity and values" title="Direct link to Identity and values" translate="no">​</a></h3>
 <p>Every function-identity field (<code>identifier</code>, <code>declaration</code>,
 <code>type</code>) is optional, so a virtual activation degrades gracefully —
@@ -148,6 +209,6 @@ values is still a valid, displayable frame.</p>
 <p>A debugger that ignores <code>transform</code> contexts still sees a coherent
 <code>invoke</code>/<code>return</code> pair and a sound source-level call stack. One
 that understands them can present virtual activations distinctly —
-for example, collapsible and tied to the callee&#x27;s source location.</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_HJkF"><a href="https://github.com/ethdebug/format/tree/main/packages/web/spec/program/context/function/invoke.mdx" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_UohW" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_g62E"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/format/pr-preview/pr-227/spec/program/context/function/"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Function identity</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/format/pr-preview/pr-227/spec/program/context/function/return"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Return contexts</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_TN1Q thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#pointer-evaluation-and-instruction-placement" class="table-of-contents__link toc-highlight">Pointer evaluation and instruction placement</a></li><li><a href="#internal-call" class="table-of-contents__link toc-highlight">Internal call</a><ul><li><a href="#inlined-internal-calls" class="table-of-contents__link toc-highlight">Inlined internal calls</a></li></ul></li><li><a href="#external-call" class="table-of-contents__link toc-highlight">External call</a></li><li><a href="#contract-creation" class="table-of-contents__link toc-highlight">Contract creation</a></li><li><a href="#reconstructing-activations" class="table-of-contents__link toc-highlight">Reconstructing activations</a><ul><li><a href="#activation-membership" class="table-of-contents__link toc-highlight">Activation membership</a></li><li><a href="#identity-and-values" class="table-of-contents__link toc-highlight">Identity and values</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Docs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/docs/overview">Project overview</a></li><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/docs/reference/challenges">Known challenges</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Spec</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/spec/overview">Specification overview</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Community</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://matrix.to/#/#ethdebug:matrix.org" target="_blank" rel="noopener noreferrer" class="footer__link-item">Matrix.chat<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://twitter.com/ethdebug" target="_blank" rel="noopener noreferrer" class="footer__link-item">Twitter<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/ethdebug/format" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 by ethdebug contributors. Built with Docusaurus.</div></div></div></footer></div>
+for example, collapsible and tied to the callee&#x27;s source location.</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_HJkF"><a href="https://github.com/ethdebug/format/tree/main/packages/web/spec/program/context/function/invoke.mdx" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_UohW" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_g62E"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/format/pr-preview/pr-227/spec/program/context/function/"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Function identity</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/format/pr-preview/pr-227/spec/program/context/function/return"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Return contexts</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_TN1Q thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#pointer-evaluation-and-instruction-placement" class="table-of-contents__link toc-highlight">Pointer evaluation and instruction placement</a></li><li><a href="#internal-call" class="table-of-contents__link toc-highlight">Internal call</a><ul><li><a href="#inlined-internal-calls" class="table-of-contents__link toc-highlight">Inlined internal calls</a></li></ul></li><li><a href="#external-call" class="table-of-contents__link toc-highlight">External call</a></li><li><a href="#contract-creation" class="table-of-contents__link toc-highlight">Contract creation</a></li><li><a href="#reconstructing-activations" class="table-of-contents__link toc-highlight">Reconstructing activations</a><ul><li><a href="#activation-membership" class="table-of-contents__link toc-highlight">Activation membership</a></li><li><a href="#correlating-with-name" class="table-of-contents__link toc-highlight">Correlating with <code>name</code></a></li><li><a href="#identity-and-values" class="table-of-contents__link toc-highlight">Identity and values</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Docs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/docs/overview">Project overview</a></li><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/docs/reference/challenges">Known challenges</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Spec</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/format/pr-preview/pr-227/spec/overview">Specification overview</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Community</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://matrix.to/#/#ethdebug:matrix.org" target="_blank" rel="noopener noreferrer" class="footer__link-item">Matrix.chat<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://twitter.com/ethdebug" target="_blank" rel="noopener noreferrer" class="footer__link-item">Twitter<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/ethdebug/format" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 by ethdebug contributors. Built with Docusaurus.</div></div></div></footer></div>
 </body>
 </html>
