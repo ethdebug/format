@@ -141,3 +141,52 @@ describe("inlined invoke/return are bracketed on emitted bytecode", () => {
     }
   });
 });
+
+// A self-tail-recursive accumulator: TCO turns the recursive call
+// into a single back-edge JUMP that legitimately carries BOTH invoke
+// and return on its one op (end one iteration + begin the next).
+const tailRecursive = `name TailSum;
+define {
+  function sum(n: uint256, acc: uint256) -> uint256 {
+    if (n == 0) { return acc; }
+    else { return sum(n - 1, acc + n); }
+  };
+}
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = sum(5, 0); }`;
+
+// Mutually recursive functions never inline, so their calls stay real
+// (invoke on a 1-op JUMP, return on a 1-op JUMPDEST).
+const mutualRecursion = `name EvenOdd;
+define {
+  function isEven(n: uint256) -> uint256 {
+    if (n == 0) { return 1; } else { return isOdd(n - 1); }
+  };
+  function isOdd(n: uint256) -> uint256 {
+    if (n == 0) { return 0; } else { return isEven(n - 1); }
+  };
+}
+storage { [0] result: uint256; }
+create { result = 0; }
+code { result = isEven(4); }`;
+
+describe("bracketing is a no-op for single-op invoke/return carriers", () => {
+  it("tailcall back-edge keeps its combined invoke+return on one op", async () => {
+    // The back-edge JUMP is a single op carrying both markers; bracketing
+    // to first-op/last-op is first==last, so both must survive.
+    const instrs = await runtimeInstructions(tailRecursive, 2);
+    const t = tally(instrs.map(flags));
+    expect(t.both).toBeGreaterThanOrEqual(1);
+  });
+
+  it("real (non-inlined) calls never carry both on an op", async () => {
+    const instrs = await runtimeInstructions(mutualRecursion, 2);
+    const t = tally(instrs.map(flags));
+    // Real calls put invoke on a 1-op JUMP and return on a 1-op JUMPDEST,
+    // distinct ops — the fix must not fabricate a both.
+    expect(t.both).toBe(0);
+    expect(t.invoke).toBeGreaterThan(0);
+    expect(t.ret).toBeGreaterThan(0);
+  });
+});
