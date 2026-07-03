@@ -188,6 +188,41 @@ non-member instruction (no `inline` marker for that depth) is
 attributed to the enclosing activation, not the inlined one, even
 while the virtual activation remains on the stack.
 
+### Correlating with `name`
+
+The push/pop and membership rules above reconstruct activations
+without any correlation identifier: they rely on `invoke`/`return`
+appearing in a well-nested order and on the `inline` marker to
+attribute instructions. That is sufficient for typical compiler
+output. It has two blind spots, both from the marker alone being
+unable to tell one activation from another of the same function:
+
+- **Adjacent activations of the same function.** Two inlined
+  copies of the same callee placed back-to-back, with no
+  intervening caller instruction, read as one activation under a
+  marker-run rule.
+- **Reordered or interleaved bodies.** An optimizer that moves a
+  `return` marker ahead of its `invoke`, or interleaves two
+  activations non-nested, defeats strict push/pop pairing.
+
+A [`name`](/spec/program/context/name) closes both. When an
+`invoke` context carries a `name`, it **declares** that activation;
+the matching `return`, and the body instructions that belong to it,
+carry the same `name` to **reference** it. Because names are unique
+within the program, the pairing is explicit and order-independent:
+adjacent same-function activations have distinct names, and a
+reference resolves to its declaration regardless of trace order.
+
+When names are present they are **authoritative** for activation
+structure — which `invoke` pairs with which `return`, and which
+instructions belong to which activation. Push/pop, the `inline`
+marker, and the marker-count depth remain the fallback a name-less
+debugger uses; in well-nested output the two agree. Where they
+cannot — the two blind spots above — the names are correct. A
+compiler that emits names should therefore keep them consistent
+with the push/pop structure wherever both are determinate, so the
+two views never silently disagree.
+
 ### Identity and values
 
 Every function-identity field (`identifier`, `declaration`,

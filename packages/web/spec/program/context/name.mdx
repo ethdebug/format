@@ -6,9 +6,56 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Named contexts
 
-Contexts may include a `name` property for distinguishing them from
-other contexts. This is particularly useful inside `pick` alternatives,
-where several possible contexts may apply at a given point in execution
-and runtime information is needed to select which one is active.
+A context may carry a `name`: a machine-generated identifier that gives
+the context a stable identity other contexts can reference. A name is
+what makes a **cross-context reference** possible — one context declares
+a name, and another points back to it by the same name.
+
+Names are opaque strings; the format imposes no structure on their
+contents. Within a single program — one
+[`instructions`](/spec/program) sequence — a `name` **must** be unique,
+so that a reference resolves to exactly one declaring context. Compilers
+**should** also choose names that are meaningful to debugger users.
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/program/context/name" }} />
+
+## Uses
+
+### Selecting `pick` alternatives
+
+Inside a [`pick`](/spec/program/context/pick), several contexts may apply
+at a given point in execution and runtime information is needed to select
+which one is active. A `name` on each alternative gives the selection
+something stable to identify the chosen alternative by.
+
+### Correlating an invocation with its return
+
+A `name` lets a function invocation and its return be paired directly.
+An [`invoke`](/spec/program/context/function/invoke) context **declares**
+an activation's name; the matching
+[`return`](/spec/program/context/function/return) context — and the
+instructions belonging to that activation's body — **reference** it by
+the same name.
+
+This declaration/reference split follows the format's general
+reference-by-name idiom (as a
+[pointer template](/spec/pointer/collection/templates) is declared
+once and referenced elsewhere). It pairs a call with its return
+without relying on the trace
+being strictly nested: even when optimization reorders or interleaves
+code so that a naive "innermost open activation" rule would mispair
+them, the shared name resolves the pairing unambiguously. When two
+inlined copies of the same function appear back-to-back, their distinct
+names keep them distinct activations.
+
+Because a single context object can hold at most one `name`, two
+activation facts that must carry **different** names at the same
+instruction — for example a tail call, where one instruction both
+returns from the current activation and invokes the next — are expressed
+with a [`gather`](/spec/program/context/gather) whose members each carry
+their own name. The naming granularity therefore tracks the structure of
+the contexts themselves.
+
+See the invoke context's
+[Reconstructing activations](/spec/program/context/function/invoke#reconstructing-activations)
+for how a debugger uses these names to rebuild the call stack.
