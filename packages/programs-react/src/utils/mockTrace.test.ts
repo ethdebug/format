@@ -532,4 +532,97 @@ describe("inline virtual activations", () => {
       expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(0);
     });
   });
+
+  describe("bracketed emission (post de-smear, #235 shape)", () => {
+    // The real bracketed shape: invoke on the body's FIRST op,
+    // return on its LAST op, transform:["inline"] on every op. The
+    // frame must be visible across the whole body — including the
+    // return-bearing exit op (close-after) — and gone at the gap.
+    const entryOp = {
+      transform: ["inline"],
+      invoke: { jump: true, identifier: "dbl" },
+    };
+    const interiorOp = { transform: ["inline"] };
+    const exitOp = { transform: ["inline"], return: { identifier: "dbl" } };
+    const gapOp = { code: { source: { id: "0" }, range: {} } };
+    const trace: TraceStep[] = [
+      { pc: 0, opcode: "PUSH1" }, // entry op (invoke)
+      { pc: 1, opcode: "DUP2" }, // interior op
+      { pc: 2, opcode: "ADD" }, // interior op
+      { pc: 3, opcode: "MSTORE" }, // exit op (return)
+      { pc: 4, opcode: "JUMPDEST" }, // gap / caller
+    ];
+    const program = {
+      instructions: [
+        instr(0, entryOp),
+        instr(1, interiorOp),
+        instr(2, interiorOp),
+        instr(3, exitOp),
+        instr(4, gapOp),
+      ],
+    } as unknown as Program;
+    const pcToInstruction = buildPcToInstructionMap(program);
+
+    it("shows the virtual frame across every body op incl. the exit", () => {
+      for (const s of [0, 1, 2, 3]) {
+        const stack = buildCallStack(trace, pcToInstruction, s);
+        expect(stack).toHaveLength(1);
+        expect(stack[0].isInline).toBe(true);
+      }
+    });
+
+    it("is gone at the gap after the return op", () => {
+      expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(0);
+    });
+  });
+
+  describe("robustness: legacy SMEARED emission (pre de-smear)", () => {
+    // Belt-and-suspenders: an older/residual emission where EVERY
+    // body op carries invoke+return+inline. Close-after must still
+    // yield exactly one frame per body across all ops (the viewed
+    // op's co-located return is deferred; prior ops net empty) and
+    // no accumulation across two gap-separated bodies.
+    const smearedOp = {
+      transform: ["inline"],
+      invoke: { jump: true, identifier: "dbl" },
+      return: { identifier: "dbl" },
+    };
+    const gapOp = { code: { source: { id: "0" }, range: {} } };
+    const trace: TraceStep[] = [
+      { pc: 0, opcode: "PUSH1" }, // body 1: 3 smeared ops
+      { pc: 1, opcode: "DUP2" },
+      { pc: 2, opcode: "MSTORE" },
+      { pc: 3, opcode: "JUMPDEST" }, // gap
+      { pc: 4, opcode: "PUSH1" }, // body 2: 3 smeared ops
+      { pc: 5, opcode: "DUP2" },
+      { pc: 6, opcode: "MSTORE" },
+      { pc: 7, opcode: "JUMPDEST" }, // gap
+    ];
+    const program = {
+      instructions: [
+        instr(0, smearedOp),
+        instr(1, smearedOp),
+        instr(2, smearedOp),
+        instr(3, gapOp),
+        instr(4, smearedOp),
+        instr(5, smearedOp),
+        instr(6, smearedOp),
+        instr(7, gapOp),
+      ],
+    } as unknown as Program;
+    const pcToInstruction = buildPcToInstructionMap(program);
+
+    it("shows exactly one frame across each smeared body", () => {
+      for (const s of [0, 1, 2, 4, 5, 6]) {
+        const stack = buildCallStack(trace, pcToInstruction, s);
+        expect(stack).toHaveLength(1);
+        expect(stack[0].isInline).toBe(true);
+      }
+    });
+
+    it("returns to top level at each gap — no accumulation", () => {
+      expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 7)).toHaveLength(0);
+    });
+  });
 });
