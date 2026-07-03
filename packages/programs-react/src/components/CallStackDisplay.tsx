@@ -102,6 +102,14 @@ export function CallStackDisplay({
                   ⮌ tail call
                 </span>
               )}
+              {frame.isInline && (
+                <span
+                  className="call-stack-inline"
+                  title="Inlined: virtual activation — the body was spliced into the caller, no call occurred"
+                >
+                  ⧉ inline
+                </span>
+              )}
             </button>
           </React.Fragment>
         ))}
