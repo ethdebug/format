@@ -3,6 +3,7 @@ import { Type } from "#types/type";
 import { Pointer, isPointer } from "#types/pointer";
 
 export type Context =
+  | Context.Name
   | Context.Code
   | Context.Variables
   | Context.Remark
@@ -16,6 +17,7 @@ export type Context =
 
 export const isContext = (value: unknown): value is Context =>
   [
+    Context.isName,
     Context.isCode,
     Context.isVariables,
     Context.isRemark,
@@ -29,6 +31,16 @@ export const isContext = (value: unknown): value is Context =>
   ].some((guard) => guard(value));
 
 export namespace Context {
+  export interface Name {
+    name: string;
+  }
+
+  export const isName = (value: unknown): value is Name =>
+    typeof value === "object" &&
+    !!value &&
+    "name" in value &&
+    typeof value.name === "string";
+
   export interface Code {
     code: Materials.SourceRange;
   }
