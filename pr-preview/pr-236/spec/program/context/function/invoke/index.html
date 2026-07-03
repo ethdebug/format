@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-236/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-236/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-236/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-236/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-236/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-236/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-236/assets/css/styles.ee37e6fe.css">
-<script src="/format/pr-preview/pr-236/assets/js/runtime~main.765cc056.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-236/assets/js/main.058d69dc.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-236/assets/js/runtime~main.189e7e60.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-236/assets/js/main.ebf20404.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -162,13 +162,14 @@ while the virtual activation remains on the stack.</p>
 without any correlation identifier: they rely on <code>invoke</code>/<code>return</code>
 appearing in a well-nested order and on the <code>inline</code> marker to
 attribute instructions. That is sufficient for typical compiler
-output. It has two blind spots, both from the marker alone being
-unable to tell one activation from another of the same function:</p>
+output. It has two blind spots, both arising because the marker
+alone can&#x27;t tell one activation from another of the same function:</p>
 <ul>
 <li class=""><strong>Adjacent activations of the same function.</strong> Two inlined
 copies of the same callee placed back-to-back, with no
-intervening caller instruction, read as one activation under a
-marker-run rule.</li>
+intervening caller instruction, read as one activation to a
+debugger that groups a consecutive run of <code>inline</code>-marked
+instructions.</li>
 <li class=""><strong>Reordered or interleaved bodies.</strong> An optimizer that moves a
 <code>return</code> marker ahead of its <code>invoke</code>, or interleaves two
 activations non-nested, defeats strict push/pop pairing.</li>
@@ -176,10 +177,11 @@ activations non-nested, defeats strict push/pop pairing.</li>
 <p>A <a class="" href="/format/pr-preview/pr-236/spec/program/context/name"><code>name</code></a> closes both. When an
 <code>invoke</code> context carries a <code>name</code>, it <strong>declares</strong> that activation;
 the matching <code>return</code>, and the body instructions that belong to it,
-carry the same <code>name</code> to <strong>reference</strong> it. Because names are unique
-within the program, the pairing is explicit and order-independent:
-adjacent same-function activations have distinct names, and a
-reference resolves to its declaration regardless of trace order.</p>
+carry the same <code>name</code> to <strong>reference</strong> it. Because each name is
+declared by exactly one <code>invoke</code>, the pairing is explicit and
+order-independent: adjacent same-function activations have distinct
+names, and a reference resolves to its declaration regardless of
+trace order.</p>
 <p>When names are present they are <strong>authoritative</strong> for activation
 structure — which <code>invoke</code> pairs with which <code>return</code>, and which
 instructions belong to which activation. Push/pop, the <code>inline</code>
