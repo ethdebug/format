@@ -495,7 +495,8 @@ code { r = count(0, 5); }`;
           expect(Invocation.isInternalCall(invocation)).toBe(true);
           const internalCall =
             invocation as Format.Program.Context.Invoke.Invocation.InternalCall;
-          const invokeTarget = internalCall.target.pointer;
+          expect(internalCall.target).toBeDefined();
+          const invokeTarget = internalCall.target!.pointer;
           expect(invokeTarget).toBeDefined();
           expect(
             "offset" in invokeTarget ? invokeTarget.offset : undefined,
