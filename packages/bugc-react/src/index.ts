@@ -44,6 +44,9 @@ export {
   type EditorSourceRange,
 } from "#components/Editor";
 
+// Curated example programs (for playground selectors)
+export { bugExamples, type BugExample } from "./examples.js";
+
 // Utilities
 export {
   // Debug utilities
