@@ -49,7 +49,8 @@
   color: var(--programs-text-muted, #888);
 }
 
-.call-stack-tailcall {
+.call-stack-tailcall,
+.call-stack-inline {
   margin-left: 4px;
   padding: 0 5px;
   border-radius: 8px;
@@ -59,4 +60,11 @@
   background: var(--programs-transform-bg, #f3ecff);
   color: var(--programs-transform-text, #8250df);
   border: 1px solid var(--programs-transform-accent, #a475f9);
+}
+
+/* Virtual (inline) activations use a dashed border to read as
+   "not a real frame" while sharing the transform palette. */
+.call-stack-inline {
+  border-style: dashed;
+  font-style: italic;
 }
