@@ -14,6 +14,7 @@ import { Memory } from "#evmgen/analysis";
 import { calculateSize } from "#evmgen/serialize";
 
 import * as Instruction from "./instruction.js";
+import { bracketActivation, carriesActivation } from "./bracket-activation.js";
 import { loadValue } from "./values/index.js";
 import {
   generateTerminator,
@@ -161,9 +162,31 @@ export function generate<S extends Stack>(
       // the runtime predecessor differs from the layout-order
       // predecessor.
 
-      // Process regular instructions
+      // Process regular instructions. Invoke/return activation
+      // discriminators must be bracketed to the first/last emitted op
+      // of the instruction (see bracket-activation.ts); everything else
+      // (source mapping, variables, transform markers) rides all ops.
       for (const inst of block.instructions) {
-        result = result.then(Instruction.generate(inst));
+        const gen = Instruction.generate(inst);
+        const operationCtx = inst.operationDebug?.context;
+        if (
+          !carriesActivation(operationCtx, "invoke") &&
+          !carriesActivation(operationCtx, "return")
+        ) {
+          result = result.then(gen);
+          continue;
+        }
+        result = result.peek((state, builder) => {
+          const start = state.instructions.length;
+          return builder.then(gen).then((s) => ({
+            ...s,
+            instructions: bracketActivation(
+              s.instructions,
+              start,
+              operationCtx,
+            ),
+          }));
+        });
       }
 
       // Emit phi copies for successor blocks before the
