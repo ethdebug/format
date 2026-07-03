@@ -7,6 +7,10 @@ testSchemaGuards("ethdebug/format/program/context", [
     guard: isContext,
   },
   {
+    schema: "schema:ethdebug/format/program/context/name",
+    guard: Context.isName,
+  },
+  {
     schema: "schema:ethdebug/format/program/context/code",
     guard: Context.isCode,
   },
