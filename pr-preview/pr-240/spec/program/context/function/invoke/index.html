@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Invocation contexts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-240/spec/program/context/function/invoke"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Invocation contexts | ethdebug format"><meta data-rh="true" name="description" content="An invoke context marks an instruction that enters a function."><meta data-rh="true" property="og:description" content="An invoke context marks an instruction that enters a function."><link data-rh="true" rel="icon" href="/format/pr-preview/pr-240/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-240/spec/program/context/function/invoke"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-240/spec/program/context/function/invoke" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-240/spec/program/context/function/invoke" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Invocation contexts","item":"https://ethdebug.github.io/format/pr-preview/pr-240/spec/program/context/function/invoke"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-240/assets/css/styles.d7c759f1.css">
-<script src="/format/pr-preview/pr-240/assets/js/runtime~main.0e557f97.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-240/assets/js/runtime~main.ff185a89.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-240/assets/js/main.a483fc11.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -158,13 +158,13 @@ non-member instruction (no <code>inline</code> marker for that depth) is
 attributed to the enclosing activation, not the inlined one, even
 while the virtual activation remains on the stack.</p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="correlating-with-activation">Correlating with <code>activation</code><a href="#correlating-with-activation" class="hash-link" aria-label="Direct link to correlating-with-activation" title="Direct link to correlating-with-activation" translate="no">​</a></h3>
-<p>The push/pop and membership rules above reconstruct activations
-without any correlation identifier: they rely on <code>invoke</code>/<code>return</code>
-appearing in a well-nested order. That is sufficient for typical
-compiler output. It has a blind spot: push/pop alone can&#x27;t tell
-one activation from another of the same function, so two inlined
-copies of a callee placed back-to-back — or an optimizer that
-moves a <code>return</code> ahead of its <code>invoke</code> — can defeat strict pairing.</p>
+<p>The push/pop rule above reconstructs the call stack without any
+correlation identifier: it relies on <code>invoke</code>/<code>return</code> appearing
+in a well-nested order. That is sufficient for typical compiler
+output, but it has a blind spot — push/pop alone can&#x27;t tell one
+activation from another of the same function, so two inlined
+copies of a callee placed back-to-back, or an optimizer that moves
+a <code>return</code> ahead of its <code>invoke</code>, can defeat strict pairing.</p>
 <p>An <strong><code>activation</code></strong> identifier closes it. The <code>invoke</code> object that
 opens an activation and the <code>return</code> (or <code>revert</code>) that closes it
 carry the same <code>activation</code> value; distinct activations carry
@@ -173,9 +173,9 @@ matching values pair an invoke with its return regardless of trace
 order, and adjacent same-function activations stay distinct because
 their identifiers differ.</p>
 <p>Unlike function <a href="#identity-and-values" class="">identity</a> (which function
-this is), <code>activation</code> names <em>which activation instance</em> this is,
-so it lives <strong>inside</strong> the <code>invoke</code>/<code>return</code>/<code>revert</code> object rather
-than as a sibling context. Two activation facts on one instruction
+this is), <code>activation</code> identifies <em>which activation instance</em> this
+is, so it lives <strong>inside</strong> the <code>invoke</code>/<code>return</code>/<code>revert</code> object
+rather than as a sibling context. Two activation facts on one instruction
 — a tail call&#x27;s back-edge, which both returns from one activation
 and invokes the next — therefore stay flat, each fact carrying its
 own <code>activation</code> value, with no <code>gather</code> required.</p>
