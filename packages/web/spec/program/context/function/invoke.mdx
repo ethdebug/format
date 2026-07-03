@@ -194,13 +194,14 @@ The push/pop and membership rules above reconstruct activations
 without any correlation identifier: they rely on `invoke`/`return`
 appearing in a well-nested order and on the `inline` marker to
 attribute instructions. That is sufficient for typical compiler
-output. It has two blind spots, both from the marker alone being
-unable to tell one activation from another of the same function:
+output. It has two blind spots, both arising because the marker
+alone can't tell one activation from another of the same function:
 
 - **Adjacent activations of the same function.** Two inlined
   copies of the same callee placed back-to-back, with no
-  intervening caller instruction, read as one activation under a
-  marker-run rule.
+  intervening caller instruction, read as one activation to a
+  debugger that groups a consecutive run of `inline`-marked
+  instructions.
 - **Reordered or interleaved bodies.** An optimizer that moves a
   `return` marker ahead of its `invoke`, or interleaves two
   activations non-nested, defeats strict push/pop pairing.
@@ -208,10 +209,11 @@ unable to tell one activation from another of the same function:
 A [`name`](/spec/program/context/name) closes both. When an
 `invoke` context carries a `name`, it **declares** that activation;
 the matching `return`, and the body instructions that belong to it,
-carry the same `name` to **reference** it. Because names are unique
-within the program, the pairing is explicit and order-independent:
-adjacent same-function activations have distinct names, and a
-reference resolves to its declaration regardless of trace order.
+carry the same `name` to **reference** it. Because each name is
+declared by exactly one `invoke`, the pairing is explicit and
+order-independent: adjacent same-function activations have distinct
+names, and a reference resolves to its declaration regardless of
+trace order.
 
 When names are present they are **authoritative** for activation
 structure — which `invoke` pairs with which `return`, and which

@@ -22,10 +22,12 @@ description: |
     guidance).
 
   Names are opaque strings; the format imposes no structure on
-  their contents. Within a single program — one **instructions**
-  sequence — a `name` **must** be unique, so that a reference
-  resolves to exactly one declaring context. Compilers **should**
-  also choose names that are meaningful to debugger users.
+  them. Within a single program — one **instructions** sequence —
+  each name **must** be declared by exactly one context; no two
+  contexts may declare the same name. Other contexts may reference
+  that name freely, and every reference resolves to the single
+  declaring context. Compilers **should** also choose names that
+  are meaningful to debugger users.
 
 type: object
 properties:

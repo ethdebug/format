@@ -11,10 +11,12 @@ the context a stable identity other contexts can reference. A name is
 what makes a **cross-context reference** possible — one context declares
 a name, and another points back to it by the same name.
 
-Names are opaque strings; the format imposes no structure on their
-contents. Within a single program — one
-[`instructions`](/spec/program) sequence — a `name` **must** be unique,
-so that a reference resolves to exactly one declaring context. Compilers
+Names are opaque strings; the format imposes no structure on them.
+Within a single program — one [`instructions`](/spec/program)
+sequence — each name **must** be declared by exactly one context; no
+two contexts may declare the same name. Other contexts may reference
+that name freely — that repetition is how they point back — and every
+reference resolves to the single declaring context. Compilers
 **should** also choose names that are meaningful to debugger users.
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/program/context/name" }} />
@@ -26,7 +28,7 @@ so that a reference resolves to exactly one declaring context. Compilers
 Inside a [`pick`](/spec/program/context/pick), several contexts may apply
 at a given point in execution and runtime information is needed to select
 which one is active. A `name` on each alternative gives the selection
-something stable to identify the chosen alternative by.
+a stable handle for the chosen alternative.
 
 ### Correlating an invocation with its return
 
