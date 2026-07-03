@@ -188,42 +188,40 @@ non-member instruction (no `inline` marker for that depth) is
 attributed to the enclosing activation, not the inlined one, even
 while the virtual activation remains on the stack.
 
-### Correlating with `name`
+### Correlating with `activation`
 
 The push/pop and membership rules above reconstruct activations
 without any correlation identifier: they rely on `invoke`/`return`
-appearing in a well-nested order and on the `inline` marker to
-attribute instructions. That is sufficient for typical compiler
-output. It has two blind spots, both arising because the marker
-alone can't tell one activation from another of the same function:
+appearing in a well-nested order. That is sufficient for typical
+compiler output. It has a blind spot: push/pop alone can't tell
+one activation from another of the same function, so two inlined
+copies of a callee placed back-to-back — or an optimizer that
+moves a `return` ahead of its `invoke` — can defeat strict pairing.
 
-- **Adjacent activations of the same function.** Two inlined
-  copies of the same callee placed back-to-back, with no
-  intervening caller instruction, read as one activation to a
-  debugger that groups a consecutive run of `inline`-marked
-  instructions.
-- **Reordered or interleaved bodies.** An optimizer that moves a
-  `return` marker ahead of its `invoke`, or interleaves two
-  activations non-nested, defeats strict push/pop pairing.
+An **`activation`** identifier closes it. The `invoke` object that
+opens an activation and the `return` (or `revert`) that closes it
+carry the same `activation` value; distinct activations carry
+distinct values. Pairing is then explicit and order-independent —
+matching values pair an invoke with its return regardless of trace
+order, and adjacent same-function activations stay distinct because
+their identifiers differ.
 
-A [`name`](/spec/program/context/name) closes both. When an
-`invoke` context carries a `name`, it **declares** that activation;
-the matching `return`, and the body instructions that belong to it,
-carry the same `name` to **reference** it. Because each name is
-declared by exactly one `invoke`, the pairing is explicit and
-order-independent: adjacent same-function activations have distinct
-names, and a reference resolves to its declaration regardless of
-trace order.
+Unlike function [identity](#identity-and-values) (which function
+this is), `activation` names _which activation instance_ this is,
+so it lives **inside** the `invoke`/`return`/`revert` object rather
+than as a sibling context. Two activation facts on one instruction
+— a tail call's back-edge, which both returns from one activation
+and invokes the next — therefore stay flat, each fact carrying its
+own `activation` value, with no `gather` required.
 
-When names are present they are **authoritative** for activation
-structure — which `invoke` pairs with which `return`, and which
-instructions belong to which activation. Push/pop, the `inline`
-marker, and the marker-count depth remain the fallback a name-less
-debugger uses; in well-nested output the two agree. Where they
-cannot — the two blind spots above — the names are correct. A
-compiler that emits names should therefore keep them consistent
-with the push/pop structure wherever both are determinate, so the
-two views never silently disagree.
+When `activation` is present it is **authoritative** for pairing —
+which `invoke` matches which `return`. Push/pop remains the fallback
+an identifier-less debugger uses; in well-nested output the two
+agree. Membership — which instructions belong to a virtual
+activation — is unaffected: it stays the per-instruction
+[`inline` marker](#activation-membership). Attributing a body that
+an optimizer relocated to a _specific_ activation would need a
+membership-level identifier; that is out of scope here.
 
 ### Identity and values
 

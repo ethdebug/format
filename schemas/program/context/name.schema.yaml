@@ -3,31 +3,18 @@ $id: "schema:ethdebug/format/program/context/name"
 
 title: ethdebug/format/program/context/name
 description: |
-  A machine-generated identifier for this context that other
-  contexts may reference by name.
+  The identifier a `pick` uses to select this context.
 
-  A `name` gives a context a stable identity that the rest of a
-  program's debug information can point back to. This is what makes
-  cross-context references possible. Uses include:
-
-  - **Selecting `pick` alternatives.** Several contexts may apply
-    at a point in execution; a `name` identifies which alternative
-    is active, so runtime information can select it.
-  - **Correlating an invocation with its return.** An `invoke`
-    context *declares* an activation's name; the matching `return`
-    context — and the instructions belonging to that activation —
-    *reference* it by the same name. This pairs a call with its
-    return directly, without relying on the trace being strictly
-    nested (see the invoke context's activation-reconstruction
-    guidance).
+  Inside a `pick`, several contexts may apply at a point in
+  execution and runtime information is needed to select which one
+  is active. A `name` on each alternative gives the selection a
+  stable handle for the chosen alternative.
 
   Names are opaque strings; the format imposes no structure on
-  them. Within a single program — one **instructions** sequence —
-  each name **must** be declared by exactly one context; no two
-  contexts may declare the same name. Other contexts may reference
-  that name freely, and every reference resolves to the single
-  declaring context. Compilers **should** also choose names that
-  are meaningful to debugger users.
+  them. A name need only be distinct among the alternatives a
+  `pick` must choose between, so that the selection is unambiguous.
+  Compilers **should** choose names that are meaningful to debugger
+  users.
 
 type: object
 properties:
@@ -37,10 +24,7 @@ required:
   - name
 
 examples:
-  # example: declaring an inlined activation, referenced by its
-  # matching return and by the instructions of the inlined body
-  - name: "inline-0"
-  # example: naming a generic instantiation
-  - name: "Array<T=bytes32>"
   # example: distinguishing a `pick` alternative
   - name: "storage-layout-v2"
+  # example: naming a generic instantiation
+  - name: "Array<T=bytes32>"

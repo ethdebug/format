@@ -43,6 +43,20 @@ properties:
 
     $ref: "schema:ethdebug/format/program/context/function"
 
+    properties:
+      activation:
+        type: string
+        title: Activation identifier
+        description: |
+          Correlation identifier for the activation this
+          invocation opens. The `return` or `revert` that ends the
+          same activation carries this same value; distinct
+          activations carry distinct values, unique within the
+          program. Lets a debugger pair an invocation with its
+          return independent of trace order — disambiguating
+          adjacent inlined activations of the same function and
+          surviving optimizer reordering. Optional.
+
     allOf:
       - oneOf:
           - required: [jump]
@@ -310,6 +324,10 @@ examples:
           offset: 128
           length: 95
       jump: true
+      # Correlation id: the matching inlined `return` carries the
+      # same value, so the two pair even if `transfer` is inlined
+      # at several sites.
+      activation: "transfer#0"
 
   # -----------------------------------------------------------
   # External CALL: token.balanceOf(account)
