@@ -125,6 +125,12 @@ export interface CallInfo {
    * (TCO), reusing the current frame rather than nesting.
    */
   isTailCall?: boolean;
+  /**
+   * True when an `inline` transform is present on the same
+   * instruction — this invoke/return belongs to an inlined
+   * (virtual) activation, not a real call.
+   */
+  isInline?: boolean;
 }
 
 /**
@@ -178,10 +184,15 @@ export function extractCallInfoFromInstruction(
   if (!info) {
     return undefined;
   }
-  const isTailCall = extractTransformFromContext(instruction.context).includes(
-    "tailcall",
-  );
-  return isTailCall ? { ...info, isTailCall: true } : info;
+  const transforms = extractTransformFromContext(instruction.context);
+  const decorated: CallInfo = { ...info };
+  if (transforms.includes("tailcall")) {
+    decorated.isTailCall = true;
+  }
+  if (transforms.includes("inline")) {
+    decorated.isInline = true;
+  }
+  return decorated;
 }
 
 function extractCallInfoFromContext(
@@ -329,6 +340,13 @@ export interface CallFrame {
    * (TCO). The frame was reused in place rather than nested.
    */
   isTailCall?: boolean;
+  /**
+   * True when this frame is a VIRTUAL activation reconstructed
+   * from an inlined body (transform:["inline"]) rather than a
+   * real call. Its instructions were spliced into the caller;
+   * no JUMP occurred.
+   */
+  isInline?: boolean;
 }
 
 /**
@@ -349,10 +367,13 @@ export function buildCallStack(
       continue;
     }
 
+    // Per-instruction inline membership drives the defensive
+    // guard below: an inlined body's instructions all carry
+    // transform:["inline"], so a virtual frame is only valid
+    // while that marker holds.
+    const isInlineInstr =
+      extractTransformFromInstruction(instruction).includes("inline");
     const callInfo = extractCallInfoFromInstruction(instruction);
-    if (!callInfo) {
-      continue;
-    }
 
     // A tail-call back-edge carries both a `return` (the previous
     // iteration) and an `invoke` (the next iteration) on a single
@@ -372,12 +393,12 @@ export function buildCallStack(
       const frame: CallFrame = {
         identifier:
           (backEdgeInvoke.identifier as string | undefined) ??
-          callInfo.identifier,
+          callInfo?.identifier,
         stepIndex: i,
         callType: invokeCallType(backEdgeInvoke),
         argumentNames: argResult?.names,
         argumentPointers: argResult?.pointers,
-        isTailCall: callInfo.isTailCall,
+        isTailCall: callInfo?.isTailCall,
       };
       if (stack.length > 0) {
         stack[stack.length - 1] = frame;
@@ -387,7 +408,7 @@ export function buildCallStack(
       continue;
     }
 
-    if (callInfo.kind === "invoke") {
+    if (callInfo?.kind === "invoke") {
       // The compiler emits invoke on both the caller JUMP
       // and callee entry JUMPDEST for the same call. These
       // occur on consecutive trace steps. Only skip if the
@@ -417,11 +438,26 @@ export function buildCallStack(
           callType: callInfo.callType,
           argumentNames: argResult?.names,
           argumentPointers: argResult?.pointers,
+          // Tag virtual activations so the widget can render
+          // them distinctly from real calls.
+          ...(callInfo.isInline ? { isInline: true } : {}),
         });
       }
-    } else if (callInfo.kind === "return" || callInfo.kind === "revert") {
+    } else if (callInfo?.kind === "return" || callInfo?.kind === "revert") {
       // Pop the matching frame
       if (stack.length > 0) {
+        stack.pop();
+      }
+    }
+
+    // Defensive membership guard: a virtual (inline) frame must
+    // not stay open once execution leaves the inlined body. If
+    // the current instruction carries no inline marker, tear down
+    // any trailing virtual frames — belt-and-suspenders against a
+    // dropped or incomplete virtual return so a phantom activation
+    // can never leak into caller code.
+    if (!isInlineInstr) {
+      while (stack.length > 0 && stack[stack.length - 1].isInline) {
         stack.pop();
       }
     }
