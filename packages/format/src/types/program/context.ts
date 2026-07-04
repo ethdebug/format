@@ -155,8 +155,9 @@ export namespace Context {
     Invoke.isInvocation(value.invoke);
 
   export namespace Invoke {
-    export type Invocation = Function.Identity &
-      (
+    export type Invocation = Function.Identity & {
+      activation?: string;
+    } & (
         | Invocation.InternalCall
         | Invocation.ExternalCall
         | Invocation.ContractCreation
@@ -164,6 +165,7 @@ export namespace Context {
 
     export const isInvocation = (value: unknown): value is Invocation =>
       Function.isIdentity(value) &&
+      (!("activation" in value) || typeof value.activation === "string") &&
       (Invocation.isInternalCall(value) ||
         Invocation.isExternalCall(value) ||
         Invocation.isContractCreation(value));
@@ -241,6 +243,7 @@ export namespace Context {
     export interface Info extends Function.Identity {
       data?: Function.PointerRef;
       success?: Function.PointerRef;
+      activation?: string;
     }
 
     export const isInfo = (value: unknown): value is Info =>
@@ -248,7 +251,8 @@ export namespace Context {
       typeof value === "object" &&
       !!value &&
       (!("data" in value) || Function.isPointerRef(value.data)) &&
-      (!("success" in value) || Function.isPointerRef(value.success));
+      (!("success" in value) || Function.isPointerRef(value.success)) &&
+      (!("activation" in value) || typeof value.activation === "string");
   }
 
   export interface Revert {
@@ -265,6 +269,7 @@ export namespace Context {
     export interface Info extends Function.Identity {
       reason?: Function.PointerRef;
       panic?: number;
+      activation?: string;
     }
 
     export const isInfo = (value: unknown): value is Info =>
@@ -272,6 +277,7 @@ export namespace Context {
       typeof value === "object" &&
       !!value &&
       (!("reason" in value) || Function.isPointerRef(value.reason)) &&
-      (!("panic" in value) || typeof value.panic === "number");
+      (!("panic" in value) || typeof value.panic === "number") &&
+      (!("activation" in value) || typeof value.activation === "string");
   }
 }
