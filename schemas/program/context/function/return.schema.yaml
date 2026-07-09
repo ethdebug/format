@@ -49,6 +49,17 @@ properties:
         required:
           - pointer
 
+      activation:
+        type: string
+        title: Activation identifier
+        description: |
+          Correlation identifier for the activation this return
+          ends. Matches the `activation` on the `invoke` that
+          opened the same activation; distinct activations carry
+          distinct values, unique within the program. Lets a
+          debugger pair a return with its invocation independent
+          of trace order. Optional.
+
     unevaluatedProperties: false
 
 required:
@@ -75,6 +86,9 @@ examples:
         pointer:
           location: stack
           slot: 0
+      # Same `activation` value as the opening `invoke`, pairing
+      # this return with its call.
+      activation: "transfer#0"
 
   # -----------------------------------------------------------
   # External call return: processing result of a CALL

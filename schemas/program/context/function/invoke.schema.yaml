@@ -43,6 +43,18 @@ properties:
 
     $ref: "schema:ethdebug/format/program/context/function"
 
+    properties:
+      activation:
+        type: string
+        title: Activation identifier
+        description: |
+          Correlation identifier pairing this invocation with its
+          matching return or revert. The invoke that opens an
+          activation and the return or revert that closes it carry
+          the same value; distinct activations carry distinct
+          values, unique within the program. Lets a debugger pair a
+          call with its return independent of trace order. Optional.
+
     allOf:
       - oneOf:
           - required: [jump]
@@ -290,6 +302,9 @@ examples:
             - name: "amount"
               location: stack
               slot: 2
+      # The matching return context carries the same `activation`
+      # value, pairing this call with its return.
+      activation: "transfer#0"
 
   # -----------------------------------------------------------
   # Inlined internal call: no target pointer
