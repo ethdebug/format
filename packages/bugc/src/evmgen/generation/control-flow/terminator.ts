@@ -68,11 +68,11 @@ export function generateTerminator<S extends Stack>(
 
     case "jump": {
       // When this jump replaces a tail-recursive call (TCO),
-      // attach a gather context to the JUMP combining the
+      // attach a flat context to the JUMP carrying both the
       // previous iteration's return and the new iteration's
-      // invoke. Depth stays constant: one pops, one pushes,
-      // on the same instruction. The function's terminal
-      // RETURN pops the final iteration's frame normally.
+      // invoke discriminators. Depth stays constant: one pops,
+      // one pushes, on the same instruction. The function's
+      // terminal RETURN pops the final iteration's frame normally.
       const invokeOptions = term.tailCall
         ? buildTailCallJumpOptions(term.tailCall)
         : undefined;
@@ -411,7 +411,8 @@ function generateReturnEpilogue<S extends Stack>(
 /**
  * Build JUMP instruction options for a TCO-replaced tail call.
  *
- * The JUMP carries BOTH contexts in a gather:
+ * The JUMP carries BOTH discriminators on a single flat
+ * context object:
  *   - return: the previous iteration's return
  *   - invoke: the new iteration's call
  *
@@ -441,14 +442,12 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         }
       : undefined;
 
-  const returnCtx: Format.Program.Context.Return = {
+  const combined: Format.Program.Context.Return &
+    Format.Program.Context.Invoke = {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
     },
-  };
-
-  const invoke: Format.Program.Context.Invoke = {
     invoke: {
       jump: true as const,
       identifier: tailCall.function,
@@ -463,11 +462,7 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
     },
   };
 
-  const gather: Format.Program.Context.Gather = {
-    gather: [returnCtx, invoke],
-  };
-
-  return { debug: { context: gather as Format.Program.Context } };
+  return { debug: { context: combined as Format.Program.Context } };
 }
 
 /** PUSH an integer as the smallest PUSHn. */
