@@ -171,7 +171,7 @@ export namespace Context {
     export namespace Invocation {
       export interface InternalCall extends Function.Identity {
         jump: true;
-        target: Function.PointerRef;
+        target?: Function.PointerRef;
         arguments?: Function.PointerRef;
       }
 
@@ -180,8 +180,7 @@ export namespace Context {
         !!value &&
         "jump" in value &&
         value.jump === true &&
-        "target" in value &&
-        Function.isPointerRef(value.target) &&
+        (!("target" in value) || Function.isPointerRef(value.target)) &&
         (!("arguments" in value) || Function.isPointerRef(value.arguments));
 
       export interface ExternalCall extends Function.Identity {

@@ -97,7 +97,8 @@ code {
       expect(typeof invoke.declaration!.range!.length).toBe("number");
 
       // Target should be a code pointer (not stack)
-      expect(Pointer.Region.isCode(call.target.pointer)).toBe(true);
+      expect(call.target).toBeDefined();
+      expect(Pointer.Region.isCode(call.target!.pointer)).toBe(true);
 
       // Caller JUMP should NOT have argument pointers
       // (args live on the callee JUMPDEST invoke context)
@@ -156,7 +157,8 @@ code {
       expect(call.identifier).toBe("add");
 
       // Target should be a code pointer
-      expect(Pointer.Region.isCode(call.target.pointer)).toBe(true);
+      expect(call.target).toBeDefined();
+      expect(Pointer.Region.isCode(call.target!.pointer)).toBe(true);
 
       // Should have argument pointers matching
       // function parameters
