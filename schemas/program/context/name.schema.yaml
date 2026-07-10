@@ -3,13 +3,16 @@ $id: "schema:ethdebug/format/program/context/name"
 
 title: ethdebug/format/program/context/name
 description: |
-  A label for distinguishing this context from other contexts.
-  This is particularly useful inside `pick` alternatives,
-  where several possible contexts may apply at a given point in
-  execution and runtime information is needed to select which one
-  is active.
+  The identifier a `pick` uses to select this context.
 
-  Context names are opaque strings with no format-imposed semantics.
+  Inside a `pick`, several contexts may apply at a point in
+  execution and runtime information is needed to select which one
+  is active. A `name` on each alternative gives the selection a
+  stable handle for the chosen alternative.
+
+  Names are opaque strings; the format imposes no structure on
+  them. A name need only be distinct among the alternatives a
+  `pick` must choose between, so that the selection is unambiguous.
   Compilers **should** choose names that are meaningful to debugger
   users.
 
@@ -21,7 +24,7 @@ required:
   - name
 
 examples:
-  # example: naming an inlined call site
-  - name: "inlined-call"
+  # example: distinguishing a `pick` alternative
+  - name: "storage-layout-v2"
   # example: naming a generic instantiation
   - name: "Array<T=bytes32>"
