@@ -188,6 +188,41 @@ non-member instruction (no `inline` marker for that depth) is
 attributed to the enclosing activation, not the inlined one, even
 while the virtual activation remains on the stack.
 
+### Correlating with `activation`
+
+The push/pop rule above reconstructs the call stack without any
+correlation identifier: it relies on `invoke`/`return` appearing
+in a well-nested order. That is sufficient for typical compiler
+output, but it has a blind spot — push/pop alone can't tell one
+activation from another of the same function, so two inlined
+copies of a callee placed back-to-back, or an optimizer that moves
+a `return` ahead of its `invoke`, can defeat strict pairing.
+
+An **`activation`** identifier closes it. The `invoke` object that
+opens an activation and the `return` (or `revert`) that closes it
+carry the same `activation` value; distinct activations carry
+distinct values. Pairing is then explicit and order-independent —
+matching values pair an invoke with its return regardless of trace
+order, and adjacent same-function activations stay distinct because
+their identifiers differ.
+
+Unlike function [identity](#identity-and-values) (which function
+this is), `activation` identifies _which activation instance_ this
+is, so it lives **inside** the `invoke`/`return`/`revert` object
+rather than as a sibling context. Two activation facts on one instruction
+— a tail call's back-edge, which both returns from one activation
+and invokes the next — therefore stay flat, each fact carrying its
+own `activation` value, with no `gather` required.
+
+When `activation` is present it is **authoritative** for pairing —
+which `invoke` matches which `return`. Push/pop remains the fallback
+an identifier-less debugger uses; in well-nested output the two
+agree. Membership — which instructions belong to a virtual
+activation — is unaffected: it stays the per-instruction
+[`inline` marker](#activation-membership). Attributing a body that
+an optimizer relocated to a _specific_ activation would need a
+membership-level identifier; that is out of scope here.
+
 ### Identity and values
 
 Every function-identity field (`identifier`, `declaration`,
