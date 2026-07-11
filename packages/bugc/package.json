@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./examples": {
+      "types": "./dist/src/examples/index.d.ts",
+      "default": "./dist/src/examples/index.js"
+    }
+  },
   "files": [
     "dist",
     "bin"
@@ -54,7 +64,8 @@
     "#test/*": "./dist/test/*.js"
   },
   "scripts": {
-    "build": "tsc",
+    "prepare:examples": "node ./bin/generate-examples.js",
+    "build": "yarn prepare:examples && tsc",
     "build:watch": "tsc --watch --preserveWatchOutput",
     "watch": "tsc --watch --preserveWatchOutput",
     "test": "vitest run",
@@ -64,7 +75,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "prepare": "tsc"
+    "prepare": "yarn prepare:examples && tsc"
   },
   "keywords": [
     "ethereum",
