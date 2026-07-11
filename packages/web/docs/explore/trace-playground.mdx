@@ -7,8 +7,6 @@ import { TracePlayground, TraceExample } from "@theme/ProgramExample";
 import {
   counterIncrement,
   functionCallAndReturn,
-  tailRecursiveSum,
-  tailRecursiveFactorial,
 } from "../core-schemas/programs/tracing-examples";
 
 # Trace playground
@@ -19,8 +17,8 @@ source line, in-scope variables, call stack, and instruction context
 light up at every step.
 
 Click **"Try it"** on an example to open the trace drawer, then use the
-step controls to walk through execution. The examples build on each
-other: start at the top and work down, picking up one idea at a time.
+step controls to walk through execution. The two examples build on each
+other: start with the storage write, then follow a function call.
 
 <TracePlayground>
 
@@ -51,31 +49,5 @@ and pop it on the JUMP back (a **return** context).
 For the exact shape of invoke, return, and revert contexts, see the
 [function call spec](/spec/program/context/function/invoke) and the
 [tracing reference](/docs/core-schemas/programs/tracing).
-
-## Watching the optimizer
-
-Compilers rewrite code as they optimize, and **transform** contexts
-record what they did. Set the **Opt** selector to **O2** and step through
-these tail-recursive programs: the recursive call folds into a loop, and
-the back-edge JUMP carries `transform: ["tailcall"]` next to its invoke
-and return. The call stack stays flat instead of growing one frame per
-iteration.
-
-<TraceExample
-  title="Tail-recursive sum"
-  description="Sums 1..5 with an accumulator; TCO folds it into a loop"
-  source={tailRecursiveSum}
-/>
-
-<TraceExample
-  title="Tail-recursive factorial"
-  description="Computes 5! with an accumulator; TCO folds it into a loop"
-  source={tailRecursiveFactorial}
-/>
-
-Flip the **Opt** selector between **O0** and **O2** to see the call stack
-change. For how the `tailcall` transform composes with invoke/return, see
-the [transform context spec](/spec/program/context/transform) and the
-[tail-call optimization walkthrough](/docs/core-schemas/programs/tracing).
 
 </TracePlayground>
