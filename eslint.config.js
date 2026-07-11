@@ -72,6 +72,7 @@ export default tseslint.config(
       "**/*.config.js",
       "**/*.config.ts",
       "packages/format/src/schemas/yamls.ts",
+      "packages/bugc/src/examples/generated.ts",
       "packages/web/.docusaurus/",
       "packages/web/build/",
     ],
