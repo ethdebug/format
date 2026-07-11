@@ -299,6 +299,33 @@ export function buildCallStack(
       continue;
     }
 
+    // A tail-call back-edge carries both a `return` (the previous
+    // iteration) and an `invoke` (the next iteration) on a single
+    // instruction. The activation is reused, not nested or
+    // unwound, so depth is unchanged: replace the top frame in
+    // place rather than pushing a second frame or popping it away.
+    // Identity comes from the invoke leaf.
+    const ctx = instruction.context as Record<string, unknown> | undefined;
+    const backEdgeInvoke = ctx ? findInvokeField(ctx) : undefined;
+    if (ctx && backEdgeInvoke && hasReturnContext(ctx)) {
+      const argResult = extractArgInfo(instruction);
+      const frame: CallFrame = {
+        identifier:
+          (backEdgeInvoke.identifier as string | undefined) ??
+          callInfo.identifier,
+        stepIndex: i,
+        callType: invokeCallType(backEdgeInvoke),
+        argumentNames: argResult?.names,
+        argumentPointers: argResult?.pointers,
+      };
+      if (stack.length > 0) {
+        stack[stack.length - 1] = frame;
+      } else {
+        stack.push(frame);
+      }
+      continue;
+    }
+
     if (callInfo.kind === "invoke") {
       // The compiler emits invoke on both the caller JUMP
       // and callee entry JUMPDEST for the same call. These
@@ -382,6 +409,35 @@ function extractArgInfo(
     names: hasAnyName ? names : undefined,
     pointers,
   };
+}
+
+/**
+ * Determine the call type of a raw invoke record from its
+ * discriminant key.
+ */
+function invokeCallType(inv: Record<string, unknown>): CallFrame["callType"] {
+  if ("jump" in inv) return "internal";
+  if ("message" in inv) return "external";
+  if ("create" in inv) return "create";
+  return undefined;
+}
+
+/**
+ * Whether an instruction's context carries a `return` — either
+ * directly or nested one level inside a gather. Mirrors
+ * findInvokeField so the flat (multi-discriminator) and gather
+ * back-edge shapes are both recognized.
+ */
+function hasReturnContext(ctx: Record<string, unknown>): boolean {
+  if ("return" in ctx) {
+    return true;
+  }
+  if ("gather" in ctx && Array.isArray(ctx.gather)) {
+    return ctx.gather.some(
+      (item) => item && typeof item === "object" && "return" in item,
+    );
+  }
+  return false;
 }
 
 function findInvokeField(
