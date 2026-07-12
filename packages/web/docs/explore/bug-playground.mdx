@@ -9,14 +9,12 @@ sidebar_label: "Compile a program and inspect its debug data"
 **BUG** is a minimal smart contract language for exercising
 **ethdebug/format**: small enough to read at a glance, expressive enough to
 reach the cases a debug format has to handle. **bugc** is its reference
-compiler — an _optimizing_ compiler from BUG to EVM bytecode that emits
-**ethdebug/format** debug information alongside the code.
+compiler, compiling BUG to EVM bytecode and emitting **ethdebug/format**
+debug information alongside the code.
 
-Why a reference compiler? Because a format is only as real as something
-that produces it. **bugc** validates **ethdebug/format** by generating it
-for every program it compiles — and you're looking at that validation
-right now: the debug annotations in the **Bytecode** view below are
-**bugc**'s output, the format describing real compiled code.
+**bugc** generates **ethdebug/format** for every program it compiles, so
+the format here describes real compiled code: the debug annotations in the
+**Bytecode** view below are its output.
 
 Edit the source, switch views, and watch each stage update — from parse
 tree to annotated bytecode.
@@ -27,7 +25,7 @@ import { BugPlayground } from "@theme/BugcExample";
 
 ## About BUG
 
-BUG is intentionally minimal—it provides just enough
+BUG is intentionally minimal — it provides just enough
 language features to demonstrate the debugging challenges that
 **ethdebug/format** addresses:
 
@@ -57,6 +55,6 @@ language features to demonstrate the debugging challenges that
 The playground shows several stages of compilation:
 
 - **AST** — The abstract syntax tree after parsing
-- **IR** — The intermediate representation used for optimization
+- **IR** — The intermediate representation between the AST and bytecode
 - **CFG** — The control flow graph visualizing program structure
 - **Bytecode** — The final EVM bytecode with debug annotations
