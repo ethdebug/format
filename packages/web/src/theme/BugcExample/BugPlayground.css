@@ -26,14 +26,16 @@
   align-items: center;
 }
 
-.bug-playground-opt-control {
+.bug-playground-opt-control,
+.bug-playground-example-control {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
 }
 
-.bug-playground-opt-control select {
+.bug-playground-opt-control select,
+.bug-playground-example-control select {
   padding: 0.25rem 0.5rem;
   border-radius: var(--ifm-global-radius);
   border: 1px solid var(--ifm-color-emphasis-300);

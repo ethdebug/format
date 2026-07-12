@@ -18,6 +18,8 @@ import {
   IrView,
   CfgView,
   BytecodeView,
+  bugExamples,
+  type BugExample,
   type SourceRange,
   type BytecodeOutput,
 } from "@ethdebug/bugc-react";
@@ -129,8 +131,20 @@ async function compile(
 type TabType = "ast" | "ir" | "cfg" | "bytecode";
 
 export interface BugPlaygroundProps {
-  /** Initial code to display in the editor */
+  /**
+   * Initial code to display in the editor. When provided, the
+   * example selector is hidden by default (the embed is showing
+   * one specific program); when omitted, the playground opens on
+   * the first curated example and shows the selector.
+   */
   initialCode?: string;
+  /** Curated examples offered in the selector dropdown. */
+  examples?: BugExample[];
+  /**
+   * Force the example selector on or off. Defaults to showing it
+   * only when `initialCode` is not provided.
+   */
+  showExampleSelector?: boolean;
   /** Default optimization level (0-3) */
   defaultOptimizationLevel?: number;
   /** Whether to show optimization level selector */
@@ -143,33 +157,20 @@ export interface BugPlaygroundProps {
  * Interactive BUG compiler playground.
  */
 export function BugPlayground({
-  initialCode = `name Counter;
-
-storage {
-  [0] count: uint256;
-  [1] threshold: uint256;
-}
-
-create {
-  count = 0;
-  threshold = 100;
-}
-
-code {
-  // Increment the counter
-  count = count + 1;
-
-  // Check threshold
-  if (count >= threshold) {
-    count = 0;
-  }
-}
-`,
+  initialCode,
+  examples = bugExamples,
+  showExampleSelector,
   defaultOptimizationLevel = 3,
   showOptimizationSelector = true,
   height = "600px",
 }: BugPlaygroundProps): JSX.Element {
-  const [code, setCode] = useState(initialCode);
+  // Show the selector only when the embed hasn't pinned a specific
+  // program via initialCode (unless explicitly overridden).
+  const showSelector =
+    showExampleSelector ?? (initialCode === undefined && examples.length > 0);
+
+  const [selectedExample, setSelectedExample] = useState(examples[0]?.name);
+  const [code, setCode] = useState(initialCode ?? examples[0]?.code ?? "");
   const [optimizationLevel, setOptimizationLevel] = useState(
     defaultOptimizationLevel,
   );
@@ -185,10 +186,12 @@ code {
     setHighlightedRanges(ranges);
   }, []);
 
-  const handleCompile = useCallback(async () => {
+  // Compile an explicit source (so example switches recompile the
+  // just-selected program, not the stale `code` from closure).
+  const runCompile = useCallback(async (src: string, level: number) => {
     setIsCompiling(true);
     try {
-      const result = await compile(code, optimizationLevel);
+      const result = await compile(src, level);
       setCompileResult(result);
       if (!result.success) {
         setActiveTab("ast"); // Show AST tab for errors
@@ -202,11 +205,27 @@ code {
     } finally {
       setIsCompiling(false);
     }
-  }, [code, optimizationLevel]);
+  }, []);
+
+  const handleCompile = useCallback(() => {
+    runCompile(code, optimizationLevel);
+  }, [runCompile, code, optimizationLevel]);
+
+  const handleExampleChange = useCallback(
+    (name: string) => {
+      const example = examples.find((e) => e.name === name);
+      if (!example) return;
+      setSelectedExample(name);
+      setCode(example.code);
+      runCompile(example.code, optimizationLevel);
+    },
+    [examples, optimizationLevel, runCompile],
+  );
 
   // Compile on mount
   useEffect(() => {
-    handleCompile();
+    runCompile(code, optimizationLevel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tabs: { id: TabType; label: string }[] = [
@@ -220,6 +239,21 @@ code {
     <div className="bug-playground" style={{ height }}>
       <div className="bug-playground-header">
         <div className="bug-playground-controls">
+          {showSelector && (
+            <label className="bug-playground-example-control">
+              <span>Example:</span>
+              <select
+                value={selectedExample}
+                onChange={(e) => handleExampleChange(e.target.value)}
+              >
+                {examples.map((example) => (
+                  <option key={example.name} value={example.name}>
+                    {example.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {showOptimizationSelector && (
             <label className="bug-playground-opt-control">
               <span>Optimization:</span>

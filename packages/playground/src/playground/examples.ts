@@ -1,3 +1,5 @@
+import { exampleSources, stripTestAnnotations } from "@ethdebug/bugc/examples";
+
 export interface Example {
   name: string;
   displayName: string;
@@ -5,114 +7,124 @@ export interface Example {
   code: string;
 }
 
-// Import all .bug files from the bugc examples directory
-// Vite will inline the file contents at build time
-const exampleFiles = import.meta.glob("../../../bugc/examples/**/*.bug", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
-
-// Map the actual example files to the Example interface
-// Organized by category, showing only working examples
-export const examples: Example[] = [
+// Curated subset of the canonical `.bug` files shipped by
+// `@ethdebug/bugc/examples`, organized by category. The sources stay
+// upstream (bugc's behavioral tests compile the same files); only the
+// selection, labels, and display order live here. Test annotations are
+// stripped so the editor shows clean source.
+const curated: Array<{
+  path: string;
+  name: string;
+  displayName: string;
+  category: Example["category"];
+}> = [
   // Basic examples
   {
+    path: "basic/minimal.bug",
     name: "minimal",
     displayName: "Minimal",
     category: "basic",
-    code: exampleFiles["../../../bugc/examples/basic/minimal.bug"] || "",
   },
   {
+    path: "basic/conditionals.bug",
     name: "conditionals",
     displayName: "Conditionals",
     category: "basic",
-    code: exampleFiles["../../../bugc/examples/basic/conditionals.bug"],
   },
   {
+    path: "basic/functions.bug",
     name: "functions",
     displayName: "Functions",
     category: "basic",
-    code: exampleFiles["../../../bugc/examples/basic/functions.bug"],
   },
   {
+    path: "basic/array-length.bug",
     name: "array-length",
     displayName: "Array Length",
     category: "basic",
-    code: exampleFiles["../../../bugc/examples/basic/array-length.bug"],
   },
 
   // Intermediate examples
   {
+    path: "intermediate/owner-counter.bug",
     name: "owner-counter",
     displayName: "Owner Counter",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/owner-counter.bug"],
   },
   {
+    path: "intermediate/arrays.bug",
     name: "arrays",
     displayName: "Arrays and Loops",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/arrays.bug"],
   },
   {
+    path: "intermediate/mappings.bug",
     name: "mappings",
     displayName: "Mappings",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/mappings.bug"],
   },
   {
+    path: "intermediate/scopes.bug",
     name: "scopes",
     displayName: "Variable Scopes",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/scopes.bug"],
   },
   {
+    path: "intermediate/slices.bug",
     name: "slices",
     displayName: "Byte Slices",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/slices.bug"],
   },
   {
+    path: "intermediate/calldata.bug",
     name: "calldata",
     displayName: "Calldata Access",
     category: "intermediate",
-    code: exampleFiles["../../../bugc/examples/intermediate/calldata.bug"],
   },
 
   // Advanced examples
   {
+    path: "advanced/nested-mappings.bug",
     name: "nested-mappings",
     displayName: "Nested Mappings",
     category: "advanced",
-    code: exampleFiles["../../../bugc/examples/advanced/nested-mappings.bug"],
   },
   {
+    path: "advanced/nested-arrays.bug",
     name: "nested-arrays",
     displayName: "Nested Arrays",
     category: "advanced",
-    code: exampleFiles["../../../bugc/examples/advanced/nested-arrays.bug"],
   },
   {
+    path: "advanced/nested-structs.bug",
     name: "nested-structs",
     displayName: "Nested Structs",
     category: "advanced",
-    code: exampleFiles["../../../bugc/examples/advanced/nested-structs.bug"],
   },
 
   // Optimization demos
   {
+    path: "optimizations/cse.bug",
     name: "cse",
     displayName: "CSE Demo",
     category: "optimizations",
-    code: exampleFiles["../../../bugc/examples/optimizations/cse.bug"],
   },
   {
+    path: "optimizations/constant-folding.bug",
     name: "constant-folding",
     displayName: "Constant Folding",
     category: "optimizations",
-    code: exampleFiles[
-      "../../../bugc/examples/optimizations/constant-folding.bug"
-    ],
   },
 ];
+
+export const examples: Example[] = curated.map(
+  ({ path, name, displayName, category }) => {
+    const source = exampleSources[path];
+    if (source === undefined) {
+      throw new Error(
+        `Curated example "${path}" is not in @ethdebug/bugc/examples`,
+      );
+    }
+    return { name, displayName, category, code: stripTestAnnotations(source) };
+  },
+);
