@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+title: "Trace playground"
+sidebar_label: "Step through an execution trace"
 ---
 
 import { TracePlayground, TraceExample } from "@theme/ProgramExample";
@@ -21,7 +23,7 @@ other: start with the storage write, then follow a function call.
 
 <TracePlayground>
 
-## Start here: a storage write
+## A storage write
 
 `Counter` increments a single storage slot. Step through it to get a feel
 for the drawer — the highlighted source line, the value in storage, and
@@ -33,7 +35,7 @@ the context attached to each instruction.
   source={counterIncrement}
 />
 
-## Following a function call
+## A function call
 
 Real programs call functions, and the debugger follows them. Watch the
 call stack push a frame on the JUMP into `add` (an **invoke** context)
@@ -46,7 +48,7 @@ and pop it on the JUMP back (a **return** context).
 />
 
 For the exact shape of invoke, return, and revert contexts, see the
-[function call spec](/spec/program/context/function/invoke) and the
+[function call spec](/spec/program/context/function) and the
 [tracing reference](/docs/core-schemas/programs/tracing).
 
 </TracePlayground>
