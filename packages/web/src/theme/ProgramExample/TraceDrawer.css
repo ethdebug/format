@@ -10,6 +10,9 @@
 .trace-drawer-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Fill the drawer height so both columns stretch full-height instead
+   * of collapsing to content height (which left dead space below). */
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
   overflow: hidden;
 }
@@ -204,11 +207,12 @@
   border-left: 3px solid var(--ifm-color-danger);
 }
 
-/* Trace panels */
+/* Trace panels - this row grows to fill the drawer's height */
 .trace-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   gap: 1px;
   background: var(--ifm-color-emphasis-200);
@@ -216,6 +220,24 @@
 
 .trace-panel {
   background: var(--ifm-background-color);
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Instructions panel: fixed header, internally scrolling list */
+.opcodes-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.opcodes-panel .panel-header {
+  flex-shrink: 0;
+}
+
+.opcodes-panel .opcode-list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -297,11 +319,62 @@
   color: var(--ifm-color-content);
 }
 
-.opcode-ellipsis {
-  padding: 4px 12px;
+/* Instruction object footer - constant height, scrolls internally */
+.instruction-object-panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-color);
+}
+
+.instruction-object-header {
+  position: static;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.instruction-object-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.instruction-object-toggle input {
+  cursor: pointer;
+  margin: 0;
+}
+
+.instruction-object-toggle code {
   font-size: 11px;
-  color: var(--ifm-color-content-secondary);
+}
+
+.instruction-object-body {
+  flex-shrink: 0;
+  min-height: 0;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.instruction-object-json {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--ifm-color-content);
+  background: transparent;
+}
+
+.instruction-object-empty {
+  padding: 10px 12px;
+  font-size: 12px;
   font-style: italic;
+  color: var(--ifm-color-content-secondary);
 }
 
 /* Stack display */
