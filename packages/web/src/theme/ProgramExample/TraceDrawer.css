@@ -10,6 +10,9 @@
 .trace-drawer-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Fill the drawer height so both columns stretch full-height instead
+   * of collapsing to content height (which left dead space below). */
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
   overflow: hidden;
 }
@@ -204,11 +207,17 @@
   border-left: 3px solid var(--ifm-color-danger);
 }
 
-/* Trace panels */
+/* Trace panels - this row grows to fill the drawer's height */
 .trace-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  flex: 1;
+  /* Explicit full-height row: without this the single implicit grid row
+   * is auto-sized to content, so the panels stay at content height (the
+   * instructions list looked "fixed height" with dead space below) even
+   * though .trace-panels itself flex-grows. The row must fill the grid. */
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   gap: 1px;
   background: var(--ifm-color-emphasis-200);
@@ -216,6 +225,37 @@
 
 .trace-panel {
   background: var(--ifm-background-color);
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Instructions panel: fixed header, internally scrolling list.
+ *
+ * These selectors are scoped with `.trace-panel` on purpose. The class
+ * names `.opcodes-panel` / `.opcode-list` are also used by the sibling
+ * TraceViewer component, whose global stylesheet caps them with
+ * `min-height: 200px; max-height: 300px`. Docusaurus theme CSS is not
+ * module-scoped, so those caps leak onto this drawer and pin the
+ * instructions list to a fixed height. The `.trace-panel.opcodes-panel`
+ * selector (specificity 0,2,0) outranks the leaked `.opcodes-panel`
+ * (0,1,0), and `max-height: none` / `min-height: 0` remove the cap so
+ * the panel grows to fill its grid cell with the list scrolling inside. */
+.trace-panel.opcodes-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  max-height: none;
+}
+
+.trace-panel.opcodes-panel .panel-header {
+  flex-shrink: 0;
+}
+
+.trace-panel.opcodes-panel .opcode-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
 }
 
@@ -297,11 +337,62 @@
   color: var(--ifm-color-content);
 }
 
-.opcode-ellipsis {
-  padding: 4px 12px;
+/* Instruction object footer - constant height, scrolls internally */
+.instruction-object-panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-color);
+}
+
+.instruction-object-header {
+  position: static;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.instruction-object-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.instruction-object-toggle input {
+  cursor: pointer;
+  margin: 0;
+}
+
+.instruction-object-toggle code {
   font-size: 11px;
-  color: var(--ifm-color-content-secondary);
+}
+
+.instruction-object-body {
+  flex-shrink: 0;
+  min-height: 0;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.instruction-object-json {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--ifm-color-content);
+  background: transparent;
+}
+
+.instruction-object-empty {
+  padding: 10px 12px;
+  font-size: 12px;
   font-style: italic;
+  color: var(--ifm-color-content-secondary);
 }
 
 /* Stack display */
@@ -409,6 +500,6 @@
 
   .trace-panels {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 }

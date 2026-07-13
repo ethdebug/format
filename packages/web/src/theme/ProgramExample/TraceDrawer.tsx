@@ -56,6 +56,7 @@ function TraceDrawerContent(): JSX.Element {
   const [isTracing, setIsTracing] = useState(false);
   const [traceError, setTraceError] = useState<string | null>(null);
   const [storage, setStorage] = useState<Record<string, string>>({});
+  const [showInstructionObject, setShowInstructionObject] = useState(false);
 
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
@@ -103,6 +104,17 @@ function TraceDrawerContent(): JSX.Element {
     if (!instruction?.debug?.context) return undefined;
 
     return extractCallInfo(instruction.debug.context);
+  }, [trace, currentStep, pcToInstruction]);
+
+  // Build the ethdebug/format instruction object for the current step
+  const currentFormatInstruction = useMemo(() => {
+    if (trace.length === 0 || currentStep >= trace.length) return undefined;
+
+    const step = trace[currentStep];
+    const instruction = pcToInstruction.get(step.pc);
+    if (!instruction) return undefined;
+
+    return toFormatInstruction(instruction, step.pc);
   }, [trace, currentStep, pcToInstruction]);
 
   // Build call stack by scanning invoke/return/revert up to
@@ -576,6 +588,36 @@ function TraceDrawerContent(): JSX.Element {
                   )}
                 </div>
               </div>
+
+              <div className="instruction-object-panel">
+                <div className="panel-header instruction-object-header">
+                  <label className="instruction-object-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showInstructionObject}
+                      onChange={(e) =>
+                        setShowInstructionObject(e.target.checked)
+                      }
+                    />
+                    <span>
+                      <code>ethdebug/format/instruction</code> object
+                    </span>
+                  </label>
+                </div>
+                {showInstructionObject && (
+                  <div className="instruction-object-body">
+                    {currentFormatInstruction ? (
+                      <pre className="instruction-object-json">
+                        {JSON.stringify(currentFormatInstruction, null, 2)}
+                      </pre>
+                    ) : (
+                      <div className="instruction-object-empty">
+                        No instruction data for this step.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -595,21 +637,22 @@ function OpcodeList({
   currentStep,
   onStepClick,
 }: OpcodeListProps): JSX.Element {
-  // Show a window around the current step
-  const windowSize = 8;
-  const start = Math.max(0, currentStep - windowSize);
-  const end = Math.min(trace.length, currentStep + windowSize + 1);
-  const visibleSteps = trace.slice(start, end);
+  // Render the full instruction list; the panel scrolls internally.
+  // Keep the active step scrolled into view as the trace advances.
+  const activeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [currentStep]);
 
   return (
     <div className="opcode-list">
-      {start > 0 && <div className="opcode-ellipsis">... {start} above</div>}
-      {visibleSteps.map((step, i) => {
-        const index = start + i;
+      {trace.map((step, index) => {
         const isActive = index === currentStep;
         return (
           <div
             key={index}
+            ref={isActive ? activeRef : undefined}
             className={`opcode-item ${isActive ? "active" : ""}`}
             onClick={() => onStepClick(index)}
           >
@@ -621,9 +664,6 @@ function OpcodeList({
           </div>
         );
       })}
-      {end < trace.length && (
-        <div className="opcode-ellipsis">... {trace.length - end} below</div>
-      )}
     </div>
   );
 }
@@ -671,6 +711,41 @@ function StorageDisplay({ storage }: StorageDisplayProps): JSX.Element {
       ))}
     </div>
   );
+}
+
+/**
+ * Convert an Evm.Instruction into an ethdebug/format/instruction object
+ * for display (offset, operation, context). Mirrors the compiler's
+ * program-builder so the drawer shows the canonical format shape.
+ */
+function toFormatInstruction(
+  instruction: Evm.Instruction,
+  offset: number,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { offset };
+
+  if (instruction.mnemonic) {
+    const operation: Record<string, unknown> = {
+      mnemonic: instruction.mnemonic,
+    };
+
+    if (instruction.immediates && instruction.immediates.length > 0) {
+      operation.arguments = [
+        "0x" +
+          instruction.immediates
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join(""),
+      ];
+    }
+
+    result.operation = operation;
+  }
+
+  if (instruction.debug?.context) {
+    result.context = instruction.debug.context;
+  }
+
+  return result;
 }
 
 function formatBigInt(value: bigint): string {
