@@ -1,15 +1,23 @@
 ---
-sidebar_position: 2
+sidebar_position: 4
+title: "BUG playground"
+sidebar_label: "Compile a program and inspect its debug data"
 ---
 
 # BUG playground
 
-BUG is a minimal smart contract language designed for demonstrating and testing
-**ethdebug/format**. It compiles to EVM bytecode and produces rich debug
-information.
+**BUG** is a minimal smart contract language for exercising
+**ethdebug/format**: small enough to read at a glance, expressive enough to
+reach the cases a debug format has to handle. **bugc** is its reference
+compiler, compiling BUG to EVM bytecode and emitting **ethdebug/format**
+debug information alongside the code.
 
-Use the interactive playground below to explore how BUG code compiles to
-intermediate representations and EVM bytecode.
+**bugc** generates **ethdebug/format** for every program it compiles, so
+the format here describes real compiled code: the debug annotations in the
+**Bytecode** view below are its output.
+
+Edit the source, switch views, and watch each stage update — from parse
+tree to annotated bytecode.
 
 import { BugPlayground } from "@theme/BugcExample";
 
@@ -17,7 +25,7 @@ import { BugPlayground } from "@theme/BugcExample";
 
 ## About BUG
 
-BUG is intentionally minimal—it provides just enough
+BUG is intentionally minimal — it provides just enough
 language features to demonstrate the debugging challenges that
 **ethdebug/format** addresses:
 
@@ -47,6 +55,6 @@ language features to demonstrate the debugging challenges that
 The playground shows several stages of compilation:
 
 - **AST** — The abstract syntax tree after parsing
-- **IR** — The intermediate representation used for optimization
+- **IR** — The intermediate representation between the AST and bytecode
 - **CFG** — The control flow graph visualizing program structure
 - **Bytecode** — The final EVM bytecode with debug annotations

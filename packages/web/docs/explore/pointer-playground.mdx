@@ -1,0 +1,324 @@
+---
+sidebar_position: 2
+title: "Pointer playground"
+sidebar_label: "Resolve a pointer to the data it locates"
+---
+
+import { PointerPlayground, PointerExample } from "@theme/PointersExample";
+import CodeBlock from "@theme/CodeBlock";
+
+export const packedAddressPointer = {
+  location: "storage",
+  slot: 0,
+  offset: 12,
+  length: 20,
+};
+
+export const arrayElementPointer = {
+  define: { "element-index": 2 },
+  in: {
+    name: "element",
+    location: "storage",
+    slot: { $sum: [{ $keccak256: [{ $wordsized: 5 }] }, "element-index"] },
+  },
+};
+
+export const mappingValuePointer = {
+  group: [
+    { name: "key-region", location: "stack", slot: 0 },
+    {
+      name: "value",
+      location: "storage",
+      slot: { $keccak256: [{ $read: "key-region" }, { $wordsized: 3 }] },
+    },
+  ],
+};
+
+export const solidityStringPointer = {
+  define: { slot: 0 },
+  in: {
+    group: [
+      {
+        name: "length-flag",
+        location: "storage",
+        slot: "slot",
+        offset: 31,
+        length: 1,
+      },
+      {
+        if: { $remainder: [{ $sum: [{ $read: "length-flag" }, 1] }, 2] },
+        then: {
+          define: {
+            "string-length": { $quotient: [{ $read: "length-flag" }, 2] },
+          },
+          in: {
+            name: "string",
+            location: "storage",
+            slot: "slot",
+            offset: 0,
+            length: "string-length",
+          },
+        },
+        else: {
+          group: [
+            {
+              name: "long-string-length-data",
+              location: "storage",
+              slot: "slot",
+              offset: 0,
+              length: 32,
+            },
+            {
+              define: {
+                "string-length": {
+                  $quotient: [
+                    { $difference: [{ $read: "long-string-length-data" }, 1] },
+                    2,
+                  ],
+                },
+                "start-slot": { $keccak256: [{ $wordsized: "slot" }] },
+                "total-slots": {
+                  $quotient: [
+                    { $sum: ["string-length", { $difference: [32, 1] }] },
+                    32,
+                  ],
+                },
+              },
+              in: {
+                list: {
+                  count: "total-slots",
+                  each: "i",
+                  is: {
+                    define: {
+                      "current-slot": { $sum: ["start-slot", "i"] },
+                      "previous-length": { $product: ["i", 32] },
+                    },
+                    in: {
+                      if: {
+                        $difference: [
+                          "string-length",
+                          { $sum: ["previous-length", 32] },
+                        ],
+                      },
+                      then: {
+                        name: "string",
+                        location: "storage",
+                        slot: "current-slot",
+                      },
+                      else: {
+                        name: "string",
+                        location: "storage",
+                        slot: "current-slot",
+                        offset: 0,
+                        length: {
+                          $difference: ["string-length", "previous-length"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  },
+};
+
+# Pointer playground
+
+A **[pointer](/docs/core-schemas/pointers)** in **ethdebug/format** is a
+recipe for finding data in the EVM: where bytes live, and how to compute
+that location from the current machine state. The
+examples below resolve real Solidity storage layouts against concrete
+state — click **"Try it"** to open the drawer and watch each pointer
+select its bytes.
+
+They build up from a single packed variable to the full short/long string
+layout, where the pointer has to branch on the data it finds.
+
+<PointerPlayground>
+
+## A packed storage variable
+
+An `address` is just 20 bytes — but Solidity packs small values together,
+so this one sits at byte 12 of slot 0 rather than filling a word of its
+own. That makes it a sub-slot region: the pointer fixes an offset and a
+length inside a single slot, so a debugger reads the 20 bytes without
+needing to know what else shares the word. Here it selects the address
+`0xd8da…6045` from the low bytes of slot 0.
+
+<details>
+<summary>Pointer definition</summary>
+
+<CodeBlock language="json">
+  {JSON.stringify(packedAddressPointer, null, 2)}
+</CodeBlock>
+
+</details>
+
+<PointerExample
+  title="Packed address (sub-slot)"
+  pointer={packedAddressPointer}
+  state={{
+    storage: {
+      "0x00":
+        "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+    },
+  }}
+  description="Reads a 20-byte address packed into the low bytes of slot 0"
+  showCode={false}
+/>
+
+**Demonstrates:** static sub-slot addressing (offset + length)
+
+## A dynamic array element
+
+This is element 2 of a `uint256[]` declared at slot 5 — but the elements
+aren't at slot 5. Solidity keeps only the array length there and lays the
+elements out starting at `keccak256(5)`, with element `i` at
+`keccak256(5) + i`. The pointer computes that address — `keccak256(5) + 2`
+— so a debugger resolves the element without hand-coding the layout,
+landing on the value `42`.
+
+<details>
+<summary>Pointer definition</summary>
+
+<CodeBlock language="json">
+  {JSON.stringify(arrayElementPointer, null, 2)}
+</CodeBlock>
+
+</details>
+
+<PointerExample
+  title="Dynamic array element"
+  pointer={arrayElementPointer}
+  state={{
+    storage: {
+      "0x036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db2":
+        "0x000000000000000000000000000000000000000000000000000000000000002a",
+    },
+  }}
+  description="Computes keccak256(5) + 2 to find element index 2"
+  showCode={false}
+/>
+
+**Demonstrates:** computed location (keccak256 + arithmetic)
+
+## A mapping value
+
+This is the value stored for one address key in a
+`mapping(address => uint256)` declared at slot 3. Mappings keep nothing at
+slot 3 itself; each value lives at `keccak256(key, 3)`, so the slot can't
+be known until you have the key. The pointer reads the key from the stack,
+hashes it with the declared slot, and resolves the value — here `1e18`
+(1 ether) for key `0xd8da…6045`.
+
+<details>
+<summary>Pointer definition</summary>
+
+<CodeBlock language="json">
+  {JSON.stringify(mappingValuePointer, null, 2)}
+</CodeBlock>
+
+</details>
+
+<PointerExample
+  title="Mapping value"
+  pointer={mappingValuePointer}
+  state={{
+    stack: [
+      "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045",
+    ],
+    storage: {
+      "0x8bd687de6e6aeb4c2d69c24f27b3ceeaf64b7f68aeb36f23bc3bfcfd9a5c4b0b":
+        "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    },
+  }}
+  description="Computes keccak256(key, 3) — the standard Solidity mapping slot"
+  showCode={false}
+/>
+
+**Demonstrates:** computed location from runtime input (stack read +
+keccak256 of key + slot)
+
+## A Solidity storage string
+
+A Solidity `string` is the most involved case here: its bytes don't live
+in one fixed place — the layout depends on the length. A **short** string
+(31 bytes or fewer) packs into its own slot with `2 × length` in the last
+byte; a **long** string stores `2 × length + 1` in the slot and spills the
+bytes to `keccak256(slot)`, across as many following slots as it needs. One
+pointer encodes the whole rule: it reads the last byte and branches on its
+parity, so a debugger reads the value the same way whether it's the five
+bytes of `"Hello"` or a forty-byte string.
+
+<details>
+<summary>Pointer definition</summary>
+
+This one pointer definition resolves both examples below — only the storage
+state changes.
+
+<CodeBlock language="json">
+  {JSON.stringify(solidityStringPointer, null, 2)}
+</CodeBlock>
+
+</details>
+
+### Short string
+
+Slot 0 packs `"Hello"` with the flag `0x0a` (= `2 × 5`) in its last byte.
+The flag is even, so the pointer takes the short branch and reads the
+string straight from the slot.
+
+<PointerExample
+  title="Short string (in-slot)"
+  pointer={solidityStringPointer}
+  state={{
+    storage: {
+      "0x00":
+        "0x48656c6c6f00000000000000000000000000000000000000000000000000000a",
+    },
+  }}
+  description={'Resolves "Hello" — a 5-byte string packed into slot 0'}
+  showCode={false}
+/>
+
+### Long string
+
+The flag here is `0x51` (= `2 × 40 + 1`), odd, so the pointer takes the
+long branch: length `(0x51 − 1) / 2 = 40`, data at `keccak256(0)`, read
+across that slot and the next.
+
+<PointerExample
+  title="Long string (keccak256 data)"
+  pointer={solidityStringPointer}
+  state={{
+    storage: {
+      "0x00":
+        "0x0000000000000000000000000000000000000000000000000000000000000051",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563":
+        "0x657468646562756720666f726d6174206c6f6e672d737472696e672064656d6f",
+      "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564":
+        "0x2c20343062797465000000000000000000000000000000000000000000000000",
+    },
+  }}
+  description={
+    "Resolves a 40-byte string across keccak256(0) and the following slot"
+  }
+  showCode={false}
+/>
+
+**Demonstrates:** conditional layout (one pointer, length-dependent branch)
+
+## Learn more
+
+- [Regions](/docs/core-schemas/pointers/regions) for locations and
+  addressing schemes
+- [Collections](/docs/core-schemas/pointers/collections) for groups,
+  lists, and conditionals
+- [Expressions](/docs/core-schemas/pointers/expressions) for arithmetic,
+  reads, and `$keccak256`
+
+</PointerPlayground>
