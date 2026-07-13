@@ -14,6 +14,7 @@ import {
   ReturnMergingStep,
   ReadWriteMergingStep,
   TailCallOptimizationStep,
+  InliningStep,
 } from "./steps/index.js";
 
 /**
@@ -58,9 +59,12 @@ function createOptimizationPipeline(level: number): OptimizationStep[] {
     );
   }
 
-  // Level 2: Add CSE, tail call optimization, and jump optimization
+  // Level 2: Add inlining, CSE, tail call optimization, and
+  // jump optimization. Inlining runs first (after L1 fold) so
+  // TCO/CSE still apply to inlined code.
   if (level >= 2) {
     steps.push(
+      new InliningStep(),
       new CommonSubexpressionEliminationStep(),
       new TailCallOptimizationStep(),
       new JumpOptimizationStep(),

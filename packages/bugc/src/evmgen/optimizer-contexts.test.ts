@@ -148,11 +148,18 @@ code { r = add(10, 20); }`;
         const program = await compileAt(source, level);
         const counts = countCallSites(program);
 
-        // One caller JUMP, one callee JUMPDEST, one
-        // continuation JUMPDEST — all naming "add".
-        expect(counts.invokeJump).toEqual({ add: 1 });
-        expect(counts.invokeJumpdest).toEqual({ add: 1 });
-        expect(counts.returnJumpdest).toEqual({ add: 1 });
+        if (level >= 2) {
+          // `add` is a leaf single-return helper: inlining (L2+)
+          // splices its body into the caller, so there's no real
+          // caller JUMP for `add`.
+          expect(counts.invokeJump).toEqual({});
+        } else {
+          // One caller JUMP, one callee JUMPDEST, one
+          // continuation JUMPDEST — all naming "add".
+          expect(counts.invokeJump).toEqual({ add: 1 });
+          expect(counts.invokeJumpdest).toEqual({ add: 1 });
+          expect(counts.returnJumpdest).toEqual({ add: 1 });
+        }
 
         // Behavior is still correct.
         const result = await executeProgram(source, {
@@ -185,9 +192,15 @@ code { r = add(2 + 3, 4 * 5); }`;
         const program = await compileAt(source, level);
         const counts = countCallSites(program);
 
-        expect(counts.invokeJump).toEqual({ add: 1 });
-        expect(counts.invokeJumpdest).toEqual({ add: 1 });
-        expect(counts.returnJumpdest).toEqual({ add: 1 });
+        if (level >= 2) {
+          // `add` inlined at L2+ — its body is spliced in, no real
+          // caller JUMP. Constant-foldable args don't change that.
+          expect(counts.invokeJump).toEqual({});
+        } else {
+          expect(counts.invokeJump).toEqual({ add: 1 });
+          expect(counts.invokeJumpdest).toEqual({ add: 1 });
+          expect(counts.returnJumpdest).toEqual({ add: 1 });
+        }
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -224,9 +237,15 @@ code {
         const program = await compileAt(source, level);
         const counts = countCallSites(program);
 
-        expect(counts.invokeJump).toEqual({ dbl: 2 });
-        expect(counts.invokeJumpdest).toEqual({ dbl: 1 });
-        expect(counts.returnJumpdest).toEqual({ dbl: 2 });
+        if (level >= 2) {
+          // Both `dbl` sites are leaf single-return calls, inlined
+          // at L2+ into the caller — no real caller JUMPs remain.
+          expect(counts.invokeJump).toEqual({});
+        } else {
+          expect(counts.invokeJump).toEqual({ dbl: 2 });
+          expect(counts.invokeJumpdest).toEqual({ dbl: 1 });
+          expect(counts.returnJumpdest).toEqual({ dbl: 2 });
+        }
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -349,18 +368,26 @@ code { r = addThree(1, 2, 3); }`;
         const program = await compileAt(source, level);
         const counts = countCallSites(program);
 
-        expect(counts.invokeJump).toEqual({
-          addThree: 1,
-          add: 2,
-        });
-        expect(counts.invokeJumpdest).toEqual({
-          addThree: 1,
-          add: 1,
-        });
-        expect(counts.returnJumpdest).toEqual({
-          addThree: 1,
-          add: 2,
-        });
+        if (level >= 2) {
+          // `add` (leaf) inlines into `addThree` at both sites;
+          // that makes `addThree` itself a leaf, so on a later
+          // fixpoint iteration it inlines into `main` too. End
+          // state: no real caller JUMPs remain.
+          expect(counts.invokeJump).toEqual({});
+        } else {
+          expect(counts.invokeJump).toEqual({
+            addThree: 1,
+            add: 2,
+          });
+          expect(counts.invokeJumpdest).toEqual({
+            addThree: 1,
+            add: 1,
+          });
+          expect(counts.returnJumpdest).toEqual({
+            addThree: 1,
+            add: 2,
+          });
+        }
 
         const result = await executeProgram(source, {
           calldata: "",

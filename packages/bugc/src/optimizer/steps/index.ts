@@ -7,3 +7,4 @@ export { BlockMergingStep } from "./block-merging.js";
 export { ReturnMergingStep } from "./return-merging.js";
 export { ReadWriteMergingStep } from "./read-write-merging.js";
 export { TailCallOptimizationStep } from "./tail-call-optimization.js";
+export { InliningStep } from "./inlining.js";
