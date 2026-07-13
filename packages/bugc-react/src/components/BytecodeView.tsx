@@ -175,7 +175,9 @@ function InstructionsView({
             ) : (
               <span className="debug-info-spacer"></span>
             )}
-            <span className="pc">{currentPc.toString().padStart(4, "0")}</span>
+            <span className="pc">
+              {`0x${currentPc.toString(16).padStart(4, "0")}`}
+            </span>
             <span className="opcode">{instruction.mnemonic}</span>
             {instruction.immediates && instruction.immediates.length > 0 && (
               <span className="immediates">
