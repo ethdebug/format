@@ -211,6 +211,11 @@
 .trace-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Explicit full-height row: without this the single implicit grid row
+   * is auto-sized to content, so the panels stay at content height (the
+   * instructions list looked "fixed height" with dead space below) even
+   * though .trace-panels itself flex-grows. The row must fill the grid. */
+  grid-template-rows: minmax(0, 1fr);
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -482,6 +487,6 @@
 
   .trace-panels {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 }

@@ -56,7 +56,7 @@ function TraceDrawerContent(): JSX.Element {
   const [isTracing, setIsTracing] = useState(false);
   const [traceError, setTraceError] = useState<string | null>(null);
   const [storage, setStorage] = useState<Record<string, string>>({});
-  const [showInstructionObject, setShowInstructionObject] = useState(true);
+  const [showInstructionObject, setShowInstructionObject] = useState(false);
 
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
