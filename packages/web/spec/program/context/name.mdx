@@ -6,9 +6,20 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Named contexts
 
-Contexts may include a `name` property for distinguishing them from
-other contexts. This is particularly useful inside `pick` alternatives,
-where several possible contexts may apply at a given point in execution
-and runtime information is needed to select which one is active.
+A context may carry an optional `name`: an identifier attached to it.
+Today a `name` acts as a label. Its most common use is inside a
+[`pick`](/spec/program/context/pick), whose alternatives are listed
+inline — a name distinguishes those alternatives from one another when
+several contexts may apply at a given point in execution.
+
+Names are opaque strings; the format imposes no structure on them. A
+name is meant to be unique within a program so it can identify a context,
+but the format does **not** yet define any way to reference a context by
+its name — so a declared name is currently inert, a label only.
+
+Naming a context is groundwork: establishing the identifier now lets a
+future name-based `pick` selection reference an alternative by its name
+instead of listing it inline. Compilers **should** choose names that are
+meaningful to debugger users.
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/program/context/name" }} />
