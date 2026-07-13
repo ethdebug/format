@@ -229,20 +229,33 @@
   min-height: 0;
 }
 
-/* Instructions panel: fixed header, internally scrolling list */
-.opcodes-panel {
+/* Instructions panel: fixed header, internally scrolling list.
+ *
+ * These selectors are scoped with `.trace-panel` on purpose. The class
+ * names `.opcodes-panel` / `.opcode-list` are also used by the sibling
+ * TraceViewer component, whose global stylesheet caps them with
+ * `min-height: 200px; max-height: 300px`. Docusaurus theme CSS is not
+ * module-scoped, so those caps leak onto this drawer and pin the
+ * instructions list to a fixed height. The `.trace-panel.opcodes-panel`
+ * selector (specificity 0,2,0) outranks the leaked `.opcodes-panel`
+ * (0,1,0), and `max-height: none` / `min-height: 0` remove the cap so
+ * the panel grows to fill its grid cell with the list scrolling inside. */
+.trace-panel.opcodes-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
+  max-height: none;
 }
 
-.opcodes-panel .panel-header {
+.trace-panel.opcodes-panel .panel-header {
   flex-shrink: 0;
 }
 
-.opcodes-panel .opcode-list {
+.trace-panel.opcodes-panel .opcode-list {
   flex: 1 1 auto;
   min-height: 0;
+  max-height: none;
   overflow: auto;
 }
 
