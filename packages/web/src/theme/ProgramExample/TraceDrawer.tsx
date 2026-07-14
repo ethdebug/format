@@ -30,6 +30,13 @@ import { useTracePlayground } from "./TracePlaygroundContext";
 
 import "./TraceDrawer.css";
 
+// Bounds for the draggable instruction-object footer (in px).
+const OBJECT_MIN_HEIGHT = 80;
+const OBJECT_DEFAULT_HEIGHT = 180;
+// Vertical space kept for the controls + instructions/state row so the
+// footer can never grow to swallow the whole drawer.
+const OBJECT_ROW_RESERVE = 160;
+
 export function TraceDrawer(): JSX.Element {
   return (
     <BrowserOnly fallback={null}>{() => <TraceDrawerContent />}</BrowserOnly>
@@ -57,6 +64,57 @@ function TraceDrawerContent(): JSX.Element {
   const [traceError, setTraceError] = useState<string | null>(null);
   const [storage, setStorage] = useState<Record<string, string>>({});
   const [showInstructionObject, setShowInstructionObject] = useState(false);
+  const [objectHeight, setObjectHeight] = useState(OBJECT_DEFAULT_HEIGHT);
+  const [isResizingObject, setIsResizingObject] = useState(false);
+
+  // Refs for the draggable instruction-object footer
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const objectDragRef = useRef<{ startY: number; startHeight: number } | null>(
+    null,
+  );
+
+  // Clamp the footer height so it keeps a minimum while leaving room for
+  // the controls + instructions/state row above it.
+  const clampObjectHeight = useCallback((height: number): number => {
+    const viewer = viewerRef.current;
+    const max = viewer
+      ? Math.max(OBJECT_MIN_HEIGHT, viewer.clientHeight - OBJECT_ROW_RESERVE)
+      : Number.POSITIVE_INFINITY;
+    return Math.min(max, Math.max(OBJECT_MIN_HEIGHT, height));
+  }, []);
+
+  const handleObjectResizeStart = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      objectDragRef.current = { startY: e.clientY, startHeight: objectHeight };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsResizingObject(true);
+    },
+    [objectHeight],
+  );
+
+  const handleObjectResizeMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = objectDragRef.current;
+      if (!drag) return;
+      // Dragging up (clientY decreases) grows the object pane.
+      const next = drag.startHeight + (drag.startY - e.clientY);
+      setObjectHeight(clampObjectHeight(next));
+    },
+    [clampObjectHeight],
+  );
+
+  const handleObjectResizeEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!objectDragRef.current) return;
+      objectDragRef.current = null;
+      setIsResizingObject(false);
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    },
+    [],
+  );
 
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
@@ -462,7 +520,7 @@ function TraceDrawerContent(): JSX.Element {
           )}
 
           {hasTrace && (
-            <div className="trace-viewer">
+            <div className="trace-viewer" ref={viewerRef}>
               <div className="trace-controls">
                 <button
                   onClick={jumpToStart}
@@ -589,15 +647,37 @@ function TraceDrawerContent(): JSX.Element {
                 </div>
               </div>
 
-              <div className="instruction-object-panel">
+              <div
+                className={`instruction-object-panel${
+                  isResizingObject ? " resizing-object" : ""
+                }`}
+              >
+                {showInstructionObject && (
+                  <div
+                    className="instruction-object-resize-handle"
+                    onPointerDown={handleObjectResizeStart}
+                    onPointerMove={handleObjectResizeMove}
+                    onPointerUp={handleObjectResizeEnd}
+                    onPointerCancel={handleObjectResizeEnd}
+                    role="separator"
+                    aria-orientation="horizontal"
+                    aria-label="Resize instruction object panel"
+                  >
+                    <div className="instruction-object-resize-bar" />
+                  </div>
+                )}
                 <div className="panel-header instruction-object-header">
                   <label className="instruction-object-toggle">
                     <input
                       type="checkbox"
                       checked={showInstructionObject}
-                      onChange={(e) =>
-                        setShowInstructionObject(e.target.checked)
-                      }
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setShowInstructionObject(on);
+                        if (on) {
+                          setObjectHeight((h) => clampObjectHeight(h));
+                        }
+                      }}
                     />
                     <span>
                       <code>ethdebug/format/instruction</code> object
@@ -605,7 +685,10 @@ function TraceDrawerContent(): JSX.Element {
                   </label>
                 </div>
                 {showInstructionObject && (
-                  <div className="instruction-object-body">
+                  <div
+                    className="instruction-object-body"
+                    style={{ height: objectHeight }}
+                  >
                     {currentFormatInstruction ? (
                       <pre className="instruction-object-json">
                         {JSON.stringify(currentFormatInstruction, null, 2)}
