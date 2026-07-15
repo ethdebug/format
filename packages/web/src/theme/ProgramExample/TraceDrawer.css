@@ -337,13 +337,43 @@
   color: var(--ifm-color-content);
 }
 
-/* Instruction object footer - constant height, scrolls internally */
+/* Instruction object footer - user-resizable, scrolls internally */
 .instruction-object-panel {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--ifm-color-emphasis-200);
   background: var(--ifm-background-color);
+}
+
+/* Drag handle straddling the divider above the footer (matches the
+ * drawer's own resize handle). Only present while the object is shown. */
+.instruction-object-resize-handle {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  touch-action: none;
+}
+
+.instruction-object-resize-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ifm-color-emphasis-400);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.instruction-object-resize-handle:hover .instruction-object-resize-bar,
+.resizing-object .instruction-object-resize-bar {
+  background: var(--ifm-color-primary);
 }
 
 .instruction-object-header {
@@ -373,7 +403,7 @@
 .instruction-object-body {
   flex-shrink: 0;
   min-height: 0;
-  max-height: 180px;
+  /* Height is driven by the drag handle (inline style); scroll inside. */
   overflow: auto;
 }
 
