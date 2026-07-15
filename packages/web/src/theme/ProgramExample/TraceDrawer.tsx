@@ -116,6 +116,21 @@ function TraceDrawerContent(): JSX.Element {
     [],
   );
 
+  // Re-clamp the footer height when the drawer/viewer is resized, so
+  // shrinking the drawer shrinks the footer rather than collapsing the
+  // instructions/state row. Keyed on trace length so it re-attaches when
+  // the viewer element mounts.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      setObjectHeight((h) => clampObjectHeight(h));
+    });
+    observer.observe(viewer);
+    return () => observer.disconnect();
+  }, [trace.length, clampObjectHeight]);
+
   // Build PC -> instruction map for source highlighting
   const pcToInstruction = useMemo(() => {
     const map = new Map<number, Evm.Instruction>();
