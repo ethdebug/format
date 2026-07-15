@@ -8,8 +8,8 @@ import { TracePlayground, TraceExample } from "@theme/ProgramExample";
 import {
   counterIncrement,
   functionCallAndReturn,
-  tailRecursiveSum,
   tailRecursiveFactorial,
+  inlineDemo,
 } from "../core-schemas/programs/tracing-examples";
 
 # Trace playground
@@ -57,16 +57,13 @@ For the exact shape of invoke, return, and revert contexts, see the
 
 Compilers rewrite code as they optimize, and **transform** contexts
 record what they did. Set the **Opt** selector to **O2** and step through
-these tail-recursive programs: the recursive call folds into a loop, and
-the back-edge JUMP carries `transform: ["tailcall"]` next to its invoke
-and return. The call stack stays flat instead of growing one frame per
-iteration.
+the examples below: each instruction the optimizer rewrote carries a
+`transform` array naming the passes responsible.
 
-<TraceExample
-  title="Tail-recursive sum"
-  description="Sums 1..5 with an accumulator; TCO folds it into a loop"
-  source={tailRecursiveSum}
-/>
+**Tail-call optimization.** In `TailFactorial` the recursive call folds
+into a loop. The back-edge JUMP carries `transform: ["tailcall"]` next to
+its invoke and return, and the call stack stays flat instead of growing
+one frame per iteration.
 
 <TraceExample
   title="Tail-recursive factorial"
@@ -74,9 +71,25 @@ iteration.
   source={tailRecursiveFactorial}
 />
 
-Flip the **Opt** selector between **O0** and **O2** to see the call stack
-change. For how the `tailcall` transform composes with invoke/return, see
-the [transform context spec](/spec/program/context/transform) and the
+**Inlining.** In `InlineDemo` the leaf helper `square` is small enough
+that at **O2** the compiler splices its body straight into each call
+site. `sumOfSquares = square(a) + square(b)` calls it twice, and after
+inlining neither call JUMPs into `square` — each multiply runs inline, and
+those instructions carry `transform: ["inline"]` pointing back to the
+`square` body they came from. The call stack marks the inlined `square`
+as a virtual activation, not a real pushed frame.
+
+<TraceExample
+  title="Inlined leaf calls"
+  description="Inlines the square helper into both call sites at O2"
+  source={inlineDemo}
+/>
+
+Flip the **Opt** selector between **O0** and **O2** to see the difference:
+at **O0** each program calls its helper the ordinary way; at **O2** the
+transforms above take over. For how these transforms compose with
+invoke/return, see the
+[transform context spec](/spec/program/context/transform) and the
 [tail-call optimization walkthrough](/docs/core-schemas/programs/tracing).
 
 </TracePlayground>
