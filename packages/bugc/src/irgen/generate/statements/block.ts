@@ -8,7 +8,7 @@ export const makeBuildBlock = (
   buildStatement: (stmt: Ast.Statement) => Process<void>,
 ) =>
   function* buildBlock(block: Ast.Block): Process<void> {
-    yield* Process.Variables.enterScope();
+    yield* Process.Variables.enterScope(block.loc ?? undefined);
 
     for (const item of block.items) {
       if (Ast.isStatement(item)) {
