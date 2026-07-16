@@ -275,15 +275,10 @@ function initializeMemory<S extends Stack>(
   const debug = sourceInfo
     ? {
         context: {
-          gather: [
-            { remark: "initialize free memory pointer" },
-            {
-              code: {
-                source: { id: sourceInfo.sourceId },
-                range: sourceInfo.loc,
-              },
-            },
-          ],
+          code: {
+            source: { id: sourceInfo.sourceId },
+            range: sourceInfo.loc,
+          },
         } as Format.Program.Context,
       }
     : {
