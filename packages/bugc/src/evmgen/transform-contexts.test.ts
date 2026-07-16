@@ -99,3 +99,24 @@ code { r = sum(5, 0); }`;
     });
   }
 });
+
+describe("optimizer emits fold transform contexts", () => {
+  // `2 + 3` and `4 * 5` fold to constants at level 1.
+  const source = `name Fold;
+
+storage { [0] r: uint256; }
+create { r = 0; }
+code { r = (2 + 3) * (4 * 5); }`;
+
+  it("emits no fold transform at level 0", async () => {
+    const bc = await compileBytecode(source, 0);
+    expect(countTransform(bc.runtimeInstructions, "fold")).toBe(0);
+  });
+
+  for (const level of [1, 2, 3] as const) {
+    it(`emits fold transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "fold")).toBeGreaterThan(0);
+    });
+  }
+});
