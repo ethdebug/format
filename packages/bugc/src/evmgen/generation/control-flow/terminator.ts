@@ -411,16 +411,24 @@ function generateReturnEpilogue<S extends Stack>(
 /**
  * Build JUMP instruction options for a TCO-replaced tail call.
  *
- * The JUMP carries BOTH discriminators on a single flat
- * context object:
+ * The JUMP carries three keys on a single flat context
+ * object:
  *   - return: the previous iteration's return
  *   - invoke: the new iteration's call
+ *   - transform: ["tailcall"]
  *
  * Semantically the debugger sees frame depth stay constant
  * across the back-edge JUMP: the previous frame pops, the
  * new one pushes, on the same instruction. The function's
  * terminal RETURN (elsewhere) emits a return context
  * normally, popping the final iteration's frame.
+ *
+ * The `transform: ["tailcall"]` key is an additive
+ * annotation: it does not replace the invoke/return pair
+ * (which state the source-level facts) but tells debuggers
+ * the pair was realized as a TCO back-edge rather than a
+ * real frame push/pop, so they can avoid inventing a
+ * spurious frame.
  *
  * The invoke mirrors the normal caller-JUMP invoke
  * (identity + declaration + code target, no argument
@@ -443,7 +451,8 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
       : undefined;
 
   const combined: Format.Program.Context.Return &
-    Format.Program.Context.Invoke = {
+    Format.Program.Context.Invoke &
+    Format.Program.Context.Transform = {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
@@ -460,6 +469,7 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         },
       },
     },
+    transform: ["tailcall"],
   };
 
   return { debug: { context: combined as Format.Program.Context } };

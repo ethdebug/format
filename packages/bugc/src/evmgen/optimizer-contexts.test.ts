@@ -524,6 +524,17 @@ code { r = count(0, 5); }`;
               Context.isReturn(instr.context),
           );
           expect(tcoJump).toBeDefined();
+
+          // The same back-edge JUMP additionally carries a
+          // `transform: ["tailcall"]` context. This is an
+          // additive annotation telling debuggers the
+          // invoke/return pair was realized as a TCO
+          // back-edge rather than a real frame push/pop.
+          expect(Context.isTransform(tcoJump!.context)).toBe(true);
+          expect(
+            (tcoJump!.context as Format.Program.Context.Transform).transform,
+          ).toContain("tailcall");
+
           const ctx = tcoJump!.context as Format.Program.Context.Invoke;
           const invocation = ctx.invoke;
           expect(Invocation.isInternalCall(invocation)).toBe(true);
