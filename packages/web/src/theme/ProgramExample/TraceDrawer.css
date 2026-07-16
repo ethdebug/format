@@ -270,7 +270,8 @@
   border-left: 3px solid #8250df;
 }
 
-.call-stack-tailcall {
+.call-stack-tailcall,
+.call-stack-inline {
   margin-left: 4px;
   padding: 0 5px;
   border-radius: 8px;
@@ -280,6 +281,13 @@
   background: rgba(130, 80, 223, 0.15);
   color: var(--ifm-color-content);
   border: 1px solid rgba(130, 80, 223, 0.45);
+}
+
+/* Virtual (inline) activations read as "not a real frame": dashed
+   border + italic, sharing the transform purple tint. */
+.call-stack-inline {
+  border-style: dashed;
+  font-style: italic;
 }
 
 /* Trace panels - this row grows to fill the drawer's height */

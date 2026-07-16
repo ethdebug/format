@@ -704,6 +704,14 @@ function TraceDrawerContent(): JSX.Element {
                             ⮌ tail call
                           </span>
                         )}
+                        {frame.isInline && (
+                          <span
+                            className="call-stack-inline"
+                            title="Inlined: virtual activation — body spliced into the caller, no call occurred"
+                          >
+                            ⧉ inline
+                          </span>
+                        )}
                       </button>
                     </React.Fragment>
                   ))
