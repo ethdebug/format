@@ -252,6 +252,18 @@ function TraceDrawerContent(): JSX.Element {
     [programsTrace, formatPcToInstruction, currentStep],
   );
 
+  // Compiler transform tags per trace step, so the instruction list can
+  // mark which instructions the optimizer rewrote (e.g. the spliced
+  // instructions of an inlined body) without stepping onto each one.
+  const transformsByStep = useMemo<string[][]>(
+    () =>
+      trace.map((s) => {
+        const fi = formatPcToInstruction.get(s.pc);
+        return fi ? extractTransformFromInstruction(fi) : [];
+      }),
+    [trace, formatPcToInstruction],
+  );
+
   // Resolve argument values for call stack frames
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
 
@@ -721,9 +733,11 @@ function TraceDrawerContent(): JSX.Element {
               {currentCallInfo && (
                 <div
                   className={`call-info-bar ${
-                    currentCallInfo.isTailCall
-                      ? "call-info-tailcall"
-                      : `call-info-${currentCallInfo.kind}`
+                    currentCallInfo.isInline
+                      ? "call-info-inline"
+                      : currentCallInfo.isTailCall
+                        ? "call-info-tailcall"
+                        : `call-info-${currentCallInfo.kind}`
                   }`}
                 >
                   {formatCallBanner(currentCallInfo)}
@@ -737,6 +751,7 @@ function TraceDrawerContent(): JSX.Element {
                     trace={trace}
                     currentStep={currentStep}
                     onStepClick={setCurrentStep}
+                    transformsByStep={transformsByStep}
                   />
                 </div>
 
@@ -848,12 +863,15 @@ interface OpcodeListProps {
   trace: TraceStep[];
   currentStep: number;
   onStepClick: (index: number) => void;
+  /** Compiler transform tags per trace step (same index as `trace`). */
+  transformsByStep: string[][];
 }
 
 function OpcodeList({
   trace,
   currentStep,
   onStepClick,
+  transformsByStep,
 }: OpcodeListProps): JSX.Element {
   // Render the full instruction list; the panel scrolls internally.
   // Keep the active step scrolled into view as the trace advances.
@@ -867,11 +885,22 @@ function OpcodeList({
     <div className="opcode-list">
       {trace.map((step, index) => {
         const isActive = index === currentStep;
+        const transforms = transformsByStep[index] ?? [];
+        const isInline = transforms.includes("inline");
+        const isTailCall = transforms.includes("tailcall");
+        const className = [
+          "opcode-item",
+          isActive ? "active" : "",
+          isInline ? "opcode-item-inline" : "",
+          isTailCall ? "opcode-item-tailcall" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
         return (
           <div
             key={index}
             ref={isActive ? activeRef : undefined}
-            className={`opcode-item ${isActive ? "active" : ""}`}
+            className={className}
             onClick={() => onStepClick(index)}
           >
             <span className="opcode-index">{index + 1}</span>
@@ -879,6 +908,24 @@ function OpcodeList({
               0x{step.pc.toString(16).padStart(4, "0")}
             </span>
             <code className="opcode-name">{step.opcode}</code>
+            {isInline && (
+              <span
+                className="opcode-transform-tag opcode-transform-inline"
+                title={'transform: ["inline"] — spliced from the inlined body'}
+              >
+                ⧉ inline
+              </span>
+            )}
+            {isTailCall && (
+              <span
+                className="opcode-transform-tag opcode-transform-tailcall"
+                title={
+                  'transform: ["tailcall"] — tail-call optimized back-edge'
+                }
+              >
+                ⮌ tailcall
+              </span>
+            )}
           </div>
         );
       })}
@@ -1064,6 +1111,17 @@ function formatCallBanner(info: CallInfo): string {
     : "()";
   if (info.isTailCall) {
     return `Tail call: ${name} (frame reused)`;
+  }
+  if (info.isInline) {
+    // No call actually occurs — the body was spliced in at compile time.
+    switch (info.kind) {
+      case "invoke":
+        return `Inlined ${name}${params} (no call — body spliced in)`;
+      case "return":
+        return `End of inlined ${name}()`;
+      case "revert":
+        return `Reverted in inlined ${name}()`;
+    }
   }
   switch (info.kind) {
     case "invoke": {
