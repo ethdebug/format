@@ -67,6 +67,7 @@ export function generate<S extends Stack>(
         // Check if this is a call continuation
         let isContinuation = false;
         let calledFunction = "";
+        let callSiteCode: Format.Program.Context.Code["code"] | undefined;
         if (func && predecessor) {
           const predBlock = func.blocks.get(predecessor);
           if (
@@ -75,6 +76,15 @@ export function generate<S extends Stack>(
           ) {
             isContinuation = true;
             calledFunction = predBlock.terminator.function;
+            // The continuation resumes at the call expression, so
+            // carry the call site's source range onto the return
+            // context (disjoint keys — flat composition).
+            const ctx = predBlock.terminator.operationDebug?.context as
+              | Record<string, unknown>
+              | undefined;
+            if (ctx && "code" in ctx) {
+              callSiteCode = ctx.code as Format.Program.Context.Code["code"];
+            }
           }
         }
 
@@ -105,7 +115,10 @@ export function generate<S extends Stack>(
             },
           };
           const continuationDebug = {
-            context: returnCtx as Format.Program.Context,
+            context: {
+              ...returnCtx,
+              ...(callSiteCode ? { code: callSiteCode } : {}),
+            } as Format.Program.Context,
           };
           result = result.then(JUMPDEST({ debug: continuationDebug }));
         } else {

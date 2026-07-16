@@ -11,6 +11,20 @@ import { type Transition, operations, pipe } from "#evmgen/operations";
 import { valueId, loadValue } from "../values/index.js";
 
 /**
+ * Extract the `code` source-range context from an instruction or
+ * terminator debug, if present.
+ */
+function codeContext(
+  debug: { context?: Format.Program.Context } | undefined,
+): Format.Program.Context.Code["code"] | undefined {
+  const ctx = debug?.context as Record<string, unknown> | undefined;
+  if (ctx && "code" in ctx) {
+    return ctx.code as Format.Program.Context.Code["code"];
+  }
+  return undefined;
+}
+
+/**
  * Generate code for a block terminator
  */
 export function generateTerminator<S extends Stack>(
@@ -249,8 +263,15 @@ export function generateCallTerminator<S extends Stack>(
         },
       },
     };
+    // Compose the call-site source range (from the call op's debug)
+    // flat alongside the invoke, so the caller JUMP maps back to the
+    // call expression. invoke and code are disjoint keys.
+    const callSiteCode = codeContext(debug);
     const invokeContext = {
-      context: invoke as Format.Program.Context,
+      context: {
+        ...invoke,
+        ...(callSiteCode ? { code: callSiteCode } : {}),
+      } as Format.Program.Context,
     };
 
     currentState = {
