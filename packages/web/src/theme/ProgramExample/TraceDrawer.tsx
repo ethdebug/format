@@ -264,6 +264,27 @@ function TraceDrawerContent(): JSX.Element {
     [trace, formatPcToInstruction],
   );
 
+  // Function-call boundaries per trace step, so the instruction list can
+  // mark calls with a lightweight badge in the same visual language as the
+  // transform tags. Consecutive identical boundaries are de-duplicated —
+  // the compiler emits invoke on both the caller JUMP and the callee entry
+  // JUMPDEST, which would otherwise badge two rows in a row.
+  const callBadgeByStep = useMemo<(CallBadge | null)[]>(() => {
+    let prevKey = "";
+    return trace.map((s) => {
+      const fi = formatPcToInstruction.get(s.pc);
+      const info = fi ? extractCallInfoFromInstruction(fi) : undefined;
+      if (!info || (info.kind !== "invoke" && info.kind !== "return")) {
+        prevKey = "";
+        return null;
+      }
+      const key = `${info.kind}:${info.identifier ?? ""}`;
+      if (key === prevKey) return null;
+      prevKey = key;
+      return { kind: info.kind, id: info.identifier };
+    });
+  }, [trace, formatPcToInstruction]);
+
   // Resolve argument values for call stack frames
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
 
@@ -752,6 +773,7 @@ function TraceDrawerContent(): JSX.Element {
                     currentStep={currentStep}
                     onStepClick={setCurrentStep}
                     transformsByStep={transformsByStep}
+                    callBadgeByStep={callBadgeByStep}
                   />
                 </div>
 
@@ -859,12 +881,20 @@ function TraceDrawerContent(): JSX.Element {
   );
 }
 
+/** A function-call boundary marker for one trace step. */
+interface CallBadge {
+  kind: "invoke" | "return";
+  id?: string;
+}
+
 interface OpcodeListProps {
   trace: TraceStep[];
   currentStep: number;
   onStepClick: (index: number) => void;
   /** Compiler transform tags per trace step (same index as `trace`). */
   transformsByStep: string[][];
+  /** Function-call boundary badge per trace step (same index as `trace`). */
+  callBadgeByStep: (CallBadge | null)[];
 }
 
 function OpcodeList({
@@ -872,6 +902,7 @@ function OpcodeList({
   currentStep,
   onStepClick,
   transformsByStep,
+  callBadgeByStep,
 }: OpcodeListProps): JSX.Element {
   // Render the full instruction list; the panel scrolls internally.
   // Keep the active step scrolled into view as the trace advances.
@@ -888,6 +919,10 @@ function OpcodeList({
         const transforms = transformsByStep[index] ?? [];
         const isInline = transforms.includes("inline");
         const isTailCall = transforms.includes("tailcall");
+        // Show a call badge only when the row isn't already carrying a
+        // transform tag (an inlined call keeps its ⧉ inline marker).
+        const callBadge =
+          !isInline && !isTailCall ? (callBadgeByStep[index] ?? null) : null;
         const className = [
           "opcode-item",
           isActive ? "active" : "",
@@ -924,6 +959,20 @@ function OpcodeList({
                 }
               >
                 ⮌ tailcall
+              </span>
+            )}
+            {callBadge && (
+              <span
+                className={`opcode-call-tag opcode-call-${callBadge.kind}`}
+                title={
+                  callBadge.kind === "invoke"
+                    ? `invoke context — calls ${callBadge.id ?? "function"}`
+                    : `return context — returns from ${callBadge.id ?? "function"}`
+                }
+              >
+                {callBadge.kind === "invoke"
+                  ? `➜ call ${callBadge.id ?? ""}`.trim()
+                  : `↵ return ${callBadge.id ?? ""}`.trim()}
               </span>
             )}
           </div>
