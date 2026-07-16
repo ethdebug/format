@@ -58,6 +58,37 @@ interface CompileResult {
   bytecode?: BytecodeOutput;
 }
 
+/**
+ * How the instruction list groups consecutive rows for the subtle
+ * background banding: off, by source statement/expression range, or by the
+ * enclosing function activation.
+ */
+type BandMode = "none" | "statement" | "function";
+const BAND_MODES: readonly { value: BandMode; label: string; title: string }[] =
+  [
+    { value: "none", label: "off", title: "No grouping" },
+    {
+      value: "statement",
+      label: "source",
+      title: "Band instructions by source statement",
+    },
+    {
+      value: "function",
+      label: "function",
+      title: "Band instructions by enclosing function",
+    },
+  ];
+
+/** A banded group of consecutive instructions in the instruction list. */
+interface InstructionGroup {
+  /** Row indices (into `trace`) in this group. */
+  rows: number[];
+  /** Light label for the group, or null for unlabeled glue/top-level. */
+  label: string | null;
+  /** What the label names, for styling. */
+  labelKind: "function" | "source";
+}
+
 /** bugc optimizer levels the tracer can compile at. */
 type OptLevel = 0 | 1 | 2 | 3;
 const OPT_LEVELS: readonly OptLevel[] = [0, 1, 2, 3];
@@ -83,6 +114,8 @@ function TraceDrawerContent(): JSX.Element {
   const [traceError, setTraceError] = useState<string | null>(null);
   const [storage, setStorage] = useState<Record<string, string>>({});
   const [showInstructionObject, setShowInstructionObject] = useState(false);
+  // Subtle grouped-range highlighting of the instruction list.
+  const [banding, setBanding] = useState<BandMode>("function");
   const [objectHeight, setObjectHeight] = useState(OBJECT_DEFAULT_HEIGHT);
   const [isResizingObject, setIsResizingObject] = useState(false);
 
@@ -284,6 +317,70 @@ function TraceDrawerContent(): JSX.Element {
       return { kind: info.kind, id: info.identifier };
     });
   }, [trace, formatPcToInstruction]);
+
+  // Group consecutive instructions for the subtle background banding: by
+  // source range ("statement") or by enclosing function ("function").
+  // Presentation only — the same source ranges and invoke/return contexts
+  // that already drive the highlight and call-info banner.
+  const instructionGroups = useMemo<InstructionGroup[] | null>(() => {
+    if (banding === "none" || trace.length === 0) return null;
+
+    // Track the active function per step via a single invoke/return pass
+    // (avoids re-running buildCallStack for every row).
+    const activeFn: (string | null)[] = [];
+    const stack: string[] = [];
+    for (const s of trace) {
+      const fi = formatPcToInstruction.get(s.pc);
+      const info = fi ? extractCallInfoFromInstruction(fi) : undefined;
+      const top = stack.length ? stack[stack.length - 1] : null;
+      if (info?.kind === "invoke") {
+        const id = info.identifier ?? "?";
+        if (top !== id) stack.push(id);
+        activeFn.push(id);
+      } else if (info?.kind === "return") {
+        activeFn.push(top);
+        stack.pop();
+      } else {
+        activeFn.push(top);
+      }
+    }
+
+    const groups: InstructionGroup[] = [];
+    let cur: InstructionGroup | null = null;
+    let curKey = "";
+    trace.forEach((s, i) => {
+      let key: string;
+      let label: string | null;
+      let labelKind: "function" | "source";
+      if (banding === "function") {
+        const fn = activeFn[i];
+        key = fn ?? "·top";
+        label = fn ? `${fn}()` : null;
+        labelKind = "function";
+      } else {
+        const inst = pcToInstruction.get(s.pc);
+        const ranges = inst?.debug?.context
+          ? extractSourceRange(inst.debug.context)
+          : [];
+        const r = ranges[0];
+        key = r ? `${r.offset}:${r.length}` : "·none";
+        label = r
+          ? source
+              .slice(r.offset, r.offset + r.length)
+              .replace(/\s+/g, " ")
+              .trim()
+          : null;
+        labelKind = "source";
+      }
+      if (!cur || key !== curKey) {
+        cur = { rows: [], label, labelKind };
+        curKey = key;
+        groups.push(cur);
+      }
+      cur.rows.push(i);
+    });
+    return groups;
+  }, [banding, trace, formatPcToInstruction, pcToInstruction, source]);
 
   // Resolve argument values for call stack frames
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
@@ -767,13 +864,34 @@ function TraceDrawerContent(): JSX.Element {
 
               <div className="trace-panels">
                 <div className="trace-panel opcodes-panel">
-                  <div className="panel-header">Instructions</div>
+                  <div className="panel-header opcodes-panel-header">
+                    <span>Instructions</span>
+                    <span
+                      className="band-control"
+                      title="Group instructions with a subtle background band"
+                    >
+                      {BAND_MODES.map((m) => (
+                        <button
+                          key={m.value}
+                          type="button"
+                          className={`band-btn${
+                            banding === m.value ? " active" : ""
+                          }`}
+                          onClick={() => setBanding(m.value)}
+                          title={m.title}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </span>
+                  </div>
                   <OpcodeList
                     trace={trace}
                     currentStep={currentStep}
                     onStepClick={setCurrentStep}
                     transformsByStep={transformsByStep}
                     callBadgeByStep={callBadgeByStep}
+                    groups={instructionGroups}
                   />
                 </div>
 
@@ -895,6 +1013,8 @@ interface OpcodeListProps {
   transformsByStep: string[][];
   /** Function-call boundary badge per trace step (same index as `trace`). */
   callBadgeByStep: (CallBadge | null)[];
+  /** Banded groups for subtle grouped-range highlighting, or null (flat). */
+  groups: InstructionGroup[] | null;
 }
 
 function OpcodeList({
@@ -903,6 +1023,7 @@ function OpcodeList({
   onStepClick,
   transformsByStep,
   callBadgeByStep,
+  groups,
 }: OpcodeListProps): JSX.Element {
   // Render the full instruction list; the panel scrolls internally.
   // Keep the active step scrolled into view as the trace advances.
@@ -912,72 +1033,92 @@ function OpcodeList({
     activeRef.current?.scrollIntoView({ block: "nearest" });
   }, [currentStep]);
 
-  return (
-    <div className="opcode-list">
-      {trace.map((step, index) => {
-        const isActive = index === currentStep;
-        const transforms = transformsByStep[index] ?? [];
-        const isInline = transforms.includes("inline");
-        const isTailCall = transforms.includes("tailcall");
-        // Show a call badge only when the row isn't already carrying a
-        // transform tag (an inlined call keeps its ⧉ inline marker).
-        const callBadge =
-          !isInline && !isTailCall ? (callBadgeByStep[index] ?? null) : null;
-        const className = [
-          "opcode-item",
-          isActive ? "active" : "",
-          isInline ? "opcode-item-inline" : "",
-          isTailCall ? "opcode-item-tailcall" : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
-        return (
-          <div
-            key={index}
-            ref={isActive ? activeRef : undefined}
-            className={className}
-            onClick={() => onStepClick(index)}
+  const renderRow = (index: number): JSX.Element => {
+    const step = trace[index];
+    const isActive = index === currentStep;
+    const transforms = transformsByStep[index] ?? [];
+    const isInline = transforms.includes("inline");
+    const isTailCall = transforms.includes("tailcall");
+    // Show a call badge only when the row isn't already carrying a
+    // transform tag (an inlined call keeps its ⧉ inline marker).
+    const callBadge =
+      !isInline && !isTailCall ? (callBadgeByStep[index] ?? null) : null;
+    const className = [
+      "opcode-item",
+      isActive ? "active" : "",
+      isInline ? "opcode-item-inline" : "",
+      isTailCall ? "opcode-item-tailcall" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return (
+      <div
+        key={index}
+        ref={isActive ? activeRef : undefined}
+        className={className}
+        onClick={() => onStepClick(index)}
+      >
+        <span className="opcode-index">{index + 1}</span>
+        <span className="opcode-pc">
+          0x{step.pc.toString(16).padStart(4, "0")}
+        </span>
+        <code className="opcode-name">{step.opcode}</code>
+        {isInline && (
+          <span
+            className="opcode-transform-tag opcode-transform-inline"
+            title={'transform: ["inline"] — spliced from the inlined body'}
           >
-            <span className="opcode-index">{index + 1}</span>
-            <span className="opcode-pc">
-              0x{step.pc.toString(16).padStart(4, "0")}
-            </span>
-            <code className="opcode-name">{step.opcode}</code>
-            {isInline && (
-              <span
-                className="opcode-transform-tag opcode-transform-inline"
-                title={'transform: ["inline"] — spliced from the inlined body'}
-              >
-                ⧉ inline
-              </span>
-            )}
-            {isTailCall && (
-              <span
-                className="opcode-transform-tag opcode-transform-tailcall"
-                title={
-                  'transform: ["tailcall"] — tail-call optimized back-edge'
-                }
-              >
-                ⮌ tailcall
-              </span>
-            )}
-            {callBadge && (
-              <span
-                className={`opcode-call-tag opcode-call-${callBadge.kind}`}
-                title={
-                  callBadge.kind === "invoke"
-                    ? `invoke context — calls ${callBadge.id ?? "function"}`
-                    : `return context — returns from ${callBadge.id ?? "function"}`
-                }
-              >
-                {callBadge.kind === "invoke"
-                  ? `➜ call ${callBadge.id ?? ""}`.trim()
-                  : `↵ return ${callBadge.id ?? ""}`.trim()}
-              </span>
-            )}
-          </div>
-        );
-      })}
+            ⧉ inline
+          </span>
+        )}
+        {isTailCall && (
+          <span
+            className="opcode-transform-tag opcode-transform-tailcall"
+            title={'transform: ["tailcall"] — tail-call optimized back-edge'}
+          >
+            ⮌ tailcall
+          </span>
+        )}
+        {callBadge && (
+          <span
+            className={`opcode-call-tag opcode-call-${callBadge.kind}`}
+            title={
+              callBadge.kind === "invoke"
+                ? `invoke context — calls ${callBadge.id ?? "function"}`
+                : `return context — returns from ${callBadge.id ?? "function"}`
+            }
+          >
+            {callBadge.kind === "invoke"
+              ? `➜ call ${callBadge.id ?? ""}`.trim()
+              : `↵ return ${callBadge.id ?? ""}`.trim()}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  if (!groups) {
+    return (
+      <div className="opcode-list">
+        {trace.map((_, index) => renderRow(index))}
+      </div>
+    );
+  }
+
+  // Grouped: a subtle band + light label per grouped range. No indentation
+  // or collapsing — the rows read the same, just quietly delineated.
+  return (
+    <div className="opcode-list opcode-list-banded">
+      {groups.map((group, gi) => (
+        <div key={gi} className="opcode-group">
+          {group.label && (
+            <div className={`opcode-group-label label-${group.labelKind}`}>
+              {group.label}
+            </div>
+          )}
+          {group.rows.map((index) => renderRow(index))}
+        </div>
+      ))}
     </div>
   );
 }
