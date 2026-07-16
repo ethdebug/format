@@ -66,6 +66,40 @@ function countTransform(
   return count;
 }
 
+describe("optimizer emits tailcall transform contexts", () => {
+  // `sum` is tail-recursive: the recursive call is in return
+  // position. Tail-call optimization (level 2+) rewrites it into a
+  // back-edge JUMP carrying `transform: ["tailcall"]`.
+  const source = `name TailSum;
+
+define {
+  function sum(n: uint256, acc: uint256) -> uint256 {
+    if (n == 0) { return acc; }
+    else { return sum(n - 1, acc + n); }
+  };
+}
+
+storage { [0] r: uint256; }
+create { r = 0; }
+code { r = sum(5, 0); }`;
+
+  for (const level of [0, 1] as const) {
+    it(`emits no tailcall transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "tailcall")).toBe(0);
+    });
+  }
+
+  for (const level of [2, 3] as const) {
+    it(`emits tailcall transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(
+        countTransform(bc.runtimeInstructions, "tailcall"),
+      ).toBeGreaterThan(0);
+    });
+  }
+});
+
 describe("optimizer emits fold transform contexts", () => {
   // `2 + 3` and `4 * 5` fold to constants at level 1.
   const source = `name Fold;
@@ -111,4 +145,37 @@ code { let v = src; s.a = v; s.b = v; }`;
       0,
     );
   });
+});
+
+describe("optimizer emits inline transform contexts", () => {
+  // `dbl` is a leaf single-return helper: inlining (level 2+)
+  // splices its body into the caller, marking the inlined
+  // instructions with `transform: ["inline"]`. The argument is a
+  // storage read (non-constant), so the inlined body cannot be
+  // constant-folded away and the marker survives at levels 2 and 3.
+  const source = `name Inline;
+
+define {
+  function dbl(x: uint256) -> uint256 { return x + x; };
+}
+
+storage { [0] r: uint256; [1] src: uint256; }
+create {}
+code { r = dbl(src); }`;
+
+  for (const level of [0, 1] as const) {
+    it(`emits no inline transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "inline")).toBe(0);
+    });
+  }
+
+  for (const level of [2, 3] as const) {
+    it(`emits inline transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "inline")).toBeGreaterThan(
+        0,
+      );
+    });
+  }
 });
