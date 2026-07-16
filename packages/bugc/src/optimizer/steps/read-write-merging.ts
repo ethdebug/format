@@ -368,6 +368,18 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
       reason: `Merged ${writes.length} writes to same location`,
     });
 
+    // Mark every instruction produced by the merge with
+    // transform:["coalesce"] so debuggers can show the SHL/OR
+    // field-packing sequence as compiler-synthesized rather than
+    // source the user wrote. Appends to any existing transform
+    // array (e.g. a folded packed value → ["fold","coalesce"]).
+    for (const inst of instructions) {
+      inst.operationDebug = Ir.Utils.addTransform(
+        inst.operationDebug,
+        "coalesce",
+      );
+    }
+
     return instructions;
   }
 

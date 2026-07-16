@@ -86,3 +86,29 @@ code { r = (2 + 3) * (4 * 5); }`;
     });
   }
 });
+
+describe("optimizer emits coalesce transform contexts", () => {
+  // Two adjacent packed writes of a runtime value to one storage
+  // slot; read/write merging (level 3) packs them with SHL/OR into
+  // a single word write.
+  const source = `name Coalesce;
+
+define { struct S { a: uint128; b: uint128; }; }
+storage { [0] s: S; [1] src: uint256; }
+create {}
+code { let v = src; s.a = v; s.b = v; }`;
+
+  for (const level of [0, 1, 2] as const) {
+    it(`emits no coalesce transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "coalesce")).toBe(0);
+    });
+  }
+
+  it("emits coalesce transform at level 3", async () => {
+    const bc = await compileBytecode(source, 3);
+    expect(countTransform(bc.runtimeInstructions, "coalesce")).toBeGreaterThan(
+      0,
+    );
+  });
+});
