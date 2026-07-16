@@ -186,49 +186,30 @@ export namespace Function {
         );
       }
 
-      // Sort values by size (largest first) for better packing
+      // Allocate largest-first for deterministic, stable offsets.
       const sortedValues = Array.from(needsMemory.entries()).sort(
         ([_a, typeA], [_b, typeB]) => getTypeSize(typeB) - getTypeSize(typeA),
       );
 
-      // Track current slot usage for packing
-      let currentSlotOffset = nextStaticOffset;
-      let currentSlotUsed = 0;
       const SLOT_SIZE = 32;
+      let currentSlotOffset = nextStaticOffset;
 
       for (const [valueId, type] of sortedValues) {
-        const size = getTypeSize(type);
-
-        // If this value needs a full slot or won't fit in current slot, start new slot
-        if (size >= SLOT_SIZE || currentSlotUsed + size > SLOT_SIZE) {
-          if (currentSlotUsed > 0) {
-            // Move to next slot if current slot has something
-            currentSlotOffset += SLOT_SIZE;
-            currentSlotUsed = 0;
-          }
-        }
-
-        // Allocate in current slot
+        // One full 32-byte word per value; sub-word scalars are NOT
+        // byte-packed into a shared word. A memory-homed value is read
+        // and written with full-word MLOAD/MSTORE, so packing two
+        // sub-word scalars into one word makes each one's store clobber
+        // the other's bytes (a real runtime corruption). A word is the
+        // EVM's natural granularity and memory is not scarce at O0, so
+        // the only cost of one-per-word is a slightly larger frame.
         allocations[valueId] = {
-          offset: currentSlotOffset + currentSlotUsed,
-          size: size,
+          offset: currentSlotOffset,
+          size: getTypeSize(type),
         };
-
-        currentSlotUsed += size;
-
-        // If we filled the slot exactly, prepare for next slot
-        if (currentSlotUsed >= SLOT_SIZE) {
-          currentSlotOffset += SLOT_SIZE;
-          currentSlotUsed = 0;
-        }
+        currentSlotOffset += SLOT_SIZE;
       }
 
-      // Update next static offset to next available slot
-      if (currentSlotUsed > 0) {
-        nextStaticOffset = currentSlotOffset + SLOT_SIZE;
-      } else {
-        nextStaticOffset = currentSlotOffset;
-      }
+      nextStaticOffset = currentSlotOffset;
 
       // For user functions, the saved return PC lives at a
       // fixed offset in the frame header. frameSize is the

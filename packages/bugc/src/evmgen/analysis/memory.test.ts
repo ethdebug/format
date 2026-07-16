@@ -299,4 +299,56 @@ describe("Memory Planning", () => {
     // Free pointer should be after all allocations
     expect(memory.nextStaticOffset).toBeGreaterThanOrEqual(0x80 + 64);
   });
+
+  it("gives each sub-word scalar its own word (no byte-packing)", () => {
+    // Sub-word scalars (address, bool, uint8, bytes4) must not be
+    // byte-packed into a shared 32-byte word: each is homed by a
+    // full-word MSTORE, so two in one word would clobber each other's
+    // bytes at runtime. Every allocation must occupy a distinct word.
+    const func: Ir.Function = {
+      name: "packed",
+      parameters: [
+        { name: "a", tempId: "%a", type: Ir.Type.Scalar.address },
+        { name: "b", tempId: "%b", type: Ir.Type.Scalar.bool },
+        { name: "c", tempId: "%c", type: Ir.Type.Scalar.uint8 },
+        { name: "d", tempId: "%d", type: Ir.Type.Scalar.bytes4 },
+      ],
+      entry: "entry",
+      blocks: new Map([
+        [
+          "entry",
+          {
+            id: "entry",
+            phis: [],
+            instructions: [],
+            terminator: { kind: "return", operationDebug: {} },
+            predecessors: new Set(),
+            debug: {},
+          } as Ir.Block,
+        ],
+      ]),
+    };
+
+    const liveness = Liveness.Function.analyze(func);
+    const memoryResult = Memory.Function.plan(func, liveness);
+    expect(memoryResult.success).toBe(true);
+    if (!memoryResult.success) throw new Error("Memory planning failed");
+    const { allocations } = memoryResult.value;
+
+    // All four parameters are allocated.
+    for (const id of ["%a", "%b", "%c", "%d"]) {
+      expect(id in allocations, `alloc for ${id}`).toBe(true);
+    }
+
+    // No two allocations share a 32-byte word.
+    const words = Object.values(allocations).map((a) =>
+      Math.floor(a.offset / 32),
+    );
+    expect(new Set(words).size, "each value owns its word").toBe(words.length);
+
+    // And each is word-aligned (a sole occupant reads its whole word).
+    for (const a of Object.values(allocations)) {
+      expect(a.offset % 32, "word-aligned offset").toBe(0);
+    }
+  });
 });
