@@ -25,6 +25,21 @@ function codeContext(
 }
 
 /**
+ * Extract the in-scope `variables` list from an instruction/terminator
+ * debug, if present, so a call's caller JUMP still lists the locals
+ * that are in scope at the call (they must not vanish at the call).
+ */
+function variablesContext(
+  debug: { context?: Format.Program.Context } | undefined,
+): Format.Program.Context.Variables["variables"] | undefined {
+  const ctx = debug?.context as Record<string, unknown> | undefined;
+  if (ctx && Array.isArray(ctx.variables) && ctx.variables.length > 0) {
+    return ctx.variables as Format.Program.Context.Variables["variables"];
+  }
+  return undefined;
+}
+
+/**
  * Generate code for a block terminator
  */
 export function generateTerminator<S extends Stack>(
@@ -267,10 +282,12 @@ export function generateCallTerminator<S extends Stack>(
     // flat alongside the invoke, so the caller JUMP maps back to the
     // call expression. invoke and code are disjoint keys.
     const callSiteCode = codeContext(debug);
+    const inScopeVars = variablesContext(debug);
     const invokeContext = {
       context: {
         ...invoke,
         ...(callSiteCode ? { code: callSiteCode } : {}),
+        ...(inScopeVars ? { variables: inScopeVars } : {}),
       } as Format.Program.Context,
     };
 
