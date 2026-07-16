@@ -19,8 +19,9 @@ single object.
 
 The context schema is open: a single context object may carry
 any number of discriminator keys together — `code`, `variables`,
-`invoke`, `return`, and so on all compose as siblings on the same
-object. Prefer the flat form when it works.
+`invoke`, `return`, `transform`, and so on all compose as
+siblings on the same object. Prefer the flat form when it
+works.
 
 Reach for `gather` only when two or more facts would collide on
 the same key. The canonical cases are:

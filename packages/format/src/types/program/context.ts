@@ -12,7 +12,8 @@ export type Context =
   | Context.Frame
   | Context.Invoke
   | Context.Return
-  | Context.Revert;
+  | Context.Revert
+  | Context.Transform;
 
 export const isContext = (value: unknown): value is Context =>
   [
@@ -26,6 +27,7 @@ export const isContext = (value: unknown): value is Context =>
     Context.isInvoke,
     Context.isReturn,
     Context.isRevert,
+    Context.isTransform,
   ].some((guard) => guard(value));
 
 export namespace Context {
@@ -290,5 +292,31 @@ export namespace Context {
       (!("reason" in value) || Function.isPointerRef(value.reason)) &&
       (!("panic" in value) || typeof value.panic === "number") &&
       (!("activation" in value) || typeof value.activation === "string");
+  }
+
+  export interface Transform {
+    transform: Transform.Identifier[];
+  }
+
+  export const isTransform = (value: unknown): value is Transform =>
+    typeof value === "object" &&
+    !!value &&
+    "transform" in value &&
+    Array.isArray(value.transform) &&
+    value.transform.length > 0 &&
+    value.transform.every(
+      (item) => typeof item === "string" && item.length > 0,
+    );
+
+  export namespace Transform {
+    // Recognized identifiers. Unknown strings are permitted
+    // (the identifier set is extensible); the union preserves
+    // autocomplete for known values.
+    export type Identifier =
+      | "inline"
+      | "tailcall"
+      | "fold"
+      | "coalesce"
+      | (string & {});
   }
 }
