@@ -146,3 +146,36 @@ code { let v = src; s.a = v; s.b = v; }`;
     );
   });
 });
+
+describe("optimizer emits inline transform contexts", () => {
+  // `dbl` is a leaf single-return helper: inlining (level 2+)
+  // splices its body into the caller, marking the inlined
+  // instructions with `transform: ["inline"]`. The argument is a
+  // storage read (non-constant), so the inlined body cannot be
+  // constant-folded away and the marker survives at levels 2 and 3.
+  const source = `name Inline;
+
+define {
+  function dbl(x: uint256) -> uint256 { return x + x; };
+}
+
+storage { [0] r: uint256; [1] src: uint256; }
+create {}
+code { r = dbl(src); }`;
+
+  for (const level of [0, 1] as const) {
+    it(`emits no inline transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "inline")).toBe(0);
+    });
+  }
+
+  for (const level of [2, 3] as const) {
+    it(`emits inline transform at level ${level}`, async () => {
+      const bc = await compileBytecode(source, level);
+      expect(countTransform(bc.runtimeInstructions, "inline")).toBeGreaterThan(
+        0,
+      );
+    });
+  }
+});

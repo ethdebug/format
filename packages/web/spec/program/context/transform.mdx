@@ -42,9 +42,12 @@ optimization-aware presentations:
 The schema defines four identifiers:
 
 - **`"inline"`** — the marked instruction is part of an inlined
-  function body. Surrounding invoke/return contexts name the
-  inlined callee; this marker tells the debugger the physical
-  code does not correspond to a separate activation record.
+  function body. A surrounding `invoke`/`return` pair names the
+  inlined callee, and a debugger reconstructs a _virtual
+  activation_ for it (see
+  [inlined internal calls](/spec/program/context/function/invoke#inlined-internal-calls)).
+  This marker tells the debugger the physical code has no separate
+  runtime activation record.
 - **`"tailcall"`** — the marked instruction is a
   tail-call-optimized back-edge JUMP or continuation, where the
   call was realized without pushing/popping a full activation.
@@ -111,6 +114,24 @@ The `return` and `invoke` state the source-level facts
 (iteration N returned, iteration N+1 was invoked); the
 `transform` explains how the compiler realized that pair as a
 single JUMP.
+
+An inlined call site combines an invoke with an inline transform.
+The invoke marks the call kind with `jump: true` but omits
+`target`, because the JUMP was elided:
+
+```yaml
+invoke:
+  jump: true
+  identifier: "square"
+  declaration: { ... }
+transform: ["inline"]
+```
+
+Each instruction of the inlined body also carries
+`transform: ["inline"]`, and a matching `return` closes the
+[virtual activation](/spec/program/context/function/invoke#reconstructing-activations).
+A small helper inlined at several call sites produces one such
+`invoke`/`return` pair — and one virtual activation — per site.
 
 Reach for [`gather`](/spec/program/context/gather) only when
 two contexts would collide on the same key — e.g., two

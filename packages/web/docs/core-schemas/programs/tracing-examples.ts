@@ -138,3 +138,27 @@ create {
 code {
   result = fact(5, 1);
 }`;
+
+export const inlineDemo = `name InlineDemo;
+
+define {
+  function square(x: uint256) -> uint256 {
+    return x * x;
+  };
+}
+
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] sumOfSquares: uint256;
+}
+
+create {
+  a = 3;
+  b = 4;
+  sumOfSquares = 0;
+}
+
+code {
+  sumOfSquares = square(a) + square(b);
+}`;
