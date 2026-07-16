@@ -111,17 +111,10 @@ export function generate(
     module.main.sourceId && module.main.loc
       ? {
           context: {
-            gather: [
-              {
-                remark: "guard: prevent fall-through into functions",
-              },
-              {
-                code: {
-                  source: { id: module.main.sourceId },
-                  range: module.main.loc,
-                },
-              },
-            ],
+            code: {
+              source: { id: module.main.sourceId },
+              range: module.main.loc,
+            },
           },
         }
       : {

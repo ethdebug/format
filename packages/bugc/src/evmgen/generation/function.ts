@@ -268,15 +268,10 @@ function makePrologueDebug(func: Ir.Function): Debug {
   return func.sourceId && func.loc
     ? {
         context: {
-          gather: [
-            { remark: "prologue: allocate call frame" },
-            {
-              code: {
-                source: { id: func.sourceId },
-                range: func.loc,
-              },
-            },
-          ],
+          code: {
+            source: { id: func.sourceId },
+            range: func.loc,
+          },
         } as Format.Program.Context,
       }
     : {
