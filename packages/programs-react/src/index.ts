@@ -72,6 +72,7 @@ export {
   traceStepToMachineState,
   effectiveContextForStep,
   type EffectiveContextInput,
+  decodeValue,
   type TraceStep,
   type MockTraceSpec,
 } from "#utils/index";

@@ -7,6 +7,12 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- The trace shows the value of a local variable as one value decoded by its
+  type, read from the region named after the variable, instead of the hex of
+  all the regions of its pointer ([#270]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 Updated `@ethdebug/format` to `0.1.0-draft.1` and `@ethdebug/pointers` to
@@ -35,6 +41,7 @@ The version scheme changed: prerelease versions are now `preview.<n>`, and
 
 First publication.
 
+[#270]: https://github.com/ethdebug/format/pull/270
 [#298]: https://github.com/ethdebug/format/pull/298
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300

@@ -23,6 +23,7 @@ import {
   buildCallStack,
 } from "#utils/mockTrace";
 import { traceStepToMachineState } from "#utils/traceState";
+import { decodeValue } from "#utils/decodeValue";
 import { effectiveContextForStep } from "#utils/effectiveContext";
 
 /**
@@ -230,6 +231,8 @@ async function resolveVariableValue(
   pointer: Pointer,
   step: TraceStep,
   templates: Pointer.Templates,
+  identifier?: string,
+  type?: unknown,
 ): Promise<string> {
   const state = traceStepToMachineState(step);
   const cursor = await dereference(pointer, {
@@ -237,8 +240,23 @@ async function resolveVariableValue(
     templates,
   });
   const view = await cursor.view(state);
+  const decode = (data: Data): string => decodeValue(data, type);
 
-  // Collect values from all regions
+  // Prefer the value region named after the variable. A memory-homed local's
+  // pointer is a group that also carries frame-scaffolding regions, so
+  // joining every region would surface the frame pointer alongside the value.
+  // `regions.lookup` gives the last concrete region generated with a given
+  // name — for a scalar that is exactly the value region. Decode it into a
+  // readable value (uint -> decimal, address -> checksummed, …) by type.
+  if (identifier) {
+    const region = view.regions.lookup[identifier];
+    if (region) {
+      return decode(await view.read(region));
+    }
+  }
+
+  // Fallback: no identifier-named region — read every region (previous
+  // behavior), covering pointers whose value region isn't identifier-named.
   const values: Data[] = [];
   for (const region of view.regions) {
     const data = await view.read(region);
@@ -249,12 +267,12 @@ async function resolveVariableValue(
     return "0x";
   }
 
-  // Single region: return its hex value
+  // Single region: decode its value
   if (values.length === 1) {
-    return values[0].toHex();
+    return decode(values[0]);
   }
 
-  // Multiple regions: concatenate hex values
+  // Multiple regions (composite) — not a scalar; concatenate raw hex.
   return values.map((d) => d.toHex()).join(", ");
 }
 
@@ -357,6 +375,8 @@ export function TraceProvider({
           v.pointer as Pointer,
           currentStep,
           templates,
+          v.identifier,
+          v.type,
         );
         if (!cancelled) {
           resolved[index] = {
@@ -460,6 +480,7 @@ export function TraceProvider({
             ptr as Pointer,
             step,
             templates,
+            names?.[i],
           );
           args[i] = { ...args[i], value };
         } catch (err) {

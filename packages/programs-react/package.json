@@ -54,6 +54,7 @@
     "@ethdebug/pointers": "^0.1.0-preview.1",
     "@shikijs/langs": "^2.5.0",
     "@shikijs/themes": "^2.5.0",
+    "ethereum-cryptography": "^2.2.1",
     "shiki": "^2.5.0"
   },
   "devDependencies": {
