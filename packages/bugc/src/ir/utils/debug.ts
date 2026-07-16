@@ -2,8 +2,9 @@ import type * as Ir from "#ir";
 import type * as Format from "@ethdebug/format";
 
 /**
- * Combine multiple debug contexts into a single context.
- * If multiple contexts have source information, creates a pick context.
+ * Combine multiple debug contexts into a single context that asserts
+ * all of them. Contexts with disjoint keys compose flat as siblings;
+ * contexts with a colliding key (e.g. two `code` ranges) are gathered.
  * Filters out empty contexts.
  */
 export function combineDebugContexts(
@@ -19,10 +20,14 @@ export function combineDebugContexts(
     return {};
   }
 
-  // Flatten pick contexts - if a context has a pick, extract its children
+  // Flatten enclosing gather (and legacy pick) wrappers so their
+  // children re-compose here rather than nesting. `gather` children
+  // all apply simultaneously, which is exactly what combining means.
   const flattenedContexts: Format.Program.Context[] = [];
   for (const context of contexts) {
-    if ("pick" in context && Array.isArray(context.pick)) {
+    if ("gather" in context && Array.isArray(context.gather)) {
+      flattenedContexts.push(...context.gather);
+    } else if ("pick" in context && Array.isArray(context.pick)) {
       flattenedContexts.push(...context.pick);
     } else {
       flattenedContexts.push(context);
@@ -66,10 +71,23 @@ export function combineDebugContexts(
     return { context: uniqueContexts[0] };
   }
 
-  // Multiple unique contexts - create a pick context
+  // Multiple distinct contexts that all apply simultaneously. If
+  // their discriminator keys are disjoint, compose them flat as
+  // sibling keys on one object; if any key collides (e.g. two
+  // `code` ranges), they cannot be siblings, so gather them. Both
+  // mean "all apply" — pick would wrongly mean "choose one".
+  const keys = uniqueContexts.flatMap((context) => Object.keys(context));
+  const hasCollision = new Set(keys).size !== keys.length;
+
+  if (!hasCollision) {
+    return {
+      context: Object.assign({}, ...uniqueContexts) as Format.Program.Context,
+    };
+  }
+
   return {
     context: {
-      pick: uniqueContexts,
+      gather: uniqueContexts,
     } as Format.Program.Context,
   };
 }
@@ -145,7 +163,8 @@ export function extractContexts(
  * - The operation's debug context
  * - Debug contexts from all operands/fields
  *
- * Uses pick contexts to preserve all distinct debug information.
+ * Distinct contexts are gathered (or composed flat when their keys
+ * are disjoint) so all applicable debug information is preserved.
  */
 export function combineSubInstructionContexts(
   operationDebug: Ir.Instruction.Debug | Ir.Block.Debug | undefined,

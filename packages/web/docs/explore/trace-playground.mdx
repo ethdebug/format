@@ -7,7 +7,7 @@ sidebar_label: "Step through an execution trace"
 import { TracePlayground, TraceExample } from "@theme/ProgramExample";
 import {
   counterIncrement,
-  functionCallAndReturn,
+  simpleFunctions,
   tailRecursiveFactorial,
   inlineDemo,
 } from "../core-schemas/programs/tracing-examples";
@@ -39,14 +39,16 @@ the context attached to each instruction.
 
 ## A function call
 
-Real programs call functions, and the debugger follows them. Watch the
-call stack push a frame on the JUMP into `add` (an **invoke** context)
-and pop it on the JUMP back (a **return** context).
+Real programs call functions, and the debugger follows them.
+`SimpleFunctions` calls an `add` helper directly, then calls `addThree` —
+which itself calls `add` twice — so the call stack nests two frames deep.
+Each JUMP into a function pushes a frame (an **invoke** context); each
+JUMP back pops it (a **return** context).
 
 <TraceExample
-  title="Function call and return"
-  description="Calls an internal add function and stores the result"
-  source={functionCallAndReturn}
+  title="Nested function calls"
+  description="Calls add directly, then addThree — which calls add twice — storing 60"
+  source={simpleFunctions}
 />
 
 For the exact shape of invoke, return, and revert contexts, see the

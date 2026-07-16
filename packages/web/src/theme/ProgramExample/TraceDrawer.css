@@ -526,6 +526,29 @@
   font-style: italic;
 }
 
+/* Function-call boundary badges: same pill shape as the transform tags,
+   but in the tracer's invoke=info / return=success colors (matching the
+   call-info banner and bytecode-view context badges). */
+.opcode-call-tag {
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ifm-color-content);
+}
+
+.opcode-call-invoke {
+  background: var(--ifm-color-info-contrast-background);
+  border: 1px solid var(--ifm-color-info);
+}
+
+.opcode-call-return {
+  background: var(--ifm-color-success-contrast-background);
+  border: 1px solid var(--ifm-color-success);
+}
+
 /* Instruction object footer - user-resizable, scrolls internally */
 .instruction-object-panel {
   position: relative;

@@ -1,3 +1,15 @@
+import { exampleSources, stripTestAnnotations } from "@ethdebug/bugc/examples";
+
+/**
+ * SimpleFunctions, referenced from the canonical bugc examples — the same
+ * `basic/functions.bug` the BUG playground dropdown sources — with bugc's
+ * inline test annotations stripped for display. Kept DRY rather than
+ * copying the `.bug` source here.
+ */
+export const simpleFunctions = stripTestAnnotations(
+  exampleSources["basic/functions.bug"],
+);
+
 export const counterIncrement = `name Counter;
 
 storage {
@@ -50,26 +62,6 @@ code {
   sum = a + b;
   a = a + 1;
   b = b + 1;
-}`;
-
-export const functionCallAndReturn = `name Adder;
-
-define {
-  function add(a: uint256, b: uint256) -> uint256 {
-    return a + b;
-  };
-}
-
-storage {
-  [0] result: uint256;
-}
-
-create {
-  result = 0;
-}
-
-code {
-  result = add(3, 4);
 }`;
 
 export const mutualRecursion = `name EvenOdd;
