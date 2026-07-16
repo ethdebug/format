@@ -175,6 +175,16 @@ export class InliningStep extends BaseOptimizationStep {
       ...(declaration ? { declaration } : {}),
     };
 
+    // The call site's own source range (e.g. `square(a)`). Inlining
+    // replaces the real call, and jump-optimization later folds the
+    // entry jump that would carry it — so without this the call site
+    // maps to no instruction. Preserve it by gathering it onto the
+    // entry instruction alongside the callee-body range it collides
+    // with (two source ranges that both apply → gather).
+    const callSiteCode = (
+      call.operationDebug?.context as { code?: unknown } | undefined
+    )?.code;
+
     const entryBlockId = blockRename.get(callee.entry)!;
     const returnBlockIds: string[] = [];
 
@@ -191,13 +201,21 @@ export class InliningStep extends BaseOptimizationStep {
             cloned.operationDebug,
             "inline",
           );
-          // Virtual invoke on the first instruction of the entry.
+          // Virtual invoke on the first instruction of the entry,
+          // plus the call site's source range (gathered with the
+          // callee-body range it collides with).
           if (isEntry && idx === 0) {
             cloned.operationDebug = mergeDiscriminator(
               cloned.operationDebug,
               "invoke",
               inlineInvoke,
             );
+            if (callSiteCode !== undefined) {
+              cloned.operationDebug = gatherCallSite(
+                cloned.operationDebug,
+                callSiteCode,
+              );
+            }
           }
           return cloned;
         },
@@ -557,5 +575,40 @@ function mergeDiscriminator(
       ...(existing ?? {}),
       [key]: value,
     } as Format.Program.Context,
+  };
+}
+
+/**
+ * Preserve the call site's `code` range on the entry instruction.
+ * The instruction already maps to the callee body, so the two source
+ * ranges collide on `code` and are gathered — both apply. The
+ * callee-body context (with its invoke/transform siblings) stays a
+ * single gather child so consumers still see those discriminators on
+ * a leaf, rather than as siblings of `gather`.
+ */
+function gatherCallSite(
+  debug: Ir.Instruction.Debug,
+  callSiteCode: unknown,
+): Ir.Instruction.Debug {
+  const existing = (debug.context ?? {}) as Record<string, unknown>;
+  const callSite = { code: callSiteCode };
+
+  if ("gather" in existing && Array.isArray(existing.gather)) {
+    // Already a gather — add the call site as another child.
+    return {
+      context: {
+        gather: [callSite, ...(existing.gather as unknown[])],
+      } as Format.Program.Context,
+    };
+  }
+  if ("code" in existing) {
+    // Colliding `code` keys — gather both.
+    return {
+      context: { gather: [callSite, existing] } as Format.Program.Context,
+    };
+  }
+  // No existing `code` — compose flat.
+  return {
+    context: { ...existing, code: callSiteCode } as Format.Program.Context,
   };
 }
