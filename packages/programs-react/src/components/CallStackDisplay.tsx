@@ -94,6 +94,22 @@ export function CallStackDisplay({
               <span className="call-stack-parens">
                 ({formatArgs(frame, resolvedCallStack)})
               </span>
+              {frame.isTailCall && (
+                <span
+                  className="call-stack-tailcall"
+                  title="Tail call: this frame was reused in place (TCO)"
+                >
+                  ⮌ tail call
+                </span>
+              )}
+              {frame.isInline && (
+                <span
+                  className="call-stack-inline"
+                  title="Inlined: virtual activation — the body was spliced into the caller, no call occurred"
+                >
+                  ⧉ inline
+                </span>
+              )}
             </button>
           </React.Fragment>
         ))}

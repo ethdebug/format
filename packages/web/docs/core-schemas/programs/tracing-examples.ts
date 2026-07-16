@@ -96,3 +96,69 @@ create {
 code {
   result = isEven(4);
 }`;
+
+export const tailRecursiveSum = `name TailSum;
+
+define {
+  function sum(n: uint256, acc: uint256) -> uint256 {
+    if (n == 0) { return acc; }
+    else { return sum(n - 1, acc + n); }
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = sum(5, 0);
+}`;
+
+export const tailRecursiveFactorial = `name TailFactorial;
+
+define {
+  function fact(n: uint256, acc: uint256) -> uint256 {
+    if (n == 0) { return acc; }
+    else { return fact(n - 1, acc * n); }
+  };
+}
+
+storage {
+  [0] result: uint256;
+}
+
+create {
+  result = 0;
+}
+
+code {
+  result = fact(5, 1);
+}`;
+
+export const inlineDemo = `name InlineDemo;
+
+define {
+  function square(x: uint256) -> uint256 {
+    return x * x;
+  };
+}
+
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] sumOfSquares: uint256;
+}
+
+create {
+  a = 3;
+  b = 4;
+  sumOfSquares = 0;
+}
+
+code {
+  sumOfSquares = square(a) + square(b);
+}`;

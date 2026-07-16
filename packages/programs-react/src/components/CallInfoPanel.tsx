@@ -29,6 +29,10 @@ function formatBanner(info: ResolvedCallInfo): string {
     ? `(${info.argumentNames.join(", ")})`
     : "()";
 
+  if (info.isTailCall) {
+    return `Tail call: ${name} (frame reused)`;
+  }
+
   if (info.kind === "invoke") {
     const prefix =
       info.callType === "external"
@@ -50,11 +54,14 @@ function formatBanner(info: ResolvedCallInfo): string {
   return `Reverted in ${name}()`;
 }
 
-function bannerClassName(kind: ResolvedCallInfo["kind"]): string {
-  if (kind === "invoke") {
+function bannerClassName(info: ResolvedCallInfo): string {
+  if (info.isTailCall) {
+    return "call-info-banner-tailcall";
+  }
+  if (info.kind === "invoke") {
     return "call-info-banner-invoke";
   }
-  if (kind === "return") {
+  if (info.kind === "return") {
     return "call-info-banner-return";
   }
   return "call-info-banner-revert";
@@ -76,9 +83,7 @@ export function CallInfoPanel({
 
   return (
     <div className={`call-info-panel ${className}`.trim()}>
-      <div
-        className={`call-info-banner ${bannerClassName(currentCallInfo.kind)}`}
-      >
+      <div className={`call-info-banner ${bannerClassName(currentCallInfo)}`}>
         {formatBanner(currentCallInfo)}
       </div>
 

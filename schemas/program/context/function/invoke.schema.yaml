@@ -326,6 +326,30 @@ examples:
       jump: true
 
   # -----------------------------------------------------------
+  # Inlined internal call: no target pointer
+  # -----------------------------------------------------------
+  # When the compiler inlines a function, the JUMP that would
+  # normally carry the invoke context has been elided — there
+  # is no physical call instruction and no code target to
+  # point at. The invoke context still records the callee's
+  # identity so the debugger can maintain a source-level call
+  # stack, and a `transform: ["inline"]` context (typically
+  # via `gather`) annotates the inlining.
+  - invoke:
+      identifier: "transfer"
+      declaration:
+        source:
+          id: 0
+        range:
+          offset: 128
+          length: 95
+      jump: true
+      # Correlation id: the matching inlined `return` carries the
+      # same value, so the two pair even if `transfer` is inlined
+      # at several sites.
+      activation: "transfer#0"
+
+  # -----------------------------------------------------------
   # External CALL: token.balanceOf(account)
   # -----------------------------------------------------------
   # This context marks the CALL instruction. Stack-based

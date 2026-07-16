@@ -56,12 +56,43 @@ meaningful code pointer to record — most notably at the first
 instruction of an inlined function body, where the inlining pass
 has elided the JUMP that would normally carry the target. The
 callee identity (`identifier`, `declaration`, `type`) remains
-meaningful in this case.
+meaningful in this case; a sibling `transform: ["inline"]` key
+on the same context indicates that the call was inlined rather
+than physically invoked.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
   pointer="#/$defs/InternalCall"
 />
+
+### Inlined internal calls
+
+When the compiler inlines a callee, there is no JUMP and no
+runtime activation record: the callee's instructions are spliced
+directly into the caller. The call still happened at the source
+level, so it is still marked with an invoke context — one that
+describes the _kind_ of call without a physical target:
+
+- `jump: true` marks the invocation as an **internal call kind**
+  (as opposed to a message call or contract creation). It does
+  **not** assert that a JUMP instruction executes here — an
+  inlined call has none.
+- `target` is omitted: there is no code location to point at,
+  because the JUMP that would carry it was elided.
+- a sibling `transform: ["inline"]` key marks the instruction as
+  belonging to an inlined body.
+
+The callee identity (`identifier`, `declaration`, `type`, all
+optional) is preserved, so the inlined function still appears on
+the debugger's call stack: the debugger reconstructs a **virtual
+activation** for it (see
+[Reconstructing activations](#reconstructing-activations)).
+
+Compilers typically inline small or leaf non-recursive callees at
+every call site, so the _same_ callee can produce several
+independent virtual activations across a trace — one per inlined
+site. (The precise eligibility rule is a compiler choice; the
+format is the same however inlining decisions are made.)
 
 ## External call
 
@@ -84,3 +115,133 @@ presence of `salt` implies CREATE2.
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}
   pointer="#/$defs/ContractCreation"
 />
+
+## Reconstructing activations
+
+A debugger reconstructs the logical call stack from `invoke` and
+`return` contexts. Each entry on that stack is an **activation**
+(the DWARF term for a call-stack entry). Activation handling is
+uniform whether or not the call was inlined:
+
+- **Push** an activation when an `invoke` context is encountered
+  and **pop** it when the matching `return` context is
+  encountered, in trace order. The `invoke` opens the activation
+  inclusive of its instruction; the `return` closes it after its
+  instruction, so the instruction bearing `return` is still inside
+  the activation.
+
+Because push/pop is driven by where the `invoke` and `return`
+contexts sit, a compiler must emit them as a **bracket**: the
+`invoke` on the first instruction of the body and the `return` on
+its last. A compiler must **not** duplicate `invoke` or `return`
+across a body's interior instructions — repeating them would push
+or pop spurious activations. The sole exception is a body that
+compiles to a **single instruction**, whose entry and exit
+coincide: that one instruction legitimately carries both `invoke`
+and `return`, and a debugger processes them in order (push, then
+pop). This bracket rule is what keeps the guarantee below —
+that a debugger ignoring `transform` still sees a coherent
+`invoke`/`return` pair — true for inlined calls.
+
+An inlined callee therefore appears on the call stack exactly as a
+non-inlined one does. Two kinds of activation differ only in how
+they are backed, distinguished by the presence of an `inline`
+transform marker — **not** by whether `target` is present:
+
+- A **real activation** comes from an `invoke` **without** an
+  `inline` transform marker. It corresponds to an actual call at
+  runtime, corroborated by machine state — a return address on the
+  EVM stack — and occupies a real stack region.
+- A **virtual activation** comes from an `invoke` whose context
+  carries `transform: ["inline"]` (an `inline` identifier in its
+  transform list). It has **no runtime corroboration** and occupies
+  no EVM stack region; it exists only in the debug annotations. Its
+  `target` is typically omitted (the JUMP was elided), but
+  `target`-absence is not itself the signal — a real internal call
+  may also omit `target` (see [Internal call](#internal-call)). The
+  reliable discriminator is the `inline` marker.
+
+### Activation membership
+
+Push/pop and membership answer two different questions. Push/pop
+(above) determines **when** a virtual activation is open — its
+lifetime on the call stack. Membership determines **which** open
+activation a given instruction belongs to. The two are
+independent, and a debugger uses both.
+
+An instruction belongs to the innermost open virtual activation if
+and only if its context carries an `inline` identifier in its
+transform list — so composed markers such as `["inline", "fold"]`
+still confer membership. The nesting depth is the number of
+`"inline"` occurrences in the list (doubly-inlined code carries
+`["inline", "inline"]`). Membership is determined
+per-instruction from this marker, **not** from instruction ranges:
+optimization passes may relocate or interleave an inlined body, so
+a positional "everything between the invoke and the return" rule
+would be unsound.
+
+This is why membership is separate from lifetime. An activation
+opened by an `invoke` stays open until its `return`, even across
+instructions that are **not** its members — for example, caller
+code an optimizer interleaved into the body's trace span. Such a
+non-member instruction (no `inline` marker for that depth) is
+attributed to the enclosing activation, not the inlined one, even
+while the virtual activation remains on the stack.
+
+### Correlating with `activation`
+
+The push/pop rule above reconstructs the call stack without any
+correlation identifier: it relies on `invoke`/`return` appearing
+in a well-nested order. That is sufficient for typical compiler
+output, but it has a blind spot — push/pop alone can't tell one
+activation from another of the same function, so two inlined
+copies of a callee placed back-to-back, or an optimizer that moves
+a `return` ahead of its `invoke`, can defeat strict pairing.
+
+An **`activation`** identifier closes it. The `invoke` object that
+opens an activation and the `return` (or `revert`) that closes it
+carry the same `activation` value; distinct activations carry
+distinct values. Pairing is then explicit and order-independent —
+matching values pair an invoke with its return regardless of trace
+order, and adjacent same-function activations stay distinct because
+their identifiers differ.
+
+Unlike function [identity](#identity-and-values) (which function
+this is), `activation` identifies _which activation instance_ this
+is, so it lives **inside** the `invoke`/`return`/`revert` object
+rather than as a sibling context. Two activation facts on one instruction
+— a tail call's back-edge, which both returns from one activation
+and invokes the next — therefore stay flat, each fact carrying its
+own `activation` value, with no `gather` required.
+
+When `activation` is present it is **authoritative** for pairing —
+which `invoke` matches which `return`. Push/pop remains the fallback
+an identifier-less debugger uses; in well-nested output the two
+agree. Membership — which instructions belong to a virtual
+activation — is unaffected: it stays the per-instruction
+[`inline` marker](#activation-membership). Attributing a body that
+an optimizer relocated to a _specific_ activation would need a
+membership-level identifier; that is out of scope here.
+
+### Identity and values
+
+Every function-identity field (`identifier`, `declaration`,
+`type`) is optional, so a virtual activation degrades gracefully —
+from full identity down to an anonymous inlined frame — with no
+fabricated data. A debugger renders whatever is present.
+
+An inlining compiler typically preserves the callee's declaration
+and per-instruction source ranges for a virtual activation, and can
+resolve inlined locals that it homed in addressable memory, via
+[`variables`](/spec/program/context/variables) contexts. Identity
+fields remain optional and degrade gracefully as described above.
+Such a compiler does **not** emit `invoke.arguments` or
+`return.data` pointers; individual parameter
+values may still be inspectable as locals inside the body where
+they are memory-homed. A virtual activation with no resolvable
+values is still a valid, displayable frame.
+
+A debugger that ignores `transform` contexts still sees a coherent
+`invoke`/`return` pair and a sound source-level call stack. One
+that understands them can present virtual activations distinctly —
+for example, collapsible and tied to the callee's source location.
