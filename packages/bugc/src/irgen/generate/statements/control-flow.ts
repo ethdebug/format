@@ -131,9 +131,13 @@ const makeBuildLoop = (
   }): Process<void> {
     const buildBlock = makeBuildBlock(buildStatement);
 
-    // Execute init statement if present (for loops)
+    // Execute init statement if present (for loops). Its variables
+    // are in scope for the loop only (for debug info), as the
+    // typechecker scopes them.
     if (config.init) {
+      yield* Process.Variables.declaringIn(config.node?.loc ?? undefined);
       yield* buildStatement(config.init);
+      yield* Process.Variables.declaringIn(undefined);
     }
 
     // Create blocks

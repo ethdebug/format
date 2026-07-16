@@ -21,6 +21,7 @@ import {
   generateCallTerminator,
 } from "./control-flow/index.js";
 import { annotateTop } from "./values/identify.js";
+import { withStackLocals } from "../debug/local-variables.js";
 
 /**
  * Generate code for a basic block
@@ -114,15 +115,18 @@ export function generate<S extends Stack>(
               },
             },
           };
+          const entry = block.entryDebug;
           const continuationDebug = {
+            ...entry,
             context: {
+              ...entry?.context,
               ...returnCtx,
               ...(callSiteCode ? { code: callSiteCode } : {}),
             } as Format.Program.Context,
           };
           result = result.then(JUMPDEST({ debug: continuationDebug }));
         } else {
-          result = result.then(JUMPDEST());
+          result = result.then(JUMPDEST({ debug: block.entryDebug }));
         }
 
         // Annotate TOS with dest variable if this is a continuation with return value.
@@ -156,11 +160,16 @@ export function generate<S extends Stack>(
                     s.memory.frameSize !== undefined,
                     spillDebug,
                   ),
-                  {
-                    mnemonic: "MSTORE" as const,
-                    opcode: 0x52,
-                    debug: spillDebug,
-                  },
+                  // The stack after the store is the stack before
+                  // the DUP1.
+                  withStackLocals(
+                    {
+                      mnemonic: "MSTORE" as const,
+                      opcode: 0x52,
+                      debug: spillDebug?.stored ?? spillDebug,
+                    },
+                    s.stack,
+                  ),
                 ],
               };
             });
@@ -214,7 +223,13 @@ export function generate<S extends Stack>(
       if (func && block.terminator.kind === "jump") {
         const target = func.blocks.get(block.terminator.target);
         if (target && target.phis.length > 0) {
-          result = result.then(generatePhis(target.phis, block.id));
+          result = result.then(
+            generatePhis(
+              target.phis,
+              block.id,
+              block.terminator.operationDebug,
+            ),
+          );
         }
       } else if (func && block.terminator.kind === "branch") {
         for (const targetId of [
@@ -257,12 +272,13 @@ export function generate<S extends Stack>(
 function generatePhis<S extends Stack>(
   phis: Ir.Block.Phi[],
   predecessor: string,
+  debug: Ir.Block.Debug,
 ): Transition<S, S> {
   // The stack grows by one per load and shrinks by one per store,
   // which the types cannot follow across a list
   const steps = [
-    ...phis.map((phi) => loadPhiSource<Stack>(phi, predecessor)),
-    ...phis.map((phi) => storePhiDest<Stack>(phi)).reverse(),
+    ...phis.map((phi) => loadPhiSource<Stack>(phi, predecessor, debug)),
+    ...phis.map((phi) => storePhiDest<Stack>(phi, debug)).reverse(),
   ] as unknown as Transition<S, S>[];
   return (state) => steps.reduce((current, step) => step(current), state);
 }
@@ -270,6 +286,7 @@ function generatePhis<S extends Stack>(
 function loadPhiSource<S extends Stack>(
   phi: Ir.Block.Phi,
   predecessor: string,
+  debug: Ir.Block.Debug,
 ): Transition<S, readonly ["value", ...S]> {
   const source = phi.sources.get(predecessor);
   if (!source) {
@@ -279,11 +296,12 @@ function loadPhiSource<S extends Stack>(
     );
   }
 
-  return loadValue(source);
+  return loadValue(source, { debug });
 }
 
 function storePhiDest<S extends Stack>(
   phi: Ir.Block.Phi,
+  debug: Ir.Block.Debug,
 ): Transition<readonly ["value", ...S], S> {
   const { PUSHn, ADD, MLOAD, MSTORE } = operations;
 
@@ -298,19 +316,21 @@ function storePhiDest<S extends Stack>(
       }
       if (state.memory.frameSize !== undefined) {
         return builder
-          .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER)), { as: "offset" })
-          .then(MLOAD(), { as: "b" })
-          .then(PUSHn(BigInt(allocation.offset)), {
+          .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER), { debug }), {
+            as: "offset",
+          })
+          .then(MLOAD({ debug }), { as: "b" })
+          .then(PUSHn(BigInt(allocation.offset), { debug }), {
             as: "a",
           })
-          .then(ADD(), { as: "offset" })
-          .then(MSTORE());
+          .then(ADD({ debug }), { as: "offset" })
+          .then(MSTORE({ debug }));
       }
       return builder
-        .then(PUSHn(BigInt(allocation.offset)), {
+        .then(PUSHn(BigInt(allocation.offset), { debug }), {
           as: "offset",
         })
-        .then(MSTORE());
+        .then(MSTORE({ debug }));
     })
     .done();
 }

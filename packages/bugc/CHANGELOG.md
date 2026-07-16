@@ -11,6 +11,16 @@ support. Changes to the specification itself are tracked in the root
 
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's unsigned `MOD`, so `x % 0` is `0`, as `x / 0` is ([#321]).
+- Each instruction has a `variables` context that lists the local
+  variables in scope (the innermost declaration of each name, which hides
+  a storage variable of that name), with a type, and a pointer to the
+  exact bytes that hold the value, in memory or on the stack, where the
+  value is there. For a dynamic array, `string` or `bytes` local, the
+  pointer reads the local's word and goes on to the length and the
+  elements or data it refers to. At optimization levels 1 to 3, a local
+  whose current value the optimizer folded to a constant or removed is
+  listed without a pointer, and an inlined function's locals are listed
+  in its inlined code ([#328]).
 
 ### Changed
 
@@ -108,6 +118,9 @@ support. Changes to the specification itself are tracked in the root
 - At optimization level 3, two writes in a row to the same field of a
   packed struct now leave the second value. Before, read/write merging
   combined the two values with `or` ([#337]).
+- A local initialized with a string literal (`let s = "hello";`) now
+  holds the string. Before, it held an empty allocation, so `s.length`
+  was `0` ([#328]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -149,6 +162,7 @@ First publication.
 [#320]: https://github.com/ethdebug/format/pull/320
 [#321]: https://github.com/ethdebug/format/pull/321
 [#327]: https://github.com/ethdebug/format/pull/327
+[#328]: https://github.com/ethdebug/format/pull/328
 [#330]: https://github.com/ethdebug/format/pull/330
 [#332]: https://github.com/ethdebug/format/pull/332
 [#333]: https://github.com/ethdebug/format/pull/333

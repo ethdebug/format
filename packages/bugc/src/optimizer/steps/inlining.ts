@@ -150,6 +150,9 @@ export class InliningStep extends BaseOptimizationStep {
       if (!idRename.has(id)) idRename.set(id, prefix + id);
     }
 
+    const inlineSites = (debug: Ir.Instruction.Debug | undefined) =>
+      inlineSitesFor(prefix, debug);
+
     const remapValue = (v: Ir.Value): Ir.Value => {
       if (v.kind !== "temp") return v;
       const sub = paramSubst.get(v.id);
@@ -196,6 +199,7 @@ export class InliningStep extends BaseOptimizationStep {
       const instructions: Ir.Instruction[] = origBlock.instructions.map(
         (inst, idx) => {
           const cloned = remapInstruction(inst, remapValue, idRename);
+          const sites = inlineSites(inst.operationDebug);
           // Mark every inlined instruction for membership.
           cloned.operationDebug = Ir.Utils.addTransform(
             cloned.operationDebug,
@@ -217,6 +221,7 @@ export class InliningStep extends BaseOptimizationStep {
               );
             }
           }
+          cloned.operationDebug.inlineSites = sites;
           return cloned;
         },
       );
@@ -254,6 +259,13 @@ export class InliningStep extends BaseOptimizationStep {
       } else {
         terminator = remapTerminator(t, remapValue, blockRename);
       }
+      terminator.operationDebug = {
+        ...terminator.operationDebug,
+        inlineSites: inlineSites(t.operationDebug),
+        ...(t.operationDebug?.origin
+          ? { origin: t.operationDebug.origin }
+          : {}),
+      };
 
       caller.blocks.set(newId, {
         id: newId,
@@ -265,6 +277,25 @@ export class InliningStep extends BaseOptimizationStep {
       });
     }
 
+    // --- carry the callee's locals into the caller ---
+    // Each keeps the temp that now holds its value (a parameter's is
+    // the call's argument; none if that is a constant) and belongs to
+    // this inline site.
+    const variables = new Map(caller.ssaVariables);
+    for (const [key, ssa] of callee.ssaVariables ?? []) {
+      const temp = ssa.temp ?? key;
+      const arg = paramSubst.get(temp);
+      variables.set(prefix + key, {
+        ...ssa,
+        temp: arg
+          ? arg.kind === "temp"
+            ? arg.id
+            : undefined
+          : (idRename.get(temp) ?? temp),
+        inlineSite: prefix + (ssa.inlineSite ?? ""),
+      });
+    }
+
     // --- wire the single return value into the caller ---
     // Current eligibility guarantees exactly one return. Substitute the
     // call's dest temp with the (remapped) returned value across the
@@ -272,9 +303,26 @@ export class InliningStep extends BaseOptimizationStep {
     if (call.dest) {
       const returns = collectReturns(callee, blockRename, remapValue);
       if (returns.length === 1) {
-        substituteTemp(caller, call.dest, returns[0].value);
+        const value = returns[0].value;
+        substituteTemp(caller, call.dest, value);
+        // A local the call's result was assigned to now has the
+        // returned value's temp (none if that is a constant).
+        const local = variables.get(call.dest);
+        if (local) {
+          variables.set(call.dest, {
+            ...local,
+            temp: value.kind === "temp" ? value.id : undefined,
+          });
+        }
       }
     }
+    if (variables.size > 0)
+      Ir.Utils.setDebugInfo(caller, "ssaVariables", variables);
+    Ir.Utils.setDebugInfo(
+      caller,
+      "origins",
+      new Map([...(callee.origins ?? []), ...(caller.origins ?? [])]),
+    );
 
     // --- rewire the calling block: call -> jump into inlined entry ---
     callBlock.terminator = {
@@ -289,6 +337,18 @@ export class InliningStep extends BaseOptimizationStep {
 }
 
 // ---- helpers ----
+
+/**
+ * The inline sites of an instruction once inlined through `prefix`:
+ * this site, then the sites it was already inlined through, renamed
+ * as its callee's locals are.
+ */
+function inlineSitesFor(
+  prefix: string,
+  debug: Ir.Instruction.Debug | undefined,
+): string[] {
+  return [prefix, ...(debug?.inlineSites ?? []).map((s) => prefix + s)];
+}
 
 function collectReturns(
   callee: Ir.Function,
@@ -564,6 +624,7 @@ function mergeDiscriminator(
   if (existing && "gather" in existing && Array.isArray(existing.gather)) {
     // Add as a new gather child rather than a sibling of gather.
     return {
+      ...debug,
       context: {
         ...existing,
         gather: [...(existing.gather as unknown[]), { [key]: value }],
@@ -571,6 +632,7 @@ function mergeDiscriminator(
     };
   }
   return {
+    ...debug,
     context: {
       ...(existing ?? {}),
       [key]: value,
@@ -596,6 +658,7 @@ function gatherCallSite(
   if ("gather" in existing && Array.isArray(existing.gather)) {
     // Already a gather — add the call site as another child.
     return {
+      ...debug,
       context: {
         gather: [callSite, ...(existing.gather as unknown[])],
       } as Format.Program.Context,
@@ -604,11 +667,13 @@ function gatherCallSite(
   if ("code" in existing) {
     // Colliding `code` keys — gather both.
     return {
+      ...debug,
       context: { gather: [callSite, existing] } as Format.Program.Context,
     };
   }
   // No existing `code` — compose flat.
   return {
+    ...debug,
     context: { ...existing, code: callSiteCode } as Format.Program.Context,
   };
 }

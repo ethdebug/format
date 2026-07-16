@@ -4,6 +4,7 @@
 
 import * as Ir from "#ir";
 import { OptimizationPipeline, type OptimizationStep } from "./optimizer.js";
+import { recordOrigins } from "./origins.js";
 import {
   ConstantFoldingStep,
   DeadCodeEliminationStep,
@@ -21,6 +22,7 @@ import {
  * Apply all optimizations based on the specified level
  */
 export function optimizeIr(module: Ir.Module, level: number): Ir.Module {
+  recordOrigins(module);
   if (level === 0) return module;
 
   const steps = createOptimizationPipeline(level);

@@ -228,7 +228,7 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
       });
     }
 
-    return {
+    const cloned: Ir.Function = {
       name: func.name,
       parameters: [...func.parameters],
       entry: func.entry,
@@ -240,6 +240,11 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
       ...(func.loc ? { loc: func.loc } : {}),
       ...(func.sourceId !== undefined ? { sourceId: func.sourceId } : {}),
     };
+    if (func.ssaVariables) {
+      Ir.Utils.setDebugInfo(cloned, "ssaVariables", new Map(func.ssaVariables));
+    }
+    if (func.origins) Ir.Utils.setDebugInfo(cloned, "origins", func.origins);
+    return cloned;
   }
 
   protected replaceInstruction(

@@ -23,7 +23,13 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
           let newInst = inst;
 
           // Track constant assignments and their debug info
-          if (inst.kind === "const" && "dest" in inst) {
+          // A string constant (a reference) is data that code
+          // generation puts in memory, not a value an operand can hold.
+          if (
+            inst.kind === "const" &&
+            "dest" in inst &&
+            inst.type.kind !== "ref"
+          ) {
             constants.set(inst.dest, inst.value);
             if (inst.operationDebug) {
               constantDebug.set(inst.dest, inst.operationDebug);

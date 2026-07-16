@@ -66,6 +66,7 @@ export function* buildModule(
       const parameters = funcDecl.parameters.map((param, index) => ({
         name: param.name,
         type: fromBugType(funcType.parameters[index]),
+        loc: param.loc ?? undefined,
       }));
 
       const func = yield* withErrorHandling(

@@ -243,6 +243,37 @@ export namespace Process {
    * Variable and scope management
    */
   export namespace Variables {
+    /** A scope's declarations, with `name` declared at `loc` */
+    const declaredHere = (
+      scope: State.Scope,
+      name: string,
+      loc: Ast.SourceLocation | undefined,
+    ): State.Scope["declared"] =>
+      loc
+        ? new Map([
+            ...(scope.declared ?? []),
+            [
+              name,
+              {
+                offset: Number(loc.offset),
+                range: scope.declaringIn ?? scope.range,
+              },
+            ],
+          ])
+        : scope.declared;
+
+    /**
+     * Make the current scope's next declarations in scope over `range`
+     * (a `for` loop's, for its init), or over the scope's own range
+     * again (undefined).
+     */
+    export function* declaringIn(
+      range: Ast.SourceLocation | undefined,
+    ): Process<void> {
+      const scope = yield* lift(State.Scopes.current)();
+      yield* lift(State.Scopes.setCurrent)({ ...scope, declaringIn: range });
+    }
+
     /**
      * Declare a new SSA variable in the current scope
      */
@@ -267,6 +298,7 @@ export namespace Process {
         ...scope,
         ssaVars: new Map([...scope.ssaVars, [name, ssaVar]]),
         usedNames: new Map([...scope.usedNames, [name, version + 1]]),
+        declared: declaredHere(scope, name, loc),
       };
 
       // Update scopes
@@ -277,7 +309,7 @@ export namespace Process {
         (s) => s.stack.length - 1,
       );
       const scopeId = `scope_${scopeIndex}_${name}`;
-      yield* addSsaMetadata(tempId, name, scopeId, type, version, loc);
+      yield* addSsaMetadata(tempId, name, scopeId, type, version, { loc });
 
       return ssaVar;
     }
@@ -290,6 +322,7 @@ export namespace Process {
       type: Ir.Type,
       tempId: string,
       loc?: Ast.SourceLocation,
+      options: { placeholder?: boolean } = {},
     ): Process<State.SsaVariable> {
       const scope = yield* lift(State.Scopes.current)();
 
@@ -306,6 +339,7 @@ export namespace Process {
         ...scope,
         ssaVars: new Map([...scope.ssaVars, [name, ssaVar]]),
         usedNames: new Map([...scope.usedNames, [name, version + 1]]),
+        declared: declaredHere(scope, name, loc),
       };
 
       // Update scopes
@@ -316,7 +350,11 @@ export namespace Process {
         (s) => s.stack.length - 1,
       );
       const scopeId = `scope_${scopeIndex}_${name}`;
-      yield* addSsaMetadata(tempId, name, scopeId, type, version, loc);
+      yield* addSsaMetadata(tempId, name, scopeId, type, version, {
+        loc,
+        alias: true,
+        placeholder: options.placeholder,
+      });
 
       return ssaVar;
     }
@@ -388,18 +426,68 @@ export namespace Process {
       scopeId: string,
       type: Ir.Type,
       version: number,
-      loc?: Ast.SourceLocation,
+      options: {
+        loc?: Ast.SourceLocation;
+        /** The temp holds a value computed earlier (perhaps another
+         * variable's): the version is defined here, not at the temp */
+        alias?: boolean;
+        /** The version only marks the declaration; it holds no value */
+        placeholder?: boolean;
+      } = {},
     ): Process<void> {
+      const { loc, alias, placeholder } = options;
       const state: State = yield { type: "peek" };
       const currentMetadata = state.function.ssaMetadata || new Map();
 
+      // The variable's declaring scope: the innermost scope that holds
+      // the name (every version of a declaration, phis included, names
+      // the scope that declared it). Its lexical scope ends where that
+      // scope's source range ends; a function-level name (a parameter)
+      // has no range.
+      const stack = state.scopes.stack;
+      let declaring = stack.length - 1;
+      while (declaring >= 0 && !stack[declaring].ssaVars.has(name)) {
+        declaring--;
+      }
+      const declaration = stack[declaring]?.declared?.get(name);
+      const scopeRange = declaration
+        ? declaration.range
+        : stack[declaring]?.range;
+      const scopeEnd = scopeRange
+        ? Number(scopeRange.offset) + Number(scopeRange.length)
+        : undefined;
+      // Two declarations of a name in one scope differ by where each
+      // is declared
+      const declaredIn = scopeRange
+        ? `${Number(scopeRange.offset)}:${scopeEnd}:${declaration?.offset ?? ""}`
+        : undefined;
+
+      // A version that aliases a temp is defined just after the
+      // instructions emitted so far in the current block: from the
+      // next instruction on, never on an instruction of an earlier
+      // statement (contexts are postconditions). Each version has its
+      // own entry, so an aliased temp's key gets a suffix.
+      const defined = alias
+        ? {
+            block: state.block.id,
+            index: state.block.instructions.length - 0.5,
+          }
+        : undefined;
+      let key = tempId;
+      for (let n = 1; currentMetadata.has(key); n++) key = `${tempId}~${n}`;
+
       const newMetadata = new Map(currentMetadata);
-      newMetadata.set(tempId, {
+      newMetadata.set(key, {
         name,
         scopeId,
         type,
         version,
         loc,
+        scopeEnd,
+        ...(declaredIn ? { declaredIn } : {}),
+        ...(key !== tempId ? { temp: tempId } : {}),
+        ...(defined ? { defined } : {}),
+        ...(placeholder ? { placeholder } : {}),
       });
 
       // Update function with new metadata
@@ -543,7 +631,10 @@ export namespace Process {
     };
 
     /**
-     * Update an SSA variable to point to an existing temp without creating a new one
+     * Update an SSA variable to point to an existing temp without
+     * creating a new one. The new version aliases the temp: debug info
+     * records where the version is defined, here, apart from the temp's
+     * own definition.
      */
     export function* updateSsaToExistingTemp(
       name: string,
@@ -585,7 +676,9 @@ export namespace Process {
 
         // Track SSA metadata for the existing temp
         const scopeId = `scope_${scopeIndex === -1 ? 0 : scopeIndex}_${name}`;
-        yield* addSsaMetadata(existingTempId, name, scopeId, type, version);
+        yield* addSsaMetadata(existingTempId, name, scopeId, type, version, {
+          alias: true,
+        });
         return;
       }
 
@@ -617,7 +710,9 @@ export namespace Process {
 
       // Track SSA metadata for the existing temp
       const scopeId = `scope_${scopeIndex}_${name}`;
-      yield* addSsaMetadata(existingTempId, name, scopeId, type, newVersion);
+      yield* addSsaMetadata(existingTempId, name, scopeId, type, newVersion, {
+        alias: true,
+      });
     }
 
     /**
@@ -880,7 +975,7 @@ export namespace Process {
      */
     export function* initialize(
       name: string,
-      parameters: { name: string; type: Ir.Type }[],
+      parameters: { name: string; type: Ir.Type; loc?: Ast.SourceLocation }[],
     ): Process<void> {
       // Convert parameters to SSA form
       const ssaParams: Ir.Function.Parameter[] = [];
@@ -910,6 +1005,7 @@ export namespace Process {
           scopeId: "param",
           type: param.type,
           version: 0,
+          ...(param.loc ? { loc: param.loc } : {}),
         });
       }
 

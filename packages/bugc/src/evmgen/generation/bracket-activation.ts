@@ -97,6 +97,18 @@ export function stripActivation(ctx: Ctx | undefined): Ctx | undefined {
     const kids = ctx.gather
       .map(stripActivation)
       .filter((c): c is Ctx => c !== undefined);
+    // Keys beside the gather (e.g. local `variables`) still apply.
+    const {
+      gather: _,
+      invoke: __,
+      return: ___,
+      ...siblings
+    } = ctx as Record<string, unknown>;
+    if (Object.keys(siblings).length > 0) {
+      return (
+        kids.length > 0 ? { ...siblings, gather: kids } : siblings
+      ) as Ctx;
+    }
     if (kids.length === 0) return undefined;
     if (kids.length === 1) return kids[0];
     return { gather: kids } as Ctx;
@@ -118,7 +130,7 @@ function attachActivation(
   const marker = { [key]: value } as Ctx;
   if (!ctx || typeof ctx !== "object") return marker;
   if (isPick(ctx)) return { pick: [...ctx.pick, marker] } as Ctx;
-  if (isGather(ctx)) return { gather: [...ctx.gather, marker] } as Ctx;
+  if (isGather(ctx)) return { ...ctx, gather: [...ctx.gather, marker] } as Ctx;
   return { ...(ctx as Record<string, unknown>), [key]: value } as Ctx;
 }
 
