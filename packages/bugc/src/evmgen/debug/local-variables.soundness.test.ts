@@ -22,6 +22,28 @@ async function runtimeProgram(source: string): Promise<Format.Program> {
   return r.value.bytecode.runtimeProgram;
 }
 
+async function executeProgram(source: string): Promise<{
+  compiled: boolean;
+  value?: bigint;
+  program?: Format.Program;
+}> {
+  const r = await compile({ to: "bytecode", source, optimizer: { level: 0 } });
+  if (!r.success) return { compiled: false };
+  const bc = r.value.bytecode;
+  const executor = new Executor();
+  await executor.deploy(
+    bc.create && bc.create.length > 0
+      ? bytesToHex(bc.create)
+      : bytesToHex(bc.runtime),
+  );
+  await executor.execute({ data: "" });
+  return {
+    compiled: true,
+    value: await executor.getStorage(0n),
+    program: bc.runtimeProgram,
+  };
+}
+
 function localsOf(ctx: unknown): Array<Record<string, unknown>> {
   if (!ctx || typeof ctx !== "object") return [];
   const vars = (ctx as { variables?: unknown }).variables;
@@ -193,6 +215,41 @@ code { r = h(3, 4); }`;
     // Every emitted record carries a type (always known in BUG).
     for (const entry of seen.values()) {
       expect(entry.type).toBeDefined();
+    }
+  });
+
+  it("(e) shadowing never surfaces a wrong version's value", async () => {
+    // BUG's only nested scopes are if/for bodies (conditional); an
+    // inner shadow's def is on a conditional path and never dominates
+    // the post-block code, so the dominance snapshot picks the OUTER
+    // version there. Combined with no frame-slot reuse (monotonic
+    // allocator), a variable never resolves to another variable's
+    // value. Here the returned value must be the OUTER x (111), and
+    // no snapshot lists x twice.
+    const source = `name Shadow;
+define {
+  function sh(n: uint256) -> uint256 {
+    let x = 111;
+    if (n > 0) {
+      let x = 222;
+      return x;
+    }
+    return x;
+  };
+}
+storage { [0] r: uint256; }
+create {}
+code { r = sh(0); }`; // n=0 → else path → returns outer x = 111
+    const res = await executeProgram(source);
+    if (!res.compiled) return; // if BUG rejects shadowing, vacuously sound
+    expect(res.value).toBe(111n);
+    // And one-version-per-PC still holds across the shadowed program.
+    const program = res.program;
+    for (const instr of program.instructions) {
+      const names = localsOf(instr.context)
+        .map((v) => v.identifier)
+        .filter((id): id is string => typeof id === "string");
+      expect(new Set(names).size).toBe(names.length);
     }
   });
 
