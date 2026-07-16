@@ -3,3 +3,4 @@ export { Cursor } from "#cursor";
 
 export type { Machine } from "#machine";
 export { Data } from "#data";
+export { decodeValue } from "#decode";
