@@ -127,6 +127,22 @@ function countCallSites(program: Format.Program): CallSiteCounts {
   return counts;
 }
 
+/** Count instructions carrying a `transform: ["inline"]` marker. */
+function countInline(program: Format.Program): number {
+  let n = 0;
+  for (const instr of program.instructions) {
+    if (!instr.context) continue;
+    if (
+      unwrapLeaves(instr.context).some(
+        (c) => Context.isTransform(c) && c.transform.includes("inline"),
+      )
+    ) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
 describe("optimizer preserves invoke/return contexts", () => {
   const allLevels: OptLevel[] = [0, 1, 2, 3];
 
@@ -150,9 +166,14 @@ code { r = add(10, 20); }`;
 
         if (level >= 2) {
           // `add` is a leaf single-return helper: inlining (L2+)
-          // splices its body into the caller, so there's no real
-          // caller JUMP for `add`.
+          // replaces the real call with a virtual inline
+          // activation, so there's no caller JUMP for `add`.
           expect(counts.invokeJump).toEqual({});
+          // Inline markers appear on the inlined body; at L3 a
+          // fully-foldable helper body can be constant-folded to a
+          // PUSH, dissolving the marker, so only require presence
+          // at L2.
+          if (level === 2) expect(countInline(program)).toBeGreaterThan(0);
         } else {
           // One caller JUMP, one callee JUMPDEST, one
           // continuation JUMPDEST — all naming "add".
@@ -193,9 +214,14 @@ code { r = add(2 + 3, 4 * 5); }`;
         const counts = countCallSites(program);
 
         if (level >= 2) {
-          // `add` inlined at L2+ — its body is spliced in, no real
-          // caller JUMP. Constant-foldable args don't change that.
+          // `add` inlined at L2+ — virtual inline activation, no
+          // real caller JUMP.
           expect(counts.invokeJump).toEqual({});
+          // Inline markers appear on the inlined body; at L3 a
+          // fully-foldable helper body can be constant-folded to a
+          // PUSH, dissolving the marker, so only require presence
+          // at L2.
+          if (level === 2) expect(countInline(program)).toBeGreaterThan(0);
         } else {
           expect(counts.invokeJump).toEqual({ add: 1 });
           expect(counts.invokeJumpdest).toEqual({ add: 1 });
@@ -238,9 +264,14 @@ code {
         const counts = countCallSites(program);
 
         if (level >= 2) {
-          // Both `dbl` sites are leaf single-return calls, inlined
-          // at L2+ into the caller — no real caller JUMPs remain.
+          // Both `dbl` sites are inlined (leaf single-return) into
+          // separate virtual activations; no real caller JUMPs.
           expect(counts.invokeJump).toEqual({});
+          // Inline markers appear on the inlined body; at L3 a
+          // fully-foldable helper body can be constant-folded to a
+          // PUSH, dissolving the marker, so only require presence
+          // at L2.
+          if (level === 2) expect(countInline(program)).toBeGreaterThan(0);
         } else {
           expect(counts.invokeJump).toEqual({ dbl: 2 });
           expect(counts.invokeJumpdest).toEqual({ dbl: 1 });
@@ -372,8 +403,10 @@ code { r = addThree(1, 2, 3); }`;
           // `add` (leaf) inlines into `addThree` at both sites;
           // that makes `addThree` itself a leaf, so on a later
           // fixpoint iteration it inlines into `main` too. End
-          // state: no real caller JUMPs remain.
+          // state: no real caller JUMPs — everything is inline
+          // activations.
           expect(counts.invokeJump).toEqual({});
+          if (level === 2) expect(countInline(program)).toBeGreaterThan(0);
         } else {
           expect(counts.invokeJump).toEqual({
             addThree: 1,

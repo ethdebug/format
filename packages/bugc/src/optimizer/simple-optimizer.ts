@@ -61,7 +61,8 @@ function createOptimizationPipeline(level: number): OptimizationStep[] {
 
   // Level 2: Add inlining, CSE, tail call optimization, and
   // jump optimization. Inlining runs first (after L1 fold) so
-  // TCO/CSE still apply to inlined code.
+  // TCO/CSE still apply to inlined code and `["fold","inline"]`
+  // composes.
   if (level >= 2) {
     steps.push(
       new InliningStep(),
