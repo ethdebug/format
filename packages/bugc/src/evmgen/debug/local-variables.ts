@@ -59,6 +59,15 @@ interface DefSite {
  * (user function): a group naming the frame-pointer region, then the
  * data region at `FP + delta`. Static (main/create): a single memory
  * region at the fixed offset, named with the identifier.
+ *
+ * The region is a full 32-byte word, not the type's byte width. A
+ * scalar is homed by a full-word `MSTORE` at `alloc.offset`, so its
+ * value occupies the whole word — right-aligned for numeric/address/
+ * bool (value in the low bytes), left-aligned for `bytesN` (value in
+ * the high bytes). The consumer's type-directed decoder extracts the
+ * meaningful bytes from the word by type; emitting the narrow type
+ * width instead would name the high bytes of the word, which for a
+ * right-aligned value are the zero padding (reads 0).
  */
 function buildPointer(
   identifier: string,
@@ -66,7 +75,7 @@ function buildPointer(
   frameSize: number | undefined,
 ): Format.Pointer {
   const offset = Number(allocation.offset);
-  const length = Number(allocation.size);
+  const length = 32;
 
   if (frameSize === undefined) {
     // No call frame (main/create): static memory offset.
@@ -294,11 +303,40 @@ function dominatingVersion(
 }
 
 /**
+ * Temps whose allocation SOLELY occupies its 32-byte memory word.
+ *
+ * Homing is a full-word `MSTORE` at `alloc.offset` (32-byte aligned
+ * slot bases), so a sub-word scalar's store writes the whole word. When
+ * the allocator byte-packs two sub-word locals into one word, each
+ * one's full-word store clobbers the other's bytes — the value is
+ * corrupted in memory at runtime. Such a local therefore cannot carry a
+ * sound value pointer; it is emitted type-only until codegen stops
+ * byte-packing sub-word scalars. A local is safe iff no other
+ * allocation shares its word.
+ */
+function soleOccupantTemps(
+  allocations: Record<string, Memory.Allocation>,
+): Set<string> {
+  const countByWord = new Map<number, number>();
+  for (const alloc of Object.values(allocations)) {
+    const word = Math.floor(Number(alloc.offset) / 32);
+    countByWord.set(word, (countByWord.get(word) ?? 0) + 1);
+  }
+  const sole = new Set<string>();
+  for (const [temp, alloc] of Object.entries(allocations)) {
+    const word = Math.floor(Number(alloc.offset) / 32);
+    if (countByWord.get(word) === 1) sole.add(temp);
+  }
+  return sole;
+}
+
+/**
  * Build the snapshot at (block,index) with source `offset`. LIST axis:
  * every lexically-in-scope variable is listed (name + type). POINTER
  * axis: a pointer is attached only where the value is located (its
- * current version's def dominates and it is memory-homed); otherwise
- * the record is type-only ("in scope, no value").
+ * current version's def dominates, it is memory-homed, and it solely
+ * occupies its word); otherwise the record is type-only ("in scope, no
+ * value").
  */
 function snapshotAt(
   byName: Map<string, Ir.Function.SsaVariable[]>,
@@ -310,6 +348,7 @@ function snapshotAt(
   offset: number | undefined,
   idom: Record<string, string | null>,
   allocations: Record<string, Memory.Allocation>,
+  soleOccupant: Set<string>,
   frameSize: number | undefined,
   sourceId: string,
 ): VariableEntry[] {
@@ -332,7 +371,12 @@ function snapshotAt(
     const repr =
       located?.ssa ??
       versions.reduce((a, b) => (b.version > a.version ? b : a));
-    const allocation = located ? allocations[located.temp] : undefined;
+    // A pointer is sound only if the value solely occupies its word —
+    // a byte-packed sub-word neighbor would clobber it (type-only).
+    const allocation =
+      located && soleOccupant.has(located.temp)
+        ? allocations[located.temp]
+        : undefined;
     entries.push(buildEntry(repr, allocation, frameSize, sourceId));
   }
   return entries;
@@ -351,6 +395,7 @@ function enrichFunction(
   if (!func.ssaVariables || func.ssaVariables.size === 0) return;
 
   const { allocations, frameSize } = memory;
+  const soleOccupant = soleOccupantTemps(allocations);
 
   const byName = new Map<string, Ir.Function.SsaVariable[]>();
   const tempOf = new Map<Ir.Function.SsaVariable, string>();
@@ -389,6 +434,7 @@ function enrichFunction(
       offset,
       idom,
       allocations,
+      soleOccupant,
       frameSize,
       sourceId,
     );

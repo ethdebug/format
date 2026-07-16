@@ -321,4 +321,102 @@ code { r = g(7); }`;
       );
     }
   });
+
+  it("(g) a sole-occupant sub-word scalar resolves to its value", async () => {
+    // A scalar narrower than a word (here an address) is homed by a
+    // full-word MSTORE, so its value occupies the whole 32-byte word.
+    // The pointer must name the FULL word (length 32), not the 20-byte
+    // type width — otherwise it reads the high (zero-pad) bytes. When
+    // the scalar solely occupies its word, resolving the word recovers
+    // the value (low bytes for a right-aligned address).
+    const source = `name SoleAddr;
+define {
+  function g(ad: address, n: uint256) -> uint256 {
+    if (n > 0) { return n; }
+    let z = ad;
+    return 0;
+  };
+}
+storage { [0] r: uint256; }
+create {}
+code { r = g(0x00000000000000000000000000000000000000aA, 0); }`;
+    const program = await runtimeProgram(source);
+
+    // The located record for `z` carries a frame pointer of length 32.
+    let zPointer: unknown;
+    for (const instr of program.instructions) {
+      for (const v of localsOf(instr.context)) {
+        if (v.identifier === "z" && v.pointer) zPointer = v.pointer;
+      }
+    }
+    expect(zPointer, "located pointer for z").toBeDefined();
+    const zGroup = (zPointer as { group?: Array<{ length?: number }> }).group;
+    expect(zGroup?.[1]?.length, "z names the full 32-byte word").toBe(32);
+
+    // Executing, the word at z's slot resolves to the address 0xaA.
+    const r = await compile({
+      to: "bytecode",
+      source,
+      optimizer: { level: 0 },
+    });
+    if (!r.success) throw new Error("compile failed");
+    const bc = r.value.bytecode;
+    const executor = new Executor();
+    await executor.deploy(
+      bc.create && bc.create.length > 0
+        ? bytesToHex(bc.create)
+        : bytesToHex(bc.runtime),
+    );
+    const mems: Uint8Array[] = [];
+    await executor.execute({ data: "" }, (s) => {
+      if (s.memory) mems.push(s.memory);
+    });
+    const resolved = new Set<bigint>();
+    for (const mem of mems) {
+      const val = resolve(zPointer, mem);
+      if (val !== undefined) resolved.add(val);
+    }
+    expect([...resolved], "z resolves to the address value 0xaA").toContain(
+      0xaan,
+    );
+  });
+
+  it("(h) byte-packed sub-word scalars are type-only, never clobbered", async () => {
+    // The allocator byte-packs multiple sub-word scalars into one word;
+    // their full-word stores clobber each other, so no packed scalar can
+    // carry a sound value. Each must appear (in scope) but type-only —
+    // never a pointer that would resolve to a clobbered value.
+    const source = `name PackedSubword;
+define {
+  function f(ad: address, flag: bool, m: uint256) -> uint256 {
+    if (m > 99) { return 1; }
+    let z = ad;
+    let g = flag;
+    return 0;
+  };
+}
+storage { [0] r: uint256; }
+create {}
+code { r = f(0x00000000000000000000000000000000000000aA, true, 0); }`;
+    const program = await runtimeProgram(source);
+
+    let zListed = false;
+    let gListed = false;
+    for (const instr of program.instructions) {
+      for (const v of localsOf(instr.context)) {
+        if (v.identifier === "z") {
+          zListed = true;
+          expect(v.pointer, "packed z must be type-only").toBeUndefined();
+          expect(v.type, "packed z keeps its type").toBeDefined();
+        }
+        if (v.identifier === "g") {
+          gListed = true;
+          expect(v.pointer, "packed g must be type-only").toBeUndefined();
+        }
+      }
+    }
+    // Both packed locals are still lexically listed (just without value).
+    expect(zListed, "z is listed in scope").toBe(true);
+    expect(gListed, "g is listed in scope").toBe(true);
+  });
 });
