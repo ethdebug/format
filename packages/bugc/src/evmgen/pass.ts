@@ -61,7 +61,7 @@ const pass: Pass<{
       // Attach local-variable debug info (memory-homed locals) to
       // the IR before generation, so it propagates onto the emitted
       // instructions. Emission-only; no-op where nothing is spilled.
-      enrichLocalVariables(ir, liveness, memoryResult.value);
+      enrichLocalVariables(ir, memoryResult.value);
 
       // Analyze block layout
       const blockResult = Layout.Module.perform(ir);

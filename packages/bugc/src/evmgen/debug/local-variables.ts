@@ -1,44 +1,57 @@
 /**
- * Local-variable debug info (emission, O0, memory-homed).
+ * Local-variable debug info (emission, O0) — per-instruction
+ * guaranteed-known snapshot.
  *
- * Emits `variables` contexts for LOCAL variables (function
- * parameters and `let` bindings) that the memory planner spilled to
- * frame-relative memory (present in a function's `allocations`
- * map). Each such local has a stable location for its whole
- * lifetime at O0, so its `variables` entry is attached to the
- * instructions across which it is live.
+ * Each instruction's `variables` context lists the local variables
+ * (parameters + `let`s) whose value the compiler can GUARANTEE is
+ * known after that instruction executes. Availability is computed by
+ * DOMINANCE (not liveness): a variable is known at P iff the def of
+ * its current SSA version dominates-or-equals P — so it is never
+ * reported before its defining store (no stale/uninitialized value),
+ * and reassignment resolves to the current version's slot.
  *
- * Scope (first cut):
- *  - O0 only. Under optimization, locations move or dissolve; not
- *    covered here.
- *  - Memory-homed locals only. Stack-resident temps have no tracked
- *    position yet and are omitted.
- *  - Liveness is applied at block granularity (a local's entry
- *    rides every instruction of a block in which it is live).
+ * Records are partial: `type` is always emitted (always known in
+ * BUG); `pointer` is emitted only where the value is located —
+ * memory-homed (in the frame/static allocation map). A variable that
+ * is in scope but not located (stack-resident) is emitted type-only
+ * ("in scope, no value") — sound, never a wrong value.
+ *
+ * Scope (this cut): O0 only (under optimization locations move or
+ * dissolve). Snapshot is stamped per instruction (redundant, accepted
+ * for now). Pointers cover memory-homed locals; stack-resident are
+ * type-only. Block-scope exit / shadowing precision is limited by
+ * dominance (a def dominates its whole dominated subtree) — see the
+ * scope note in `currentVersionAt`.
  *
  * The location pointer encodes bugc's runtime frame convention: the
- * frame base pointer lives in machine memory at `FRAME_POINTER`
- * (0x80); a frame-homed local is at `mem[ mem[FRAME_POINTER] +
- * delta ]`. This is expressed with existing pointer vocabulary — a
- * `group` that names the frame-pointer machine region and a data
- * region whose offset reads it (`$read`) and adds the static delta
- * (`$sum`). Functions without a frame (main/create) home locals at
- * a static memory offset.
+ * frame base lives in machine memory at `FRAME_POINTER` (0x80); a
+ * frame-homed local is at `mem[ mem[FRAME_POINTER] + delta ]`,
+ * expressed as a `group` naming the frame region and a data region
+ * whose offset reads it (`$read`) and adds the static delta (`$sum`).
+ * Functions without a frame (main/create) home locals at a static
+ * memory offset.
  */
 import type * as Format from "@ethdebug/format";
 
 import * as Ir from "#ir";
-import { Liveness, Memory } from "#evmgen/analysis";
+import { Memory } from "#evmgen/analysis";
 import { convertToEthDebugType } from "../../irgen/debug/types.js";
 
 type VariableEntry = Format.Program.Context.Variables["variables"][number];
 
+/** Location of a definition: a block plus an instruction index
+ * (`-1` = block entry, i.e. a parameter or phi, before all
+ * instructions). */
+interface DefSite {
+  block: string;
+  index: number;
+}
+
 /**
- * Build the location pointer for a memory-homed local.
- *
- * Frame-homed (user function): a group naming the frame-pointer
- * machine region, then the data region at `FP + delta`. Static
- * (main/create): a plain memory region at the fixed offset.
+ * Build the location pointer for a memory-homed local. Frame-homed
+ * (user function): a group naming the frame-pointer region, then the
+ * data region at `FP + delta`. Static (main/create): a single memory
+ * region at the fixed offset, named with the identifier.
  */
 function buildPointer(
   identifier: string,
@@ -50,7 +63,7 @@ function buildPointer(
 
   if (frameSize === undefined) {
     // No call frame (main/create): static memory offset.
-    return { location: "memory", offset, length };
+    return { name: identifier, location: "memory", offset, length };
   }
 
   // Frame-relative: mem[ mem[FRAME_POINTER] + delta ].
@@ -73,23 +86,17 @@ function buildPointer(
 }
 
 /**
- * Build a `variables` entry for one memory-homed local, or
- * undefined if it has no SSA metadata (unnamed temp) or an
- * unconvertible type.
+ * Build a partial variable record for one SSA version: identifier +
+ * type + declaration always; pointer only when the version is
+ * memory-homed (present in the allocation map).
  */
 function buildEntry(
-  tempId: string,
-  ssa: Ir.Function.SsaVariable | undefined,
-  allocation: Memory.Allocation,
+  ssa: Ir.Function.SsaVariable,
+  allocation: Memory.Allocation | undefined,
   frameSize: number | undefined,
   sourceId: string,
-): VariableEntry | undefined {
-  if (!ssa) return undefined;
-
-  const entry: VariableEntry = {
-    identifier: ssa.name,
-    pointer: buildPointer(ssa.name, allocation, frameSize),
-  };
+): VariableEntry {
+  const entry: VariableEntry = { identifier: ssa.name };
 
   const type = convertToEthDebugType(ssa.type);
   if (type) entry.type = type;
@@ -98,15 +105,18 @@ function buildEntry(
     entry.declaration = { source: { id: sourceId }, range: ssa.loc };
   }
 
+  if (allocation) {
+    entry.pointer = buildPointer(ssa.name, allocation, frameSize);
+  }
+
   return entry;
 }
 
 /**
- * Merge local-variable entries into an instruction's debug context
- * as a flat `variables` sibling. If the context already carries a
- * `variables` array (e.g. storage variables from irgen), the local
- * entries are appended to it; otherwise a `variables` key is added.
- * All other keys (code, etc.) are preserved.
+ * Merge variable entries into an instruction's debug context as a
+ * flat `variables` sibling, appending to any existing `variables`
+ * (e.g. storage variables from irgen) and preserving all other keys.
+ * Storage entries take precedence over a same-identifier local.
  */
 function withVariables(
   debug: Ir.Instruction.Debug | undefined,
@@ -119,8 +129,6 @@ function withVariables(
     ? (context.variables as VariableEntry[])
     : [];
 
-  // Avoid duplicating an identifier already present (storage vars
-  // take precedence; don't shadow them).
   const have = new Set(
     existing
       .map((v) => v.identifier)
@@ -139,103 +147,177 @@ function withVariables(
   };
 }
 
-/**
- * Memory-homed temps live at block granularity anywhere they are
- * live within a block: values live-in, live-out, or defined in the
- * block. Intersected with the allocations map (memory-homed).
- */
-function liveMemoryHomed(
-  blockId: string,
-  block: Ir.Block,
-  liveness: Liveness.Function.Info,
-  allocations: Record<string, Memory.Allocation>,
-): Set<string> {
-  const live = new Set<string>();
-  const consider = (id: string) => {
-    if (id in allocations) live.add(id);
-  };
-
-  for (const id of liveness.liveIn.get(blockId) ?? []) consider(id);
-  for (const id of liveness.liveOut.get(blockId) ?? []) consider(id);
-  for (const phi of block.phis) consider(phi.dest);
-  for (const inst of block.instructions) {
-    if ("dest" in inst && typeof inst.dest === "string") consider(inst.dest);
+/** Whether block `a` dominates-or-equals block `b`. */
+function dominatesBlock(
+  a: string,
+  b: string,
+  idom: Record<string, string | null>,
+): boolean {
+  let current: string | null = b;
+  while (current !== null) {
+    if (current === a) return true;
+    current = idom[current] ?? null;
   }
+  return false;
+}
 
-  return live;
+/** Whether def-site `d` dominates-or-equals position (block,index). */
+function defDominates(
+  d: DefSite,
+  block: string,
+  index: number,
+  idom: Record<string, string | null>,
+): boolean {
+  if (d.block === block) return d.index <= index;
+  return dominatesBlock(d.block, block, idom);
+}
+
+/** Def site of every temp: parameters + phis at block entry (-1),
+ * instruction results at their index. */
+function collectDefSites(func: Ir.Function): Map<string, DefSite> {
+  const defs = new Map<string, DefSite>();
+  for (const p of func.parameters) {
+    defs.set(p.tempId, { block: func.entry, index: -1 });
+  }
+  for (const [blockId, block] of func.blocks) {
+    for (const phi of block.phis ?? []) {
+      defs.set(phi.dest, { block: blockId, index: -1 });
+    }
+    block.instructions.forEach((inst, i) => {
+      if ("dest" in inst && typeof inst.dest === "string") {
+        defs.set(inst.dest, { block: blockId, index: i });
+      }
+    });
+  }
+  return defs;
 }
 
 /**
- * Enrich a single function's instructions in place with live
- * memory-homed local `variables` contexts.
+ * The current SSA version of a source identifier at (block,index):
+ * among the identifier's versions whose def dominates-or-equals the
+ * position, the one with the LATEST (deepest-dominating) def — which
+ * resolves reassignment (later def wins) to the value actually live.
+ *
+ * Scope note: dominance never "ends", so a def dominates its whole
+ * dominated subtree. For a straight-line block-local that means it
+ * can remain reported after its lexical block; for shadowing the
+ * inner version can win past its block. That's a scope-precision
+ * limit of the dominance-only model (a later scope-exit refinement
+ * tightens it); it never reports a value before its def.
+ */
+function currentVersionAt(
+  versions: Ir.Function.SsaVariable[],
+  tempOf: Map<Ir.Function.SsaVariable, string>,
+  defs: Map<string, DefSite>,
+  block: string,
+  index: number,
+  idom: Record<string, string | null>,
+): { ssa: Ir.Function.SsaVariable; temp: string } | undefined {
+  let best:
+    | { ssa: Ir.Function.SsaVariable; temp: string; def: DefSite }
+    | undefined;
+  for (const ssa of versions) {
+    const temp = tempOf.get(ssa)!;
+    const def = defs.get(temp);
+    if (!def || !defDominates(def, block, index, idom)) continue;
+    if (!best) {
+      best = { ssa, temp, def };
+      continue;
+    }
+    // Prefer the later/deeper dominating def.
+    const later =
+      def.block === best.def.block
+        ? def.index > best.def.index
+        : dominatesBlock(best.def.block, def.block, idom);
+    if (later) best = { ssa, temp, def };
+  }
+  return best;
+}
+
+/**
+ * Stamp each instruction of a function with its guaranteed-known
+ * variable snapshot.
  */
 function enrichFunction(
   func: Ir.Function,
-  liveness: Liveness.Function.Info,
+  module: Ir.Module,
   memory: Memory.Function.Info,
   sourceId: string,
 ): void {
-  const { allocations, frameSize } = memory;
-  if (!func.ssaVariables || Object.keys(allocations).length === 0) return;
+  if (!func.ssaVariables || func.ssaVariables.size === 0) return;
 
-  // Precompute an entry per memory-homed temp that has SSA metadata.
-  const entryFor = new Map<string, VariableEntry>();
-  for (const tempId of Object.keys(allocations)) {
-    const entry = buildEntry(
-      tempId,
-      func.ssaVariables.get(tempId),
-      allocations[tempId],
-      frameSize,
-      sourceId,
-    );
-    if (entry) entryFor.set(tempId, entry);
+  const { allocations, frameSize } = memory;
+
+  // Group SSA versions by source identifier; remember each version's
+  // temp id.
+  const byName = new Map<string, Ir.Function.SsaVariable[]>();
+  const tempOf = new Map<Ir.Function.SsaVariable, string>();
+  for (const [temp, ssa] of func.ssaVariables) {
+    tempOf.set(ssa, temp);
+    const list = byName.get(ssa.name);
+    if (list) list.push(ssa);
+    else byName.set(ssa.name, [ssa]);
   }
-  if (entryFor.size === 0) return;
+  if (byName.size === 0) return;
+
+  const defs = collectDefSites(func);
+  const idom = new Ir.Analysis.Statistics.Analyzer().analyze({
+    ...module,
+    main: func,
+  }).dominatorTree;
 
   for (const [blockId, block] of func.blocks) {
-    const live = liveMemoryHomed(blockId, block, liveness, allocations);
-    const entries = [...live]
-      .map((id) => entryFor.get(id))
-      .filter((e): e is VariableEntry => e !== undefined);
-    if (entries.length === 0) continue;
-
-    for (const inst of block.instructions) {
-      inst.operationDebug = withVariables(inst.operationDebug, entries);
-    }
+    block.instructions.forEach((inst, i) => {
+      const entries: VariableEntry[] = [];
+      for (const versions of byName.values()) {
+        const current = currentVersionAt(
+          versions,
+          tempOf,
+          defs,
+          blockId,
+          i,
+          idom,
+        );
+        if (!current) continue;
+        entries.push(
+          buildEntry(
+            current.ssa,
+            allocations[current.temp],
+            frameSize,
+            sourceId,
+          ),
+        );
+      }
+      if (entries.length > 0) {
+        inst.operationDebug = withVariables(inst.operationDebug, entries);
+      }
+    });
   }
 }
 
 /**
- * Enrich a module's instructions with local-variable debug info.
- * Returns the same module (mutated in place); safe to call before
+ * Enrich a module's instructions with per-instruction guaranteed-
+ * known local-variable snapshots. Mutates in place; safe before
  * generation.
  */
 export function enrich(
   module: Ir.Module,
-  liveness: Liveness.Module.Info,
   memory: Memory.Module.Info,
 ): Ir.Module {
   const sourceId = module.sourceId;
 
-  const targets: {
-    func: Ir.Function;
-    live?: Liveness.Function.Info;
-    mem?: Memory.Function.Info;
-  }[] = [
-    { func: module.main, live: liveness.main, mem: memory.main },
-    ...(module.create
-      ? [{ func: module.create, live: liveness.create, mem: memory.create }]
-      : []),
+  const targets: { func: Ir.Function; mem?: Memory.Function.Info }[] = [
+    { func: module.main, mem: memory.main },
+    ...(module.create ? [{ func: module.create, mem: memory.create }] : []),
     ...[...module.functions].map(([name, func]) => ({
       func,
-      live: liveness.functions[name],
       mem: memory.functions[name],
     })),
   ];
 
-  for (const { func, live, mem } of targets) {
-    if (!live || !mem) continue;
-    enrichFunction(func, live, mem, sourceId);
+  for (const { func, mem } of targets) {
+    if (!mem) continue;
+    enrichFunction(func, module, mem, sourceId);
   }
 
   return module;
