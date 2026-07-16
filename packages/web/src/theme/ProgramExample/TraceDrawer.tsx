@@ -1112,7 +1112,10 @@ function OpcodeList({
       {groups.map((group, gi) => (
         <div key={gi} className="opcode-group">
           {group.label && (
-            <div className={`opcode-group-label label-${group.labelKind}`}>
+            <div
+              className={`opcode-group-label label-${group.labelKind}`}
+              title={group.label}
+            >
               {group.label}
             </div>
           )}
