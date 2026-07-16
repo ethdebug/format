@@ -52,13 +52,5 @@ export namespace Function {
     version: number;
     /** Source location of declaration */
     loc?: Ast.SourceLocation;
-    /**
-     * Source offset at which the variable's enclosing lexical scope
-     * ends. Together with `loc`, gives the lexical extent over which
-     * the variable is in scope: `[loc.offset, scopeEnd)`. Used to
-     * list a variable (name + type) across its scope, independently
-     * of whether its value is currently located.
-     */
-    scopeEnd?: number;
   }
 }

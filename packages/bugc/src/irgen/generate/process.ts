@@ -374,17 +374,6 @@ export namespace Process {
       const state: State = yield { type: "peek" };
       const currentMetadata = state.function.ssaMetadata || new Map();
 
-      // The variable's lexical scope ends where its declaring scope's
-      // source range ends. `scopeId` is `scope_<index>_<name>`; the
-      // index is the scope's position on the stack.
-      const indexMatch = /^scope_(\d+)_/.exec(scopeId);
-      const scopeRange = indexMatch
-        ? state.scopes.stack[Number(indexMatch[1])]?.range
-        : undefined;
-      const scopeEnd = scopeRange
-        ? Number(scopeRange.offset) + Number(scopeRange.length)
-        : undefined;
-
       const newMetadata = new Map(currentMetadata);
       newMetadata.set(tempId, {
         name,
@@ -392,7 +381,6 @@ export namespace Process {
         type,
         version,
         loc,
-        scopeEnd,
       });
 
       // Update function with new metadata
