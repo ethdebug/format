@@ -12,7 +12,7 @@ import React, {
   useRef,
 } from "react";
 import type { Pointer, Program } from "@ethdebug/format";
-import { dereference, Data } from "@ethdebug/pointers";
+import { dereference, decodeValue, Data } from "@ethdebug/pointers";
 import {
   type TraceStep,
   type CallInfo,
@@ -230,6 +230,7 @@ async function resolveVariableValue(
   step: TraceStep,
   templates: Pointer.Templates,
   identifier?: string,
+  type?: unknown,
 ): Promise<string> {
   const state = traceStepToMachineState(step);
   const cursor = await dereference(pointer, {
@@ -237,16 +238,19 @@ async function resolveVariableValue(
     templates,
   });
   const view = await cursor.view(state);
+  const decode = (data: Data): string =>
+    decodeValue(data, type as Parameters<typeof decodeValue>[1]);
 
   // Prefer the value region named after the variable. A memory-homed local's
   // pointer is a group that also carries frame-scaffolding regions, so
   // joining every region would surface the frame pointer alongside the value.
   // `regions.lookup` gives the last concrete region generated with a given
-  // name — for a scalar that is exactly the value region.
+  // name — for a scalar that is exactly the value region. Decode it into a
+  // readable value (uint -> decimal, address -> checksummed, …) by type.
   if (identifier) {
     const region = view.regions.lookup[identifier];
     if (region) {
-      return (await view.read(region)).toHex();
+      return decode(await view.read(region));
     }
   }
 
@@ -262,12 +266,12 @@ async function resolveVariableValue(
     return "0x";
   }
 
-  // Single region: return its hex value
+  // Single region: decode its value
   if (values.length === 1) {
-    return values[0].toHex();
+    return decode(values[0]);
   }
 
-  // Multiple regions: concatenate hex values
+  // Multiple regions (composite) — not a scalar; concatenate raw hex.
   return values.map((d) => d.toHex()).join(", ");
 }
 
@@ -345,6 +349,7 @@ export function TraceProvider({
           currentStep,
           templates,
           v.identifier,
+          v.type,
         );
         if (!cancelled) {
           resolved[index] = {

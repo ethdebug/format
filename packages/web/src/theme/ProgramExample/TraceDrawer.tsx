@@ -24,7 +24,12 @@ import {
   extractSourceRange,
 } from "@ethdebug/bugc-react";
 import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
-import { dereference, Data, type Machine } from "@ethdebug/pointers";
+import {
+  dereference,
+  decodeValue,
+  Data,
+  type Machine,
+} from "@ethdebug/pointers";
 import {
   buildCallStack,
   extractCallInfoFromInstruction,
@@ -382,7 +387,7 @@ function TraceDrawerContent(): JSX.Element {
         try {
           next.set(
             v.identifier,
-            await resolvePointer(v.pointer, state, v.identifier),
+            await resolvePointer(v.pointer, state, v.identifier, v.rawType),
           );
         } catch {
           // leave unresolved
@@ -1076,7 +1081,10 @@ function formatBigInt(value: bigint): string {
 // Variable type extracted from debug context
 interface Variable {
   identifier: string;
+  /** Formatted type string, for display. */
   type?: string;
+  /** Raw ethdebug type specifier, for value decoding. */
+  rawType?: unknown;
   pointer?: unknown;
 }
 
@@ -1097,7 +1105,7 @@ function VariablesDisplay({
           <div key={i} className="variable-item">
             <span className="variable-name">{variable.identifier}</span>
             {value !== undefined && (
-              <code className="variable-value">{formatAsDecimal(value)}</code>
+              <code className="variable-value">{value}</code>
             )}
             {variable.type && (
               <span className="variable-type">{variable.type}</span>
@@ -1206,6 +1214,7 @@ function extractVariables(context: unknown): Variable[] {
         variables.push({
           identifier: String(variable.identifier),
           type: variable.type ? formatType(variable.type) : undefined,
+          rawType: variable.type,
           pointer: variable.pointer,
         });
       }
@@ -1393,18 +1402,22 @@ function traceStepToState(
 }
 
 /**
- * Resolve a single pointer against a machine state.
+ * Resolve a single pointer against a machine state, decoding the value
+ * region into a readable string when the variable's type is known.
  */
 async function resolvePointer(
   pointer: unknown,
   state: Machine.State,
   identifier?: string,
+  type?: unknown,
 ): Promise<string> {
   const cursor = await dereference(
     pointer as Parameters<typeof dereference>[0],
     { state, templates: {} },
   );
   const view = await cursor.view(state);
+  const decode = (data: Data): string =>
+    decodeValue(data, type as Parameters<typeof decodeValue>[1]);
 
   // Prefer the value region named after the variable. A memory-homed local's
   // pointer is a group that also carries frame-scaffolding regions, so
@@ -1412,7 +1425,7 @@ async function resolvePointer(
   if (identifier) {
     const region = view.regions.lookup[identifier];
     if (region) {
-      return (await view.read(region)).toHex();
+      return decode(await view.read(region));
     }
   }
 
@@ -1425,7 +1438,8 @@ async function resolvePointer(
   }
 
   if (values.length === 0) return "0x";
-  if (values.length === 1) return values[0].toHex();
+  if (values.length === 1) return decode(values[0]);
+  // Composite (multiple regions) — not a scalar; show raw hex words.
   return values.map((d) => d.toHex()).join(", ");
 }
 
