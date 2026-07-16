@@ -329,7 +329,7 @@ function TraceDrawerContent(): JSX.Element {
 
       const resolvePromises = ptrs.map(async (ptr, i) => {
         try {
-          const value = await resolvePointer(ptr, state);
+          const value = await resolvePointer(ptr, state, names?.[i]);
           args[i] = { ...args[i], value };
         } catch (err) {
           args[i] = {
@@ -380,7 +380,10 @@ function TraceDrawerContent(): JSX.Element {
       currentVariables.map(async (v) => {
         if (!v.pointer) return;
         try {
-          next.set(v.identifier, await resolvePointer(v.pointer, state));
+          next.set(
+            v.identifier,
+            await resolvePointer(v.pointer, state, v.identifier),
+          );
         } catch {
           // leave unresolved
         }
@@ -1395,6 +1398,7 @@ function traceStepToState(
 async function resolvePointer(
   pointer: unknown,
   state: Machine.State,
+  identifier?: string,
 ): Promise<string> {
   const cursor = await dereference(
     pointer as Parameters<typeof dereference>[0],
@@ -1402,6 +1406,19 @@ async function resolvePointer(
   );
   const view = await cursor.view(state);
 
+  // Prefer the value region named after the variable. A memory-homed local's
+  // pointer is a group that also carries frame-scaffolding regions, so
+  // joining every region would surface the frame pointer alongside the value.
+  if (identifier) {
+    const region = view.regions.lookup[identifier];
+    if (region) {
+      return (await view.read(region)).toHex();
+    }
+  }
+
+  // Fallback: no identifier-named region — read every region (covers
+  // pointers whose value region isn't identifier-named, e.g. anonymous
+  // single-region storage locals).
   const values: Data[] = [];
   for (const region of view.regions) {
     values.push(await view.read(region));
