@@ -229,6 +229,7 @@ async function resolveVariableValue(
   pointer: Pointer,
   step: TraceStep,
   templates: Pointer.Templates,
+  identifier?: string,
 ): Promise<string> {
   const state = traceStepToMachineState(step);
   const cursor = await dereference(pointer, {
@@ -237,7 +238,20 @@ async function resolveVariableValue(
   });
   const view = await cursor.view(state);
 
-  // Collect values from all regions
+  // Prefer the value region named after the variable. A memory-homed local's
+  // pointer is a group that also carries frame-scaffolding regions, so
+  // joining every region would surface the frame pointer alongside the value.
+  // `regions.lookup` gives the last concrete region generated with a given
+  // name — for a scalar that is exactly the value region.
+  if (identifier) {
+    const region = view.regions.lookup[identifier];
+    if (region) {
+      return (await view.read(region)).toHex();
+    }
+  }
+
+  // Fallback: no identifier-named region — read every region (previous
+  // behavior), covering pointers whose value region isn't identifier-named.
   const values: Data[] = [];
   for (const region of view.regions) {
     const data = await view.read(region);
@@ -330,6 +344,7 @@ export function TraceProvider({
           v.pointer as Pointer,
           currentStep,
           templates,
+          v.identifier,
         );
         if (!cancelled) {
           resolved[index] = {
@@ -427,6 +442,7 @@ export function TraceProvider({
             ptr as Pointer,
             step,
             templates,
+            names?.[i],
           );
           args[i] = { ...args[i], value };
         } catch (err) {
