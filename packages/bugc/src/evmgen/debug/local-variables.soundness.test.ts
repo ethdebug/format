@@ -241,11 +241,11 @@ storage { [0] r: uint256; }
 create {}
 code { r = sh(0); }`; // n=0 → else path → returns outer x = 111
     const res = await executeProgram(source);
-    if (!res.compiled) return; // if BUG rejects shadowing, vacuously sound
+    // If BUG rejects shadowing, it's vacuously sound.
+    if (!res.compiled || !res.program) return;
     expect(res.value).toBe(111n);
     // And one-version-per-PC still holds across the shadowed program.
-    const program = res.program;
-    for (const instr of program.instructions) {
+    for (const instr of res.program.instructions) {
       const names = localsOf(instr.context)
         .map((v) => v.identifier)
         .filter((id): id is string => typeof id === "string");
