@@ -167,6 +167,7 @@ export namespace State {
   export interface Scope {
     readonly ssaVars: Map<string, SsaVariable>; // SSA variable tracking
     readonly usedNames: Map<string, number>; // For handling shadowing
+    readonly range?: Ast.SourceLocation; // Lexical extent of this scope
   }
 
   /**
@@ -189,9 +190,12 @@ export namespace State {
       (read) => (state) => read(state.scopes),
     );
 
-    export const push = () =>
+    export const push = (range?: Ast.SourceLocation) =>
       update((scopes) => ({
-        stack: [...scopes.stack, { ssaVars: new Map(), usedNames: new Map() }],
+        stack: [
+          ...scopes.stack,
+          { ssaVars: new Map(), usedNames: new Map(), range },
+        ],
       }));
 
     export const pop = () =>

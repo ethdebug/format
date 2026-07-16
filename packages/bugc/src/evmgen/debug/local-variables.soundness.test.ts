@@ -15,6 +15,7 @@ import { compile } from "#compiler";
 import { Executor } from "@ethdebug/evm";
 import { bytesToHex } from "ethereum-cryptography/utils";
 import type * as Format from "@ethdebug/format";
+import { Program } from "@ethdebug/format";
 
 async function runtimeProgram(source: string): Promise<Format.Program> {
   const r = await compile({ to: "bytecode", source, optimizer: { level: 0 } });
@@ -250,6 +251,46 @@ code { r = sh(0); }`; // n=0 → else path → returns outer x = 111
         .map((v) => v.identifier)
         .filter((id): id is string => typeof id === "string");
       expect(new Set(names).size).toBe(names.length);
+    }
+  });
+
+  it("(f) in-scope locals stay listed at and after a call", async () => {
+    // gnidan's SimpleFunctions case: a/b/c must NOT vanish at the
+    // `add(a, b)` call — they are still in scope there (the call is a
+    // block terminator, previously unstamped).
+    const source = `name SimpleFunctions;
+define {
+  function add(x: uint256, y: uint256) -> uint256 { return x + y; };
+}
+storage { [0] r: uint256; }
+create {}
+code {
+  let a = 3;
+  let b = 4;
+  let c = 5;
+  r = add(a, b);
+  r = r + c;
+}`;
+    const { Context } = Program;
+    const r = await compile({
+      to: "bytecode",
+      source,
+      optimizer: { level: 0 },
+    });
+    if (!r.success) throw new Error("compile failed");
+    const program = r.value.bytecode.runtimeProgram;
+
+    // The invoke JUMP into `add` must still list a, b and c.
+    const invokeJump = program.instructions.find(
+      (i) =>
+        i.operation?.mnemonic === "JUMP" &&
+        i.context !== undefined &&
+        Context.isInvoke(i.context),
+    );
+    expect(invokeJump, "invoke JUMP for add").toBeDefined();
+    const names = localsOf(invokeJump!.context).map((v) => v.identifier);
+    for (const id of ["a", "b", "c"]) {
+      expect(names, `${id} at the call`).toContain(id);
     }
   });
 

@@ -1,14 +1,21 @@
 /**
- * Local-variable debug info (emission, O0) — per-instruction
- * guaranteed-known snapshot.
+ * Local-variable debug info (emission, O0) — per-instruction snapshot
+ * splitting two independent axes:
  *
- * Each instruction's `variables` context lists the local variables
- * (parameters + `let`s) whose value the compiler can GUARANTEE is
- * known after that instruction executes. Availability is computed by
- * DOMINANCE (not liveness): a variable is known at P iff the def of
- * its current SSA version dominates-or-equals P — so it is never
- * reported before its defining store (no stale/uninitialized value),
- * and reassignment resolves to the current version's slot.
+ *  - LIST (which variables appear) = LEXICAL SCOPE. Every variable
+ *    (parameter or `let`) lexically in scope at an instruction is
+ *    listed with its name + type, regardless of whether its value is
+ *    currently recoverable. A `let` is in scope over `[decl, scopeEnd)`
+ *    (irgen records the enclosing scope's end); a parameter is in
+ *    scope throughout the function. Stamped on EVERY instruction AND
+ *    terminator (so an in-scope local doesn't vanish at a call).
+ *  - POINTER (value vs type-only) = AVAILABILITY by DOMINANCE. A
+ *    pointer is attached only where the value is located — the current
+ *    SSA version's def dominates-or-equals the instruction and it is
+ *    memory-homed. Otherwise the record is type-only ("in scope, no
+ *    value"). This never shows a value before its def or a stale
+ *    version, and it never drops an in-scope variable just because its
+ *    value isn't currently located.
  *
  * Records are partial: `type` is always emitted (always known in
  * BUG); `pointer` is emitted only where the value is located —
@@ -192,21 +199,74 @@ function collectDefSites(func: Ir.Function): Map<string, DefSite> {
   return defs;
 }
 
+/** The source offset of an instruction/terminator, from its `code`
+ * context, if present. */
+function codeOffset(
+  debug: Ir.Instruction.Debug | undefined,
+): number | undefined {
+  const code = (
+    debug?.context as { code?: { range?: { offset?: unknown } } } | undefined
+  )?.code;
+  const offset = code?.range?.offset;
+  return offset == null ? undefined : Number(offset);
+}
+
 /**
- * The current SSA version of a source identifier at (block,index):
- * among the identifier's versions whose def dominates-or-equals the
- * position, the one with the LATEST (deepest-dominating) def — which
- * resolves reassignment (later def wins) to the value actually live.
- *
- * Scope note: dominance never "ends", so a def dominates its whole
- * dominated subtree. For a straight-line block-local that means it
- * can remain reported after its lexical block; for shadowing the
- * inner version can win past its block. That's a scope-precision
- * limit of the dominance-only model (a later scope-exit refinement
- * tightens it); it never reports a value before its def.
+ * Lexical scope of a source identifier, as bytecode-source intervals.
+ * `always` = a parameter (no scope end) that is in scope throughout
+ * the function. `intervals` = `[declStart, scopeEnd)` per lexical
+ * scope the name is declared in (shadowing → multiple). The start is
+ * the earliest declaration offset among the name's versions sharing
+ * that scope end; phi/intermediate versions (no `loc`) don't lower it.
  */
-function currentVersionAt(
-  versions: Ir.Function.SsaVariable[],
+interface NameScope {
+  always: boolean;
+  intervals: Array<[start: number, end: number]>;
+}
+
+function buildNameScopes(
+  byName: Map<string, Ir.Function.SsaVariable[]>,
+): Map<string, NameScope> {
+  const out = new Map<string, NameScope>();
+  for (const [name, versions] of byName) {
+    let always = false;
+    const startByEnd = new Map<number, number>();
+    for (const v of versions) {
+      if (v.scopeEnd === undefined) {
+        always = true;
+        continue;
+      }
+      if (!v.loc) continue; // no declaration offset → don't set start
+      const start = Number(v.loc.offset);
+      const prev = startByEnd.get(v.scopeEnd);
+      startByEnd.set(
+        v.scopeEnd,
+        prev === undefined ? start : Math.min(prev, start),
+      );
+    }
+    out.set(name, {
+      always,
+      intervals: [...startByEnd].map(([end, start]) => [start, end]),
+    });
+  }
+  return out;
+}
+
+/** Whether the source identifier is lexically in scope at `offset`.
+ * Unknown offset ⇒ don't drop (treated as in scope). */
+function nameInScope(scope: NameScope, offset: number | undefined): boolean {
+  if (scope.always) return true;
+  if (offset === undefined) return true;
+  return scope.intervals.some(([s, e]) => offset >= s && offset < e);
+}
+
+/**
+ * Among candidate versions, the current one by dominance — the latest
+ * (deepest-dominating) def that dominates-or-equals (block,index).
+ * Returns undefined if none is available yet (in scope, not located).
+ */
+function dominatingVersion(
+  candidates: Ir.Function.SsaVariable[],
   tempOf: Map<Ir.Function.SsaVariable, string>,
   defs: Map<string, DefSite>,
   block: string,
@@ -216,7 +276,7 @@ function currentVersionAt(
   let best:
     | { ssa: Ir.Function.SsaVariable; temp: string; def: DefSite }
     | undefined;
-  for (const ssa of versions) {
+  for (const ssa of candidates) {
     const temp = tempOf.get(ssa)!;
     const def = defs.get(temp);
     if (!def || !defDominates(def, block, index, idom)) continue;
@@ -224,7 +284,6 @@ function currentVersionAt(
       best = { ssa, temp, def };
       continue;
     }
-    // Prefer the later/deeper dominating def.
     const later =
       def.block === best.def.block
         ? def.index > best.def.index
@@ -235,8 +294,53 @@ function currentVersionAt(
 }
 
 /**
- * Stamp each instruction of a function with its guaranteed-known
- * variable snapshot.
+ * Build the snapshot at (block,index) with source `offset`. LIST axis:
+ * every lexically-in-scope variable is listed (name + type). POINTER
+ * axis: a pointer is attached only where the value is located (its
+ * current version's def dominates and it is memory-homed); otherwise
+ * the record is type-only ("in scope, no value").
+ */
+function snapshotAt(
+  byName: Map<string, Ir.Function.SsaVariable[]>,
+  scopes: Map<string, NameScope>,
+  tempOf: Map<Ir.Function.SsaVariable, string>,
+  defs: Map<string, DefSite>,
+  block: string,
+  index: number,
+  offset: number | undefined,
+  idom: Record<string, string | null>,
+  allocations: Record<string, Memory.Allocation>,
+  frameSize: number | undefined,
+  sourceId: string,
+): VariableEntry[] {
+  const entries: VariableEntry[] = [];
+  for (const [name, versions] of byName) {
+    // LIST axis: is the identifier lexically in scope here?
+    if (!nameInScope(scopes.get(name)!, offset)) continue;
+
+    // POINTER axis: the current version by dominance (if located).
+    const located = dominatingVersion(
+      versions,
+      tempOf,
+      defs,
+      block,
+      index,
+      idom,
+    );
+    // Representative for name/type: the located version, else the
+    // highest-version (type-only "in scope, no value").
+    const repr =
+      located?.ssa ??
+      versions.reduce((a, b) => (b.version > a.version ? b : a));
+    const allocation = located ? allocations[located.temp] : undefined;
+    entries.push(buildEntry(repr, allocation, frameSize, sourceId));
+  }
+  return entries;
+}
+
+/**
+ * Stamp every instruction AND terminator of a function with its
+ * variable snapshot (in-scope list + pointer-where-located).
  */
 function enrichFunction(
   func: Ir.Function,
@@ -248,8 +352,6 @@ function enrichFunction(
 
   const { allocations, frameSize } = memory;
 
-  // Group SSA versions by source identifier; remember each version's
-  // temp id.
   const byName = new Map<string, Ir.Function.SsaVariable[]>();
   const tempOf = new Map<Ir.Function.SsaVariable, string>();
   for (const [temp, ssa] of func.ssaVariables) {
@@ -260,38 +362,53 @@ function enrichFunction(
   }
   if (byName.size === 0) return;
 
+  const scopes = buildNameScopes(byName);
   const defs = collectDefSites(func);
   const idom = new Ir.Analysis.Statistics.Analyzer().analyze({
     ...module,
     main: func,
   }).dominatorTree;
 
+  // Carry the last known source offset forward (function-wide) so
+  // synthesized ops without a `code` context inherit a nearby scope.
+  let lastOffset: number | undefined;
+  const stamp = (
+    debug: Ir.Instruction.Debug | undefined,
+    blockId: string,
+    index: number,
+  ): Ir.Instruction.Debug => {
+    const offset = codeOffset(debug) ?? lastOffset;
+    if (offset !== undefined) lastOffset = offset;
+    const entries = snapshotAt(
+      byName,
+      scopes,
+      tempOf,
+      defs,
+      blockId,
+      index,
+      offset,
+      idom,
+      allocations,
+      frameSize,
+      sourceId,
+    );
+    // withVariables returns the (possibly unchanged) debug, never
+    // undefined, so it is safe to assign back to a required field.
+    return withVariables(debug, entries);
+  };
+
   for (const [blockId, block] of func.blocks) {
     block.instructions.forEach((inst, i) => {
-      const entries: VariableEntry[] = [];
-      for (const versions of byName.values()) {
-        const current = currentVersionAt(
-          versions,
-          tempOf,
-          defs,
-          blockId,
-          i,
-          idom,
-        );
-        if (!current) continue;
-        entries.push(
-          buildEntry(
-            current.ssa,
-            allocations[current.temp],
-            frameSize,
-            sourceId,
-          ),
-        );
-      }
-      if (entries.length > 0) {
-        inst.operationDebug = withVariables(inst.operationDebug, entries);
-      }
+      inst.operationDebug = stamp(inst.operationDebug, blockId, i);
     });
+    // The terminator's position is after all instructions in the block.
+    if (block.terminator) {
+      block.terminator.operationDebug = stamp(
+        block.terminator.operationDebug,
+        blockId,
+        block.instructions.length,
+      );
+    }
   }
 }
 

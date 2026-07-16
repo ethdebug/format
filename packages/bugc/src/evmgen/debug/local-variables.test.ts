@@ -42,7 +42,11 @@ function localEntries(
     const ctx = instr.context as Record<string, unknown> | undefined;
     if (!ctx || !Array.isArray(ctx.variables)) continue;
     for (const v of ctx.variables as Array<Record<string, unknown>>) {
-      if (typeof v.identifier === "string" && !byId.has(v.identifier)) {
+      if (typeof v.identifier !== "string") continue;
+      const existing = byId.get(v.identifier);
+      // Prefer the located record: a variable now appears type-only
+      // (in scope, no value) as well as with a pointer where located.
+      if (!existing || (!existing.pointer && v.pointer)) {
         byId.set(v.identifier, v);
       }
     }

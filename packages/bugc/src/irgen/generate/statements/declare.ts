@@ -102,6 +102,7 @@ function* buildVariableDeclaration(
       decl.name,
       irType,
       allocTemp,
+      decl.loc ?? undefined,
     );
 
     // If there's an initializer, store the value in memory
@@ -183,7 +184,11 @@ function* buildVariableDeclaration(
       const value = yield* buildExpression(decl.initializer, {
         kind: "rvalue",
       });
-      const ssaVar = yield* Process.Variables.declare(decl.name, irType);
+      const ssaVar = yield* Process.Variables.declare(
+        decl.name,
+        irType,
+        decl.loc ?? undefined,
+      );
 
       // Generate assignment to the new SSA temp
       if (value.kind === "temp") {
@@ -207,7 +212,11 @@ function* buildVariableDeclaration(
       }
     } else {
       // No initializer - declare with default value
-      const ssaVar = yield* Process.Variables.declare(decl.name, irType);
+      const ssaVar = yield* Process.Variables.declare(
+        decl.name,
+        irType,
+        decl.loc ?? undefined,
+      );
       yield* Process.Instructions.emit({
         kind: "const",
         value: 0n,
