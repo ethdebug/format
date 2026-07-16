@@ -14,10 +14,6 @@
       "types": "./src/data.ts",
       "default": "./dist/src/data.js"
     },
-    "#decode": {
-      "types": "./src/decode.ts",
-      "default": "./dist/src/decode.js"
-    },
     "#evaluate": {
       "types": "./src/evaluate.ts",
       "default": "./dist/src/evaluate.js"

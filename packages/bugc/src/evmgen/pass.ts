@@ -9,7 +9,6 @@ import { Error as EvmgenError, ErrorCode } from "#evmgen/errors";
 import { buildProgram } from "#evmgen/program-builder";
 
 import { Layout, Liveness, Memory } from "#evmgen/analysis";
-import { enrich as enrichLocalVariables } from "./debug/local-variables.js";
 
 /**
  * Output produced by the EVM generation pass
@@ -57,11 +56,6 @@ const pass: Pass<{
           ),
         );
       }
-
-      // Attach local-variable debug info (memory-homed locals) to
-      // the IR before generation, so it propagates onto the emitted
-      // instructions. Emission-only; no-op where nothing is spilled.
-      enrichLocalVariables(ir, memoryResult.value);
 
       // Analyze block layout
       const blockResult = Layout.Module.perform(ir);
