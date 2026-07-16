@@ -1,5 +1,6 @@
 import type * as Format from "@ethdebug/format";
 import type * as Ir from "#ir";
+import { Utils as IrUtils } from "#ir";
 import type * as Evm from "#evm";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
@@ -411,16 +412,24 @@ function generateReturnEpilogue<S extends Stack>(
 /**
  * Build JUMP instruction options for a TCO-replaced tail call.
  *
- * The JUMP carries BOTH discriminators on a single flat
- * context object:
+ * The JUMP carries three keys on a single flat context
+ * object:
  *   - return: the previous iteration's return
  *   - invoke: the new iteration's call
+ *   - transform: ["tailcall"]
  *
  * Semantically the debugger sees frame depth stay constant
  * across the back-edge JUMP: the previous frame pops, the
  * new one pushes, on the same instruction. The function's
  * terminal RETURN (elsewhere) emits a return context
  * normally, popping the final iteration's frame.
+ *
+ * The `transform: ["tailcall"]` key is an additive
+ * annotation: it does not replace the invoke/return pair
+ * (which state the source-level facts) but tells debuggers
+ * the pair was realized as a TCO back-edge rather than a
+ * real frame push/pop, so they can avoid inventing a
+ * spurious frame.
  *
  * The invoke mirrors the normal caller-JUMP invoke
  * (identity + declaration + code target, no argument
@@ -432,7 +441,7 @@ function generateReturnEpilogue<S extends Stack>(
  * resolved later by patchInvokeTarget.
  */
 function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
-  debug: { context: Format.Program.Context };
+  debug: Ir.Instruction.Debug;
 } {
   const declaration =
     tailCall.declarationLoc && tailCall.declarationSourceId
@@ -462,7 +471,16 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
     },
   };
 
-  return { debug: { context: combined as Format.Program.Context } };
+  // Route through the shared helper so all transform emission
+  // (fold/tailcall/coalesce/...) composes consistently: the
+  // `transform` marker becomes a flat sibling key appended to
+  // any existing transform array.
+  return {
+    debug: IrUtils.addTransform(
+      { context: combined as Format.Program.Context },
+      "tailcall",
+    ),
+  };
 }
 
 /** PUSH an integer as the smallest PUSHn. */

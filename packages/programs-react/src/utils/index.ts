@@ -18,6 +18,7 @@ export {
   findInstructionAtPc,
   extractVariablesFromInstruction,
   extractCallInfoFromInstruction,
+  extractTransformFromInstruction,
   buildPcToInstructionMap,
   buildCallStack,
   type TraceStep,

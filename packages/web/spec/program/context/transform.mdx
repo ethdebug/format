@@ -114,6 +114,7 @@ single JUMP.
 
 Reach for [`gather`](/spec/program/context/gather) only when
 two contexts would collide on the same key — e.g., two
-independent `variables` blocks or two `frame`s from different
+independent `variables` blocks or two
+[`frame`](/spec/program/context/frame)s from different
 pipeline stages. When keys don't collide, the flat form is
 preferred.

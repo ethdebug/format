@@ -524,6 +524,7 @@ code { r = count(0, 5); }`;
               Context.isReturn(instr.context),
           );
           expect(tcoJump).toBeDefined();
+
           const ctx = tcoJump!.context as Format.Program.Context.Invoke;
           const invocation = ctx.invoke;
           expect(Invocation.isInternalCall(invocation)).toBe(true);

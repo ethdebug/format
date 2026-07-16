@@ -173,6 +173,49 @@ instead of (or alongside) a reason pointer:
 }`}
 </SchemaExample>
 
+## Optimized code: the tailcall transform
+
+When the compiler optimizes tail-recursive calls, it turns the recursion
+into a loop: the recursive call becomes a **back-edge** — a single JUMP that
+ends one iteration and begins the next without pushing a frame. That one
+JUMP carries three facts at once, composed as sibling keys on a single
+context (the flat form described on the
+[transform context](/spec/program/context/transform) page):
+
+<SchemaExample
+  schema="program/context/transform"
+  href="/spec/program/context/transform"
+  title="TCO back-edge: return + invoke + transform"
+>
+  {`{
+  "return": {
+    "identifier": "sum"
+  },
+  "invoke": {
+    "jump": true,
+    "identifier": "sum",
+    "target": {
+      "pointer": { "location": "code", "offset": "0x33", "length": 1 }
+    }
+  },
+  "transform": ["tailcall"]
+}`}
+</SchemaExample>
+
+The `return` and `invoke` state the source-level facts — the previous
+iteration returned, the next was invoked — and `transform: ["tailcall"]`
+explains how the compiler realized that pair as one JUMP. Because no value
+crosses a frame boundary here, the `return` carries no `data` and the
+`invoke` no `arguments`: the accumulator is threaded through the loop
+directly, and the invoke `target` points at the loop header the JUMP
+re-enters. A debugger that ignores the transform still reads a coherent
+invoke/return sequence; one that understands it can show that the call stack
+isn't really growing.
+
+To watch this happen — flipping the optimizer between **O0** and **O2** and
+stepping through the back-edge — see the tail-call optimization examples in
+the [Trace playground](/docs/explore/trace-playground).
+
 ## Trace data structure
 
 A trace step captures the EVM state at a single point:
