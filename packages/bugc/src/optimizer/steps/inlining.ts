@@ -187,7 +187,10 @@ export class InliningStep extends BaseOptimizationStep {
         (inst, idx) => {
           const cloned = remapInstruction(inst, remapValue, idRename);
           // Mark every inlined instruction for membership.
-          cloned.operationDebug = addInlineMarker(cloned.operationDebug);
+          cloned.operationDebug = Ir.Utils.addTransform(
+            cloned.operationDebug,
+            "inline",
+          );
           // Virtual invoke on the first instruction of the entry.
           if (isEntry && idx === 0) {
             cloned.operationDebug = mergeDiscriminator(
@@ -225,8 +228,9 @@ export class InliningStep extends BaseOptimizationStep {
         terminator = {
           kind: "jump",
           target: call.continuation,
-          operationDebug: addInlineMarker(
+          operationDebug: Ir.Utils.addTransform(
             mergeDiscriminator({}, "return", inlineReturn),
+            "inline",
           ),
         };
       } else {
@@ -527,12 +531,6 @@ function recomputePredecessors(fn: Ir.Function): void {
 }
 
 // ---- debug-context composition ----
-
-function addInlineMarker(
-  debug: Ir.Instruction.Debug | undefined,
-): Ir.Instruction.Debug {
-  return Ir.Utils.addTransform(debug, "inline");
-}
 
 /**
  * Attach a discriminator (invoke/return) as a flat sibling key on
