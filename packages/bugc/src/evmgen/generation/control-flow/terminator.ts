@@ -472,8 +472,22 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         }
       : undefined;
 
+  // The call site's own source range, composed flat alongside the
+  // invoke/return (disjoint keys). This maps the back-edge JUMP back
+  // to the recursive call expression, matching the `{invoke, code}` a
+  // real caller JUMP carries and the `{return, code}` on the
+  // continuation JUMPDEST for a non-TCO call.
+  const callSiteCode =
+    tailCall.callSiteLoc && tailCall.callSiteSourceId
+      ? {
+          source: { id: tailCall.callSiteSourceId },
+          range: tailCall.callSiteLoc,
+        }
+      : undefined;
+
   const combined: Format.Program.Context.Return &
-    Format.Program.Context.Invoke = {
+    Format.Program.Context.Invoke &
+    Partial<Format.Program.Context.Code> = {
     return: {
       identifier: tailCall.function,
       ...(declaration ? { declaration } : {}),
@@ -490,6 +504,7 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
         },
       },
     },
+    ...(callSiteCode ? { code: callSiteCode } : {}),
   };
 
   // Route through the shared helper so all transform emission

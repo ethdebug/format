@@ -1,4 +1,5 @@
 import * as Ir from "#ir";
+import type * as Format from "@ethdebug/format";
 import {
   BaseOptimizationStep,
   type OptimizationContext,
@@ -152,10 +153,25 @@ export class TailCallOptimizationStep extends BaseOptimizationStep {
           // debugger can still see the recursive call in
           // the trace, even though the implementation is
           // now a block-internal jump.
+          //
+          // The call expression's own source range lives on the
+          // original call terminator's operationDebug. Carry it on
+          // the tailCall so the back-edge JUMP can map back to the
+          // call site (mirroring the flat `{invoke, code}` a real
+          // caller JUMP gets), not just the callee declaration.
+          const callSiteCode = (
+            callTerm.operationDebug?.context as
+              | { code?: Format.Program.Context.Code["code"] }
+              | undefined
+          )?.code;
           const tailCall: Ir.Block.TailCall = {
             function: funcName,
             ...(func.loc ? { declarationLoc: func.loc } : {}),
             ...(func.sourceId ? { declarationSourceId: func.sourceId } : {}),
+            ...(callSiteCode?.range ? { callSiteLoc: callSiteCode.range } : {}),
+            ...(typeof callSiteCode?.source?.id === "string"
+              ? { callSiteSourceId: callSiteCode.source.id }
+              : {}),
           };
 
           block.terminator = {

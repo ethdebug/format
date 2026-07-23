@@ -47,6 +47,10 @@ export namespace Block {
     declarationLoc?: Ast.SourceLocation;
     /** Source ID for the declaration (inherited from module) */
     declarationSourceId?: string;
+    /** Source location of the call site (the recursive call expression) */
+    callSiteLoc?: Ast.SourceLocation;
+    /** Source ID for the call site (inherited from module) */
+    callSiteSourceId?: string;
   }
 
   /**
