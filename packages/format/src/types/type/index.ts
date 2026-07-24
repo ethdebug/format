@@ -237,6 +237,8 @@ export namespace Type {
       class?: "elementary";
       kind: "contract";
       payable?: boolean;
+      library?: boolean;
+      interface?: boolean;
       definition?: Definition;
     }
 
@@ -246,6 +248,18 @@ export namespace Type {
       mayHaveClass(value, "elementary") &&
       hasKind(value, "contract") &&
       (!("payable" in value) || typeof value.payable === "boolean") &&
+      (!("library" in value) || typeof value.library === "boolean") &&
+      (!("interface" in value) || typeof value.interface === "boolean") &&
+      // The schema's oneOf splits contract types three ways (normal /
+      // library / interface). `library` and `interface` cannot both be
+      // true: that shape satisfies two branches at once, which the
+      // oneOf rejects.
+      !(
+        "library" in value &&
+        value.library === true &&
+        "interface" in value &&
+        value.interface === true
+      ) &&
       (!("definition" in value) || isDefinition(value.definition));
 
     export interface Enum {

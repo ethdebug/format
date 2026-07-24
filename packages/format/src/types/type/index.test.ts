@@ -1,4 +1,9 @@
+import { describe, it, expect } from "vitest";
+
 import { testSchemaGuards } from "#test/guards";
+// loads schemas into the global hyperjump validator + `toValidate` matcher
+import "#test/hyperjump";
+
 import { Type, isType } from "./index.js";
 
 testSchemaGuards("ethdebug/format/type", [
@@ -96,3 +101,54 @@ testSchemaGuards("ethdebug/format/type", [
     guard: Type.isWrapper,
   },
 ] as const);
+
+// The contract type's schema uses a oneOf to distinguish normal /
+// library / interface contracts via the `library` and `interface`
+// flags. The guard must carry those flags and agree with the schema —
+// in particular it must reject a contract that sets both flags true
+// (which matches two oneOf branches at once).
+describe("Type.Elementary.isContract flag semantics", () => {
+  const contractSchema = "schema:ethdebug/format/type/elementary/contract";
+
+  const legal = [
+    { title: "normal (flags omitted)", value: { kind: "contract" } },
+    {
+      title: "normal (flags explicitly false)",
+      value: { kind: "contract", library: false, interface: false },
+    },
+    { title: "library", value: { kind: "contract", library: true } },
+    { title: "interface", value: { kind: "contract", interface: true } },
+  ] as const;
+
+  const illegal = [
+    {
+      title: "both library and interface true",
+      value: { kind: "contract", library: true, interface: true },
+    },
+  ] as const;
+
+  for (const { title, value } of legal) {
+    it(`accepts the ${title} contract shape`, async () => {
+      expect(Type.Elementary.isContract(value)).toBe(true);
+      // guard agrees with the schema
+      await expect(value).toValidate({ schema: contractSchema });
+    });
+  }
+
+  for (const { title, value } of illegal) {
+    it(`rejects a contract with ${title}`, async () => {
+      expect(Type.Elementary.isContract(value)).toBe(false);
+      // guard agrees with the schema
+      await expect(value).not.toValidate({ schema: contractSchema });
+    });
+  }
+
+  it("rejects non-boolean flag values", () => {
+    expect(
+      Type.Elementary.isContract({ kind: "contract", library: "true" }),
+    ).toBe(false);
+    expect(Type.Elementary.isContract({ kind: "contract", interface: 1 })).toBe(
+      false,
+    );
+  });
+});
