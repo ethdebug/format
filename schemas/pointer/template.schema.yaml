@@ -16,7 +16,6 @@ properties:
     type: array
     items:
       $ref: "schema:ethdebug/format/pointer/identifier"
-    additionalItems: false
 
   for:
     $ref: "schema:ethdebug/format/pointer"

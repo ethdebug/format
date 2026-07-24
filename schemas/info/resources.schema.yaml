@@ -63,7 +63,7 @@ examples:
               location: storage
               slot: contract_variable_slot__struct__Coordinate__storage
               offset: 0
-              length: 128
+              length: 16
             - name: member__y__struct__Coordinate__storage
               location: storage
               slot: contract_variable_slot__struct__Coordinate__storage
@@ -71,4 +71,4 @@ examples:
                 $sum:
                   - .offset: member__x__struct__Coordinate__storage
                   - .length: member__x__struct__Coordinate__storage
-              length: 128
+              length: 16

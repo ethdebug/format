@@ -314,27 +314,9 @@ examples:
   # is no physical call instruction and no code target to
   # point at. The invoke context still records the callee's
   # identity so the debugger can maintain a source-level call
-  # stack.
-  - invoke:
-      identifier: "transfer"
-      declaration:
-        source:
-          id: 0
-        range:
-          offset: 128
-          length: 95
-      jump: true
-
-  # -----------------------------------------------------------
-  # Inlined internal call: no target pointer
-  # -----------------------------------------------------------
-  # When the compiler inlines a function, the JUMP that would
-  # normally carry the invoke context has been elided — there
-  # is no physical call instruction and no code target to
-  # point at. The invoke context still records the callee's
-  # identity so the debugger can maintain a source-level call
-  # stack, and a `transform: ["inline"]` context (typically
-  # via `gather`) annotates the inlining.
+  # stack, and a `transform: ["inline"]` context annotates the
+  # inlining — composed flat alongside the invoke on the same
+  # context object (the two carry disjoint keys).
   - invoke:
       identifier: "transfer"
       declaration:
