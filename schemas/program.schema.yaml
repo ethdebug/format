@@ -71,7 +71,6 @@ examples:
     # code {
     #   let localValue = storedValue;
     #   storedValue += 1;
-    #   value = tmp;
     # };
     # ```
     contract:
@@ -90,16 +89,32 @@ examples:
           pointer:
             location: storage
             slot: 0
+    # Each instruction's pointers describe the machine state the
+    # debugger observes when stopped at that instruction, i.e.
+    # before it executes; stack `slot` counts from the top of
+    # that pre-execution stack.
     instructions:
       - offset: 0
+        # about to PUSH0; stack: (empty)
         operation:
           mnemonic: PUSH0
         context:
           variables:
             - *stored-value
       - offset: 1
+        # about to SLOAD the slot pushed by PUSH0; stack: [0x00].
+        # localValue is not observable until SLOAD produces it, so
+        # it first appears at offset 2.
         operation:
           mnemonic: SLOAD
+        context:
+          variables:
+            - *stored-value
+      - offset: 2
+        # about to PUSH1; stack: [localValue] (top is slot 0)
+        operation:
+          mnemonic: PUSH1
+          arguments: ["0x01"]
         context:
           variables:
             - *stored-value
@@ -111,37 +126,28 @@ examples:
               pointer:
                 location: stack
                 slot: 0
-      - offset: 2
-        operation:
-          mnemonic: PUSH1
-          arguments: ["0x01"]
-        context:
-          variables:
-            - *stored-value
-            - <<: *local-value
-              pointer:
-                location: stack
-                slot: 1
-
       - offset: 4
+        # about to ADD; stack: [localValue, 0x01], so localValue is
+        # one below the top (slot 1). ADD then consumes it.
         operation:
           mnemonic: ADD
         context:
           variables:
             - *stored-value
-            - *local-value
+            - <<: *local-value
+              pointer:
+                location: stack
+                slot: 1
       - offset: 5
+        # about to PUSH0; stack: [storedValue + 1]. localValue was
+        # consumed by ADD and is no longer in scope.
         operation:
           mnemonic: PUSH0
         context:
           variables:
             - *stored-value
-            - <<: *local-value
-              pointer:
-                location: stack
-                slot: 1
-
       - offset: 6
+        # about to SSTORE; stack: [storedValue + 1, 0x00]
         operation:
           mnemonic: SSTORE
         context:
