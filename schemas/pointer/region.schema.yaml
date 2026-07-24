@@ -9,24 +9,31 @@ properties:
   location:
     $ref: "#/$defs/Location"
 
+required:
+  - location
+
 allOf:
   - if:
+      required:
+        - location
       properties:
         location:
           const: stack
-
     then:
       $ref: "schema:ethdebug/format/pointer/region/stack"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: memory
-
     then:
       $ref: "schema:ethdebug/format/pointer/region/memory"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: storage
@@ -34,6 +41,8 @@ allOf:
       $ref: "schema:ethdebug/format/pointer/region/storage"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: calldata
@@ -41,6 +50,8 @@ allOf:
       $ref: "schema:ethdebug/format/pointer/region/calldata"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: returndata
@@ -48,6 +59,8 @@ allOf:
       $ref: "schema:ethdebug/format/pointer/region/returndata"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: transient
@@ -55,6 +68,8 @@ allOf:
       $ref: "schema:ethdebug/format/pointer/region/transient"
 
   - if:
+      required:
+        - location
       properties:
         location:
           const: code
