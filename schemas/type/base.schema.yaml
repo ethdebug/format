@@ -66,11 +66,11 @@ $defs:
             bits: 256
       - kind: struct
         contains:
-          - member: x
+          - name: x
             type:
               kind: uint
               bits: 256
-          - member: y
+          - name: y
             type:
               kind: uint
               bits: 256

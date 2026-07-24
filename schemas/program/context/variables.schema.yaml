@@ -19,7 +19,6 @@ properties:
     items:
       $ref: "#/$defs/Variable"
     minItems: 1
-    additionalItems: false
 required:
   - variables
 
