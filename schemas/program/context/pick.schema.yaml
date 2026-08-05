@@ -15,7 +15,6 @@ properties:
     items:
       $ref: "schema:ethdebug/format/program/context"
     minItems: 2
-    additionalItems: false
 required:
   - pick
 

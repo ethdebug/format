@@ -16,10 +16,10 @@ properties:
   define:
     title: Mapping of variables to expression value
     type: object
-    patternProperties:
-      "^[a-zA-Z_\\-]+[a-zA-Z0-9$_\\-]*$":
-        $ref: "schema:ethdebug/format/pointer/expression"
-    additionalProperties: false
+    propertyNames:
+      $ref: "schema:ethdebug/format/pointer/identifier"
+    additionalProperties:
+      $ref: "schema:ethdebug/format/pointer/expression"
   in:
     $ref: "schema:ethdebug/format/pointer"
 

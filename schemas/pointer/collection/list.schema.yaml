@@ -38,6 +38,5 @@ examples:
       each: "index"
       is:
         location: memory
-        offset:
-          $read: "index"
+        offset: "index"
         length: 1

@@ -5,8 +5,7 @@ title: ethdebug/format/type/definition
 description: |
   Object containing name and location information for a type.
 
-  This schema does not require any particular field, but it **must** contain
-  at least one property.
+  This schema **must** specify at least one of `name` or `location`.
 
 type: object
 properties:

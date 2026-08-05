@@ -50,7 +50,6 @@ properties:
       The full array of instructions for the bytecode.
     items:
       $ref: "schema:ethdebug/format/program/instruction"
-    additionalItems: false
 
 required:
   - contract
