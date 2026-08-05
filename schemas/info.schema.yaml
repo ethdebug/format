@@ -23,6 +23,8 @@ required:
   - compilation
   - programs
 
+unevaluatedProperties: false
+
 examples:
   - compilation:
       id: __301f3b6d85831638

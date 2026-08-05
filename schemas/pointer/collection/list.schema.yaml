@@ -26,6 +26,7 @@ properties:
       - count
       - each
       - is
+    additionalProperties: false
 
 required:
   - list

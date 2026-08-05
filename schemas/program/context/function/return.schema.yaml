@@ -36,6 +36,7 @@ properties:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
+        additionalProperties: false
 
       success:
         type: object
@@ -48,6 +49,7 @@ properties:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
+        additionalProperties: false
 
       activation:
         type: string

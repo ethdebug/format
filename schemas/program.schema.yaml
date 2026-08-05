@@ -57,6 +57,8 @@ required:
   - environment
   - instructions
 
+unevaluatedProperties: false
+
 examples:
   - # Incrementing a storage counter
     #

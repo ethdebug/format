@@ -27,6 +27,7 @@ properties:
             $ref: "schema:ethdebug/format/pointer"
         required:
           - pointer
+        additionalProperties: false
 
       panic:
         type: integer

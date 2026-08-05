@@ -38,6 +38,8 @@ properties:
       - name
       - version
 
+    unevaluatedProperties: false
+
     examples:
       - name: lllc
         version: 0.4.12-develop.2017.6.27+commit.b83f77e0.Linux.g++
@@ -74,6 +76,8 @@ required:
   - id
   - compiler
   - sources
+
+unevaluatedProperties: false
 
 examples:
   - id: foo

@@ -57,6 +57,8 @@ properties:
 required:
   - offset
 
+unevaluatedProperties: false
+
 examples:
   - offset: 0
     operation:
