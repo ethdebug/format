@@ -6,7 +6,7 @@ export const isPointer = (value: unknown): value is Pointer =>
 export namespace Pointer {
   export type Identifier = string;
   export const isIdentifier = (value: unknown): value is Identifier =>
-    typeof value === "string" && /^[a-zA-Z_\\-]+[a-zA-Z0-9$_\\-]*$/.test(value);
+    typeof value === "string" && /^[a-zA-Z_-]+[a-zA-Z0-9$_-]*$/.test(value);
 
   export type Region =
     | Region.Stack

@@ -1,9 +1,57 @@
+import { describe, it, expect } from "vitest";
+
 import { testSchemaGuards } from "#test/guards";
+import { describeSchema } from "#describe";
 
 import { Pointer, isPointer } from "./pointer.js";
 
+const identifierSchema = "schema:ethdebug/format/pointer/identifier";
+
+describe("Pointer.isIdentifier", () => {
+  const valid = ["a", "a0", "-$", "__init__", "_x", "A", "foo-bar", "x$y"];
+
+  const invalid = [
+    "", // empty
+    "0abc", // leading digit
+    "$x", // leading $
+    "a b", // space
+    "foo\\bar", // embedded backslash — accepted before the fix
+    "\\", // lone backslash
+    "foo\tbar", // tab
+    "café", // non-ASCII letter
+  ];
+
+  it.each(valid)("accepts %j", (value) => {
+    expect(Pointer.isIdentifier(value)).toBe(true);
+  });
+
+  it.each(invalid)("rejects %j", (value) => {
+    expect(Pointer.isIdentifier(value)).toBe(false);
+  });
+
+  it("agrees with the identifier schema pattern over a corpus", () => {
+    const { schema } = describeSchema({ schema: identifierSchema });
+    const { pattern } = schema as { pattern: string };
+    const schemaRegex = new RegExp(pattern);
+
+    for (const value of [...valid, ...invalid]) {
+      expect(Pointer.isIdentifier(value)).toBe(schemaRegex.test(value));
+    }
+  });
+
+  it("rejects non-string inputs", () => {
+    for (const value of [undefined, null, 42, {}, ["a"]]) {
+      expect(Pointer.isIdentifier(value)).toBe(false);
+    }
+  });
+});
+
 const expressionSchema = "schema:ethdebug/format/pointer/expression";
 testSchemaGuards("ethdebug/format/pointer", [
+  {
+    schema: identifierSchema,
+    guard: Pointer.isIdentifier,
+  },
   {
     schema: expressionSchema,
     guard: Pointer.isExpression,
