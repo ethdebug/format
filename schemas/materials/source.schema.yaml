@@ -76,6 +76,8 @@ required:
   - contents
   - language
 
+unevaluatedProperties: false
+
 examples:
   - id: 5
     path: ./contracts/SimpleStorage.sol
