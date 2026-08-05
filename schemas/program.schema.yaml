@@ -36,8 +36,11 @@ properties:
 
   context:
     description: |
-      The context known to exist prior to the execution of the first
-      instruction in the bytecode.
+      The context that holds prior to the execution of the first
+      instruction in the bytecode. This is the base case of the context
+      chain — the precondition to the first instruction — from which each
+      instruction's own `context` follows as a postcondition (see
+      **ethdebug/format/program/instruction**).
 
       This field is **optional**. Omitting it is equivalent to specifying the
       empty context value (`{}`).
@@ -72,7 +75,6 @@ examples:
     # code {
     #   let localValue = storedValue;
     #   storedValue += 1;
-    #   value = tmp;
     # };
     # ```
     contract:
@@ -127,20 +129,17 @@ examples:
       - offset: 4
         operation:
           mnemonic: ADD
+        # ADD consumes localValue, leaving storedValue + 1 on the stack,
+        # so localValue is no longer observable from this point on.
         context:
           variables:
             - *stored-value
-            - *local-value
       - offset: 5
         operation:
           mnemonic: PUSH0
         context:
           variables:
             - *stored-value
-            - <<: *local-value
-              pointer:
-                location: stack
-                slot: 1
 
       - offset: 6
         operation:
