@@ -62,6 +62,10 @@ properties:
   definition:
     $ref: "schema:ethdebug/format/type/definition"
 
+required:
+  - kind
+  - contains
+
 oneOf:
   - type: object
     title: External function type
@@ -86,7 +90,9 @@ oneOf:
                 title: Contract type wrapper
                 properties:
                   type:
-                    $ref: "schema:ethdebug/format/type/elementary/contract"
+                    oneOf:
+                      - $ref: "schema:ethdebug/format/type/elementary/contract"
+                      - $ref: "schema:ethdebug/format/type/reference"
     required:
       - external
 
@@ -161,4 +167,6 @@ $defs:
         type: object
         properties:
           type:
-            $ref: "schema:ethdebug/format/type/complex/tuple"
+            oneOf:
+              - $ref: "schema:ethdebug/format/type/complex/tuple"
+              - $ref: "schema:ethdebug/format/type/reference"
