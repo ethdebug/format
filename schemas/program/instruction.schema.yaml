@@ -54,7 +54,11 @@ properties:
       instruction, which is in turn the precondition of the next. A debugger
       paused at the trace step about to execute instruction *i* therefore
       reads the context of instruction *i − 1* — or, before the first
-      instruction, the program-level `context`.
+      instruction, the program-level `context`. Equivalently, prepending
+      the program-level `context` to the sequence of instruction contexts
+      yields a single sequence indexed by trace position, with no special
+      case: the context in effect when about to execute the instruction at
+      position *i* is element *i* of that sequence.
 
       This field is **optional**. Omitting it is equivalent to specifying the
       empty context value (`{}`).
