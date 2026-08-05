@@ -42,12 +42,19 @@ properties:
 
   context:
     description: |
-      The context known to exist following the execution of this instruction.
-      "Following execution" means the context's semantic facts (source
-      location, variables in scope, function invocation, etc.) hold from
-      this point forward. Pointers within the context reference the machine
-      state at this instruction's trace step, which is the state a debugger
-      observes when it encounters the instruction.
+      The context that holds **following** the execution of this
+      instruction. Both its semantic facts (source location, variables in
+      scope, function invocation, etc.) and any pointers it contains resolve
+      against the machine state **after** the instruction has executed
+      (its postcondition).
+
+      Instruction contexts form a chain. The program-level `context` is the
+      base case: the precondition that holds before the first instruction
+      executes. Each instruction's context is then the postcondition of that
+      instruction, which is in turn the precondition of the next. A debugger
+      paused at the trace step about to execute instruction *i* therefore
+      reads the context of instruction *i − 1* — or, before the first
+      instruction, the program-level `context`.
 
       This field is **optional**. Omitting it is equivalent to specifying the
       empty context value (`{}`).
