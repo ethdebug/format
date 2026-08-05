@@ -338,28 +338,25 @@ function generateReturnEpilogue<S extends Stack>(
 
     // Pop stale values, keeping only the return value
     // (if any). Multi-block functions can accumulate
-    // leftover values (e.g. branch condition results)
-    // from predecessor blocks.
+    // leftover values (e.g. branch condition results, or
+    // operands DUP'd by loadValue) below the return value.
+    //
+    // With the return value on TOS, repeatedly SWAP1 the
+    // stale value just beneath it up to the top and POP it.
+    // Each SWAP1/POP removes one stale value while leaving
+    // the return value on TOS — so any number of stale
+    // values are cleaned without disturbing the result.
     const keep = value ? 1 : 0;
     while (s.stack.length > keep) {
-      if (keep > 0 && s.stack.length > 1) {
-        const depth = s.stack.length - 1;
+      if (keep > 0) {
         s = {
           ...s,
           instructions: [
             ...s.instructions,
-            {
-              mnemonic: `SWAP${depth}`,
-              opcode: 0x8f + depth,
-              debug,
-            },
+            { mnemonic: "SWAP1", opcode: 0x90, debug },
           ],
-          stack: [s.stack[depth], ...s.stack.slice(1, depth), s.stack[0]],
-          brands: [
-            s.brands[depth],
-            ...s.brands.slice(1, depth),
-            s.brands[0],
-          ] as Stack,
+          stack: [s.stack[1], s.stack[0], ...s.stack.slice(2)],
+          brands: [s.brands[1], s.brands[0], ...s.brands.slice(2)] as Stack,
         };
       }
       s = {
