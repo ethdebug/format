@@ -11,11 +11,13 @@ properties:
   kind:
     const: string
   encoding:
-    type: string
+    description: |
+      The character encoding of the string's bytes at runtime.
+    $ref: "schema:ethdebug/format/materials/encoding"
     default: utf-8
 required:
   - kind
 examples:
   - kind: string
   - kind: string
-    encoding: utf-16
+    encoding: utf-16le

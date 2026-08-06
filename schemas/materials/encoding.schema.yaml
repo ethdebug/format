@@ -1,0 +1,25 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/materials/encoding"
+
+title: ethdebug/format/materials/encoding
+description: |
+  A character encoding, identified by a label from the WHATWG Encoding
+  Standard (https://encoding.spec.whatwg.org/).
+
+  The value **must** be a label that the Standard defines — for example
+  `utf-8`, `utf-16le`, or `windows-1252`. Where the Standard lists several
+  labels for the same encoding, its canonical (lowercase) name is
+  preferred (`utf-16le` rather than `utf-16`, which the Standard treats as
+  a label for the same encoding). Because these are exactly the labels the
+  `TextDecoder` API accepts, a JavaScript consumer can pass the value
+  straight to `new TextDecoder(label)`.
+
+  Where a field of this type is optional and omitted, the encoding is
+  `utf-8`.
+
+type: string
+
+examples:
+  - utf-8
+  - utf-16le
+  - windows-1252
