@@ -28,3 +28,8 @@ export {
 } from "./mockTrace.js";
 
 export { traceStepToMachineState } from "./traceState.js";
+
+export {
+  effectiveContextForStep,
+  type EffectiveContextInput,
+} from "./effectiveContext.js";
