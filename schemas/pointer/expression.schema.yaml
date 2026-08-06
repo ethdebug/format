@@ -37,9 +37,9 @@ description: |
   whose results depend on operand widths — the operand **must** be
   width-bearing. A bare integer (a JSON number, an odd-digit hex literal,
   `$wordsize`, an arithmetic result, or a lookup) is **not** valid there:
-  give it a width first with `$sizedN` or `$wordsized`. There is no implicit
-  widening of an integer to bytes; the resize forms are the only bridge from
-  an integer to bytes.
+  give it a width first with `$sizedN` or `$wordsized`. There is no
+  implicit widening; the resize forms are the only bridge from an integer
+  to bytes.
 
 oneOf:
   - $ref: "#/$defs/Literal"
@@ -224,10 +224,10 @@ $defs:
   Keccak256:
     title: Keccak256 hash
     description: |
-      An object of the form `{ "$keccak256": [...values] }`, indicating that this
-      expression evaluates to the Solidity-style keccak256 hash of the
-      tightly-packed bytes encoded by `values`. The result is **bytes** of
-      width 32.
+      An object of the form `{ "$keccak256": [...values] }`, indicating
+      that this expression evaluates to the Solidity-style keccak256 hash
+      of the tightly-packed bytes encoded by `values`. The result is
+      **bytes** of width 32.
 
       Because the hash is taken over the concatenation of the operands'
       bytes, each operand **must** be width-bearing (bytes): a bare integer
