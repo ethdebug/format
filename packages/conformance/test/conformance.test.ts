@@ -52,7 +52,7 @@ function validCompilation() {
     },
     sources: [
       {
-        id: 5,
+        id: "5",
         path: "Counter.test",
         contents: "contract Counter {}",
         language: "Test",
@@ -67,7 +67,7 @@ function validProgram() {
       name: "Counter",
       definition: {
         source: {
-          id: 5,
+          id: "5",
         },
         range: {
           offset: 0,
@@ -85,7 +85,7 @@ function validProgram() {
         context: {
           code: {
             source: {
-              id: 5,
+              id: "5",
             },
             range: {
               offset: 0,
