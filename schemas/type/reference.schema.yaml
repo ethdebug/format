@@ -6,11 +6,9 @@ description: A reference to a known type by ID
 type: object
 properties:
   id:
-    type:
-      - string
-      - number
+    type: string
 additionalProperties: false
 required:
   - id
 examples:
-  - id: 5
+  - id: "5"

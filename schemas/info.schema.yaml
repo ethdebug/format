@@ -33,7 +33,7 @@ examples:
       settings:
         turbo: true
       sources:
-        - id: 1
+        - id: "1"
           path: "Escrow.eg"
           language: examplelang
           contents: |
@@ -163,7 +163,7 @@ examples:
           name: "Escrow"
           definition:
             source:
-              id: 1
+              id: "1"
             range:
               offset: 0
               length: 891
@@ -176,7 +176,7 @@ examples:
             context:
               code:
                 source:
-                  id: 1
+                  id: "1"
                 range:
                   offset: 891
                   length: 20
