@@ -165,6 +165,9 @@ $defs:
       - const: "$this"
         description: |
           Indicates a reference to the region containing this expression.
+          A property lookup via `$this` (e.g. `{ ".length": "$this" }`) must
+          not be circular: the referenced property must be resolvable without
+          depending on the value currently being defined.
 
   Keccak256:
     title: Keccak256 hash
