@@ -269,12 +269,12 @@ examples:
     # needed, and the compiler emits far less. The per-slot list form above
     # remains useful when a consumer wants a distinct region per slot.
     define:
-      "string-storage-contract-variable-slot": 0
+      "string-storage-slot": 0
     in:
       group:
         - name: "long-string-length-data"
           location: storage
-          slot: "string-storage-contract-variable-slot"
+          slot: "string-storage-slot"
           offset: 0
           length: $wordsize
 
@@ -288,7 +288,7 @@ examples:
 
             "start-slot":
               $keccak256:
-                - $wordsized: "string-storage-contract-variable-slot"
+                - $wordsized: "string-storage-slot"
           in:
             name: "string"
             location: storage
