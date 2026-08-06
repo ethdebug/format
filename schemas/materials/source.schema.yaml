@@ -54,15 +54,15 @@ properties:
 
   encoding:
     description: |
-      Character encoding of original source `contents`. This property
-      is **required** if this encoding does not match the JSON transmission
+      Character encoding of the original source `contents`. This property
+      is **required** if that encoding does not match the JSON transmission
       encoding (UTF-8), since the value of the `contents` property will
-      represent the text of the source of this JSON encoding.
+      represent the text of the source in this JSON encoding.
 
       This property **must not** appear in objects that do not specify
       a `contents` property.
 
-    type: string
+    $ref: "schema:ethdebug/format/materials/encoding"
 
   language:
     description: |
