@@ -32,7 +32,7 @@ export function generateTerminator<S extends Stack>(
   isLastBlock: boolean = false,
   isUserFunction: boolean = false,
 ): Transition<S, Stack> {
-  const { PUSHn, PUSH2, MSTORE, RETURN, STOP, JUMP, JUMPI } = operations;
+  const { PUSHn, MSTORE, RETURN, STOP } = operations;
 
   switch (term.kind) {
     case "return": {
@@ -88,65 +88,86 @@ export function generateTerminator<S extends Stack>(
       // invoke discriminators. Depth stays constant: one pops,
       // one pushes, on the same instruction. The function's
       // terminal RETURN pops the final iteration's frame normally.
-      const invokeOptions = term.tailCall
-        ? buildTailCallJumpOptions(term.tailCall)
+      const jumpDebug = term.tailCall
+        ? buildTailCallJumpOptions(term.tailCall).debug
         : undefined;
 
-      return pipe<S>()
-        .peek((state, builder) => {
-          const patchIndex = state.instructions.length;
+      // Imperative, like generateCallTerminator/generateReturnEpilogue:
+      // drop any leftover block-local scratch so the target block is
+      // entered with the canonical empty stack, then jump.
+      return ((state: State<S>): State<Stack> => {
+        let s = state as State<Stack>;
+        while (s.stack.length > 0) {
+          s = {
+            ...s,
+            instructions: [
+              ...s.instructions,
+              { mnemonic: "POP", opcode: 0x50 },
+            ],
+            stack: s.stack.slice(1),
+            brands: s.brands.slice(1),
+          };
+        }
 
-          return builder
-            .then(PUSH2([0, 0]), { as: "counter" })
-            .then(JUMP(invokeOptions))
-            .then((newState) => ({
-              ...newState,
-              patches: [
-                ...newState.patches,
-                {
-                  index: patchIndex,
-                  target: term.target,
-                },
-              ],
-            }));
-        })
-        .done();
+        const patchIndex = s.instructions.length;
+        return {
+          ...s,
+          instructions: [
+            ...s.instructions,
+            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
+            {
+              mnemonic: "JUMP",
+              opcode: 0x56,
+              ...(jumpDebug ? { debug: jumpDebug } : {}),
+            },
+          ],
+          patches: [...s.patches, { index: patchIndex, target: term.target }],
+          stack: [],
+          brands: [],
+        };
+      }) as Transition<S, Stack>;
     }
 
     case "branch": {
-      return pipe<S>()
-        .then(loadValue(term.condition), { as: "b" })
-        .peek((state, builder) => {
-          // Record offset for true target patch
-          const trueIndex = state.instructions.length;
+      // Load the condition to the top, then drop any leftover scratch
+      // beneath it (SWAP1/POP) so both successors are entered with the
+      // canonical empty stack — the JUMPI and the fall-through JUMP
+      // consume the condition and the pushed counters.
+      return ((state: State<S>): State<Stack> => {
+        let s: State<Stack> = loadValue(term.condition)(state as State<Stack>);
+        while (s.stack.length > 1) {
+          s = {
+            ...s,
+            instructions: [
+              ...s.instructions,
+              { mnemonic: "SWAP1", opcode: 0x90 },
+              { mnemonic: "POP", opcode: 0x50 },
+            ],
+            stack: [s.stack[0], ...s.stack.slice(2)],
+            brands: [s.brands[0], ...s.brands.slice(2)],
+          };
+        }
 
-          return builder
-            .then(PUSH2([0, 0]), { as: "counter" })
-            .then(JUMPI())
-            .peek((state2, builder2) => {
-              // Record offset for false target patch
-              const falseIndex = state2.instructions.length;
-
-              return builder2
-                .then(PUSH2([0, 0]), { as: "counter" })
-                .then(JUMP())
-                .then((finalState) => ({
-                  ...finalState,
-                  patches: [
-                    ...finalState.patches,
-                    {
-                      index: trueIndex,
-                      target: term.trueTarget,
-                    },
-                    {
-                      index: falseIndex,
-                      target: term.falseTarget,
-                    },
-                  ],
-                }));
-            });
-        })
-        .done();
+        const trueIndex = s.instructions.length;
+        const falseIndex = trueIndex + 2;
+        return {
+          ...s,
+          instructions: [
+            ...s.instructions,
+            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
+            { mnemonic: "JUMPI", opcode: 0x57 },
+            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
+            { mnemonic: "JUMP", opcode: 0x56 },
+          ],
+          patches: [
+            ...s.patches,
+            { index: trueIndex, target: term.trueTarget },
+            { index: falseIndex, target: term.falseTarget },
+          ],
+          stack: [],
+          brands: [],
+        };
+      }) as Transition<S, Stack>;
     }
 
     case "call":
@@ -303,13 +324,13 @@ export function generateCallTerminator<S extends Stack>(
       currentState = {
         ...currentState,
         stack: [{ id: `call_return_${funcName}`, irValue: term.dest }],
-        brands: ["value" as const] as unknown as Stack,
+        brands: ["value"],
       };
     } else {
       currentState = {
         ...currentState,
         stack: [],
-        brands: [] as unknown as Stack,
+        brands: [],
       };
     }
 

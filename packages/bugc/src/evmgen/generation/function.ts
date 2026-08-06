@@ -319,18 +319,50 @@ export function generate(
     stateAfterPrologue = prologueTransition(initialState);
   }
 
+  // Map each call continuation block to the block that calls into
+  // it. A continuation is entered at runtime with the callee's return
+  // value on top of the stack; every other block is entered with an
+  // empty stack. This is the canonical block-boundary invariant that
+  // lets each block's stack model be reconstructed from its role in
+  // the control-flow graph rather than threaded through layout order
+  // (which desynced the tracked stack from the runtime stack).
+  const callerOfContinuation = new Map<string, string>();
+  for (const [bid, b] of func.blocks) {
+    if (b.terminator.kind === "call") {
+      callerOfContinuation.set(b.terminator.continuation, bid);
+    }
+  }
+
   const finalState = layout.order.reduce(
     (state: State<Stack>, blockId: string, index: number) => {
       const block = func.blocks.get(blockId);
       if (!block) return state;
 
-      // Determine predecessor for phi resolution
-      // This is simplified - real implementation would track actual control flow
-      const predecessor = index > 0 ? layout.order[index - 1] : undefined;
-
       // Check if this is the first or last block
       const isFirstBlock = index === 0;
       const isLastBlock = index === layout.order.length - 1;
+
+      // Reset the tracked stack to this block's canonical entry
+      // instead of inheriting the previous block's exit. A call
+      // continuation begins with the return value on top; any other
+      // block begins empty. The `predecessor` we pass through is the
+      // calling block for a continuation (so its return context and
+      // return-value spill resolve), and undefined otherwise.
+      const callerBlockId = callerOfContinuation.get(blockId);
+      let predecessor: string | undefined = undefined;
+      let entry: State<Stack> = { ...state, stack: [], brands: [] as Stack };
+      if (callerBlockId !== undefined) {
+        predecessor = callerBlockId;
+        const callTerm = func.blocks.get(callerBlockId)!.terminator;
+        const dest = callTerm.kind === "call" ? callTerm.dest : undefined;
+        if (dest) {
+          entry = {
+            ...state,
+            stack: [{ id: `ret_${blockId}`, irValue: dest }],
+            brands: ["value"] as unknown as Stack,
+          };
+        }
+      }
 
       return Block.generate(
         block,
@@ -340,7 +372,7 @@ export function generate(
         options.isUserFunction || false,
         func,
         options.functions,
-      )(state);
+      )(entry);
     },
     stateAfterPrologue,
   );
