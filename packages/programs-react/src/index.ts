@@ -70,6 +70,8 @@ export {
   type FindSourceRangeOptions,
   type ResolverOptions,
   traceStepToMachineState,
+  effectiveContextForStep,
+  type EffectiveContextInput,
   type TraceStep,
   type MockTraceSpec,
 } from "#utils/index";

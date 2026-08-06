@@ -23,6 +23,7 @@ import {
   buildCallStack,
 } from "#utils/mockTrace";
 import { traceStepToMachineState } from "#utils/traceState";
+import { effectiveContextForStep } from "#utils/effectiveContext";
 
 /**
  * Compute a key representing an instruction's source range,
@@ -282,13 +283,39 @@ export function TraceProvider({
     ? pcToInstruction.get(currentStep.pc)
     : undefined;
 
+  // Instruction contexts are POSTCONDITIONS: the semantic facts and
+  // pointers shown at the step about to execute instruction i come
+  // from instruction i-1 (program-level context at the first step).
+  // Pointer resolution still runs against the state observed at step
+  // i; only the context selection shifts. See effectiveContextForStep.
+  const effectiveContext = useMemo(
+    () =>
+      effectiveContextForStep({
+        programContext: program.context,
+        contextAtPc: (pc) => pcToInstruction.get(pc)?.context,
+        trace,
+        stepIndex: currentStepIndex,
+      }),
+    [program.context, pcToInstruction, trace, currentStepIndex],
+  );
+
+  // A synthetic instruction lets the context-tree extractors (which
+  // read `.context`) apply uniformly to the program-level base case.
+  const effectiveInstruction = useMemo<Program.Instruction | undefined>(
+    () =>
+      effectiveContext
+        ? ({ context: effectiveContext } as Program.Instruction)
+        : undefined,
+    [effectiveContext],
+  );
+
   // Extract variable metadata (synchronous)
   const extractedVars = useMemo(() => {
-    if (!currentInstruction) {
+    if (!effectiveInstruction) {
       return [];
     }
-    return extractVariablesFromInstruction(currentInstruction);
-  }, [currentInstruction]);
+    return extractVariablesFromInstruction(effectiveInstruction);
+  }, [effectiveInstruction]);
 
   // Async variable resolution
   const [currentVariables, setCurrentVariables] = useState<ResolvedVariable[]>(
@@ -456,12 +483,12 @@ export function TraceProvider({
     };
   }, [callStack, shouldResolve, trace, templates]);
 
-  // Extract call info for current instruction (synchronous)
+  // Extract call info from the effective (postcondition) context.
   const extractedCallInfo = useMemo((): CallInfo | undefined => {
-    if (!currentInstruction) {
+    if (!effectiveInstruction) {
       return undefined;
     }
-    return extractCallInfoFromInstruction(currentInstruction);
+    return extractCallInfoFromInstruction(effectiveInstruction);
   }, [currentInstruction]);
 
   // Async call info pointer resolution
