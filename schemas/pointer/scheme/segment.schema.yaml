@@ -68,3 +68,9 @@ examples:
       $product:
         - $wordsize
         - 3
+  # a carry example: an offset at or beyond `$wordsize` addresses a later
+  # slot. Here `offset: $wordsize` is byte 0 of slot 1, so this segment is
+  # the 4 bytes beginning there.
+  - slot: 0
+    offset: $wordsize
+    length: 4
