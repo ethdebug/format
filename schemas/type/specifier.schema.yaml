@@ -17,4 +17,4 @@ else:
 examples:
   - kind: uint
     bits: 256
-  - id: 42
+  - id: "42"

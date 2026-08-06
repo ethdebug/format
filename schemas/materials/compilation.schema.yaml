@@ -85,7 +85,7 @@ examples:
       name: lllc
       version: 0.4.12-develop.2017.6.27+commit.b83f77e0.Linux.g++
     sources:
-      - id: 0
+      - id: "0"
         path: stdin
         contents: |
           (add 1 (mul 2 (add 3 4)))
