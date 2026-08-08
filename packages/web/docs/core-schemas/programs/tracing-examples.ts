@@ -154,3 +154,21 @@ create {
 code {
   sumOfSquares = square(a) + square(b);
 }`;
+
+export const addressIdentity = `name Identity;
+
+define {
+  function idn(owner: address) -> address {
+    return owner;
+  };
+}
+
+storage {
+  [0] stored: address;
+}
+
+create {}
+
+code {
+  stored = idn(0x52908400098527886e0f7030069857d2e4169ee7);
+}`;
