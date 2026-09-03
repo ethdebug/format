@@ -1,7 +1,7 @@
 import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
 import type { Data } from "#data";
-import { evaluate, type EvaluateOptions } from "#evaluate";
+import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 
 /**
  * Evaluate all Pointer.Expression-value properties on a given region
@@ -55,7 +55,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
     const [property, expression] = expressionQueue.shift()!;
 
     try {
-      const data = await evaluate(expression, {
+      const value = await evaluate(expression, {
         ...options,
         regions: {
           ...options.regions,
@@ -63,7 +63,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
         },
       });
 
-      evaluatedProperties[property as keyof R] = data;
+      evaluatedProperties[property as keyof R] = Value.toData(value);
     } catch (error) {
       if (
         error instanceof Error &&

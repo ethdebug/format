@@ -1,6 +1,6 @@
 import type { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
-import type { Data } from "#data";
+import type { Value } from "#evaluate";
 
 /**
  * A single state transition for processing on a stack
@@ -62,14 +62,14 @@ export namespace Memo {
    */
   export interface SaveVariables {
     kind: "save-variables";
-    variables: Record<string, Data>;
+    variables: Record<string, Value>;
   }
 
   /**
    * Initialize a SaveVariables memo
    */
   export const saveVariables = (
-    variables: Record<string, Data>,
+    variables: Record<string, Value>,
   ): SaveVariables => ({
     kind: "save-variables",
     variables,
