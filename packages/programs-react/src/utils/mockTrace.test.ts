@@ -3,6 +3,12 @@
  * detection, and call-stack construction — including the flat
  * tail-call back-edge shape: a single instruction that carries
  * both a `return` and an `invoke` context.
+ *
+ * Call-stack timing: instruction contexts are postconditions, so
+ * the frame list at trace step i reflects the instructions
+ * executed at steps 0..i-1. An invoke on the instruction at step
+ * k opens its frame at step k+1; a return at step k is still shown
+ * at step k+1 (close-after) and gone at step k+2.
  */
 
 import { describe, it, expect } from "vitest";
@@ -15,6 +21,7 @@ import {
   buildPcToInstructionMap,
   type TraceStep,
 } from "./mockTrace.js";
+import { effectiveContextForStep } from "./effectiveContext.js";
 
 /** Build a minimal instruction with a context at an offset. */
 function instr(offset: number, context: unknown): Program.Instruction {
@@ -80,13 +87,15 @@ describe("extractCallInfoFromInstruction tailcall flag", () => {
 
 describe("buildCallStack TCO frame replacement", () => {
   const trace: TraceStep[] = [
-    { pc: 0, opcode: "JUMPDEST" }, // entry invoke → push sum
-    { pc: 10, opcode: "JUMP" }, // TCO back-edge → replace frame
+    { pc: 0, opcode: "JUMPDEST" }, // entry invoke (push at step 1)
+    { pc: 10, opcode: "JUMP" }, // TCO back-edge (replace at step 2)
+    { pc: 4, opcode: "JUMPDEST" }, // loop body
   ];
 
   const program = {
     instructions: [
       instr(0, { invoke: { jump: true, identifier: "sum" } }),
+      instr(4, { code: {} }),
       instr(10, {
         gather: [
           { return: { identifier: "sum" } },
@@ -100,20 +109,20 @@ describe("buildCallStack TCO frame replacement", () => {
   const pcToInstruction = buildPcToInstructionMap(program);
 
   it("keeps the stack depth stable across a tail call", () => {
-    const stack = buildCallStack(trace, pcToInstruction, 1);
+    const stack = buildCallStack(trace, pcToInstruction, 2);
     // Without the fix, the return-first gather pops to empty.
     expect(stack).toHaveLength(1);
   });
 
   it("replaces the top frame and marks it as a tail call", () => {
-    const stack = buildCallStack(trace, pcToInstruction, 1);
+    const stack = buildCallStack(trace, pcToInstruction, 2);
     expect(stack[0].identifier).toBe("sum");
     expect(stack[0].isTailCall).toBe(true);
-    expect(stack[0].stepIndex).toBe(1);
+    expect(stack[0].stepIndex).toBe(2);
   });
 
   it("does not mark a normal (pre-tailcall) frame", () => {
-    const stack = buildCallStack(trace, pcToInstruction, 0);
+    const stack = buildCallStack(trace, pcToInstruction, 1);
     expect(stack).toHaveLength(1);
     expect(stack[0].isTailCall).toBeFalsy();
   });
@@ -146,34 +155,36 @@ describe("buildCallStack flat return+invoke back-edge", () => {
   // caller-JUMP/callee-JUMPDEST dedup does not apply — this is
   // the arrangement that exposes the bug.
   const trace: TraceStep[] = [
-    { pc: 0, opcode: "JUMPDEST" }, // step 0: push sum
+    { pc: 0, opcode: "JUMPDEST" }, // step 0: entry (push at step 1)
     { pc: 4, opcode: "JUMPDEST" }, // step 1: loop body
-    { pc: 10, opcode: "JUMP" }, // step 2: back-edge → reuse
+    { pc: 10, opcode: "JUMP" }, // step 2: back-edge (reuse at step 3)
     { pc: 4, opcode: "JUMPDEST" }, // step 3: loop body
-    { pc: 10, opcode: "JUMP" }, // step 4: back-edge → reuse
+    { pc: 10, opcode: "JUMP" }, // step 4: back-edge (reuse at step 5)
+    { pc: 4, opcode: "JUMPDEST" }, // step 5: loop body
   ];
 
   it("keeps the stack at constant depth across the back-edge", () => {
     // Reused in place: one frame in, one frame out — depth 1.
-    expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(1);
-    expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(1);
+    expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(1);
+    expect(buildCallStack(trace, pcToInstruction, 5)).toHaveLength(1);
   });
 
   it("reuses the top frame with the next iteration's identity", () => {
-    const stack = buildCallStack(trace, pcToInstruction, 2);
+    const stack = buildCallStack(trace, pcToInstruction, 3);
     expect(stack[0].identifier).toBe("sum");
     expect(stack[0].callType).toBe("internal");
-    // Points at the back-edge step, not the original entry.
-    expect(stack[0].stepIndex).toBe(2);
+    // Rooted at the back-edge's postcondition step, not the
+    // original entry's.
+    expect(stack[0].stepIndex).toBe(3);
   });
 
   it("still pushes and pops ordinary (non-flat) calls", () => {
     // A normal invoke on one instruction, a normal return on
     // another — depth rises then falls, in contrast to the flat
     // back-edge which reuses the frame in place. The pop uses
-    // close-after semantics: the frame stays visible while parked
-    // ON the return instruction and is popped only once execution
-    // advances past it.
+    // close-after semantics: the frame stays visible on the step
+    // that observes the return's postcondition and is popped only
+    // once execution advances past it.
     const normalProgram = {
       instructions: [
         instr(0, { invoke: { jump: true, identifier: "helper" } }),
@@ -182,16 +193,19 @@ describe("buildCallStack flat return+invoke back-edge", () => {
     } as unknown as Program;
     const map = buildPcToInstructionMap(normalProgram);
     const normalTrace: TraceStep[] = [
-      { pc: 0, opcode: "JUMPDEST" }, // invoke helper → push
-      { pc: 8, opcode: "JUMP" }, // return helper (close-after)
-      { pc: 12, opcode: "STOP" }, // advanced past the return
+      { pc: 0, opcode: "JUMPDEST" }, // invoke helper
+      { pc: 8, opcode: "JUMP" }, // return helper
+      { pc: 12, opcode: "JUMPDEST" }, // back in the caller
+      { pc: 13, opcode: "STOP" },
     ];
-    // Pushed on the invoke.
-    expect(buildCallStack(normalTrace, map, 0)).toHaveLength(1);
-    // Still visible while parked on the return (close-after).
+    // Not yet pushed: the invoke has not executed.
+    expect(buildCallStack(normalTrace, map, 0)).toHaveLength(0);
+    // Pushed once the invoke has executed.
     expect(buildCallStack(normalTrace, map, 1)).toHaveLength(1);
+    // Still visible on the return's postcondition step (close-after).
+    expect(buildCallStack(normalTrace, map, 2)).toHaveLength(1);
     // Popped once execution advances past the return.
-    expect(buildCallStack(normalTrace, map, 2)).toHaveLength(0);
+    expect(buildCallStack(normalTrace, map, 3)).toHaveLength(0);
   });
 });
 
@@ -225,6 +239,7 @@ describe("flat (production) TCO back-edge shape", () => {
     const trace: TraceStep[] = [
       { pc: 0, opcode: "JUMPDEST" },
       { pc: 10, opcode: "JUMP" },
+      { pc: 4, opcode: "JUMPDEST" },
     ];
     const program = {
       instructions: [
@@ -234,7 +249,7 @@ describe("flat (production) TCO back-edge shape", () => {
     } as unknown as Program;
     const pcToInstruction = buildPcToInstructionMap(program);
 
-    const stack = buildCallStack(trace, pcToInstruction, 1);
+    const stack = buildCallStack(trace, pcToInstruction, 2);
     expect(stack).toHaveLength(1);
     expect(stack[0].identifier).toBe("sum");
     expect(stack[0].isTailCall).toBe(true);
@@ -255,6 +270,7 @@ describe("flat (production) TCO back-edge shape", () => {
     const trace: TraceStep[] = [
       { pc: 0, opcode: "JUMPDEST" },
       { pc: 10, opcode: "JUMP" },
+      { pc: 4, opcode: "JUMPDEST" },
     ];
     const program = {
       instructions: [
@@ -264,7 +280,7 @@ describe("flat (production) TCO back-edge shape", () => {
     } as unknown as Program;
     const pcToInstruction = buildPcToInstructionMap(program);
 
-    const stack = buildCallStack(trace, pcToInstruction, 1);
+    const stack = buildCallStack(trace, pcToInstruction, 2);
     expect(stack.some((f) => f.isTailCall)).toBe(false);
   });
 });
@@ -275,12 +291,13 @@ describe("flat (production) TCO back-edge shape", () => {
 // instruction and a virtual return on the exit-last instruction;
 // every inlined instruction carries transform:["inline"]. The
 // call stack reconstructs the virtual frame via close-after
-// push/pop (a frame is visible AT its return-bearing instruction
-// and popped on advance), tags it, and — belt-and-suspenders —
-// tears down any trailing virtual frame the moment execution
-// reaches an instruction whose inline-marker count is below the
-// open virtual depth. So it reads distinctly from a real call and
-// never leaks a phantom frame into caller code.
+// push/pop (a frame is visible on the step that observes its
+// return's postcondition and popped on advance), tags it, and —
+// belt-and-suspenders — tears down any trailing virtual frame the
+// moment execution has passed an instruction whose inline-marker
+// count is below the open virtual depth. So it reads distinctly
+// from a real call and never leaks a phantom frame into caller
+// code.
 describe("inline virtual activations", () => {
   const entryInvoke = {
     code: { source: { id: "0" }, range: { offset: 0, length: 1 } },
@@ -350,10 +367,11 @@ describe("inline virtual activations", () => {
   describe("buildCallStack virtual frame lifetime (close-after)", () => {
     // A single inlined body: entry / body / exit / caller.
     const trace: TraceStep[] = [
-      { pc: 0, opcode: "PUSH1" }, // entry invoke → push virtual dbl
+      { pc: 0, opcode: "PUSH1" }, // entry invoke (push at step 1)
       { pc: 1, opcode: "ADD" }, // inlined body instruction
-      { pc: 2, opcode: "MSTORE" }, // exit return (still inside frame)
-      { pc: 3, opcode: "JUMPDEST" }, // caller code (frame gone)
+      { pc: 2, opcode: "MSTORE" }, // exit return (pop at step 4)
+      { pc: 3, opcode: "JUMPDEST" }, // caller code
+      { pc: 4, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -365,27 +383,28 @@ describe("inline virtual activations", () => {
     } as unknown as Program;
     const pcToInstruction = buildPcToInstructionMap(program);
 
-    it("pushes a virtual frame tagged isInline at the entry", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 0);
+    it("pushes a virtual frame tagged isInline after the entry", () => {
+      expect(buildCallStack(trace, pcToInstruction, 0)).toHaveLength(0);
+      const stack = buildCallStack(trace, pcToInstruction, 1);
       expect(stack).toHaveLength(1);
       expect(stack[0].identifier).toBe("dbl");
       expect(stack[0].isInline).toBe(true);
     });
 
     it("keeps the virtual frame open across the inlined body", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 1);
-      expect(stack).toHaveLength(1);
-      expect(stack[0].isInline).toBe(true);
-    });
-
-    it("still shows the frame AT the exit return (close-after)", () => {
       const stack = buildCallStack(trace, pcToInstruction, 2);
       expect(stack).toHaveLength(1);
       expect(stack[0].isInline).toBe(true);
     });
 
-    it("pops the frame once execution advances past the return", () => {
+    it("still shows the frame after the exit return (close-after)", () => {
       const stack = buildCallStack(trace, pcToInstruction, 3);
+      expect(stack).toHaveLength(1);
+      expect(stack[0].isInline).toBe(true);
+    });
+
+    it("pops the frame once execution advances past the return", () => {
+      const stack = buildCallStack(trace, pcToInstruction, 4);
       expect(stack).toHaveLength(0);
     });
   });
@@ -394,20 +413,21 @@ describe("inline virtual activations", () => {
     const trace: TraceStep[] = [
       { pc: 0, opcode: "PUSH1" }, // the whole body: invoke+return
       { pc: 1, opcode: "JUMPDEST" }, // caller code
+      { pc: 2, opcode: "STOP" },
     ];
     const program = {
       instructions: [instr(0, singleOpBody), instr(1, callerMark)],
     } as unknown as Program;
     const pcToInstruction = buildPcToInstructionMap(program);
 
-    it("shows the virtual frame AT the single body op", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 0);
+    it("shows the virtual frame after the single body op", () => {
+      const stack = buildCallStack(trace, pcToInstruction, 1);
       expect(stack).toHaveLength(1);
       expect(stack[0].isInline).toBe(true);
     });
 
-    it("pops after advancing off the body op", () => {
-      expect(buildCallStack(trace, pcToInstruction, 1)).toHaveLength(0);
+    it("pops after advancing further", () => {
+      expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(0);
     });
   });
 
@@ -419,6 +439,7 @@ describe("inline virtual activations", () => {
       { pc: 10, opcode: "PUSH1" }, // site 2 entry
       { pc: 12, opcode: "MSTORE" }, // site 2 exit
       { pc: 13, opcode: "JUMPDEST" }, // caller
+      { pc: 14, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -433,14 +454,14 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("shows depth 1 while inside the second body", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 3);
+      const stack = buildCallStack(trace, pcToInstruction, 4);
       expect(stack).toHaveLength(1);
       expect(stack[0].isInline).toBe(true);
-      expect(stack[0].stepIndex).toBe(3);
+      expect(stack[0].stepIndex).toBe(4);
     });
 
     it("is empty after both sites — no accumulation", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 5);
+      const stack = buildCallStack(trace, pcToInstruction, 6);
       expect(stack).toHaveLength(0);
     });
   });
@@ -456,6 +477,7 @@ describe("inline virtual activations", () => {
       { pc: 2, opcode: "PUSH1" }, // site 2 entry (immediately)
       { pc: 3, opcode: "MSTORE" }, // site 2 exit
       { pc: 5, opcode: "JUMPDEST" }, // caller
+      { pc: 6, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -469,13 +491,13 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("does not merge or accumulate — one frame, rooted at site 2", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 2);
+      const stack = buildCallStack(trace, pcToInstruction, 3);
       expect(stack).toHaveLength(1);
-      expect(stack[0].stepIndex).toBe(2);
+      expect(stack[0].stepIndex).toBe(3);
     });
 
     it("is empty after both sites", () => {
-      expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 5)).toHaveLength(0);
     });
   });
 
@@ -487,6 +509,7 @@ describe("inline virtual activations", () => {
     const trace: TraceStep[] = [
       { pc: 0, opcode: "JUMP" }, // real invoke of dbl
       { pc: 1, opcode: "PUSH1" }, // virtual (inline) invoke of dbl
+      { pc: 2, opcode: "ADD" },
     ];
     const program = {
       instructions: [instr(0, realInvoke), instr(1, entryInvoke)],
@@ -494,7 +517,7 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("keeps a real and a virtual dbl as two separate frames", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 1);
+      const stack = buildCallStack(trace, pcToInstruction, 2);
       expect(stack).toHaveLength(2);
       expect(stack[0].isInline).toBeFalsy();
       expect(stack[1].isInline).toBe(true);
@@ -524,6 +547,7 @@ describe("inline virtual activations", () => {
       { pc: 1, opcode: "PUSH1" }, // enter A (inside B)
       { pc: 2, opcode: "MSTORE" }, // exit A
       { pc: 3, opcode: "ADD" }, // back in B only
+      { pc: 4, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -536,14 +560,14 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("stacks two virtual frames inside the inner body", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 1);
+      const stack = buildCallStack(trace, pcToInstruction, 2);
       expect(stack).toHaveLength(2);
       expect(stack[0].identifier).toBe("B");
       expect(stack[1].identifier).toBe("A");
     });
 
     it("drops to the outer frame after the inner returns", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 3);
+      const stack = buildCallStack(trace, pcToInstruction, 4);
       expect(stack).toHaveLength(1);
       expect(stack[0].identifier).toBe("B");
     });
@@ -552,12 +576,13 @@ describe("inline virtual activations", () => {
   describe("defensive membership guard", () => {
     // A virtual invoke whose exit return never arrives (residual
     // smear / dropped marker): the frame must still be torn down
-    // when execution reaches a non-inline caller instruction,
+    // once execution has passed a non-inline caller instruction,
     // rather than leaking to the end of the trace.
     const trace: TraceStep[] = [
-      { pc: 0, opcode: "PUSH1" }, // virtual invoke → push
+      { pc: 0, opcode: "PUSH1" }, // virtual invoke (push at step 1)
       { pc: 1, opcode: "ADD" }, // still inside the body
       { pc: 3, opcode: "JUMPDEST" }, // caller code, no inline marker
+      { pc: 4, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -569,23 +594,25 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("keeps the frame while inline membership holds", () => {
-      expect(buildCallStack(trace, pcToInstruction, 1)).toHaveLength(1);
+      expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(1);
     });
 
-    it("force-pops a stale virtual frame at a non-inline instr", () => {
-      expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(0);
+    it("force-pops a stale virtual frame past a non-inline instr", () => {
+      expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(0);
     });
   });
 
   describe("real calls (regression: close-after applies uniformly)", () => {
     // A real call: caller JUMP + callee JUMPDEST (deduped), then a
-    // return. The frame is visible at its return step and popped on
-    // advance — same close-after rule as virtual frames.
+    // return. The frame is visible on the return's postcondition
+    // step and popped on advance — same close-after rule as virtual
+    // frames.
     const trace: TraceStep[] = [
       { pc: 0, opcode: "JUMP" }, // caller invoke
       { pc: 1, opcode: "JUMPDEST" }, // callee entry invoke (dedup)
       { pc: 2, opcode: "JUMP" }, // callee return
       { pc: 3, opcode: "JUMPDEST" }, // back in caller
+      { pc: 4, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -598,17 +625,17 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("collapses the caller/callee invoke double into one frame", () => {
-      expect(buildCallStack(trace, pcToInstruction, 1)).toHaveLength(1);
+      expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(1);
     });
 
-    it("still shows the frame AT its return instruction", () => {
-      const stack = buildCallStack(trace, pcToInstruction, 2);
+    it("still shows the frame after its return instruction", () => {
+      const stack = buildCallStack(trace, pcToInstruction, 3);
       expect(stack).toHaveLength(1);
       expect(stack[0].isInline).toBeFalsy();
     });
 
     it("pops the real frame on advancing past the return", () => {
-      expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(0);
     });
   });
 
@@ -630,6 +657,7 @@ describe("inline virtual activations", () => {
       { pc: 2, opcode: "ADD" }, // interior op
       { pc: 3, opcode: "MSTORE" }, // exit op (return)
       { pc: 4, opcode: "JUMPDEST" }, // gap / caller
+      { pc: 5, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -643,7 +671,8 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("shows the virtual frame across every body op incl. the exit", () => {
-      for (const s of [0, 1, 2, 3]) {
+      expect(buildCallStack(trace, pcToInstruction, 0)).toHaveLength(0);
+      for (const s of [1, 2, 3, 4]) {
         const stack = buildCallStack(trace, pcToInstruction, s);
         expect(stack).toHaveLength(1);
         expect(stack[0].isInline).toBe(true);
@@ -651,7 +680,7 @@ describe("inline virtual activations", () => {
     });
 
     it("is gone at the gap after the return op", () => {
-      expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 5)).toHaveLength(0);
     });
   });
 
@@ -676,6 +705,7 @@ describe("inline virtual activations", () => {
       { pc: 5, opcode: "DUP2" },
       { pc: 6, opcode: "MSTORE" },
       { pc: 7, opcode: "JUMPDEST" }, // gap
+      { pc: 8, opcode: "STOP" },
     ];
     const program = {
       instructions: [
@@ -692,7 +722,7 @@ describe("inline virtual activations", () => {
     const pcToInstruction = buildPcToInstructionMap(program);
 
     it("shows exactly one frame across each smeared body", () => {
-      for (const s of [0, 1, 2, 4, 5, 6]) {
+      for (const s of [1, 2, 3, 5, 6, 7]) {
         const stack = buildCallStack(trace, pcToInstruction, s);
         expect(stack).toHaveLength(1);
         expect(stack[0].isInline).toBe(true);
@@ -700,8 +730,143 @@ describe("inline virtual activations", () => {
     });
 
     it("returns to top level at each gap — no accumulation", () => {
-      expect(buildCallStack(trace, pcToInstruction, 3)).toHaveLength(0);
-      expect(buildCallStack(trace, pcToInstruction, 7)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 4)).toHaveLength(0);
+      expect(buildCallStack(trace, pcToInstruction, 8)).toHaveLength(0);
     });
+  });
+});
+
+// Instruction contexts are POSTCONDITIONS: at trace step i the
+// frame list must reflect instructions 0..i-1 (program-level
+// context as the base case), so that it agrees at every step with
+// the call-info banner, which is selected by effectiveContextForStep
+// under the same rule.
+describe("buildCallStack postcondition timing", () => {
+  // A real call as the compiler emits it: invoke on the caller JUMP
+  // AND the callee entry JUMPDEST (which also carries the argument
+  // pointers), then a return on the callee's exit JUMP.
+  const argPointer = { name: "x", location: "stack", slot: 0 };
+  const program = {
+    instructions: [
+      instr(0, { code: {} }), // caller prologue
+      instr(1, { invoke: { jump: true, identifier: "f" } }), // caller JUMP
+      instr(2, {
+        invoke: {
+          jump: true,
+          identifier: "f",
+          arguments: { pointer: { group: [argPointer] } },
+        },
+      }), // callee entry JUMPDEST
+      instr(3, { code: {} }), // callee body
+      instr(4, { return: { identifier: "f" } }), // callee exit JUMP
+      instr(5, { code: {} }), // back in the caller
+      instr(6, { code: {} }),
+    ],
+  } as unknown as Program;
+  const pcToInstruction = buildPcToInstructionMap(program);
+  const trace: TraceStep[] = [0, 1, 2, 3, 4, 5, 6].map((pc) => ({
+    pc,
+    opcode: "JUMPDEST",
+  }));
+
+  /** The call-info banner's selection for a step. */
+  const banner = (stepIndex: number) => {
+    const context = effectiveContextForStep({
+      programContext: program.context,
+      contextAtPc: (pc) => pcToInstruction.get(pc)?.context,
+      trace,
+      stepIndex,
+    });
+    return context
+      ? extractCallInfoFromInstruction(instr(0, context))
+      : undefined;
+  };
+
+  it("shows no frame while parked on the caller JUMP", () => {
+    // Step 1 is ABOUT to execute the invoke; it has not run yet, so
+    // neither the banner nor the frame list may show it.
+    expect(banner(1)).toBeUndefined();
+    expect(buildCallStack(trace, pcToInstruction, 1)).toHaveLength(0);
+  });
+
+  it("pushes the frame on the step the banner first names the invoke", () => {
+    expect(banner(2)?.kind).toBe("invoke");
+    const stack = buildCallStack(trace, pcToInstruction, 2);
+    expect(stack).toHaveLength(1);
+    expect(stack[0].identifier).toBe("f");
+    expect(stack[0].stepIndex).toBe(2);
+  });
+
+  it("agrees with the banner at every step", () => {
+    const depths = trace.map(
+      (_, i) => buildCallStack(trace, pcToInstruction, i).length,
+    );
+    const kinds = trace.map((_, i) => banner(i)?.kind);
+    // The frame opens with the invoke's postcondition and — under
+    // close-after — is still shown alongside the return banner,
+    // vanishing on the step after.
+    expect(kinds).toEqual([
+      undefined,
+      undefined,
+      "invoke",
+      "invoke",
+      undefined,
+      "return",
+      undefined,
+    ]);
+    expect(depths).toEqual([0, 0, 1, 1, 1, 1, 0]);
+  });
+
+  it("roots the frame at the step after the callee entry", () => {
+    // The dedup keeps the callee JUMPDEST's argument pointers, and
+    // those are its postcondition — they describe the state observed
+    // at the step AFTER it, which is where the frame is rooted.
+    const stack = buildCallStack(trace, pcToInstruction, 4);
+    expect(stack[0].stepIndex).toBe(3);
+    expect(stack[0].argumentNames).toEqual(["x"]);
+    expect(stack[0].argumentPointers).toEqual([argPointer]);
+  });
+
+  it("opens a frame from the program-level context at the first step", () => {
+    const entryProgram = {
+      context: { invoke: { jump: true, identifier: "main" } },
+      instructions: [instr(0, { code: {} })],
+    } as unknown as Program;
+    const stack = buildCallStack(
+      [{ pc: 0, opcode: "JUMPDEST" }],
+      buildPcToInstructionMap(entryProgram),
+      0,
+      entryProgram.context,
+    );
+    expect(stack).toHaveLength(1);
+    expect(stack[0].identifier).toBe("main");
+    expect(stack[0].stepIndex).toBe(0);
+  });
+});
+
+describe("buildCallStack membership guard on context-less steps", () => {
+  // A virtual invoke whose exit return never arrives, followed by
+  // an instruction carrying no context at all: no context means no
+  // inline membership, so the stale virtual frame is torn down just
+  // as it would be at a context-bearing caller instruction.
+  const trace: TraceStep[] = [
+    { pc: 0, opcode: "PUSH1" }, // virtual invoke (push at step 1)
+    { pc: 1, opcode: "JUMPDEST" }, // no context
+    { pc: 2, opcode: "STOP" },
+  ];
+  const program = {
+    instructions: [
+      instr(0, {
+        transform: ["inline"],
+        invoke: { jump: true, identifier: "dbl" },
+      }),
+      instr(1, undefined),
+    ],
+  } as unknown as Program;
+  const pcToInstruction = buildPcToInstructionMap(program);
+
+  it("force-pops the stale virtual frame", () => {
+    expect(buildCallStack(trace, pcToInstruction, 1)).toHaveLength(1);
+    expect(buildCallStack(trace, pcToInstruction, 2)).toHaveLength(0);
   });
 });

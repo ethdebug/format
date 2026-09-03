@@ -261,7 +261,10 @@ function TraceDrawerContent(): JSX.Element {
     return extractTransformFromInstruction(currentInstruction);
   }, [currentInstruction]);
 
-  // Build call stack via the shared, tailcall-aware helper.
+  // Build the call stack via the shared, tailcall-aware helper, on
+  // the same postcondition timing as the panels above (no
+  // program-level context from bugc): a frame appears on the step
+  // the call-info banner first names its invoke.
   const callStack = useMemo<CallFrame[]>(
     () => buildCallStack(programsTrace, formatPcToInstruction, currentStep),
     [programsTrace, formatPcToInstruction, currentStep],
@@ -300,7 +303,9 @@ function TraceDrawerContent(): JSX.Element {
     });
   }, [trace, formatPcToInstruction]);
 
-  // Resolve argument values for call stack frames
+  // Resolve argument values for call stack frames. A frame's
+  // stepIndex is the step whose observed state its argument
+  // pointers describe (the callee entry's postcondition).
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
 
   const [resolvedArgs, setResolvedArgs] = useState<Map<number, ResolvedArg[]>>(

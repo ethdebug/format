@@ -385,13 +385,19 @@ export function TraceProvider({
     };
   }, [extractedVars, currentStep, shouldResolve, templates]);
 
-  // Build call stack by scanning instructions up to current step
+  // Build the call stack on the same postcondition timing as the
+  // panels above: at step i the frame list reflects instructions
+  // 0..i-1 (program-level context as the base case), so a frame
+  // appears on the step the call-info banner first names its invoke.
   const callStack = useMemo(
-    () => buildCallStack(trace, pcToInstruction, currentStepIndex),
-    [trace, pcToInstruction, currentStepIndex],
+    () =>
+      buildCallStack(trace, pcToInstruction, currentStepIndex, program.context),
+    [trace, pcToInstruction, currentStepIndex, program.context],
   );
 
-  // Resolve argument values for call stack frames.
+  // Resolve argument values for call stack frames. A frame's
+  // stepIndex is the step whose observed state its argument
+  // pointers describe (the callee entry's postcondition).
   // Cache by stepIndex so we don't re-resolve frames that
   // haven't changed when the user steps forward.
   const argCacheRef = useRef<Map<number, ResolvedCallFrame["resolvedArgs"]>>(

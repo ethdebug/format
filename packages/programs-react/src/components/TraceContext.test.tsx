@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import type { Program } from "@ethdebug/format";
 import { TraceProvider, useTraceContext } from "./TraceContext.js";
@@ -119,5 +119,83 @@ describe("TraceProvider postcondition call-info selection", () => {
     // "sum" surfaces here.
     expect(result.current.currentCallInfo?.kind).toBe("invoke");
     expect(result.current.currentCallInfo?.identifier).toBe("sum");
+  });
+});
+
+describe("TraceProvider call-stack timing", () => {
+  // A real call as the compiler emits it: invoke on the caller
+  // JUMP and on the callee entry JUMPDEST (with the argument
+  // pointers), then the callee body. The JUMP pops its target, so
+  // the argument's stack slot only holds the argument once the
+  // JUMPDEST is reached; JUMPDEST itself is a no-op, so the state
+  // observed at the JUMPDEST and at the step after it coincide.
+  const callProgram = {
+    instructions: [
+      instr(0, { invoke: { jump: true, identifier: "f" } }),
+      instr(1, {
+        invoke: {
+          jump: true,
+          identifier: "f",
+          arguments: {
+            pointer: { group: [{ name: "x", location: "stack", slot: 0 }] },
+          },
+        },
+      }),
+      instr(2, { code: {} }),
+    ],
+  } as unknown as Program;
+
+  // Stack entries are listed bottom-to-top.
+  const callTrace: TraceStep[] = [
+    { pc: 0, opcode: "JUMP", stack: ["0x2a", "0x01"] },
+    { pc: 1, opcode: "JUMPDEST", stack: ["0x2a"] },
+    { pc: 2, opcode: "PUSH1", stack: ["0x2a"] },
+  ];
+
+  function render() {
+    return renderHook(() => useTraceContext(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <TraceProvider
+          trace={callTrace}
+          program={callProgram}
+          templates={templates}
+          resolveVariables={true}
+        >
+          {children}
+        </TraceProvider>
+      ),
+    });
+  }
+
+  it("shows the frame and the invoke banner on the same step", () => {
+    const { result } = render();
+    // Parked on the caller JUMP: neither the banner nor the frame
+    // list shows the call yet.
+    expect(result.current.currentCallInfo).toBeUndefined();
+    expect(result.current.callStack).toHaveLength(0);
+
+    act(() => result.current.jumpToStep(1));
+    expect(result.current.currentCallInfo?.kind).toBe("invoke");
+    expect(result.current.callStack).toHaveLength(1);
+    expect(result.current.callStack[0].identifier).toBe("f");
+  });
+
+  it("resolves arguments against the entry's postcondition", async () => {
+    const { result } = render();
+    act(() => result.current.jumpToStep(2));
+
+    // The frame is rooted at the step after the JUMPDEST, which is
+    // where its argument pointers describe the observed state.
+    expect(result.current.callStack[0].stepIndex).toBe(2);
+    expect(result.current.callStack[0].argumentNames).toEqual(["x"]);
+
+    await waitFor(() => {
+      const args = result.current.resolvedCallStack[0]?.resolvedArgs;
+      expect(args?.[0]?.value).toBeDefined();
+    });
+    const [x] = result.current.resolvedCallStack[0].resolvedArgs!;
+    expect(x.name).toBe("x");
+    expect(x.error).toBeUndefined();
+    expect(BigInt(x.value!)).toBe(42n);
   });
 });
