@@ -55,7 +55,7 @@ const structStorageTest: ObserveTraceTest<{
   }),
 
   expectedValues: [
-    { x: 0, y: 0, salt: "0x" },
+    { x: 0, y: 0, salt: "0x00000000" },
     { x: 5, y: 8, salt: "0xdeadbeef" },
     { x: 1, y: 2, salt: "0xfeedface" },
   ],
@@ -75,27 +75,29 @@ const structStorageTest: ObserveTraceTest<{
   },
 };
 
+const stringStorageCompileOptions = singleSourceCompilation({
+  path: "StringStorage.sol",
+  contractName: "StringStorage",
+  content: `contract StringStorage {
+    string storedString;
+    bool done;
+
+    event Done();
+
+    constructor() {
+      storedString = "hello world";
+      storedString = "solidity storage is a fun lesson in endianness";
+
+      done = true;
+    }
+  }
+  `,
+});
+
 const stringStorageTest: ObserveTraceTest<string> = {
   pointer: findExamplePointer("string-storage-contract-variable-slot"),
 
-  compileOptions: singleSourceCompilation({
-    path: "StringStorage.sol",
-    contractName: "StringStorage",
-    content: `contract StringStorage {
-      string storedString;
-      bool done;
-
-      event Done();
-
-      constructor() {
-        storedString = "hello world";
-        storedString = "solidity storage is a fun lesson in endianness";
-
-        done = true;
-      }
-    }
-    `,
-  }),
+  compileOptions: stringStorageCompileOptions,
 
   expectedValues: [
     "",
@@ -114,6 +116,35 @@ const stringStorageTest: ObserveTraceTest<string> = {
 
     // decode into JS string
     return new TextDecoder().decode(stringData);
+  },
+};
+
+/**
+ * the companion `string storage` example expresses the long-string body as
+ * a single region whose `length` runs across storage slots (see the segment
+ * addressing scheme). It models only the long form, so this test observes
+ * the trace only while the variable is unset or holds a long string.
+ */
+const multiSlotStringStorageTest: ObserveTraceTest<string> = {
+  pointer: findExamplePointer("string-storage-slot"),
+
+  compileOptions: stringStorageCompileOptions,
+
+  expectedValues: ["", "solidity storage is a fun lesson in endianness"],
+
+  async observe({ regions, read }: Cursor.View): Promise<string> {
+    const [string] = regions.named("string");
+
+    return new TextDecoder().decode(await read(string));
+  },
+
+  // solc marks long strings by an odd length word; the example does not
+  // model the short form, whose length word would decode as a huge length
+  async shouldObserve(state) {
+    const lengthData = await state.storage.read({ slot: Data.zero() });
+    const lengthWord = lengthData.asUint();
+
+    return lengthWord === 0n || lengthWord % 2n === 1n;
   },
 };
 
@@ -218,5 +249,6 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
 export const observeTraceTests = {
   "struct storage": structStorageTest,
   "string storage": stringStorageTest,
+  "string storage (multi-slot)": multiSlotStringStorageTest,
   "uint256[] memory": uint256ArrayMemoryTest,
 };

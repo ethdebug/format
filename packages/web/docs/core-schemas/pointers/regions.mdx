@@ -31,12 +31,18 @@ Regions in these locations use `offset` and `length`:
 ### Slot-based locations
 
 **Storage**, **transient storage**, and **stack** are organized in 32-byte
-slots. Regions use `slot`.
+slots. Regions use `slot`, and may narrow or extend the byte range with
+`offset` and `length`, both measured in bytes relative to the start of `slot`.
 
-For storage and transient storage, values that don't fill a full slot can
-specify sub-slot positioning with `offset` and `length` within the slot —
-useful for packed storage, such as a 20-byte address held at byte 12 of a
-slot.
+A segment may begin at any non-negative `offset`; an offset at or past
+`$wordsize` carries into later slots, so byte `$wordsize` of slot `p` is byte
+`0` of slot `p + 1`. Its `length` may likewise run past the end of the slot,
+in which case the segment is the concatenation of consecutive slots. When
+`length` is omitted, the segment ends at the end of the slot in which it
+begins. This covers packed storage, such as a 20-byte address held at byte 12
+of a slot, as well as data spanning many slots — the multi-slot
+`string storage` example in the [pointer schema](/spec/pointer) reads a long
+string's bytes as a single region.
 
 ## Location-specific details
 

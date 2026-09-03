@@ -202,6 +202,49 @@ describe("dereference", () => {
     });
   });
 
+  it("resolves .length lookups of $this inside list items", async () => {
+    // mirrors the shape of the `struct Record[] memory` schema example,
+    // where each item's offset is computed from its own length
+    const pointer: Pointer = {
+      list: {
+        count: 3,
+        each: "item-index",
+        is: {
+          name: "item",
+          location: "memory",
+          offset: {
+            $sum: [64, { $product: ["item-index", { ".length": "$this" }] }],
+          },
+          length: 32,
+        },
+      },
+    };
+
+    const cursor = await dereference(pointer);
+
+    const { regions } = await cursor.view(state);
+
+    expect(regions.map(({ offset }) => offset!.asUint())).toEqual([
+      64n,
+      96n,
+      128n,
+    ]);
+  });
+
+  it("throws an error on a self-referential $this lookup", async () => {
+    const pointer: Pointer = {
+      location: "memory",
+      offset: 0,
+      length: { ".length": "$this" },
+    };
+
+    const cursor = await dereference(pointer);
+
+    await expect(cursor.view(state)).rejects.toThrow(
+      "Circular reference detected: $this.length",
+    );
+  });
+
   it("throws an error on circular reference", async () => {
     const pointer: Pointer = {
       location: "memory",
