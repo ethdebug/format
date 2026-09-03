@@ -281,12 +281,12 @@ examples:
       identifier: "transfer"
       declaration:
         source:
-          id: 0
+          id: "0"
         range:
           offset: 128
           length: 95
       type:
-        id: 7
+        id: "7"
       jump: true
       target:
         pointer:
@@ -321,7 +321,7 @@ examples:
       identifier: "transfer"
       declaration:
         source:
-          id: 0
+          id: "0"
         range:
           offset: 128
           length: 95

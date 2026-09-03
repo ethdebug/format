@@ -48,7 +48,7 @@ examples:
           name: Coordinate
           location:
             source:
-              id: 5
+              id: "5"
             range:
               offset: 18
               length: 55

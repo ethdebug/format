@@ -80,7 +80,7 @@ examples:
       identifier: "transfer"
       declaration:
         source:
-          id: 0
+          id: "0"
         range:
           offset: 128
           length: 95
@@ -141,7 +141,7 @@ examples:
       identifier: "fact"
       declaration:
         source:
-          id: 0
+          id: "0"
         range:
           offset: 64
           length: 120
