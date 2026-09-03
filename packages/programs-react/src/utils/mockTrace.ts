@@ -3,6 +3,7 @@
  */
 
 import { Program } from "@ethdebug/format";
+import { effectiveContextForStep } from "./effectiveContext.js";
 
 /**
  * A single step in an execution trace.
@@ -199,11 +200,15 @@ export function extractCallEvents(
   if (!instruction.context) {
     return [];
   }
-  const events = collectCallInfos(instruction.context);
+  return extractCallEventsFromContext(instruction.context);
+}
+
+function extractCallEventsFromContext(context: Program.Context): CallInfo[] {
+  const events = collectCallInfos(context);
   if (events.length === 0) {
     return [];
   }
-  const transforms = extractTransformFromContext(instruction.context);
+  const transforms = extractTransformFromContext(context);
   const isTailCall = transforms.includes("tailcall");
   const isInline = transforms.includes("inline");
   if (!isTailCall && !isInline) {
@@ -369,29 +374,43 @@ export interface CallFrame {
 }
 
 /**
- * Build a call stack by scanning instructions from
- * step 0 to the given step index.
+ * Build the call stack as observed at a trace step.
+ *
+ * Instruction contexts are POSTCONDITIONS, so the frame list at
+ * step i reflects the contexts of the instructions executed at
+ * steps 0..i-1, with the program-level context as the base case
+ * (see {@link effectiveContextForStep}). A frame therefore opens
+ * on the step AFTER its invoke instruction — the same step on
+ * which the call-info banner first names the invoke — and a
+ * frame's `stepIndex` is the step whose observed state its
+ * argument pointers describe.
  */
 export function buildCallStack(
   trace: TraceStep[],
   pcToInstruction: Map<number, Program.Instruction>,
   upToStep: number,
+  programContext?: Program.Context,
 ): CallFrame[] {
   const stack: CallFrame[] = [];
+  const contextAtPc = (pc: number) => pcToInstruction.get(pc)?.context;
 
   for (let i = 0; i <= upToStep && i < trace.length; i++) {
-    const step = trace[i];
-    const instruction = pcToInstruction.get(step.pc);
-    if (!instruction) {
-      continue;
-    }
+    // A step without a context contributes no call events and no
+    // inline membership; the membership guard below still applies.
+    const context = effectiveContextForStep({
+      programContext,
+      contextAtPc,
+      trace,
+      stepIndex: i,
+    });
+    const ctx = context as unknown as Record<string, unknown> | undefined;
 
     // Per-instruction inline membership drives the defensive
     // guard below: an inlined body's instructions all carry
     // transform:["inline"] (nested inlining stacks the marker), so
     // the count bounds how many virtual frames may legitimately be
     // open on this instruction.
-    const transforms = extractTransformFromInstruction(instruction);
+    const transforms = context ? extractTransformFromContext(context) : [];
     const inlineCount = transforms.filter((t) => t === "inline").length;
 
     // A tail-call back-edge carries both a `return` (the previous
@@ -406,7 +425,6 @@ export function buildCallStack(
     // activation handled by the event loop below, so exclude the
     // inline marker here. The isTailCall *label* (which drives the
     // call-stack chip / info banner) follows the `tailcall` marker.
-    const ctx = instruction.context as Record<string, unknown> | undefined;
     const backEdgeInvoke = ctx ? findInvokeField(ctx) : undefined;
     if (
       ctx &&
@@ -414,7 +432,7 @@ export function buildCallStack(
       hasReturnContext(ctx) &&
       !transforms.includes("inline")
     ) {
-      const argResult = extractArgInfo(instruction);
+      const argResult = extractArgInfo(ctx);
       const frame: CallFrame = {
         identifier: backEdgeInvoke.identifier as string | undefined,
         stepIndex: i,
@@ -434,10 +452,11 @@ export function buildCallStack(
     // A context may carry more than one event (invoke + return),
     // e.g. an inlined body that emits to a single instruction.
     // Process them in order: an invoke opens a frame INCLUSIVE of
-    // its instruction; a return closes it AFTER its instruction
-    // (close-after) — so the frame is still shown while parked on
-    // the return-bearing instruction and popped only on advance.
-    for (const event of extractCallEvents(instruction)) {
+    // its step; a return closes it AFTER its step (close-after) —
+    // so the frame is still shown on the step whose banner names
+    // the return and popped only on advance.
+    const events = context ? extractCallEventsFromContext(context) : [];
+    for (const event of events) {
       if (event.kind === "invoke") {
         // The compiler emits invoke on both the caller JUMP and
         // callee entry JUMPDEST for a REAL call, on consecutive
@@ -452,14 +471,15 @@ export function buildCallStack(
           top.stepIndex === i - 1 &&
           !!top.isInline === !!event.isInline;
         if (isDuplicate) {
-          // Use the callee entry step for resolution — argument
-          // pointers/names live on the JUMPDEST, not the JUMP.
-          const argResult = extractArgInfo(instruction);
+          // Root the frame at the callee entry's postcondition step:
+          // the argument pointers/names live on the JUMPDEST, not
+          // the JUMP, and describe the state observed after it.
+          const argResult = ctx ? extractArgInfo(ctx) : undefined;
           top.stepIndex = i;
           top.argumentNames = argResult?.names ?? top.argumentNames;
           top.argumentPointers = argResult?.pointers;
         } else {
-          const argResult = extractArgInfo(instruction);
+          const argResult = ctx ? extractArgInfo(ctx) : undefined;
           stack.push({
             identifier: event.identifier,
             stepIndex: i,
@@ -503,15 +523,12 @@ export function buildCallStack(
 }
 
 /**
- * Extract argument names and pointers from an
- * instruction's invoke context, if present.
+ * Extract argument names and pointers from a context's invoke,
+ * if present.
  */
 function extractArgInfo(
-  instruction: Program.Instruction,
+  ctx: Record<string, unknown>,
 ): { names?: string[]; pointers?: unknown[] } | undefined {
-  const ctx = instruction.context as Record<string, unknown> | undefined;
-  if (!ctx) return undefined;
-
   const invoke = findInvokeField(ctx);
   if (!invoke) return undefined;
 

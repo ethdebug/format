@@ -27,6 +27,7 @@ import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
 import { dereference, Data, type Machine } from "@ethdebug/pointers";
 import {
   buildCallStack,
+  effectiveContextForStep,
   extractCallInfoFromInstruction,
   extractTransformFromInstruction,
   type CallFrame,
@@ -183,16 +184,27 @@ function TraceDrawerContent(): JSX.Element {
     return extractSourceRange(instruction.debug.context);
   }, [trace, currentStep, pcToInstruction]);
 
-  // Extract variables from current instruction context
+  // Instruction contexts are POSTCONDITIONS, so the semantic facts
+  // shown at the step about to execute instruction i come from
+  // instruction i-1 (bugc emits no program-level context, so the
+  // first step is empty). Pointer resolution still runs against the
+  // state observed at step i; only the context selection shifts.
+  const effectiveContext = useMemo(
+    () =>
+      effectiveContextForStep({
+        programContext: undefined,
+        contextAtPc: (pc) => pcToInstruction.get(pc)?.debug?.context,
+        trace,
+        stepIndex: currentStep,
+      }),
+    [pcToInstruction, trace, currentStep],
+  );
+
+  // Extract variables from the effective (postcondition) context.
   const currentVariables = useMemo(() => {
-    if (trace.length === 0 || currentStep >= trace.length) return [];
-
-    const step = trace[currentStep];
-    const instruction = pcToInstruction.get(step.pc);
-    if (!instruction?.debug?.context) return [];
-
-    return extractVariables(instruction.debug.context);
-  }, [trace, currentStep, pcToInstruction]);
+    if (!effectiveContext) return [];
+    return extractVariables(effectiveContext);
+  }, [effectiveContext]);
 
   // Adapt the bugc instruction map + evm trace to the shared
   // programs-react call-stack helpers, which read the
@@ -222,11 +234,14 @@ function TraceDrawerContent(): JSX.Element {
     return formatPcToInstruction.get(step.pc);
   }, [trace, currentStep, formatPcToInstruction]);
 
-  // Extract call info from current instruction context
+  // Extract call info from the effective (postcondition) context.
   const currentCallInfo = useMemo<CallInfo | undefined>(() => {
-    if (!currentInstruction) return undefined;
-    return extractCallInfoFromInstruction(currentInstruction);
-  }, [currentInstruction]);
+    if (!effectiveContext) return undefined;
+    return extractCallInfoFromInstruction({
+      offset: 0,
+      context: effectiveContext,
+    } as unknown as Program.Instruction);
+  }, [effectiveContext]);
 
   // Build the ethdebug/format instruction object for the current step
   const currentFormatInstruction = useMemo(() => {
@@ -246,7 +261,10 @@ function TraceDrawerContent(): JSX.Element {
     return extractTransformFromInstruction(currentInstruction);
   }, [currentInstruction]);
 
-  // Build call stack via the shared, tailcall-aware helper.
+  // Build the call stack via the shared, tailcall-aware helper, on
+  // the same postcondition timing as the panels above (no
+  // program-level context from bugc): a frame appears on the step
+  // the call-info banner first names its invoke.
   const callStack = useMemo<CallFrame[]>(
     () => buildCallStack(programsTrace, formatPcToInstruction, currentStep),
     [programsTrace, formatPcToInstruction, currentStep],
@@ -285,7 +303,9 @@ function TraceDrawerContent(): JSX.Element {
     });
   }, [trace, formatPcToInstruction]);
 
-  // Resolve argument values for call stack frames
+  // Resolve argument values for call stack frames. A frame's
+  // stepIndex is the step whose observed state its argument
+  // pointers describe (the callee entry's postcondition).
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
 
   const [resolvedArgs, setResolvedArgs] = useState<Map<number, ResolvedArg[]>>(
