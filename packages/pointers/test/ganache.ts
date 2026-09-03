@@ -124,7 +124,9 @@ function makeWords(slots: StructLog["storage"]): Machine.State.Words {
       const rawHex =
         slots[slot.resizeTo(32).toHex().slice(2) as keyof typeof slots];
 
-      const data = Data.fromHex(`0x${rawHex}`);
+      // slots untouched by the transaction so far are absent from the
+      // struct log; treat them as zero
+      const data = Data.fromHex(`0x${rawHex ?? "00".repeat(32)}`);
 
       return new Data(data.slice(Number(offset), Number(offset + length)));
     },
