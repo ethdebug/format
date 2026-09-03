@@ -52,7 +52,7 @@ properties:
       If this field has value larger than the default value, i.e., if the
       segment extends beyond the last byte in the slot, then this segment is
       defined to be the concatenation of the sequentially-addressed slot(s)
-      following following the slot specified.
+      following the slot specified.
     $ref: "schema:ethdebug/format/pointer/expression"
     default:
       $difference:
