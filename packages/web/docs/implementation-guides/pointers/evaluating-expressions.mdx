@@ -9,7 +9,48 @@ import CodeListing from "@site/src/components/CodeListing";
 
 Expression evaluation is a bit more interesting than reading raw region data,
 but, still, performing this evaluation becomes relatively straightforward
-if variable and region references are pre-evaluated:
+if variable and region references are pre-evaluated.
+
+## Two sorts of value
+
+The schema defines every expression to evaluate to one of two sorts of
+value: an **integer**, which has a numeric value but no width, or **bytes**,
+which have a definite width. The distinction matters because `$keccak256`
+and `$concat` produce results that depend on the widths of their operands,
+so the schema requires those operands to be bytes. A bare integer (a JSON
+number, `$wordsize`, an arithmetic result, or a lookup) must first be given
+a width with `$sized<N>` or `$wordsized`; the resize forms are the only
+bridge from an integer to bytes.
+
+This reference implementation represents the two sorts as a tagged union:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={(sourceFile) =>
+    sourceFile.getExportedDeclarations().get("Value")[0]
+  }
+/>
+
+The accompanying `Value` namespace provides constructors, type guards, and
+the two conversions the rest of the implementation needs: `toInteger()`,
+for positions where the schema expects an integer (bytes are read as the
+non-negative integer they encode big-endian), and `toData()`, for storing
+a value as a concrete region's `slot`, `offset`, or `length`:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={(sourceFile) =>
+    sourceFile.getExportedDeclarations().get("Value")[1]
+  }
+/>
+
+## Evaluation options
+
+Variables carry the sort of the expression that defined them, so the
+`variables` map holds `Value`s, while the `regions` map holds pre-evaluated
+concrete regions:
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -37,7 +78,8 @@ specific logic based on the kind of expression:
 
 ## Evaluating constants, literals, and variables
 
-Evaluating constant expressions is quite straightforward:
+Evaluating constant expressions is quite straightforward; `$wordsize` is the
+integer 32:
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -45,8 +87,10 @@ Evaluating constant expressions is quite straightforward:
   extract={(sourceFile) => sourceFile.getFunction("evaluateConstant")}
 />
 
-Evaluating literals involves detecting hex string vs. number and converting
-appropriate to bytes:
+Literals follow the schema's sorting rule: a JSON number is an integer, a
+hex string with an even number of digits is bytes of that width, and a hex
+string with an odd number of digits (which has no whole-byte width) is an
+integer:
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -55,7 +99,8 @@ appropriate to bytes:
 />
 
 Variable lookups, of course, require consulting the `variables` map passed
-in `EvaluateOptions`:
+in `EvaluateOptions`, yielding whichever sort of value the variable was
+defined with:
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -65,67 +110,39 @@ in `EvaluateOptions`:
 
 ## Evaluating arithmetic operations
 
-Doing arithmetic operations follows the logic one might expect: recurse on
-the operands of the expression and join the results appropriately. Note the
-slight differences in implementation for operations that accept any number
-of operands (sums, products), vs. operations that only accept two operands
-(differences, quotients, remainders).
-
-Evaluating sums:
+Arithmetic is ordinary integer arithmetic: each operand is evaluated and
+taken as an integer (a bytes operand is read as the non-negative integer its
+bytes encode), and the result is an integer with no width. A small helper
+performs this coercion wherever the schema expects an integer:
 
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticSum")}
+  extract={(sourceFile) => sourceFile.getFunction("evaluateInteger")}
 />
 
-Evaluating products:
+With operands as integers, the five operations differ only in how they
+combine them. Note that sums and products accept any number of operands,
+while differences, quotients, and remainders take exactly two:
 
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticProduct")}
+  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmetic")}
 />
 
-Evaluating differences:
-
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/evaluate.ts"
-  extract={(sourceFile) =>
-    sourceFile.getFunction("evaluateArithmeticDifference")
-  }
-/>
-
-**Note** how this function operates on unsigned values only by bounding the
-result below at 0.
-
-Evaluating quotients:
-
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/evaluate.ts"
-  extract={(sourceFile) => sourceFile.getFunction("evaluateArithmeticQuotient")}
-/>
-
-(Quotients of course use integer division only.)
-
-Evaluating remainders:
-
-<CodeListing
-  packageName="@ethdebug/pointers"
-  sourcePath="src/evaluate.ts"
-  extract={(sourceFile) =>
-    sourceFile.getFunction("evaluateArithmeticRemainder")
-  }
-/>
+**Note** how `$difference` operates on unsigned values only by bounding the
+result below at 0, and how `$quotient` uses integer division only.
 
 ## Evaluating resize expressions
 
-This schema provides the `{ "$sized<N>": <expression> }` construct to allow
-explicitly resizing a subexpression. This implementation uses the
+This schema provides the `{ "$sized<N>": <expression> }` and
+`{ "$wordsized": <expression> }` constructs to allow explicitly resizing a
+subexpression. A resize always produces bytes of the requested width, and
+so is the way to give an integer a width; this implementation encodes an
+integer as its minimal big-endian bytes and then uses the
 [`Data.prototype.resizeTo()`](/docs/implementation-guides/pointers/types/data-and-machines)
-method to perform this operation.
+method for both sorts.
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -144,6 +161,20 @@ See Solidity's
 documentation for an example of how one high-level EVM language makes heavy
 use of hashing to allocate persistent data.
 
+Because the hash is taken over the operands' concatenated bytes, each
+operand must evaluate to bytes. This helper evaluates the operands of a
+width-sensitive operation and rejects a bare integer with an error that
+names the offending operand and suggests the fix:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/evaluate.ts"
+  extract={(sourceFile) => sourceFile.getFunction("evaluateBytesOperands")}
+/>
+
+With every operand's width guaranteed, hashing is a matter of concatenating
+and applying the hash function:
+
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
@@ -152,8 +183,9 @@ use of hashing to allocate persistent data.
 
 ## Evaluating concatenation
 
-Byte concatenation is straightforward: recursively evaluate the operands and
-join them together, preserving the byte width of each operand.
+Byte concatenation reuses the same operand helper: evaluate the operands,
+requiring each to be bytes, and join them together, preserving the byte
+width of each operand.
 
 <CodeListing
   packageName="@ethdebug/pointers"
@@ -173,8 +205,9 @@ Currently, the specification defines lookup operations for three properties:
 accessing properties that aren't available on the target region (e.g.
 memory regions do not contain a `slot` property).
 
-Since all of these lookups function in the same way, this reference
-implementation needs only a single
+A region's `slot`, `offset`, and `length` are positions and counts, so a
+lookup evaluates to an integer. Since all of these lookups function in the
+same way, this reference implementation needs only a single
 `evaluateLookup<O extends "slot" | "offset" | "length">` function:
 
 <CodeListing
@@ -193,7 +226,8 @@ use of runtime definedness checks.)
 Finally, the last kind of expression defined by this specification is for
 reading raw data from the machine state. A `Pointer.Expression.Read` should
 evaluate to the raw bytes stored at runtime in the region identified by a
-particular name.
+particular name; naturally, its result is bytes, whose width is the length
+of the region read.
 
 Thanks to `evaluate()`'s requirement that its input regions-by-name map
 contains only concrete
