@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Regions | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/regions"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Regions | ethdebug format"><meta data-rh="true" name="description" content="A region represents a contiguous block of bytes in a specific EVM data"><meta data-rh="true" property="og:description" content="A region represents a contiguous block of bytes in a specific EVM data"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-284/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/regions"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/regions" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/regions" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Pointers","item":"https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/"},{"@type":"ListItem","position":2,"name":"Regions","item":"https://ethdebug.github.io/format/pr-preview/pr-284/docs/core-schemas/pointers/regions"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-284/assets/css/styles.21c5b708.css">
-<script src="/format/pr-preview/pr-284/assets/js/runtime~main.7e7ce76a.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-284/assets/js/runtime~main.189e62ce.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-284/assets/js/main.d5a8ac31.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -30,11 +30,17 @@ Regions in these locations use <code>offset</code> and <code>length</code>:</p>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="slot-based-locations">Slot-based locations<a href="#slot-based-locations" class="hash-link" aria-label="Direct link to Slot-based locations" title="Direct link to Slot-based locations" translate="no">​</a></h3>
 <p><strong>Storage</strong>, <strong>transient storage</strong>, and <strong>stack</strong> are organized in 32-byte
-slots. Regions use <code>slot</code>.</p>
-<p>For storage and transient storage, values that don&#x27;t fill a full slot can
-specify sub-slot positioning with <code>offset</code> and <code>length</code> within the slot —
-useful for packed storage, such as a 20-byte address held at byte 12 of a
-slot.</p>
+slots. Regions use <code>slot</code>, and may narrow or extend the byte range with
+<code>offset</code> and <code>length</code>, both measured in bytes relative to the start of <code>slot</code>.</p>
+<p>A segment may begin at any non-negative <code>offset</code>; an offset at or past
+<code>$wordsize</code> carries into later slots, so byte <code>$wordsize</code> of slot <code>p</code> is byte
+<code>0</code> of slot <code>p + 1</code>. Its <code>length</code> may likewise run past the end of the slot,
+in which case the segment is the concatenation of consecutive slots. When
+<code>length</code> is omitted, the segment ends at the end of the slot in which it
+begins. This covers packed storage, such as a 20-byte address held at byte 12
+of a slot, as well as data spanning many slots — the multi-slot
+<code>string storage</code> example in the <a class="" href="/format/pr-preview/pr-284/spec/pointer">pointer schema</a> reads a long
+string&#x27;s bytes as a single region.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="location-specific-details">Location-specific details<a href="#location-specific-details" class="hash-link" aria-label="Direct link to Location-specific details" title="Direct link to Location-specific details" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="memory">Memory<a href="#memory" class="hash-link" aria-label="Direct link to Memory" title="Direct link to Memory" translate="no">​</a></h3>
 <p>Memory is a simple byte array that grows as needed. Memory addresses often
