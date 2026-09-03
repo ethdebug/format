@@ -336,5 +336,6 @@ examples:
       - .length: "array-start"
       - 1
   - $keccak256:
-      - 5
-      - .offset: "array-start"
+      - $wordsized: 5
+      - $wordsized:
+          .offset: "array-start"
