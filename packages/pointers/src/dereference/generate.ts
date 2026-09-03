@@ -1,7 +1,7 @@
 import type { Pointer } from "@ethdebug/format";
 import type { Machine } from "#machine";
 import type { Cursor } from "#cursor";
-import type { Data } from "#data";
+import type { Value } from "#evaluate";
 
 import { Memo } from "./memo.js";
 import { processPointer, type ProcessOptions } from "./process.js";
@@ -129,7 +129,7 @@ async function initializeProcessOptions({
   const stackLengthChange = currentStackLength - initialStackLength;
 
   const regions: Record<string, Cursor.Region> = {};
-  const variables: Record<string, Data> = {};
+  const variables: Record<string, Value> = {};
 
   return {
     templates,

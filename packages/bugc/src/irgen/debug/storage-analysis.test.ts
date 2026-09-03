@@ -426,9 +426,9 @@ describe("storage-analysis", () => {
 
       const pointer = translateComputeSlotChain(chain!);
 
-      // Should be: keccak256(wordsized(0x1234), 0)
+      // Should be: keccak256(wordsized(0x1234), wordsized(0))
       expect(pointer).toEqual({
-        $keccak256: [{ $wordsized: 0x1234 }, 0],
+        $keccak256: [{ $wordsized: 0x1234 }, { $wordsized: 0 }],
       });
     });
 
@@ -446,12 +446,17 @@ describe("storage-analysis", () => {
 
       const pointer = translateComputeSlotChain(chain!);
 
-      // Should be: keccak256(wordsized(0xbbbb), keccak256(wordsized(0xaaaa), 1))
+      // Should be:
+      //   keccak256(
+      //     wordsized(0xbbbb),
+      //     keccak256(wordsized(0xaaaa), wordsized(1)),
+      //   )
+      // The inner keccak256 is already 32-byte bytes, so it is not wrapped.
       expect(pointer).toEqual({
         $keccak256: [
           { $wordsized: 0xbbbb },
           {
-            $keccak256: [{ $wordsized: 0xaaaa }, 1],
+            $keccak256: [{ $wordsized: 0xaaaa }, { $wordsized: 1 }],
           },
         ],
       });
@@ -470,9 +475,9 @@ describe("storage-analysis", () => {
 
       const pointer = translateComputeSlotChain(chain!);
 
-      // Should be: keccak256(2)
+      // Should be: keccak256(wordsized(2))
       expect(pointer).toEqual({
-        $keccak256: [2],
+        $keccak256: [{ $wordsized: 2 }],
       });
     });
 
@@ -509,11 +514,11 @@ describe("storage-analysis", () => {
 
       const pointer = translateComputeSlotChain(chain!);
 
-      // Should be: sum(keccak256(wordsized(0xaaaa), 4), 2)
+      // Should be: sum(keccak256(wordsized(0xaaaa), wordsized(4)), 2)
       expect(pointer).toEqual({
         $sum: [
           {
-            $keccak256: [{ $wordsized: 0xaaaa }, 4],
+            $keccak256: [{ $wordsized: 0xaaaa }, { $wordsized: 4 }],
           },
           2,
         ],

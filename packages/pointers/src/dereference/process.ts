@@ -1,8 +1,7 @@
 import { Pointer } from "@ethdebug/format";
 import type { Machine } from "#machine";
 import type { Cursor } from "#cursor";
-import { Data } from "#data";
-import { evaluate } from "#evaluate";
+import { evaluate, Value } from "#evaluate";
 
 import { Memo } from "./memo.js";
 import { adjustStackLength, evaluateRegion } from "./region.js";
@@ -15,7 +14,7 @@ export interface ProcessOptions {
   state: Machine.State;
   stackLengthChange: bigint;
   regions: Record<string, Cursor.Region>;
-  variables: Record<string, Data>;
+  variables: Record<string, Value>;
 }
 
 /**
@@ -101,13 +100,13 @@ async function* processList(
   const { list } = collection;
   const { count: countExpression, each, is } = list;
 
-  const count = (await evaluate(countExpression, options)).asUint();
+  const count = Value.toInteger(await evaluate(countExpression, options));
 
   const memos: Memo[] = [];
   for (let index = 0n; index < count; index++) {
     memos.push(
       Memo.saveVariables({
-        [each]: Data.fromUint(index),
+        [each]: Value.integer(index),
       }),
     );
 
@@ -123,7 +122,7 @@ async function* processConditional(
 ): Process {
   const { if: ifExpression, then: then_, else: else_ } = collection;
 
-  const if_ = (await evaluate(ifExpression, options)).asUint();
+  const if_ = Value.toInteger(await evaluate(ifExpression, options));
 
   if (if_) {
     return [Memo.dereferencePointer(then_)];
@@ -142,15 +141,15 @@ async function* processScope(
   const allVariables = {
     ...options.variables,
   };
-  const newVariables: { [identifier: string]: Data } = {};
+  const newVariables: { [identifier: string]: Value } = {};
   for (const [identifier, expression] of Object.entries(variableExpressions)) {
-    const data = await evaluate(expression, {
+    const value = await evaluate(expression, {
       ...options,
       variables: allVariables,
     });
 
-    allVariables[identifier] = data;
-    newVariables[identifier] = data;
+    allVariables[identifier] = value;
+    newVariables[identifier] = value;
   }
 
   return [Memo.saveVariables(newVariables), Memo.dereferencePointer(in_)];

@@ -5,6 +5,43 @@ title: ethdebug/format/pointer/expression
 description: |
   A schema for describing expressions that evaluate to values.
 
+  ## Two sorts of value: integers and bytes
+
+  Every expression evaluates to a value of one of two sorts:
+
+  - an **integer** — an unbounded, non-negative integer. It has a numeric
+    value but **no width**. Arithmetic is ordinary integer arithmetic.
+  - **bytes** — a finite sequence of bytes with a definite **width** (its
+    byte length).
+
+  The two sorts are produced by different forms:
+
+  - **Integers** are produced by a JSON-number literal, the `$wordsize`
+    constant, a variable or lookup (`.offset` / `.length` / `.slot`) that
+    denotes an index or count, an arithmetic operation (`$sum`,
+    `$difference`, `$product`, `$quotient`, `$remainder`), and a
+    hexadecimal literal that has an **odd** number of digits (which has no
+    whole-byte width — see `Literal`).
+  - **Bytes** are produced by a hexadecimal literal with an **even** number
+    of digits (its width is the number of bytes written), `$read` (its
+    width is the length of the region read), the resize forms
+    `$sizedN` / `$wordsized` (whose width is `N` / the word size),
+    `$keccak256` (width 32), and `$concat` (width the sum of its operands').
+
+  ## Coercion and the width-bearing requirement
+
+  Where an **integer** is expected — arithmetic operands, a list `count`, a
+  segment `slot` / `offset` / `length` — a bytes value is accepted and read
+  as the non-negative integer its bytes encode (big-endian).
+
+  Where **bytes** are expected — the operands of `$concat` and `$keccak256`,
+  whose results depend on operand widths — the operand **must** be
+  width-bearing. A bare integer (a JSON number, an odd-digit hex literal,
+  `$wordsize`, an arithmetic result, or a lookup) is **not** valid there:
+  give it a width first with `$sizedN` or `$wordsized`. There is no
+  implicit widening; the resize forms are the only bridge from an integer
+  to bytes.
+
 oneOf:
   - $ref: "#/$defs/Literal"
   - $ref: "#/$defs/Variable"
@@ -20,7 +57,18 @@ $defs:
   Literal:
     title: Literal value
     description: |
-      An unsigned number or a `0x`-prefixed string of hexadecimal digits
+      A literal value, written either as a JSON number or as a `0x`-prefixed
+      hexadecimal string.
+
+      Its sort follows its form:
+
+      - a JSON number is an **integer** (no width);
+      - a hexadecimal string with an **even** number of digits is **bytes**,
+        whose width is the number of bytes written (`"0x00"` is one zero
+        byte, `"0xdead"` is two bytes);
+      - a hexadecimal string with an **odd** number of digits has no
+        whole-byte width and is therefore an **integer**, equal to the value
+        its digits denote (`"0x1"` is the integer `1`, not bytes).
 
     $ref: "schema:ethdebug/format/data/value"
 
@@ -44,6 +92,12 @@ $defs:
 
   Arithmetic:
     title: Arithmetic operation
+    description: |
+      Ordinary integer arithmetic. Each operand is taken as an **integer**
+      (a bytes operand is read as the non-negative integer its bytes encode),
+      and the result is an **integer** with no width. To use an arithmetic
+      result where bytes are required, give it a width with `$sizedN` or
+      `$wordsized`.
     type: object
     properties:
       "$sum":
@@ -113,7 +167,8 @@ $defs:
       An object of the form `{ ".<property-name>": "<region>" }`, to
       denote that this expression is equivalent to the defined value for
       the property named `<property-name>` inside the region referenced as
-      `<region>`.
+      `<region>`. The value is an **integer** (a region's `.offset`,
+      `.length`, or `.slot`).
 
       `<property-name>` **must** be a valid and present property on the
       corresponding region, or it **must** correspond to an optional property
@@ -136,7 +191,8 @@ $defs:
     description: |
       An object of the form `{ "$read": "<region>" }`. The value of this
       expression equals the raw bytes present in the running machine state
-      in the referenced region.
+      in the referenced region. The result is **bytes** whose width is the
+      length of the region read.
     type: object
     properties:
       $read:
@@ -169,9 +225,16 @@ $defs:
   Keccak256:
     title: Keccak256 hash
     description: |
-      An object of the form `{ "$keccak256": [...values] }`, indicating that this
-      expression evaluates to the Solidity-style keccak256 hash of the
-      tightly-packed bytes encoded by `values`.
+      An object of the form `{ "$keccak256": [...values] }`, indicating
+      that this expression evaluates to the Solidity-style keccak256 hash
+      of the tightly-packed bytes encoded by `values`. The result is
+      **bytes** of width 32.
+
+      Because the hash is taken over the concatenation of the operands'
+      bytes, each operand **must** be width-bearing (bytes): a bare integer
+      is not valid here and must be given a width first with `$sizedN` or
+      `$wordsized`. This is why a mapping-slot computation word-sizes its key
+      and slot before hashing.
     type: object
     properties:
       $keccak256:
@@ -184,7 +247,7 @@ $defs:
       - $keccak256
     examples:
       - $keccak256:
-          - 0
+          - $wordsized: 0
           - "0x00"
 
   Concat:
@@ -193,7 +256,12 @@ $defs:
       An object of the form `{ "$concat": [...values] }`, indicating that this
       expression evaluates to the concatenation of bytes from each value.
       The byte width of each operand is preserved; no padding is added or
-      removed between operands.
+      removed between operands. The result is **bytes** whose width is the
+      sum of the operand widths.
+
+      Each operand **must** be width-bearing (bytes): a bare integer is not
+      valid here and must be given a width first with `$sizedN` or
+      `$wordsized`.
     type: object
     properties:
       $concat:
@@ -216,6 +284,10 @@ $defs:
   Resize:
     title: Resize data
     description: |
+      A resize operation produces **bytes** of a definite width, and is the
+      bridge from an integer to bytes: give it an integer (or bytes) and it
+      yields bytes of the requested width.
+
       A resize operation expression is either an object of the form
       `{ "$sized<N>": <expression> }` or an object of the form
       `{ "$wordsized": <expression> }`, where `<expression>` is an expression
@@ -265,5 +337,6 @@ examples:
       - .length: "array-start"
       - 1
   - $keccak256:
-      - 5
-      - .offset: "array-start"
+      - $wordsized: 5
+      - $wordsized:
+          .offset: "array-start"
