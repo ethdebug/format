@@ -46,7 +46,8 @@ properties:
       The length of the bytes range this segment represents.
 
       This field is **optional**. If unspecified, its default value indicates
-      that the segment ends at the end of the slot.
+      that the segment ends at the end of the slot in which it begins (after
+      applying any `offset` carry).
 
       If this field has value larger than the default value, i.e., if the
       segment extends beyond the last byte in the slot, then this segment is
@@ -56,7 +57,9 @@ properties:
     default:
       $difference:
         - $wordsize
-        - .offset: $this
+        - $remainder:
+            - .offset: $this
+            - $wordsize
 
 required:
   - slot
