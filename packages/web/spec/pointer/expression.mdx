@@ -6,25 +6,45 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 
 # Expression syntax
 
-Pointer expressions operate on the domain of bytes representing unsigned
-integers.
+Pointer expressions compute the values that pointers need: slot numbers,
+byte offsets, lengths, and counts, as well as the byte sequences that get
+hashed to derive them.
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/pointer/expression" }} />
 
+## Integers and bytes
+
+Every expression evaluates to a value of one of two sorts. An **integer** is
+an unbounded, non-negative number with no width: JSON numbers, `$wordsize`,
+variables, lookups, arithmetic results, and odd-digit hexadecimal literals
+are integers. **Bytes** are a finite sequence with a definite width:
+even-digit hexadecimal literals, `$read`, `$keccak256`, `$concat`, and the
+resize forms produce bytes.
+
+Where an integer is expected (arithmetic operands, a list `count`, a
+segment's `slot`, `offset`, or `length`), a bytes value is read as the
+non-negative integer its bytes encode, big-endian. Where bytes are expected
+(the operands of `$concat` and `$keccak256`, whose results depend on operand
+widths), the operand **must** be width-bearing; a bare integer there is
+invalid and **must** first be given a width with `$sized<N>` or
+`$wordsized`. There is no implicit widening: the resize forms are the only
+bridge from an integer to bytes.
+
 ## Literal values
 
-An expression can be a literal value.
+An expression can be a literal value, written either as a JSON number or as
+a `0x`-prefixed hexadecimal string.
 
-Literal values **must** be represented either as JSON numbers or as
-`0x`-prefixed hexadecimal strings. Hexadecimal strings always represent a
-literal string of bytes.
+A JSON number is an **integer**. A hexadecimal string with an **even** number
+of digits is **bytes**, whose width is the number of bytes written: `"0x00"`
+is one zero byte and `"0xdead"` is two bytes. A hexadecimal string with an
+**odd** number of digits has no whole-byte width and is therefore an
+**integer** equal to the value its digits denote: `"0x1"` is the integer `1`,
+not bytes.
 
-For convenience, this schema does not restrict hexadecimal string
-representations to those that specify an even-number of digits (i.e., those
-that specify complete byte pairs); odd numbers of hexadecimal digits are fine.
-
-Hexadecimal string representations **may** omit leading zeroes; values are
-assumed to be left-padded to the bytes width appropriate for the context.
+Widths are never inferred from context, so a literal intended as bytes of a
+particular width **must** be written with that many digits or wrapped in a
+resize form.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
@@ -47,7 +67,8 @@ For an example where scalar variables may appear, see the
 ## Arithmetic operations
 
 An expression can be an object of the form `{ <op>: [...] }`, where `<op>`
-denotes an arithmetic operation.
+denotes an arithmetic operation. Operands are taken as integers, and the
+result is an **integer** with no width.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
@@ -58,7 +79,8 @@ denotes an arithmetic operation.
 
 An expression can reference properties defined for a particular region, such as
 another region's `"offset"` or `"length"`. Such expressions resolve to the
-same value as the expression specified for that corresponding property.
+same value as the expression specified for that corresponding property, and
+that value is an **integer**.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
@@ -72,7 +94,7 @@ An expression can be an object of the form `{ "$read": "<region>" }`, where
 
 The value of such an expression is the concatenation of bytes present in the
 running machine state that correspond to the bytes addressed by the referenced
-region.
+region: **bytes** whose width is the length of that region.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
@@ -83,7 +105,8 @@ region.
 
 An expression can be an object of form `{ "$keccak256": [...] }`, indicating
 that the value of the expression is a Solidity-style, tightly-packed keccak256
-hash of the concatenation of bytes specified by the list.
+hash of the concatenation of bytes specified by the list. Each operand
+**must** be bytes, and the result is **bytes** of width 32.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
@@ -94,8 +117,9 @@ hash of the concatenation of bytes specified by the list.
 
 An expression can be an object of form `{ "$concat": [...] }`, indicating
 that the value of the expression is the concatenation of bytes from each
-value in the list. The byte width of each operand is preserved; no padding
-is added or removed between operands.
+value in the list. Each operand **must** be bytes; the byte width of each
+operand is preserved, no padding is added or removed between operands, and
+the result is **bytes** whose width is the sum of the operand widths.
 
 This is useful for building composite byte sequences, for example when
 constructing storage slot keys or preparing data for hashing.
@@ -107,10 +131,10 @@ constructing storage slot keys or preparing data for hashing.
 
 ## Resize operations
 
-In certain situations, e.g. keccak256 hashes, it's crucially important to be
-able to express the bytes width of particular expression values. This schema
-provides primitives to allow specifying an explicit bytes width for a
-particular sub-expression.
+In certain situations, e.g. keccak256 hashes, an expression value must have
+a particular byte width. Resize operations produce **bytes** of an explicit
+width from any sub-expression, and are the only way to turn an integer into
+bytes.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/pointer/expression" }}
