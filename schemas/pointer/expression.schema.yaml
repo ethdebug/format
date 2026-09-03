@@ -24,8 +24,9 @@ description: |
     whole-byte width — see `Literal`).
   - **Bytes** are produced by a hexadecimal literal with an **even** number
     of digits (its width is the number of bytes written), `$read` (its
-    width is the length of the region read), and the resize forms
-    `$sizedN` / `$wordsized` (whose width is `N` / the word size).
+    width is the length of the region read), the resize forms
+    `$sizedN` / `$wordsized` (whose width is `N` / the word size),
+    `$keccak256` (width 32), and `$concat` (width the sum of its operands').
 
   ## Coercion and the width-bearing requirement
 
