@@ -135,9 +135,7 @@ describe("dereference", () => {
       expect(region).toEqual({
         name: "item",
         location: "memory",
-        offset: Data.fromUint(
-          Data.fromNumber(index).asUint() * 32n,
-        ).padUntilAtLeast(1),
+        offset: Data.fromUint(BigInt(index) * 32n),
         length: Data.fromNumber(32),
       });
     }
