@@ -27,9 +27,7 @@ This reference implementation represents the two sorts as a tagged union:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={(sourceFile) =>
-    sourceFile.getExportedDeclarations().get("Value")[0]
-  }
+  extract={(sourceFile) => sourceFile.getExportedDeclarations().get("Value")[0]}
 />
 
 The accompanying `Value` namespace provides constructors, type guards, and
@@ -41,9 +39,7 @@ a value as a concrete region's `slot`, `offset`, or `length`:
 <CodeListing
   packageName="@ethdebug/pointers"
   sourcePath="src/evaluate.ts"
-  extract={(sourceFile) =>
-    sourceFile.getExportedDeclarations().get("Value")[1]
-  }
+  extract={(sourceFile) => sourceFile.getExportedDeclarations().get("Value")[1]}
 />
 
 ## Evaluation options
