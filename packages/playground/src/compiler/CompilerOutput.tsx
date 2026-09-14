@@ -11,12 +11,12 @@ import { ErrorView } from "./ErrorView";
 import "./CompilerOutput.css";
 
 // CSS for bugc-react components
-import "@ethdebug/bugc-react/src/components/variables.css";
-import "@ethdebug/bugc-react/src/components/AstView.css";
-import "@ethdebug/bugc-react/src/components/BytecodeView.css";
-import "@ethdebug/bugc-react/src/components/CfgView.css";
-import "@ethdebug/bugc-react/src/components/EthdebugTooltip.css";
-import "@ethdebug/bugc-react/src/components/IrView.css";
+import "@ethdebug/bugc-react/dist/src/components/variables.css";
+import "@ethdebug/bugc-react/dist/src/components/AstView.css";
+import "@ethdebug/bugc-react/dist/src/components/BytecodeView.css";
+import "@ethdebug/bugc-react/dist/src/components/CfgView.css";
+import "@ethdebug/bugc-react/dist/src/components/EthdebugTooltip.css";
+import "@ethdebug/bugc-react/dist/src/components/IrView.css";
 
 interface CompilerOutputProps {
   result: CompileResult;
