@@ -4,11 +4,19 @@
   "description": "ethdebug/format schemas distributed as NPM package",
   "type": "module",
   "main": "dist/src/index.js",
-  "repository": "https://github.com/ethdebug/format",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/format"
+  },
   "license": "MIT",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "imports": {
     "#describe": {
       "types": "./src/describe.ts",
@@ -71,6 +79,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "a5f00cb643dd589c6d6fc7d4471adbfefbb99e86"
+  }
 }

@@ -5,7 +5,19 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/evm"
+  },
   "license": "MIT",
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "imports": {
     "#executor": {
       "types": "./src/executor.ts",
@@ -27,6 +39,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ethdebug/pointers": "^0.1.0-0",
     "@ethereumjs/common": "^10.0.0",
     "@ethereumjs/evm": "^10.0.0",
     "@ethereumjs/statemanager": "^10.0.0",
@@ -34,18 +47,9 @@
     "ethereum-cryptography": "^3.2.0"
   },
   "devDependencies": {
-    "@ethdebug/pointers": "^0.1.0-0",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
-  },
-  "peerDependencies": {
-    "@ethdebug/pointers": "^0.1.0-0"
-  },
-  "peerDependenciesMeta": {
-    "@ethdebug/pointers": {
-      "optional": true
-    }
   },
   "publishConfig": {
     "access": "public"

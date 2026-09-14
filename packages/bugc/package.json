@@ -17,10 +17,13 @@
   },
   "files": [
     "dist",
-    "bin"
+    "!dist/**/*.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
-    "bugc": "./bin/bugc.ts"
+    "bugc": "./dist/bin/bugc.js"
   },
   "imports": {
     "#ast": "./dist/src/ast/index.js",
@@ -61,7 +64,7 @@
     "#types": "./dist/src/types/index.js",
     "#types/analysis": "./dist/src/types/analysis/index.js",
     "#types/spec": "./dist/src/types/spec.js",
-    "#test/*": "./dist/test/*.js"
+    "#test/*": "./test/*.ts"
   },
   "scripts": {
     "prepare:examples": "node ./bin/generate-examples.js",
@@ -84,6 +87,11 @@
     "ethdebug"
   ],
   "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/bugc"
+  },
   "license": "MIT",
   "devDependencies": {
     "@ethdebug/evm": "^0.1.0-0",
@@ -95,7 +103,6 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "eslint": "^8.0.0",
-    "ethereum-cryptography": "^3.2.0",
     "fast-check": "^4.2.0",
     "prettier": "^3.5.3",
     "tsx": "^4.19.4",
@@ -105,6 +112,7 @@
   },
   "dependencies": {
     "@ethdebug/format": "^0.1.0-0",
+    "ethereum-cryptography": "^3.2.0",
     "fp-ts": "^2.16.11",
     "parsimmon": "^1.18.1"
   },

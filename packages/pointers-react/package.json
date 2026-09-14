@@ -5,7 +5,19 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/pointers-react"
+  },
   "license": "MIT",
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "imports": {
     "#components/*": {
       "types": "./src/components/*.tsx",
