@@ -49,8 +49,9 @@
     "#test/*": "./test/*.ts"
   },
   "scripts": {
-    "run-example": "node ./dist/bin/run-example.js",
-    "prepare": "tsc --build",
+    "build": "rm -rf dist && tsc --build tsconfig.build.json",
+    "prepare": "yarn build",
+    "run-example": "tsx bin/run-example.ts",
     "watch": "tsc --build --watch",
     "test": "vitest"
   },

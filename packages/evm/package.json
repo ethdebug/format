@@ -33,8 +33,8 @@
     }
   },
   "scripts": {
-    "prepare": "tsc",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc --build tsconfig.build.json",
+    "prepare": "yarn build",
     "watch": "tsc --watch --preserveWatchOutput",
     "test": "vitest run"
   },

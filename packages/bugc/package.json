@@ -68,7 +68,7 @@
   },
   "scripts": {
     "prepare:examples": "node ./bin/generate-examples.js",
-    "build": "yarn prepare:examples && tsc",
+    "build": "yarn prepare:examples && rm -rf dist && tsc --build tsconfig.build.json",
     "build:watch": "tsc --watch --preserveWatchOutput",
     "watch": "tsc --watch --preserveWatchOutput",
     "test": "vitest run",
@@ -78,7 +78,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "prepare": "yarn prepare:examples && tsc"
+    "prepare": "yarn build"
   },
   "keywords": [
     "ethereum",

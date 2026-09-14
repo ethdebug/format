@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "declarationMap": false },
+  "include": ["src/**/*", "typings.d.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "test/**",
+    "bin/**"
+  ],
+  "references": [{ "path": "../format/tsconfig.build.json" }]
+}

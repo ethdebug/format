@@ -5,9 +5,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn --cwd packages/format prepare:yamls && yarn --cwd packages/bugc prepare:examples && tsc --build packages/format packages/pointers packages/evm packages/bugc packages/conformance packages/programs-react packages/pointers-react",
+    "build": "yarn lerna run build --no-private",
     "bundle": "tsx ./bin/bundle-schema.ts",
-    "test": "vitest",
+    "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "start": "./bin/start",
     "lerna": "lerna",
