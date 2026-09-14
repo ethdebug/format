@@ -2,8 +2,8 @@ import {
   singleSourceCompilation,
   findExamplePointer,
   type ObserveTraceOptions,
-} from "../test/index.js";
-import { type Cursor, Data } from "./index.js";
+} from "./index.js";
+import { type Cursor, Data } from "../src/index.js";
 
 export interface ObserveTraceTest<V> extends ObserveTraceOptions<V> {
   expectedValues: V[];

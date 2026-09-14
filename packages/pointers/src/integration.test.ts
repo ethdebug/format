@@ -1,7 +1,7 @@
 import { expect, describe, it } from "vitest";
 
 import { observeTrace } from "../test/index.js";
-import { observeTraceTests } from "./test-cases.js";
+import { observeTraceTests } from "../test/test-cases.js";
 
 describe("dereference (integration)", () => {
   describe("changing pointer values over the course of a trace", () => {
