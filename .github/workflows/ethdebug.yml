@@ -18,7 +18,7 @@ on:
         required: true
       soldb_ref:
         description: SolDB ref to build
-        default: main
+        default: v0.3.0
         required: true
 
 concurrency:
@@ -28,7 +28,7 @@ concurrency:
 env:
   FOUNDRY_VERSION: v1.0.0
   SOLIDITY_REF: ${{ github.event.inputs.solidity_ref || 'develop' }}
-  SOLDB_REF: ${{ github.event.inputs.soldb_ref || 'main' }}
+  SOLDB_REF: ${{ github.event.inputs.soldb_ref || 'v0.3.0' }}
 
 jobs:
   conformance:
