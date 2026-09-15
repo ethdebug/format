@@ -76,8 +76,11 @@ export function observeSourceBreakpoint(
   target: string,
 ): { set: boolean; hit: boolean; stoppedAtTarget: boolean } {
   return {
-    set: result.stdout.includes(`Breakpoint set at ${target}, PC`),
-    hit: result.stdout.includes("Breakpoint hit at step"),
+    // SolDB numbers breakpoints, e.g. `Breakpoint #1 set at Counter.sol:8` and
+    // `Breakpoint #1 hit at step 88, Counter.sol:8, PC 558`, so match the stable
+    // fragments rather than an exact, unnumbered prefix.
+    set: result.stdout.includes(`set at ${target}`),
+    hit: /Breakpoint #\d+ hit at step/.test(result.stdout),
     stoppedAtTarget: result.stdout.includes(`${target}, PC`),
   };
 }
