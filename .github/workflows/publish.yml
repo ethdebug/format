@@ -1,0 +1,70 @@
+name: Publish tagged packages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Run npm publish with --dry-run"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+# lerna.json sets no commit message; adding "[skip ci]" there would
+# silently stop this workflow from publishing.
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tagged: ${{ steps.tags.outputs.tagged }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: tags
+        run: |
+          if git tag --points-at HEAD | grep -q '^@ethdebug/'; then
+            echo tagged=true >> "$GITHUB_OUTPUT"
+          else
+            echo tagged=false >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: check
+    if: >-
+      needs.check.outputs.tagged == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Use npm 11 (trusted publishing)
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: yarn test
+
+      - name: Publish
+        run: >-
+          yarn tsx bin/publish-tagged.ts
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) && '--dry-run' || '' }}

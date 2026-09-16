@@ -1,6 +1,7 @@
 {
   "name": "@ethdebug/conformance",
   "version": "0.1.0-0",
+  "private": true,
   "description": "Reusable ETHDebug conformance runner and adapters",
   "type": "module",
   "main": "dist/src/index.js",
@@ -51,8 +52,5 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

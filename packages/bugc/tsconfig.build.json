@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "declarationMap": false },
+  "include": ["src/**/*", "bin/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "test/**"
+  ],
+  "references": [
+    { "path": "../format/tsconfig.build.json" },
+    { "path": "../pointers/tsconfig.build.json" },
+    { "path": "../evm/tsconfig.build.json" }
+  ]
+}

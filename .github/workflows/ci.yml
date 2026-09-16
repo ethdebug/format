@@ -25,12 +25,15 @@ jobs:
 
   run-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: yarn
           cache-dependency-path: yarn.lock
 
@@ -39,6 +42,12 @@ jobs:
 
       - name: Run tests
         run: yarn test
+
+      - name: Check publishable tarballs
+        run: yarn tsx bin/check-tarballs.ts
+
+      - name: Smoke-test installed tarballs
+        run: yarn tsx bin/smoke-tarballs.ts
 
   build-web:
     runs-on: ubuntu-latest

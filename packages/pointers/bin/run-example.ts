@@ -6,7 +6,7 @@ import "../src/index.js";
 
 import { observeTrace } from "../test/index.js";
 
-import { observeTraceTests } from "../src/test-cases.js";
+import { observeTraceTests } from "../test/test-cases.js";
 
 export async function run() {
   const { pointer, compileOptions, observe } =

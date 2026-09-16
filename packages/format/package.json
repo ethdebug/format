@@ -4,11 +4,19 @@
   "description": "ethdebug/format schemas distributed as NPM package",
   "type": "module",
   "main": "dist/src/index.js",
-  "repository": "https://github.com/ethdebug/format",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/format"
+  },
   "license": "MIT",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "imports": {
     "#describe": {
       "types": "./src/describe.ts",
@@ -46,12 +54,13 @@
   },
   "scripts": {
     "prepare:yamls": "node ./bin/generate-schema-yamls.js",
-    "prepare": "yarn prepare:yamls && tsc",
+    "build": "yarn prepare:yamls && rm -rf dist && tsc --build tsconfig.build.json",
+    "prepare": "yarn build",
     "clean": "rm -rf dist && rm src/schemas/yamls.ts",
     "test": "vitest",
     "watch:typescript": "tsc --watch",
     "watch:schemas": "nodemon --watch ../../schemas -e 'yaml' --exec 'yarn prepare:yamls'",
-    "watch": "yarn prepare && concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
+    "watch": "yarn prepare:yamls && concurrently --names=tsc,schemas \"yarn watch:typescript\" \"yarn watch:schemas\""
   },
   "dependencies": {
     "json-schema-typed": "8.0.1",
@@ -71,6 +80,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "a5f00cb643dd589c6d6fc7d4471adbfefbb99e86"
+  }
 }

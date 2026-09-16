@@ -5,13 +5,25 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/bugc-react"
+  },
   "license": "MIT",
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
     },
-    "./src/components/*.css": "./src/components/*.css"
+    "./dist/src/components/*.css": "./dist/src/components/*.css"
   },
   "imports": {
     "#components/*": {
@@ -32,8 +44,8 @@
     }
   },
   "scripts": {
-    "prepare": "tsc",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc --build tsconfig.build.json && copyfiles -u 1 \"src/**/*.css\" dist/src",
+    "prepare": "yarn build",
     "watch": "tsc --watch --preserveWatchOutput",
     "test": "vitest run"
   },

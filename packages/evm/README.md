@@ -1,8 +1,9 @@
-# @ethdebug/pointers
+# @ethdebug/evm
 
-_This NPM package contains a reference implementation for dereferencing
-**ethdebug/format**
-[pointers](https://ethdebug.github.io/format/spec/pointer/overview)._
+EVM execution and state access for ethdebug/format.
+
+Part of [ethdebug/format](https://github.com/ethdebug/format). See
+the [documentation](https://ethdebug.github.io/format/).
 
 ## TypeScript
 

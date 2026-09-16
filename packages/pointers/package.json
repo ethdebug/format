@@ -4,7 +4,19 @@
   "description": "Reference implementation for ethdebug/format pointers",
   "main": "dist/src/index.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethdebug/format.git",
+    "directory": "packages/pointers"
+  },
   "license": "MIT",
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "imports": {
     "#cursor": {
       "types": "./src/cursor.ts",
@@ -37,13 +49,13 @@
     "#test/*": "./test/*.ts"
   },
   "scripts": {
-    "run-example": "node ./dist/bin/run-example.js",
-    "prepare": "tsc --build",
+    "build": "rm -rf dist && tsc --build tsconfig.build.json",
+    "prepare": "yarn build",
+    "run-example": "tsx bin/run-example.ts",
     "watch": "tsc --build --watch",
     "test": "vitest"
   },
   "devDependencies": {
-    "@ethdebug/format": "^0.1.0-0",
     "chalk": "^5.6.2",
     "cli-highlight": "^2.1.11",
     "ganache": "7.9.x",
@@ -53,6 +65,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@ethdebug/format": "^0.1.0-0",
     "ethereum-cryptography": "^2.2.1"
   },
   "publishConfig": {
