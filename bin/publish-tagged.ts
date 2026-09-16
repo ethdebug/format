@@ -4,6 +4,18 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkPackList, packList } from "./packlist.js";
 
+export const registry = "https://registry.npmjs.org";
+
+export function npmEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const clean: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (!key.toLowerCase().startsWith("npm_config_")) {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
 export interface Workspace {
   name: string;
   version: string;
@@ -135,9 +147,14 @@ export function classifyView(
 }
 
 export function viewVersions(name: string, version: string): ViewResult {
-  const result = spawnSync("npm", ["view", name, "versions", "--json"], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    "npm",
+    ["view", name, "versions", "--json", "--registry", registry],
+    {
+      encoding: "utf8",
+      env: npmEnv(process.env),
+    },
+  );
   try {
     return classifyView(result.status ?? 1, result.stdout, version);
   } catch (error) {
@@ -147,7 +164,15 @@ export function viewVersions(name: string, version: string): ViewResult {
 }
 
 export function publishArgs(dryRun: boolean, env: NodeJS.ProcessEnv): string[] {
-  const args = ["publish", "--access", "public", "--tag", "latest"];
+  const args = [
+    "publish",
+    "--access",
+    "public",
+    "--tag",
+    "latest",
+    "--registry",
+    registry,
+  ];
   if (env.GITHUB_ACTIONS) {
     args.push("--provenance");
   }
@@ -162,6 +187,7 @@ function publish(workspace: Workspace, dryRun: boolean): void {
   const result = spawnSync("npm", args, {
     cwd: workspace.dir,
     stdio: "inherit",
+    env: npmEnv(process.env),
   });
   if (result.status !== 0) {
     throw new Error(`npm publish failed for ${workspace.name}`);
