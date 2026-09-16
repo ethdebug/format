@@ -45,7 +45,7 @@
     "build": "rm -rf dist && tsc --build tsconfig.build.json && copyfiles -u 1 \"src/**/*.css\" dist/src",
     "prepare": "yarn build",
     "typecheck": "tsc -p tsconfig.typecheck.json",
-    "watch": "tsc --watch --preserveWatchOutput",
+    "watch": "copyfiles -u 1 \"src/**/*.css\" dist/src && concurrently --names=tsc,css \"tsc --watch --preserveWatchOutput\" \"nodemon --watch src -e css --exec 'copyfiles -u 1 \\\"src/**/*.css\\\" dist/src'\"",
     "test": "vitest run"
   },
   "dependencies": {
@@ -60,7 +60,9 @@
     "@testing-library/react": "^16.0.0",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
+    "concurrently": "^8.2.2",
     "jsdom": "^26.0.0",
+    "nodemon": "^3.1.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^5.0.0",
