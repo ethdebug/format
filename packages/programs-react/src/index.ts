@@ -76,10 +76,8 @@ export {
   type MockTraceSpec,
 } from "#utils/index";
 
-// CSS - consumers should import these stylesheets
-// import "@ethdebug/programs-react/components/Opcodes.css";
-// import "@ethdebug/programs-react/components/SourceContents.css";
-// import "@ethdebug/programs-react/components/TraceControls.css";
-// import "@ethdebug/programs-react/components/VariableInspector.css";
-// import "@ethdebug/programs-react/components/CallStackDisplay.css";
-// import "@ethdebug/programs-react/components/CallInfoPanel.css";
+// CSS - consumers should import the stylesheets they need; the
+// package ships them under dist/src/components/, for example:
+// import "@ethdebug/programs-react/dist/src/components/Opcodes.css";
+// Available: Opcodes.css, SourceContents.css, TraceControls.css,
+//   VariableInspector.css, CallStackDisplay.css, CallInfoPanel.css
