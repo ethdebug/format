@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/bugc-react",
-  "version": "0.1.0-0",
+  "version": "0.1.0-1",
   "description": "React components for visualizing BUG compiler output",
   "type": "module",
   "main": "dist/src/index.js",
@@ -50,7 +50,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ethdebug/bugc": "^0.1.0-0"
+    "@ethdebug/bugc": "^0.1.0-1"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.0.0",

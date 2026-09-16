@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/programs-react",
-  "version": "0.1.0-0",
+  "version": "0.1.0-1",
   "description": "React components for visualizing ethdebug/format program annotations",
   "type": "module",
   "main": "dist/src/index.js",
@@ -39,8 +39,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ethdebug/format": "^0.1.0-0",
-    "@ethdebug/pointers": "^0.1.0-0",
+    "@ethdebug/format": "^0.1.0-1",
+    "@ethdebug/pointers": "^0.1.0-1",
     "@shikijs/langs": "^2.5.0",
     "@shikijs/themes": "^2.5.0",
     "shiki": "^2.5.0"
