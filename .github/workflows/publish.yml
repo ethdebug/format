@@ -9,16 +9,14 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: read
-  id-token: write
-
 # lerna.json sets no commit message; adding "[skip ci]" there would
 # silently stop this workflow from publishing.
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       tagged: ${{ steps.tags.outputs.tagged }}
     steps:
@@ -26,9 +24,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Capture the tag list first: under `shell: bash` (which adds
+      # `-o pipefail`) `grep -q` can kill `git` with SIGPIPE and turn
+      # a MATCH into tagged=false.
       - id: tags
         run: |
-          if git tag --points-at HEAD | grep -q '^@ethdebug/'; then
+          tags=$(git tag --points-at HEAD)
+          if printf '%s\n' "$tags" | grep -q '^@ethdebug/'; then
             echo tagged=true >> "$GITHUB_OUTPUT"
           else
             echo tagged=false >> "$GITHUB_OUTPUT"
@@ -41,6 +43,13 @@ jobs:
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    # cancel-in-progress only protects a job that has started. GitHub
+    # still cancels a PENDING run in this group when a newer one
+    # queues, so a Publish commit whose run shows "cancelled" must be
+    # re-run from the Actions UI.
     concurrency:
       group: publish
       cancel-in-progress: false
