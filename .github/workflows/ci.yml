@@ -23,6 +23,12 @@ jobs:
       - name: Lint
         run: yarn lint
 
+      - name: Type-check
+        run: yarn typecheck
+
+      - name: Check type-check programs use live source
+        run: yarn tsx bin/check-typecheck-sources.ts
+
   run-tests:
     runs-on: ubuntu-latest
     strategy:

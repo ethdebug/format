@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "rootDir": "../..",
+    "paths": {
+      "@ethdebug/bugc": ["../bugc/src/index.ts"],
+      "@ethdebug/evm": ["../evm/src/index.ts"],
+      "@ethdebug/format": ["../format/src/index.ts"],
+      "@ethdebug/pointers": ["../pointers/src/index.ts"]
+    }
+  }
+}

@@ -1,3 +1,17 @@
+/*
+ * Shared compiler options for every package.
+ *
+ * Each package's tsconfig.typecheck.json maps its @ethdebug/*
+ * dependencies to sibling source, so `yarn typecheck` compiles a
+ * dependency's source under the DEPENDENT's compilerOptions. Keep
+ * per-package type-checking strictness uniform, or confine a stricter
+ * setting to a package nothing else depends on: a package that relaxes
+ * an option its dependents set would report errors in its own source
+ * only when a dependent checks it. Today only format adds
+ * exactOptionalPropertyTypes; turning that option on can only add
+ * errors, so a dependent, which leaves it off, simply checks format's
+ * source less strictly than format itself does.
+ */
 {
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */

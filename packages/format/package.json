@@ -57,6 +57,7 @@
     "build": "yarn prepare:yamls && rm -rf dist && tsc --build tsconfig.build.json",
     "prepare": "yarn build",
     "clean": "rm -rf dist && rm src/schemas/yamls.ts",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "vitest",
     "watch:typescript": "tsc --watch",
     "watch:schemas": "nodemon --watch ../../schemas -e 'yaml' --exec 'yarn prepare:yamls'",

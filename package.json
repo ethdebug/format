@@ -7,6 +7,7 @@
   "scripts": {
     "build": "yarn lerna run build --no-private",
     "bundle": "tsx ./bin/bundle-schema.ts",
+    "typecheck": "yarn lerna run typecheck --ignore @ethdebug/format-web --ignore @ethdebug/bug-playground",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "start": "./bin/start",

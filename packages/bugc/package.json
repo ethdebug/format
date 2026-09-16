@@ -26,44 +26,158 @@
     "bugc": "./dist/bin/bugc.js"
   },
   "imports": {
-    "#ast": "./dist/src/ast/index.js",
-    "#ast/spec": "./dist/src/ast/spec.js",
-    "#ast/visitor": "./dist/src/ast/visitor.js",
-    "#ast/analysis": "./dist/src/ast/analysis/index.js",
-    "#cli": "./dist/src/cli/index.js",
-    "#compiler": "./dist/src/compiler/index.js",
-    "#errors": "./dist/src/errors/index.js",
-    "#evm": "./dist/src/evm/index.js",
-    "#evm/spec": "./dist/src/evm/spec/index.js",
-    "#evm/analysis": "./dist/src/evm/analysis/index.js",
-    "#evmgen": "./dist/src/evmgen/index.js",
-    "#evmgen/analysis": "./dist/src/evmgen/analysis/index.js",
-    "#evmgen/errors": "./dist/src/evmgen/errors.js",
-    "#evmgen/state": "./dist/src/evmgen/state.js",
-    "#evmgen/operations": "./dist/src/evmgen/operations.js",
-    "#evmgen/generation": "./dist/src/evmgen/generation/index.js",
-    "#evmgen/serialize": "./dist/src/evmgen/serialize.js",
-    "#evmgen/pass": "./dist/src/evmgen/pass.js",
-    "#evmgen/program-builder": "./dist/src/evmgen/program-builder.js",
-    "#ir": "./dist/src/ir/index.js",
-    "#ir/spec": "./dist/src/ir/spec/index.js",
-    "#ir/analysis": "./dist/src/ir/analysis/index.js",
-    "#irgen": "./dist/src/irgen/index.js",
-    "#irgen/pass": "./dist/src/irgen/pass.js",
-    "#irgen/errors": "./dist/src/irgen/errors.js",
-    "#irgen/type": "./dist/src/irgen/type.js",
-    "#irgen/generate": "./dist/src/irgen/generate/index.js",
-    "#irgen/debug/variables": "./dist/src/irgen/debug/variables.js",
-    "#optimizer": "./dist/src/optimizer/index.js",
-    "#optimizer/*": "./dist/src/optimizer/*.js",
-    "#parser": "./dist/src/parser/index.js",
-    "#parser/pass": "./dist/src/parser/pass.js",
-    "#result": "./dist/src/result.js",
-    "#typechecker": "./dist/src/typechecker/index.js",
-    "#typechecker/pass": "./dist/src/typechecker/pass.js",
-    "#types": "./dist/src/types/index.js",
-    "#types/analysis": "./dist/src/types/analysis/index.js",
-    "#types/spec": "./dist/src/types/spec.js",
+    "#ast": {
+      "types": "./src/ast/index.ts",
+      "default": "./dist/src/ast/index.js"
+    },
+    "#ast/spec": {
+      "types": "./src/ast/spec.ts",
+      "default": "./dist/src/ast/spec.js"
+    },
+    "#ast/visitor": {
+      "types": "./src/ast/visitor.ts",
+      "default": "./dist/src/ast/visitor.js"
+    },
+    "#ast/analysis": {
+      "types": "./src/ast/analysis/index.ts",
+      "default": "./dist/src/ast/analysis/index.js"
+    },
+    "#cli": {
+      "types": "./src/cli/index.ts",
+      "default": "./dist/src/cli/index.js"
+    },
+    "#compiler": {
+      "types": "./src/compiler/index.ts",
+      "default": "./dist/src/compiler/index.js"
+    },
+    "#errors": {
+      "types": "./src/errors/index.ts",
+      "default": "./dist/src/errors/index.js"
+    },
+    "#evm": {
+      "types": "./src/evm/index.ts",
+      "default": "./dist/src/evm/index.js"
+    },
+    "#evm/spec": {
+      "types": "./src/evm/spec/index.ts",
+      "default": "./dist/src/evm/spec/index.js"
+    },
+    "#evm/analysis": {
+      "types": "./src/evm/analysis/index.ts",
+      "default": "./dist/src/evm/analysis/index.js"
+    },
+    "#evmgen": {
+      "types": "./src/evmgen/index.ts",
+      "default": "./dist/src/evmgen/index.js"
+    },
+    "#evmgen/analysis": {
+      "types": "./src/evmgen/analysis/index.ts",
+      "default": "./dist/src/evmgen/analysis/index.js"
+    },
+    "#evmgen/errors": {
+      "types": "./src/evmgen/errors.ts",
+      "default": "./dist/src/evmgen/errors.js"
+    },
+    "#evmgen/state": {
+      "types": "./src/evmgen/state.ts",
+      "default": "./dist/src/evmgen/state.js"
+    },
+    "#evmgen/operations": {
+      "types": "./src/evmgen/operations.ts",
+      "default": "./dist/src/evmgen/operations.js"
+    },
+    "#evmgen/generation": {
+      "types": "./src/evmgen/generation/index.ts",
+      "default": "./dist/src/evmgen/generation/index.js"
+    },
+    "#evmgen/serialize": {
+      "types": "./src/evmgen/serialize.ts",
+      "default": "./dist/src/evmgen/serialize.js"
+    },
+    "#evmgen/pass": {
+      "types": "./src/evmgen/pass.ts",
+      "default": "./dist/src/evmgen/pass.js"
+    },
+    "#evmgen/program-builder": {
+      "types": "./src/evmgen/program-builder.ts",
+      "default": "./dist/src/evmgen/program-builder.js"
+    },
+    "#ir": {
+      "types": "./src/ir/index.ts",
+      "default": "./dist/src/ir/index.js"
+    },
+    "#ir/spec": {
+      "types": "./src/ir/spec/index.ts",
+      "default": "./dist/src/ir/spec/index.js"
+    },
+    "#ir/analysis": {
+      "types": "./src/ir/analysis/index.ts",
+      "default": "./dist/src/ir/analysis/index.js"
+    },
+    "#irgen": {
+      "types": "./src/irgen/index.ts",
+      "default": "./dist/src/irgen/index.js"
+    },
+    "#irgen/pass": {
+      "types": "./src/irgen/pass.ts",
+      "default": "./dist/src/irgen/pass.js"
+    },
+    "#irgen/errors": {
+      "types": "./src/irgen/errors.ts",
+      "default": "./dist/src/irgen/errors.js"
+    },
+    "#irgen/type": {
+      "types": "./src/irgen/type.ts",
+      "default": "./dist/src/irgen/type.js"
+    },
+    "#irgen/generate": {
+      "types": "./src/irgen/generate/index.ts",
+      "default": "./dist/src/irgen/generate/index.js"
+    },
+    "#irgen/debug/variables": {
+      "types": "./src/irgen/debug/variables.ts",
+      "default": "./dist/src/irgen/debug/variables.js"
+    },
+    "#optimizer": {
+      "types": "./src/optimizer/index.ts",
+      "default": "./dist/src/optimizer/index.js"
+    },
+    "#optimizer/*": {
+      "types": "./src/optimizer/*.ts",
+      "default": "./dist/src/optimizer/*.js"
+    },
+    "#parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./dist/src/parser/index.js"
+    },
+    "#parser/pass": {
+      "types": "./src/parser/pass.ts",
+      "default": "./dist/src/parser/pass.js"
+    },
+    "#result": {
+      "types": "./src/result.ts",
+      "default": "./dist/src/result.js"
+    },
+    "#typechecker": {
+      "types": "./src/typechecker/index.ts",
+      "default": "./dist/src/typechecker/index.js"
+    },
+    "#typechecker/pass": {
+      "types": "./src/typechecker/pass.ts",
+      "default": "./dist/src/typechecker/pass.js"
+    },
+    "#types": {
+      "types": "./src/types/index.ts",
+      "default": "./dist/src/types/index.js"
+    },
+    "#types/analysis": {
+      "types": "./src/types/analysis/index.ts",
+      "default": "./dist/src/types/analysis/index.js"
+    },
+    "#types/spec": {
+      "types": "./src/types/spec.ts",
+      "default": "./dist/src/types/spec.js"
+    },
     "#test/*": "./test/*.ts"
   },
   "scripts": {
@@ -75,7 +189,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src bin --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "prepare": "yarn build"
