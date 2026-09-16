@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn lerna run build --no-private",
+    "build": "yarn lerna run build --ignore @ethdebug/format-web --ignore @ethdebug/bug-playground",
     "bundle": "tsx ./bin/bundle-schema.ts",
     "typecheck": "yarn lerna run typecheck --ignore @ethdebug/format-web --ignore @ethdebug/bug-playground",
     "test": "vitest run",
