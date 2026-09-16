@@ -6,9 +6,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   classifyView,
+  npmEnv,
   parseTags,
   publishArgs,
   readWorkspaces,
+  registry,
   selectPackages,
   topoSort,
   viewVersions,
@@ -121,6 +123,25 @@ describe("classifyView", () => {
   });
 });
 
+describe("npmEnv", () => {
+  it("strips npm_config_* keys regardless of case", () => {
+    const cleaned = npmEnv({
+      npm_config_registry: "https://registry.yarnpkg.com",
+      NPM_CONFIG_REGISTRY: "https://registry.yarnpkg.com",
+      npm_config_user_agent: "yarn/1.22.0 npm/? node/v20",
+      PATH: "/usr/bin",
+      HOME: "/home/gnidan",
+      GITHUB_ACTIONS: "true",
+    });
+    expect(cleaned).not.toHaveProperty("npm_config_registry");
+    expect(cleaned).not.toHaveProperty("NPM_CONFIG_REGISTRY");
+    expect(cleaned).not.toHaveProperty("npm_config_user_agent");
+    expect(cleaned.PATH).toBe("/usr/bin");
+    expect(cleaned.HOME).toBe("/home/gnidan");
+    expect(cleaned.GITHUB_ACTIONS).toBe("true");
+  });
+});
+
 describe("viewVersions", () => {
   it("prefixes the package name on a probe failure", () => {
     const result: SpawnSyncReturns<string> = {
@@ -135,6 +156,35 @@ describe("viewVersions", () => {
     expect(() => viewVersions("@ethdebug/format", "0.1.0-1")).toThrow(
       /@ethdebug\/format/,
     );
+  });
+
+  it("targets registry.npmjs.org and strips yarn's registry env", () => {
+    const originalRegistry = process.env.npm_config_registry;
+    process.env.npm_config_registry = "https://registry.yarnpkg.com";
+    try {
+      const result: SpawnSyncReturns<string> = {
+        pid: 1,
+        output: [null, "", ""],
+        stdout: '["0.1.0-1"]',
+        stderr: "",
+        status: 0,
+        signal: null,
+      };
+      vi.mocked(spawnSync).mockReturnValue(result);
+      viewVersions("@ethdebug/format", "0.1.0-1");
+      const [command, args, options] = vi.mocked(spawnSync).mock.calls[0];
+      expect(command).toBe("npm");
+      expect(args).toContain("--registry");
+      expect(args).toContain(registry);
+      const passedEnv = (options as { env?: NodeJS.ProcessEnv }).env ?? {};
+      expect(passedEnv).not.toHaveProperty("npm_config_registry");
+    } finally {
+      if (originalRegistry === undefined) {
+        delete process.env.npm_config_registry;
+      } else {
+        process.env.npm_config_registry = originalRegistry;
+      }
+    }
   });
 });
 
@@ -196,13 +246,15 @@ describe("readWorkspaces", () => {
 });
 
 describe("publishArgs", () => {
-  it("tags a publish as latest", () => {
+  it("tags a publish as latest, on registry.npmjs.org", () => {
     expect(publishArgs(false, {})).toEqual([
       "publish",
       "--access",
       "public",
       "--tag",
       "latest",
+      "--registry",
+      registry,
     ]);
   });
 
@@ -213,6 +265,8 @@ describe("publishArgs", () => {
       "public",
       "--tag",
       "latest",
+      "--registry",
+      registry,
       "--dry-run",
     ]);
   });
@@ -224,11 +278,20 @@ describe("publishArgs", () => {
       "public",
       "--tag",
       "latest",
+      "--registry",
+      registry,
       "--provenance",
     ]);
   });
 
   it("omits --provenance outside GitHub Actions", () => {
     expect(publishArgs(false, {})).not.toContain("--provenance");
+  });
+
+  it("always includes --registry pointing at registry.npmjs.org", () => {
+    expect(publishArgs(false, {})).toContain(registry);
+    expect(publishArgs(true, {})).toContain(registry);
+    expect(publishArgs(false, { GITHUB_ACTIONS: "true" })).toContain(registry);
+    expect(publishArgs(true, { GITHUB_ACTIONS: "true" })).toContain(registry);
   });
 });
