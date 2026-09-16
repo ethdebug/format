@@ -23,7 +23,7 @@
     "node": ">=20"
   },
   "bin": {
-    "bugc": "./dist/bin/bugc.js"
+    "bugc": "dist/bin/bugc.js"
   },
   "imports": {
     "#ast": "./dist/src/ast/index.js",
