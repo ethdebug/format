@@ -51,6 +51,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc --build tsconfig.build.json",
     "prepare": "yarn build",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "run-example": "tsx bin/run-example.ts",
     "watch": "tsc --build --watch",
     "test": "vitest"
