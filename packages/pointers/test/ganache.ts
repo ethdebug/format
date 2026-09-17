@@ -32,7 +32,7 @@ export function machineForProvider(
       return {
         async *[Symbol.asyncIterator]() {
           const structLogs = await requestStructLogs(
-            `0x${transactionHash.asUint().toString(16)}`,
+            transactionHash.toHex(),
             provider,
           );
 
