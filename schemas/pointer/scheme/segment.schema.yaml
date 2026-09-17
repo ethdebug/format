@@ -28,9 +28,17 @@ properties:
       `0`, indicating that the segment begins at the start of the specified
       slot.
 
-      This field's expression must resolve to a value _n_ such that
-      0&nbsp;≤&nbsp;_n_&nbsp;\<&nbsp;`$wordsize` (i.e., the offset **must**
-      begin inside the slot).
+      This field's expression must resolve to a non-negative value. It is
+      **not** bounded by the word size: an offset that meets or exceeds
+      `$wordsize` carries into subsequent slots. Given a `slot` value `p`
+      and an `offset` value `n`, the segment begins at byte
+      `n mod $wordsize` of slot `p + floor(n / $wordsize)`. (Equivalently,
+      byte `{ "offset": "$wordsize" }` of slot `p` is byte `0` of slot
+      `p + 1`, consistent with the multi-slot note above.) Emitters may
+      therefore chain byte sums across a slot boundary without decomposing
+      into slot and byte components themselves; a resolver recovers the
+      effective slot and byte by division and remainder against
+      `$wordsize`.
     $ref: "schema:ethdebug/format/pointer/expression"
     default: 0
   length:
@@ -38,17 +46,20 @@ properties:
       The length of the bytes range this segment represents.
 
       This field is **optional**. If unspecified, its default value indicates
-      that the segment ends at the end of the slot.
+      that the segment ends at the end of the slot in which it begins (after
+      applying any `offset` carry).
 
       If this field has value larger than the default value, i.e., if the
       segment extends beyond the last byte in the slot, then this segment is
       defined to be the concatenation of the sequentially-addressed slot(s)
-      following following the slot specified.
+      following the slot specified.
     $ref: "schema:ethdebug/format/pointer/expression"
     default:
       $difference:
         - $wordsize
-        - .offset: $this
+        - $remainder:
+            - .offset: $this
+            - $wordsize
 
 required:
   - slot
@@ -60,3 +71,9 @@ examples:
       $product:
         - $wordsize
         - 3
+  # a carry example: an offset at or beyond `$wordsize` addresses a later
+  # slot. Here `offset: $wordsize` is byte 0 of slot 1, so this segment is
+  # the 4 bytes beginning there.
+  - slot: 0
+    offset: $wordsize
+    length: 4
