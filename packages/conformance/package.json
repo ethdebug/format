@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/conformance",
-  "version": "0.1.0-1",
+  "version": "0.1.0-2",
   "private": true,
   "description": "Reusable ETHDebug conformance runner and adapters",
   "type": "module",
@@ -45,8 +45,8 @@
     "test:external": "vitest run --no-file-parallelism --maxWorkers=1"
   },
   "dependencies": {
-    "@ethdebug/bugc": "^0.1.0-1",
-    "@ethdebug/format": "^0.1.0-1",
+    "@ethdebug/bugc": "^0.1.0-2",
+    "@ethdebug/format": "^0.1.0-2",
     "@hyperjump/json-schema": "^1.17.3"
   },
   "devDependencies": {

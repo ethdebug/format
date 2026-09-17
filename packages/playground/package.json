@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/bug-playground",
-  "version": "0.1.0-1",
+  "version": "0.1.0-2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,8 +14,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@ethdebug/bugc": "^0.1.0-1",
-    "@ethdebug/bugc-react": "^0.1.0-1",
+    "@ethdebug/bugc": "^0.1.0-2",
+    "@ethdebug/bugc-react": "^0.1.0-2",
     "@monaco-editor/react": "^4.6.0",
     "dagre": "^0.8.5",
     "monaco-editor": "^0.52.2",

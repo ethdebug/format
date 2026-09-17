@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/format",
-  "version": "0.1.0-1",
+  "version": "0.1.0-2",
   "description": "ethdebug/format schemas distributed as NPM package",
   "type": "module",
   "main": "dist/src/index.js",

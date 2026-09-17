@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/pointers",
-  "version": "0.1.0-1",
+  "version": "0.1.0-2",
   "description": "Reference implementation for ethdebug/format pointers",
   "main": "dist/src/index.js",
   "type": "module",
@@ -67,7 +67,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@ethdebug/format": "^0.1.0-1",
+    "@ethdebug/format": "^0.1.0-2",
     "ethereum-cryptography": "^2.2.1"
   },
   "publishConfig": {
