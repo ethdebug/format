@@ -32,6 +32,29 @@ A static pointer can't capture this, but an expression can — for example,
 `array-start + index × 32` computes the element's offset from the array's
 base and the index.
 
+## Integers and bytes
+
+Expressions produce two kinds of value. Arithmetic (`$sum`, `$product`, and
+so on) is unbounded integer math: the result is a number with no byte width.
+`$read`, hexadecimal literals with an even number of digits, and the resize
+operations produce **bytes** of a definite width.
+
+The distinction matters for hashing and concatenation. `$keccak256` and
+`$concat` work on bytes, and their results depend on how wide each operand
+is, so every operand must already be bytes. A bare number like `5` or an
+arithmetic result is not; wrap it in `$wordsized` (or `$sized<N>`) first.
+That applies to mapping keys _and_ to slot numbers before hashing:
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ "$keccak256": [{ "$wordsized": "key" }, { "$wordsized": "slot" }] }`}
+</SchemaExample>
+
+Resizes are the only way to turn an integer into bytes; nothing pads
+implicitly. Going the other way is automatic: where a number is expected (an
+arithmetic operand, a `slot`, `offset`, `length`, or list count), bytes are
+read as the big-endian integer they encode, so a hash can be used directly as
+a slot or added to.
+
 ## Arithmetic expressions
 
 Basic math operations for computing addresses:
@@ -60,9 +83,10 @@ Remainder after division.
 
 ### `$read` — Read from a named region
 
-Reads the bytes from a previously defined region. For example, a group can
-name an `array-length-slot` region and then use `{ $read: "array-length-slot" }`
-to retrieve the array's length at runtime and use it in a later computation.
+Reads the bytes from a previously defined region; the result is bytes as
+wide as the region. For example, a group can name an `array-length-slot`
+region and then use `{ $read: "array-length-slot" }` to retrieve the array's
+length at runtime and use it in a later computation.
 
 ## Region property lookups
 
@@ -105,23 +129,48 @@ Solidity uses keccak256 hashing to compute storage locations for dynamic data.
 ### Array element slots
 
 For a dynamic array at slot `n`, elements start at `keccak256(n)`, so element
-`i` lives at `keccak256(n) + i`.
+`i` lives at `keccak256(n) + i`. The slot is word-sized before hashing, and
+the 32-byte hash is then read as an integer by `$sum`:
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{
+  "$sum": [
+    { "$keccak256": [{ "$wordsized": 5 }] },
+    "element-index"
+  ]
+}`}
+</SchemaExample>
 
 ### Mapping value slots
 
-For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`.
+For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`, with
+both the key and the slot word-sized:
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{ "$keccak256": [{ "$wordsized": "key" }, { "$wordsized": 3 }] }`}
+</SchemaExample>
 
 ### Nested mappings
 
 For `mapping(address => mapping(uint => uint))` at slot 2, the value is at
-`keccak256(inner_key, keccak256(outer_key, 2))`.
+`keccak256(inner_key, keccak256(outer_key, 2))`. The inner hash is already 32
+bytes and needs no resize; the keys and the literal slot do:
+
+<SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
+  {`{
+  "$keccak256": [
+    { "$wordsized": "inner-key" },
+    { "$keccak256": [{ "$wordsized": "outer-key" }, { "$wordsized": 2 }] }
+  ]
+}`}
+</SchemaExample>
 
 ## Data manipulation
 
 ### `$concat` — Concatenate bytes
 
-Joins byte sequences without padding. Useful for building hash inputs from
-multiple values.
+Joins byte sequences without padding. Every operand must be bytes. Useful
+for building hash inputs from multiple values.
 
 ### `$sized<N>` — resize to N bytes
 
@@ -143,7 +192,8 @@ count-1, computing each element's slot.
 To read element `i` from `uint256[] storage arr` at slot 5, a pointer:
 
 1. Defines the array's base slot
-2. Computes the element's slot: `keccak256(5) + element_index`
+2. Computes the element's slot: `keccak256(5) + element_index`, word-sizing
+   `5` before hashing
 3. Returns that storage location
 
 ## Learn more

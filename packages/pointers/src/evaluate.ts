@@ -5,20 +5,76 @@ import type { Cursor } from "#cursor";
 import { read } from "#read";
 import { keccak256 } from "ethereum-cryptography/keccak";
 
+/**
+ * The result of evaluating an expression: one of two sorts of value.
+ *
+ * An **integer** is an unbounded non-negative integer with no width; it
+ * is produced by JSON-number literals, `$wordsize`, lookups, arithmetic,
+ * and odd-digit hex literals.
+ *
+ * **Bytes** are a byte sequence with a definite width; they are produced
+ * by even-digit hex literals, `$read`, and the resize forms.
+ *
+ * Variables carry the sort of the expression that defined them.
+ */
+export type Value = Value.Integer | Value.Bytes;
+
+export namespace Value {
+  export interface Integer {
+    sort: "integer";
+    value: bigint;
+  }
+
+  export interface Bytes {
+    sort: "bytes";
+    data: Data;
+  }
+
+  export const integer = (value: bigint): Integer => ({
+    sort: "integer",
+    value,
+  });
+
+  export const bytes = (data: Data): Bytes => ({ sort: "bytes", data });
+
+  export const isInteger = (value: Value): value is Integer =>
+    value.sort === "integer";
+
+  export const isBytes = (value: Value): value is Bytes =>
+    value.sort === "bytes";
+
+  /**
+   * Coerce to an integer, for positions where an integer is expected
+   * (arithmetic operands, list counts, segment slot/offset/length). Bytes
+   * are read as the non-negative integer they encode big-endian.
+   */
+  export const toInteger = (value: Value): bigint =>
+    isInteger(value) ? value.value : value.data.asUint();
+
+  /**
+   * Represent as `Data` for storage on a concrete `Cursor.Region`. Bytes
+   * keep their width; an integer is encoded as its minimal big-endian
+   * bytes (a region's slot/offset/length are integers, so this width is
+   * not significant).
+   */
+  export const toData = (value: Value): Data =>
+    isBytes(value) ? value.data : Data.fromUint(value.value);
+}
+
 export interface EvaluateOptions {
   state: Machine.State;
   regions: {
     [identifier: string]: Cursor.Region;
   };
   variables: {
-    [identifier: string]: Data;
+    [identifier: string]: Value;
   };
 }
 
 export async function evaluate(
   expression: Pointer.Expression,
   options: EvaluateOptions,
-): Promise<Data> {
+): Promise<Value> {
   if (Pointer.Expression.isLiteral(expression)) {
     return evaluateLiteral(expression);
   }
@@ -32,25 +88,7 @@ export async function evaluate(
   }
 
   if (Pointer.Expression.isArithmetic(expression)) {
-    if (Pointer.Expression.Arithmetic.isSum(expression)) {
-      return evaluateArithmeticSum(expression, options);
-    }
-
-    if (Pointer.Expression.Arithmetic.isDifference(expression)) {
-      return evaluateArithmeticDifference(expression, options);
-    }
-
-    if (Pointer.Expression.Arithmetic.isProduct(expression)) {
-      return evaluateArithmeticProduct(expression, options);
-    }
-
-    if (Pointer.Expression.Arithmetic.isQuotient(expression)) {
-      return evaluateArithmeticQuotient(expression, options);
-    }
-
-    if (Pointer.Expression.Arithmetic.isRemainder(expression)) {
-      return evaluateArithmeticRemainder(expression, options);
-    }
+    return evaluateArithmetic(expression, options);
   }
 
   if (Pointer.Expression.isKeccak256(expression)) {
@@ -90,186 +128,169 @@ export async function evaluate(
   );
 }
 
+/**
+ * Evaluate an expression where an integer is expected, coercing bytes
+ */
+async function evaluateInteger(
+  expression: Pointer.Expression,
+  options: EvaluateOptions,
+): Promise<bigint> {
+  return Value.toInteger(await evaluate(expression, options));
+}
+
+/**
+ * Evaluate the operands of a width-sensitive operation (`$concat`,
+ * `$keccak256`), each of which must evaluate to bytes
+ */
+async function evaluateBytesOperands(
+  operation: "$concat" | "$keccak256",
+  operands: Pointer.Expression[],
+  options: EvaluateOptions,
+): Promise<Data[]> {
+  return await Promise.all(
+    operands.map(async (operand, index) => {
+      const value = await evaluate(operand, options);
+
+      if (Value.isInteger(value)) {
+        throw new Error(
+          [
+            `Operand ${index} of ${operation} (${JSON.stringify(operand)}) `,
+            `evaluates to the integer ${value.value}, which has no byte `,
+            `width; give it a width with $wordsized or $sizedN`,
+          ].join(""),
+        );
+      }
+
+      return value.data;
+    }),
+  );
+}
+
 async function evaluateLiteral(
   literal: Pointer.Expression.Literal,
-): Promise<Data> {
+): Promise<Value> {
   switch (typeof literal) {
-    case "string":
-      return Data.fromHex(literal);
+    case "string": {
+      const digits = literal.slice(2);
+
+      // an odd number of digits has no whole-byte width
+      if (digits.length % 2 === 1) {
+        return Value.integer(BigInt(literal));
+      }
+
+      return Value.bytes(Data.fromHex(literal));
+    }
     case "number":
-      return Data.fromNumber(literal);
+      return Value.integer(BigInt(literal));
   }
 }
 
 async function evaluateConstant(
   constant: Pointer.Expression.Constant,
-): Promise<Data> {
+): Promise<Value> {
   switch (constant) {
     case "$wordsize":
-      return Data.fromHex("0x20");
+      return Value.integer(32n);
   }
 }
 
 async function evaluateVariable(
   identifier: Pointer.Expression.Variable,
   { variables }: EvaluateOptions,
-): Promise<Data> {
-  const data = variables[identifier];
-  if (typeof data === "undefined") {
+): Promise<Value> {
+  const value = variables[identifier];
+  if (typeof value === "undefined") {
     throw new Error(`Unknown variable with identifier ${identifier}`);
   }
 
-  return data;
+  return value;
 }
 
-async function evaluateArithmeticSum(
-  expression: Pointer.Expression.Arithmetic.Sum,
+async function evaluateArithmetic(
+  expression: Pointer.Expression.Arithmetic,
   options: EvaluateOptions,
-): Promise<Data> {
+): Promise<Value> {
+  const [[operation, operandExpressions]] = Object.entries(expression) as [
+    string,
+    Pointer.Expression[],
+  ][];
+
   const operands = await Promise.all(
-    expression.$sum.map(
-      async (expression) => await evaluate(expression, options),
-    ),
+    operandExpressions.map((operand) => evaluateInteger(operand, options)),
   );
 
-  const maxLength = operands.reduce(
-    (max, { length }) => (length > max ? length : max),
-    0,
-  );
+  switch (operation) {
+    case "$sum":
+      return Value.integer(operands.reduce((sum, value) => sum + value, 0n));
+    case "$difference": {
+      const [a, b] = operands;
+      return Value.integer(a > b ? a - b : 0n);
+    }
+    case "$product":
+      return Value.integer(
+        operands.reduce((product, value) => product * value, 1n),
+      );
+    case "$quotient": {
+      const [a, b] = operands;
+      return Value.integer(a / b);
+    }
+    case "$remainder": {
+      const [a, b] = operands;
+      return Value.integer(a % b);
+    }
+  }
 
-  const data = Data.fromUint(
-    operands.reduce((sum, data) => sum + data.asUint(), 0n),
-  ).padUntilAtLeast(maxLength);
-
-  return data;
-}
-
-async function evaluateArithmeticDifference(
-  expression: Pointer.Expression.Arithmetic.Difference,
-  options: EvaluateOptions,
-): Promise<Data> {
-  const [a, b] = await Promise.all(
-    expression.$difference.map(
-      async (expression) => await evaluate(expression, options),
-    ),
-  );
-
-  const maxLength = a.length > b.length ? a.length : b.length;
-
-  const unpadded =
-    a.asUint() > b.asUint()
-      ? Data.fromUint(a.asUint() - b.asUint())
-      : Data.fromNumber(0);
-
-  const data = unpadded.padUntilAtLeast(maxLength);
-  return data;
-}
-
-async function evaluateArithmeticProduct(
-  expression: Pointer.Expression.Arithmetic.Product,
-  options: EvaluateOptions,
-): Promise<Data> {
-  const operands = await Promise.all(
-    expression.$product.map(
-      async (expression) => await evaluate(expression, options),
-    ),
-  );
-
-  const maxLength = operands.reduce(
-    (max, { length }) => (length > max ? length : max),
-    0,
-  );
-
-  return Data.fromUint(
-    operands.reduce((product, data) => product * data.asUint(), 1n),
-  ).padUntilAtLeast(maxLength);
-}
-
-async function evaluateArithmeticQuotient(
-  expression: Pointer.Expression.Arithmetic.Quotient,
-  options: EvaluateOptions,
-): Promise<Data> {
-  const [a, b] = await Promise.all(
-    expression.$quotient.map(
-      async (expression) => await evaluate(expression, options),
-    ),
-  );
-
-  const maxLength = a.length > b.length ? a.length : b.length;
-
-  const data = Data.fromUint(a.asUint() / b.asUint()).padUntilAtLeast(
-    maxLength,
-  );
-
-  return data;
-}
-
-async function evaluateArithmeticRemainder(
-  expression: Pointer.Expression.Arithmetic.Remainder,
-  options: EvaluateOptions,
-): Promise<Data> {
-  const [a, b] = await Promise.all(
-    expression.$remainder.map(
-      async (expression) => await evaluate(expression, options),
-    ),
-  );
-
-  const maxLength = a.length > b.length ? a.length : b.length;
-
-  const data = Data.fromUint(a.asUint() % b.asUint()).padUntilAtLeast(
-    maxLength,
-  );
-
-  return data;
+  throw new Error(`Unknown arithmetic operation ${operation}`);
 }
 
 async function evaluateKeccak256(
   expression: Pointer.Expression.Keccak256,
   options: EvaluateOptions,
-): Promise<Data> {
-  const operands = await Promise.all(
-    expression.$keccak256.map(
-      async (expression) => await evaluate(expression, options),
-    ),
+): Promise<Value> {
+  const operands = await evaluateBytesOperands(
+    "$keccak256",
+    expression.$keccak256,
+    options,
   );
 
   const preimage = Data.zero().concat(...operands);
-  const hash = Data.fromBytes(keccak256(preimage));
 
-  return hash;
+  return Value.bytes(Data.fromBytes(keccak256(preimage)));
 }
 
 async function evaluateConcat(
   expression: Pointer.Expression.Concat,
   options: EvaluateOptions,
-): Promise<Data> {
-  const operands = await Promise.all(
-    expression.$concat.map(
-      async (expression) => await evaluate(expression, options),
-    ),
+): Promise<Value> {
+  const operands = await evaluateBytesOperands(
+    "$concat",
+    expression.$concat,
+    options,
   );
 
-  return Data.zero().concat(...operands);
+  return Value.bytes(Data.zero().concat(...operands));
 }
 
 async function evaluateResize(
   expression: Pointer.Expression.Resize,
   options: EvaluateOptions,
-): Promise<Data> {
+): Promise<Value> {
   const [[operation, subexpression]] = Object.entries(expression);
 
   const newLength = Pointer.Expression.Resize.isToNumber(expression)
     ? Number(operation.match(/^\$sized([1-9]+[0-9]*)$/)![1])
     : 32;
 
-  return (await evaluate(subexpression, options)).resizeTo(newLength);
+  const value = await evaluate(subexpression, options);
+
+  return Value.bytes(Value.toData(value).resizeTo(newLength));
 }
 
 async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
   operation: O,
   lookup: Pointer.Expression.Lookup.ForOperation<O>,
   options: EvaluateOptions,
-): Promise<Data> {
+): Promise<Value> {
   const { regions } = options;
 
   const identifier = lookup[operation];
@@ -288,13 +309,13 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
     );
   }
 
-  return data;
+  return Value.integer(data.asUint());
 }
 
 async function evaluateRead(
   expression: Pointer.Expression.Read,
   options: EvaluateOptions,
-): Promise<Data> {
+): Promise<Value> {
   const { state: _state, regions } = options;
 
   const identifier = expression.$read;
@@ -303,5 +324,5 @@ async function evaluateRead(
     throw new Error(`Region not found: ${identifier}`);
   }
 
-  return await read(region, options);
+  return Value.bytes(await read(region, options));
 }
