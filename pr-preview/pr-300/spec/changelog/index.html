@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-300/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-300/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-300/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-300/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-300/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-300/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-300/assets/css/styles.42198f36.css">
-<script src="/format/pr-preview/pr-300/assets/js/runtime~main.03dce5d3.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-300/assets/js/main.ebbabc0f.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-300/assets/js/runtime~main.a3545271.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-300/assets/js/main.9e0d90e1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -19,33 +19,55 @@ version is that package&#x27;s version and this file is keyed by it. Each publis
 package that implements the spec (<code>@ethdebug/pointers</code>, <code>@ethdebug/evm</code>, and so
 on) has its own <code>CHANGELOG.md</code> under <code>packages/&lt;name&gt;/</code>; this file covers only
 the spec itself.</p>
-<p>Each entry gives a summary, in one or two sentences, of what changed. Three
-sub-items follow:</p>
+<p>Each entry gives a summary of what changed. Three sub-items follow:</p>
 <ul>
 <li class=""><code>Schemas:</code> the fully qualified name(s) of the schema(s) the change touches.</li>
-<li class=""><code>Producers:</code> what an emitter of <code>ethdebug/format</code> data (a compiler such as
-solc or bugc) must change to keep emitting valid data, or <code>no change needed</code>.</li>
-<li class=""><code>Consumers:</code> what a consumer of <code>ethdebug/format</code> data (a debugger such as
-soldb) must change to keep handling it correctly, or <code>no change needed</code>.</li>
+<li class=""><code>Producers:</code> what the change means for an emitter of <code>ethdebug/format</code> data (a
+compiler such as solc or bugc).</li>
+<li class=""><code>Consumers:</code> what the change means for a reader of <code>ethdebug/format</code> data (a
+debugger such as soldb).</li>
 </ul>
+<p>Each <code>Producers:</code> and <code>Consumers:</code> sub-item starts with one of three prefixes:</p>
+<ul>
+<li class=""><code>no change needed.</code> Nothing that was valid becomes invalid, and nothing
+changes meaning for this party. One short reason may follow.</li>
+<li class=""><code>optional:</code> The change adds a capability. Nothing that was valid before
+changes. No party is obliged to do anything. The sub-item says what the party
+may now do.</li>
+<li class=""><code>required:</code> Output that was valid before the change no longer validates, or
+the specification adds or changes a normative <strong>must</strong>, or the meaning of data
+that was already valid changes. The sub-item names the schema keyword, or
+quotes the specification prose, that imposes the obligation. Prose that says
+<strong>should</strong> or &quot;preferred&quot; is never <code>required:</code>.</li>
+</ul>
+<p>A consumer has an obligation only where producers can now emit something that a
+conforming consumer would otherwise misread or reject, or where the meaning of
+data that was already valid changed. A consumer that does not use a new optional
+feature has no obligation.</p>
+<p>Each change is compared with the specification immediately before it. A schema
+that is new in a change had no earlier valid output, so its use is <code>optional:</code>
+unless a schema that already existed now requires it.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Direct link to Unreleased" title="Direct link to Unreleased" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="changed">Changed<a href="#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed" translate="no">​</a></h3>
 <ul>
 <li class="">
-<p>A segment&#x27;s <code>offset</code> now carries past <code>$wordsize</code> into later slots instead of
-being bounded to a single slot, and <code>length</code> may span the resulting sequence
-of slots. The default <code>length</code> is now <code>$wordsize - (offset mod $wordsize)</code>,
-running to the end of the slot in which the segment begins. A new example
-illustrates the carry, collapsing a long storage string to one multi-slot
-region (<a href="https://github.com/ethdebug/format/pull/284" target="_blank" rel="noopener noreferrer" class="">#284<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<p>A segment&#x27;s <code>offset</code> is no longer limited to a value below <code>$wordsize</code>: an
+offset at or past <code>$wordsize</code> now carries into later slots. The default
+<code>length</code> is now <code>$wordsize - (offset mod $wordsize)</code>, which runs to the end of
+the slot in which the segment begins and equals the earlier default for an
+offset inside the slot. A <code>length</code> that spans slots was already defined. A new
+segment example shows the carry, and a new pointer example collapses a long
+storage string to one multi-slot region (<a href="https://github.com/ethdebug/format/pull/284" target="_blank" rel="noopener noreferrer" class="">#284<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/scheme/segment</strong>,
 <strong>ethdebug/format/pointer</strong></li>
-<li class="">Producers: no change needed. Every previously valid pointer keeps its
-meaning; the change only removes an incorrect bound and defines behavior
-that was previously undefined.</li>
-<li class="">Consumers: must resolve carried offsets and lengths that span slots, rather
-than assuming a segment stays within one slot.</li>
+<li class="">Producers: optional: a producer may emit an <code>offset</code> at or past <code>$wordsize</code>
+and let it carry into later slots. Every pointer that was valid before keeps
+its meaning.</li>
+<li class="">Consumers: required: find the slot and byte of an <code>offset</code> by division and
+remainder against <code>$wordsize</code>, and compute the default <code>length</code> as
+<code>$wordsize - (offset mod $wordsize)</code>. The <code>offset</code> description no longer
+says that the offset &quot;<strong>must</strong> begin inside the slot&quot;.</li>
 </ul>
 </li>
 <li class="">
@@ -56,27 +78,35 @@ the long way around now uses <code>$this</code> (<a href="https://github.com/eth
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong>,
 <strong>ethdebug/format/pointer</strong></li>
-<li class="">Producers: no change needed for a pointer that terminates; a circular
-lookup never had a defined value.</li>
-<li class="">Consumers: no change needed, beyond reporting a circular lookup as an error
-rather than recursing without bound.</li>
+<li class="">Producers: required: do not emit a circular property lookup through <code>$this</code>.
+A new &quot;must not be circular&quot; in the description imposes this; no validator
+catches it. A pointer that already resolves is not affected.</li>
+<li class="">Consumers: no change needed. The rule constrains producers only, and no
+valid data changes meaning.</li>
 </ul>
 </li>
 <li class="">
 <p>Expressions now evaluate to one of two sorts, an unbounded integer or
-definite-width bytes, and the <code>$concat</code> and <code>$keccak256</code> operands must be
-width-bearing bytes rather than bare integers. This tightens what was
-previously undefined; it does not break any output that was already valid,
-since the sorting rules were unstated before. Examples that hashed bare
-integers are corrected (<a href="https://github.com/ethdebug/format/pull/286" target="_blank" rel="noopener noreferrer" class="">#286<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+definite-width bytes, and the <code>$concat</code> and <code>$keccak256</code> operands <strong>must</strong> be
+width-bearing bytes rather than bare integers. A hexadecimal literal with an
+even number of digits is bytes of exactly the width written, a literal with an
+odd number of digits is an integer, and widths are never inferred from
+context; the earlier text let a literal omit leading zeroes and padded it to
+the width of its context. No schema keyword changes, so a validator accepts
+the same documents as before, but an expression that passes a bare integer to
+<code>$concat</code> or <code>$keccak256</code>, as the schema&#x27;s own earlier examples did, no longer
+conforms. Those examples are corrected (<a href="https://github.com/ethdebug/format/pull/286" target="_blank" rel="noopener noreferrer" class="">#286<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong></li>
-<li class="">Producers: word-size bare integers (with <code>$wordsized</code> or a <code>$sizedN</code> form)
-before passing them to <code>$concat</code> or <code>$keccak256</code>; mapping-key pointers
-already do this.</li>
-<li class="">Consumers: reject bare integers in <code>$concat</code>/<code>$keccak256</code> operand positions,
-and treat arithmetic results as unbounded integers rather than assuming a
-fixed width.</li>
+<li class="">Producers: required: give each bare-integer operand of <code>$concat</code> or
+<code>$keccak256</code> a width first with <code>$wordsized</code> or a <code>$sizedN</code> form, and write
+a literal that is meant as bytes with its full number of digits (a new
+&quot;<strong>must</strong> be width-bearing&quot; in the description). No validator catches this.</li>
+<li class="">Consumers: required: the meaning of literals changed (&quot;Widths are never
+inferred from context&quot;). Read an even-digit hexadecimal literal as bytes of
+exactly the width written, and an odd-digit literal or a JSON number as an
+integer. Arithmetic results are unbounded integers. The specification does
+not say what a consumer does with a bare-integer operand.</li>
 </ul>
 </li>
 </ul>
@@ -95,29 +125,34 @@ a label the Standard does not define validates anyway. (<a href="https://github.
 <li class="">Schemas: <strong>ethdebug/format/materials/encoding</strong>,
 <strong>ethdebug/format/materials/source</strong>,
 <strong>ethdebug/format/type/elementary/string</strong></li>
-<li class="">Producers: use a label the Standard defines, and where several of its labels
-name the same encoding its canonical lowercase name is preferred —
-<code>utf-16le</code> rather than <code>utf-16</code>, <code>utf-8</code> rather than <code>UTF-8</code>.</li>
-<li class="">Consumers: a label may go straight to <code>new TextDecoder(label)</code>, which
-accepts exactly these labels; do not count on validation having rejected a
-label from outside the Standard.</li>
+<li class="">Producers: required: an <code>encoding</code> value must be a label that the Standard
+defines (a new <strong>must</strong> in the description); no validator catches this. The
+canonical lowercase name (<code>utf-16le</code>, not <code>utf-16</code>) is only preferred.</li>
+<li class="">Consumers: optional: a consumer may pass the value straight to
+<code>new TextDecoder(label)</code>. No validator rejects a label from outside the
+Standard. An omitted field means <code>utf-8</code>, as it did before.</li>
 </ul>
 </li>
 <li class="">
-<p>A context may list the compiler transformations that produced an instruction
-— <code>inline</code>, <code>tailcall</code>, <code>fold</code>, <code>coalesce</code>, with an extensible identifier
-set and repeats allowed. A transform annotates rather than replaces the
-semantic contexts, and composes flat beside them on one context object.
-(<a href="https://github.com/ethdebug/format/pull/216" target="_blank" rel="noopener noreferrer" class="">#216<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+<p>A context may list the compiler transformations that produced an instruction —
+<code>inline</code>, <code>tailcall</code>, <code>fold</code>, <code>coalesce</code>, with an extensible identifier set
+and repeats allowed. A transform annotates rather than replaces the semantic
+contexts, and composes flat beside them on one context object. The
+<strong>ethdebug/format/program/context/function/invoke</strong> page now describes how a
+debugger reconstructs activations from <code>invoke</code> and <code>return</code> contexts, and
+says that a compiler must emit the two as a bracket around a body. (<a href="https://github.com/ethdebug/format/pull/216" target="_blank" rel="noopener noreferrer" class="">#216<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/transform</strong>,
 <strong>ethdebug/format/program/context</strong>,
 <strong>ethdebug/format/program/context/function/invoke</strong></li>
-<li class="">Producers: optional; emit it alongside the <code>invoke</code>/<code>return</code> bracket that an
-optimization would otherwise hide.</li>
-<li class="">Consumers: no change needed; preserve an unfamiliar identifier as an opaque
-label, and optionally reconstruct inlined and tail-call activations that
-have no real frame.</li>
+<li class="">Producers: required: a producer that emits <code>invoke</code> and <code>return</code> contexts
+must emit them as a bracket: <code>invoke</code> on the first instruction of a body,
+<code>return</code> on its last, and neither in between (a new &quot;must emit them as a
+<strong>bracket</strong>&quot; on the <code>invoke</code> page). A one-instruction body is the only
+exception. <code>transform</code> itself is optional (one or more non-empty strings).</li>
+<li class="">Consumers: optional: a consumer may ignore <code>transform</code>. A consumer that
+reads it may reconstruct inlined and tail-call activations that have no real
+frame, and should keep an unfamiliar identifier as an opaque label.</li>
 </ul>
 </li>
 <li class="">
@@ -128,20 +163,24 @@ program. (<a href="https://github.com/ethdebug/format/pull/245" target="_blank" 
 <li class="">Schemas: <strong>ethdebug/format/program/context/function/invoke</strong>,
 <strong>ethdebug/format/program/context/function/return</strong>,
 <strong>ethdebug/format/program/context/function/revert</strong></li>
-<li class="">Producers: optional; put the same value on the opening invoke and on its
-closing return or revert.</li>
-<li class="">Consumers: no change needed; where present, pair a call with its return by
-<code>activation</code> instead of relying on strict nesting in trace order.</li>
+<li class="">Producers: optional: a producer may put the same <code>activation</code> string on an
+<code>invoke</code> and on the <code>return</code> or <code>revert</code> that ends it. Distinct activations
+carry distinct values, unique within the program.</li>
+<li class="">Consumers: optional: where <code>activation</code> is present, a consumer may pair a
+call with its return or revert by that value instead of by strict nesting in
+trace order.</li>
 </ul>
 </li>
 <li class="">
-<p>Contexts mark the function-call lifecycle — an invocation of exactly one
-kind (<code>jump</code> for an internal call, <code>message</code> for an external message call,
-<code>create</code> for a contract creation), a successful return, or a revert — each
-carrying optional function identity (<code>identifier</code>, <code>declaration</code>, <code>type</code>).
+<p>Contexts mark the function-call lifecycle — an invocation of exactly one kind
+(<code>jump</code> for an internal call, <code>message</code> for an external message call, <code>create</code>
+for a contract creation), a successful return, or a revert — each carrying
+optional function identity (<code>identifier</code>, <code>declaration</code>, <code>type</code>).
 <strong>ethdebug/format/type/specifier</strong> names the &quot;full type or <code>{ id }</code> reference&quot;
 pattern that <strong>ethdebug/format/type/wrapper</strong> and context variables now share.
-(<a href="https://github.com/ethdebug/format/pull/154" target="_blank" rel="noopener noreferrer" class="">#154<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+The <code>context</code> description in <strong>ethdebug/format/program/instruction</strong> now
+states that pointers in a context reference the machine state at that
+instruction&#x27;s trace step. (<a href="https://github.com/ethdebug/format/pull/154" target="_blank" rel="noopener noreferrer" class="">#154<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/function</strong>,
 <strong>ethdebug/format/program/context/function/invoke</strong>,
@@ -151,12 +190,15 @@ pattern that <strong>ethdebug/format/type/wrapper</strong> and context variables
 <strong>ethdebug/format/program/context</strong>,
 <strong>ethdebug/format/program/context/variables</strong>,
 <strong>ethdebug/format/program/instruction</strong></li>
-<li class="">Producers: optional; for an internal call the invoke belongs on the callee&#x27;s
-entry JUMPDEST, where the remaining stack is stable, and for an external
-call or creation on the CALL/CREATE instruction itself.</li>
-<li class="">Consumers: read these to build a source-level call stack;
-<strong>ethdebug/format/type/specifier</strong> only names the discrimination that
-already existed, so type handling is unaffected.</li>
+<li class="">Producers: required: two narrow points. Context pointers resolve against the
+machine state at the instruction&#x27;s trace step (a new <code>context</code> description
+sentence). A variable <code>type</code> that has an <code>id</code> key must be a bare type
+reference (<code>if</code>/<code>then</code>/<code>else</code> replaces <code>oneOf</code>). The new contexts are
+optional; a <code>return</code> needs <code>data</code> (<code>required</code>).</li>
+<li class="">Consumers: required: resolve pointers in a context against the machine state
+at the instruction&#x27;s trace step (a new sentence in the <code>context</code>
+description; <a href="https://github.com/ethdebug/format/pull/281" target="_blank" rel="noopener noreferrer" class="">#281<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> later removes it). To read the function contexts is
+optional. Type handling is unaffected.</li>
 </ul>
 </li>
 <li class="">
@@ -166,10 +208,11 @@ is most useful for telling <code>pick</code> alternatives apart. (<a href="https
 <li class="">Schemas: <strong>ethdebug/format/program/context/name</strong>,
 <strong>ethdebug/format/program/context</strong>,
 <strong>ethdebug/format/program/context/pick</strong></li>
-<li class="">Producers: optional. Before this change the context schema&#x27;s
-<code>unevaluatedProperties: false</code> rejected a <code>name</code> key outright, so the schema
-added in <a href="https://github.com/ethdebug/format/pull/113" target="_blank" rel="noopener noreferrer" class="">#113<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> was unreachable.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: optional: a producer may put a <code>name</code> string on a context, for
+example to tell <code>pick</code> alternatives apart. <code>unevaluatedProperties: false</code>
+rejected the key before, so the schema from <a href="https://github.com/ethdebug/format/pull/113" target="_blank" rel="noopener noreferrer" class="">#113<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> was unreachable.</li>
+<li class="">Consumers: no change needed. A <code>name</code> is an opaque label with no
+format-imposed semantics.</li>
 </ul>
 </li>
 <li class="">
@@ -177,9 +220,12 @@ added in <a href="https://github.com/ethdebug/format/pull/113" target="_blank" r
 is dynamically sized. (<a href="https://github.com/ethdebug/format/pull/168" target="_blank" rel="noopener noreferrer" class="">#168<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/complex/array</strong></li>
-<li class="">Producers: emit <code>count</code> for fixed-size arrays, which the type schema
-previously had no way to express.</li>
-<li class="">Consumers: treat a missing <code>count</code> as dynamic.</li>
+<li class="">Producers: required: for fixed-size arrays only. State <code>count</code>, because an
+array type without <code>count</code> now means a dynamic array (&quot;When omitted, the
+array is dynamically sized&quot;). <code>count</code> is not in <code>required</code>.</li>
+<li class="">Consumers: required: read a missing <code>count</code> as a dynamic array and a present
+<code>count</code> as the fixed number of elements. The <code>count</code> description changed the
+meaning of an array type without <code>count</code>.</li>
 </ul>
 </li>
 <li class="">
@@ -190,12 +236,14 @@ template reference may remap the region names a template produces through
 <li class="">Schemas: <strong>ethdebug/format/pointer/collection/templates</strong>,
 <strong>ethdebug/format/pointer/collection/reference</strong>,
 <strong>ethdebug/format/pointer</strong>, <strong>ethdebug/format/pointer/collection</strong></li>
-<li class="">Producers: optional; inline templates make a pointer self-contained, and
-<code>yields</code> lets one template be instantiated several times without region-name
-collisions.</li>
-<li class="">Consumers: resolve a reference against inline templates first and the
-enclosing <strong>ethdebug/format/info</strong> <code>pointers</code> table second, then apply
-<code>yields</code> renames to the regions the template yields.</li>
+<li class="">Producers: optional: a producer may declare templates inline with
+<code>templates</code> and <code>in</code>, which makes a pointer self-contained, and may add
+<code>yields</code> to a template reference to reuse it without region-name collisions.</li>
+<li class="">Consumers: required: a consumer that resolves pointers must support both
+forms, because a valid pointer can now contain them (a new <code>oneOf</code> branch
+for <code>templates</code> in <strong>ethdebug/format/pointer/collection</strong>; a new <code>yields</code>
+property). Templates in <code>templates</code> are available by name inside <code>in</code>.
+<code>yields</code> renames regions; unmapped names pass through unchanged.</li>
 </ul>
 </li>
 <li class="">
@@ -204,9 +252,13 @@ operands&#x27; bytes, preserving each operand&#x27;s byte width; an empty operan
 is permitted. (<a href="https://github.com/ethdebug/format/pull/156" target="_blank" rel="noopener noreferrer" class="">#156<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong></li>
-<li class="">Producers: optional.</li>
-<li class="">Consumers: implement <code>$concat</code>, adding and removing no padding between
-operands.</li>
+<li class="">Producers: optional: a producer may use <code>$concat</code> to build a byte sequence
+from several operands, for example a storage slot key or the input to a
+hash.</li>
+<li class="">Consumers: required: a consumer that resolves pointers must support
+<code>$concat</code>, because a valid pointer can now contain it (a new <code>Concat</code> branch
+in the schema&#x27;s <code>oneOf</code>). Operands join in list order and keep their byte
+widths; no padding is added or removed.</li>
 </ul>
 </li>
 <li class="">
@@ -219,10 +271,13 @@ example <code>&quot;ir&quot;</code> or <code>&quot;source&quot;</code>. (<a href
 <strong>ethdebug/format/program/context/gather</strong>,
 <strong>ethdebug/format/program/context/frame</strong>,
 <strong>ethdebug/format/program/context</strong></li>
-<li class="">Producers: optional; reach for <code>gather</code> only where facts would collide on
-the same key, since disjoint keys compose flat on one object.</li>
-<li class="">Consumers: resolve <code>pick</code> with runtime information, merge <code>gather</code> members,
-and filter or label contexts by <code>frame</code>.</li>
+<li class="">Producers: optional: a producer may use <code>pick</code>, <code>gather</code> and <code>frame</code> on a
+context. A <code>pick</code> or <code>gather</code> list needs at least two members
+(<code>minItems: 2</code>). <code>gather</code> is needed only where two facts use the same key.</li>
+<li class="">Consumers: optional: a consumer that supports these keys reads a <code>pick</code> as
+alternatives of which one is true, reads all members of a <code>gather</code> as true
+together, and may separate facts by <code>frame</code>. A consumer without this support
+cannot use such contexts.</li>
 </ul>
 </li>
 <li class="">
@@ -236,36 +291,48 @@ reference it. (<a href="https://github.com/ethdebug/format/pull/126" target="_bl
 <strong>ethdebug/format/materials/source-range</strong>,
 <strong>ethdebug/format/pointer/expression</strong>,
 <strong>ethdebug/format/program/instruction</strong></li>
-<li class="">Producers: an instruction&#x27;s <code>operation.arguments</code> items may now be JSON
-numbers, not only hex strings.</li>
-<li class="">Consumers: accept both forms everywhere <strong>ethdebug/format/data/value</strong>
-appears — most notably operation arguments, which were hex-string-only
-before.</li>
+<li class="">Producers: optional: <code>operation.arguments</code> items may now be JSON numbers,
+and <strong>ethdebug/format/materials/source-range</strong> <code>offset</code> and <code>length</code> may now
+be <code>0x</code>-prefixed hex strings. Other uses accepted both forms already.</li>
+<li class="">Consumers: required: accept both forms in <code>operation.arguments</code> items
+(hex-string-only before) and in <strong>ethdebug/format/materials/source-range</strong>
+<code>offset</code> and <code>length</code> (JSON-number-only before). The <code>oneOf</code> of
+<strong>ethdebug/format/data/value</strong> now applies there.</li>
 </ul>
 </li>
 <li class="">
-<p>A context may carry a human-readable <code>remark</code> string, intended as annotation
-rather than as something a compiler interprets. (<a href="https://github.com/ethdebug/format/pull/125" target="_blank" rel="noopener noreferrer" class="">#125<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+<p>A context may carry a human-readable <code>remark</code> string, intended primarily for
+humans to use as an annotation and not for compilers to use directly. (<a href="https://github.com/ethdebug/format/pull/125" target="_blank" rel="noopener noreferrer" class="">#125<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/remark</strong>,
 <strong>ethdebug/format/program/context</strong></li>
-<li class="">Producers: optional.</li>
-<li class="">Consumers: display it; derive no semantics from it.</li>
+<li class="">Producers: optional: a context may carry a <code>remark</code> string. A context that
+holds only a <code>remark</code> is now valid.</li>
+<li class="">Consumers: optional: a consumer may display the <code>remark</code>. It is an
+annotation for humans and has no other meaning. A context can now hold only
+a <code>remark</code>.</li>
 </ul>
 </li>
 <li class="">
-<p>One compilation&#x27;s debugging information is a single <strong>ethdebug/format/info</strong>
-document holding its <code>compilation</code>, its <code>programs</code>, and by-name lookup tables
-for <code>types</code> and <code>pointers</code>. The same change raised the compilation <code>id</code>
-uniqueness requirement from <strong>should</strong> to <strong>must</strong> (relaxed back to <strong>should</strong>
-by <a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>). (<a href="https://github.com/ethdebug/format/pull/123" target="_blank" rel="noopener noreferrer" class="">#123<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+<p>A new <strong>ethdebug/format/info</strong> schema can represent all debugging information
+of one compilation as one standalone document that holds its <code>compilation</code>,
+its <code>programs</code>, and by-name lookup tables for <code>types</code> and <code>pointers</code>. A new
+<strong>ethdebug/format/info/resources</strong> schema holds only the lookup tables (and an
+optional <code>compilation</code>), for compilers that give the other data elsewhere in
+their output. The same change raised the compilation <code>id</code> uniqueness
+requirement from <strong>should</strong> to <strong>must</strong> (relaxed back to <strong>should</strong> by
+<a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>). (<a href="https://github.com/ethdebug/format/pull/123" target="_blank" rel="noopener noreferrer" class="">#123<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/info</strong>, <strong>ethdebug/format/info/resources</strong>,
 <strong>ethdebug/format/materials/compilation</strong></li>
-<li class="">Producers: emit one <strong>ethdebug/format/info</strong> document per compilation,
-hoisting shared types and pointer templates into the lookup tables.</li>
-<li class="">Consumers: resolve <code>{ &quot;id&quot;: ... }</code> type references and named pointer
-templates against <code>info.types</code> and <code>info.pointers</code>.</li>
+<li class="">Producers: required: a compilation <code>id</code>, when given, <strong>must</strong> be globally
+unique (<strong>should</strong> before; <a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> later relaxed this back to <strong>should</strong>).
+The rest is optional: an <strong>ethdebug/format/info/resources</strong> object
+(<code>required</code>: <code>types</code>, <code>pointers</code>) or an <strong>ethdebug/format/info</strong> document
+(those two, <code>compilation</code>, <code>programs</code>).</li>
+<li class="">Consumers: optional: a consumer may read either form and look up types and
+pointer templates by name in <code>types</code> and <code>pointers</code>. This change does not
+say how a type reference <code>id</code> or a <code>template</code> name resolves against them.</li>
 </ul>
 </li>
 <li class="">
@@ -280,11 +347,13 @@ and a <code>context</code> carrying source-range and variable facts. (<a href="h
 <strong>ethdebug/format/program/context/code</strong>,
 <strong>ethdebug/format/program/context/variables</strong>,
 <strong>ethdebug/format/program/context/name</strong></li>
-<li class="">Producers: emit one program per bytecode; <code>offset</code> is the container-relative
-byte offset, which equals the program counter for legacy (non-EOF) bytecode
-but not for a code section within an EOF container.</li>
-<li class="">Consumers: entirely new surface; nothing existing changes.
-<strong>ethdebug/format/program/context/name</strong> ships here but is unreferenced
+<li class="">Producers: optional: a compiler may emit one <strong>ethdebug/format/program</strong> per
+bytecode; no earlier schema requires it. <code>required</code>: <code>contract</code>,
+<code>environment</code>, <code>instructions</code>; per instruction, <code>offset</code>, <code>context</code>. For EOF
+bytecode, <code>offset</code> <strong>must</strong> count from the container start. A variable
+<code>type</code>, when given, <strong>must</strong> be a full type or an <code>{ id }</code> reference.</li>
+<li class="">Consumers: no change needed. Every schema here is new, and no earlier schema
+references them. <strong>ethdebug/format/program/context/name</strong> is unreferenced
 until <a href="https://github.com/ethdebug/format/pull/179" target="_blank" rel="noopener noreferrer" class="">#179<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>.</li>
 </ul>
 </li>
@@ -296,17 +365,25 @@ until <a href="https://github.com/ethdebug/format/pull/179" target="_blank" rel=
 <li class="">Schemas: <strong>ethdebug/format/pointer/template</strong>,
 <strong>ethdebug/format/pointer/collection/reference</strong>,
 <strong>ethdebug/format/pointer/collection</strong></li>
-<li class="">Producers: optional; a repeated pointer shape can be emitted once and
-referenced rather than restated at every use.</li>
-<li class="">Consumers: resolve a template reference by name and bind its <code>expect</code>
-variables from the instantiating scope.</li>
+<li class="">Producers: optional: a producer may write a repeated pointer shape one time
+as a pointer template and refer to it with a <code>template</code> collection. This
+change gives no location for template definitions.</li>
+<li class="">Consumers: required: a consumer that resolves pointers must support the
+<code>template</code> collection, because a valid pointer can now contain it (a new
+<code>oneOf</code> branch in <strong>ethdebug/format/pointer/collection</strong>). To resolve it,
+find the template by name and bind its <code>expect</code> variables from the scope at
+the reference. This change gives no location for template definitions.</li>
 </ul>
 </li>
 <li class="">
 <p>Two primitives cover a <code>0x</code>-prefixed hex string of at least one digit and a
-non-negative JSON integer. <strong>ethdebug/format/materials/source-range</strong>,
-<strong>ethdebug/format/pointer/expression</strong>, and the elementary numeric types
-reference them instead of restating the constraints. (<a href="https://github.com/ethdebug/format/pull/104" target="_blank" rel="noopener noreferrer" class="">#104<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+non-negative JSON integer. <strong>ethdebug/format/materials/source-range</strong> <code>offset</code>
+and <code>length</code>, <strong>ethdebug/format/pointer/expression</strong> literals, and
+<strong>ethdebug/format/type/elementary/bytes</strong> <code>size</code> reference them. This tightens
+source-range values from any number to a non-negative integer and makes the
+non-negative limit on integer literals effective. The <code>bits</code> and <code>places</code> of
+the elementary numeric types change from <code>type: number</code> to <code>type: integer</code>.
+(<a href="https://github.com/ethdebug/format/pull/104" target="_blank" rel="noopener noreferrer" class="">#104<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/data/hex</strong>, <strong>ethdebug/format/data/unsigned</strong>,
 <strong>ethdebug/format/materials/source-range</strong>,
@@ -316,10 +393,13 @@ reference them instead of restating the constraints. (<a href="https://github.co
 <strong>ethdebug/format/type/elementary/uint</strong>,
 <strong>ethdebug/format/type/elementary/fixed</strong>,
 <strong>ethdebug/format/type/elementary/ufixed</strong></li>
-<li class="">Producers: <strong>ethdebug/format/type/elementary/bytes</strong> <code>size</code> now permits <code>0</code>
-(its <code>minimum: 1</code> is gone), and the <code>bits</code> of <code>int</code>, <code>uint</code>, <code>fixed</code>, and
-<code>ufixed</code> must be integral rather than merely numeric.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: required: <strong>ethdebug/format/materials/source-range</strong> <code>offset</code> and
+<code>length</code> must be non-negative integers, and an expression&#x27;s integer literal
+must be non-negative (<code>type: integer</code>, <code>minimum: 0</code>). <code>type: integer</code> now
+also applies to a bytes type <code>size</code> and to the <code>places</code> of <code>fixed</code> and
+<code>ufixed</code>; <code>size</code> may now be <code>0</code>. The <code>bits</code> change rejects nothing new.</li>
+<li class="">Consumers: no change needed. Every instance that stays valid keeps its
+meaning; the only newly valid value is a bytes type <code>size</code> of <code>0</code>.</li>
 </ul>
 </li>
 </ul>
@@ -333,14 +413,14 @@ the chain: the precondition to instruction 0. (<a href="https://github.com/ethde
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/instruction</strong>,
 <strong>ethdebug/format/program</strong></li>
-<li class="">Producers: no change needed; this states the convention emission already
-followed. The <code>Incrementer</code> example is corrected to drop <code>localValue</code> from
-the <code>ADD</code> and following <code>PUSH0</code> contexts, where <code>ADD</code> has consumed it.</li>
-<li class="">Consumers: at the trace step about to execute instruction <em>i</em>, read
-instruction <em>i − 1</em>&#x27;s context, or the program-level <code>context</code> before the
-first instruction. A debugger that had followed the removed sentence —
-which framed pointers as resolving against pre-execution state — must
-shift by one step.</li>
+<li class="">Producers: required: emit <code>context</code> pointers against the machine state after
+the instruction has executed; the description placed them &quot;at this
+instruction&#x27;s trace step&quot; before. A producer that already emitted
+postconditions needs no change.</li>
+<li class="">Consumers: required: a debugger paused before instruction <em>i</em> reads the
+context of instruction <em>i − 1</em>, or the program-level <code>context</code> before the
+first instruction (the same description change). A debugger that followed
+the removed sentence must shift by one step.</li>
 </ul>
 </li>
 <li class="">
@@ -350,7 +430,9 @@ are 16 bytes and not 128 — and <code>additionalItems</code>, which JSON Schema
 does not define, is dropped where it was inert.
 <strong>ethdebug/format/pointer/collection/scope</strong>&#x27;s <code>define</code> validates its keys by
 referencing <strong>ethdebug/format/pointer/identifier</strong> rather than an inline copy
-of that pattern. (<a href="https://github.com/ethdebug/format/pull/277" target="_blank" rel="noopener noreferrer" class="">#277<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+of that pattern. The <strong>ethdebug/format/type/definition</strong> description now
+states the rule that its <code>anyOf</code> enforces: at least one of <code>name</code> or
+<code>location</code>. (<a href="https://github.com/ethdebug/format/pull/277" target="_blank" rel="noopener noreferrer" class="">#277<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/base</strong>, <strong>ethdebug/format/type/definition</strong>,
 <strong>ethdebug/format/pointer/collection/list</strong>,
@@ -362,8 +444,9 @@ of that pattern. (<a href="https://github.com/ethdebug/format/pull/277" target="
 <strong>ethdebug/format/program/context/gather</strong>,
 <strong>ethdebug/format/program/context/pick</strong>,
 <strong>ethdebug/format/program/context/variables</strong></li>
-<li class="">Producers: no change needed.</li>
-<li class="">Consumers: no change needed; the accepted shape of every valid instance is
+<li class="">Producers: no change needed. No instance changes validity; the reworded
+<strong>must</strong> states what the <code>anyOf</code> already enforced.</li>
+<li class="">Consumers: no change needed. The accepted shape of every valid instance is
 unchanged.</li>
 </ul>
 </li>
@@ -373,9 +456,12 @@ function&#x27;s <code>contract</code> wrapper each accept an <code>{ id }</code>
 as a concrete type, matching what <code>returns</code> already allowed. (<a href="https://github.com/ethdebug/format/pull/279" target="_blank" rel="noopener noreferrer" class="">#279<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/complex/function</strong></li>
-<li class="">Producers: parameters and the contract type may be given by reference
-instead of inline.</li>
-<li class="">Consumers: resolve a reference in these positions like any other.</li>
+<li class="">Producers: optional: a producer may give the <code>parameters</code> type and an
+external function&#x27;s <code>contract</code> type as an <code>{ id }</code> reference. Inline types
+stay valid.</li>
+<li class="">Consumers: required: a consumer that reads function types must accept an
+<code>{ id }</code> reference in the <code>parameters</code> and <code>contract</code> wrappers and resolve
+it like any other type reference (a new <code>oneOf</code> in each wrapper).</li>
 </ul>
 </li>
 <li class="">
@@ -385,20 +471,24 @@ context by name, so a declared name is inert. Establishing the identifier is
 groundwork for a future name-based <code>pick</code> selection. (<a href="https://github.com/ethdebug/format/pull/251" target="_blank" rel="noopener noreferrer" class="">#251<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/name</strong></li>
-<li class="">Producers: no change needed.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: no change needed. Only the description changed, and &quot;meant to be
+unique&quot; is an intent, not a <strong>must</strong>.</li>
+<li class="">Consumers: no change needed. A <code>name</code> stays a label; the format defines no
+reference by name.</li>
 </ul>
 </li>
 <li class="">
 <p>The <code>target</code> field is optional on an internal (<code>jump</code>) invocation, for the
 cases with no meaningful target pointer — most notably the first instruction
-of an inlined body, whose JUMP has been elided. External calls and contract
-creations still require it. (<a href="https://github.com/ethdebug/format/pull/242" target="_blank" rel="noopener noreferrer" class="">#242<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+of an inlined body, whose JUMP has been elided. External calls still require
+it; a contract creation has no <code>target</code> field. (<a href="https://github.com/ethdebug/format/pull/242" target="_blank" rel="noopener noreferrer" class="">#242<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/function/invoke</strong></li>
-<li class="">Producers: omit <code>target</code> rather than emit a placeholder pointer; the callee
-identity stays meaningful without it.</li>
-<li class="">Consumers: handle an invoke context with no <code>target</code>.</li>
+<li class="">Producers: optional: a producer may omit <code>target</code> on an internal (<code>jump</code>)
+invocation when there is no meaningful code pointer to record. The callee
+identity (<code>identifier</code>, <code>declaration</code>, <code>type</code>) stays meaningful without it.</li>
+<li class="">Consumers: required: accept an internal (<code>jump</code>) invoke context that has no
+<code>target</code>. <code>target</code> is no longer in the <code>required</code> list of the internal call.</li>
 </ul>
 </li>
 <li class="">
@@ -407,9 +497,12 @@ is permitted where a return is known to happen but no return value is
 observable — a void function, or a tail-call-optimized back-edge. (<a href="https://github.com/ethdebug/format/pull/211" target="_blank" rel="noopener noreferrer" class="">#211<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/function/return</strong></li>
-<li class="">Producers: omit <code>data</code> instead of pointing at stack slot 0, which at a TCO
-back-edge holds the next iteration&#x27;s argument, not the return value.</li>
-<li class="">Consumers: handle a return context with no <code>data</code>.</li>
+<li class="">Producers: optional: a producer may omit <code>data</code> when no return value is
+observable: a void function, a tail-call-optimized back-edge, or lost
+location tracking. A return context that has <code>data</code> stays valid.</li>
+<li class="">Consumers: required: accept a return context that has no <code>data</code>, down to a
+bare <code>return: {}</code>. <code>data</code> is no longer in the <code>required</code> list of the
+<code>return</code> object.</li>
 </ul>
 </li>
 <li class="">
@@ -420,10 +513,11 @@ was unstated before; the value stays numeric-or-string, as it already was.
 (<a href="https://github.com/ethdebug/format/pull/172" target="_blank" rel="noopener noreferrer" class="">#172<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/materials/id</strong></li>
-<li class="">Producers: a producer that reuses an id within one scope must change. The
-requirement is prose, so no validator reports the collision.</li>
-<li class="">Consumers: no change needed; an id may now be relied on as a key within its
-scope.</li>
+<li class="">Producers: required: do not reuse an id within one scope, for example source
+ids within one compilation. A new <strong>must</strong> in the description imposes this;
+no validator catches a collision.</li>
+<li class="">Consumers: no change needed. A consumer may now rely on an id as a key
+within its scope.</li>
 </ul>
 </li>
 <li class="">
@@ -431,8 +525,9 @@ scope.</li>
 each of its examples. (<a href="https://github.com/ethdebug/format/pull/170" target="_blank" rel="noopener noreferrer" class="">#170<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/complex/array</strong></li>
-<li class="">Producers: no change needed.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: no change needed. The change adds only descriptions and example
+comments.</li>
+<li class="">Consumers: no change needed. The set of valid array types is unchanged.</li>
 </ul>
 </li>
 <li class="">
@@ -444,26 +539,30 @@ matching the relaxation <a href="https://github.com/ethdebug/format/pull/145" ta
 its own key, so an explicit <code>{}</code> still failed until here. (<a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context</strong></li>
-<li class="">Producers: an explicit <code>&quot;context&quot;: {}</code> is accepted from here on; between
-<a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> and this change only omitting the field worked.</li>
-<li class="">Consumers: accept an empty context object, and read a validation failure as
-a complaint about one member rather than about the whole union.</li>
+<li class="">Producers: optional: a producer may now emit an explicit <code>&quot;context&quot;: {}</code>.
+Between <a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> and this change, only omitting the field validated.</li>
+<li class="">Consumers: required: accept an explicit <code>&quot;context&quot;: {}</code> as the empty
+context. <code>allOf</code> with <code>if</code>/<code>then</code> clauses replaces the <code>anyOf</code> that rejected
+it. The change in validator errors needs no action.</li>
 </ul>
 </li>
 <li class="">
-<p>An empty context (<code>{}</code>) is valid, and both the program-level <code>context</code> and an
-instruction&#x27;s <code>context</code> are optional, with omission equivalent to <code>{}</code>. What
-this actually changed was dropping <code>minProperties: 1</code> from the context schema
-and <code>context</code> from an instruction&#x27;s <code>required</code>; the context schema&#x27;s <code>anyOf</code>
-still rejected an explicit <code>{}</code>, because each of its members required its own
-key, until <a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> replaced the union. (<a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+<p>An instruction&#x27;s <code>context</code> is optional, and omitting it is equivalent to the
+empty context (<code>{}</code>). The program-level <code>context</code> was already optional and
+gains the same statement. The change removed <code>context</code> from an instruction&#x27;s
+<code>required</code> and removed <code>minProperties: 1</code> from the context schema. An explicit
+<code>{}</code> still did not validate: the context schema&#x27;s <code>anyOf</code> rejected it, because
+each of its members requires its own key, until <a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> replaced the union.
+(<a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program</strong>,
 <strong>ethdebug/format/program/instruction</strong>, <strong>ethdebug/format/program/context</strong></li>
-<li class="">Producers: omit <code>context</code> on an instruction that carries no facts instead of
-inventing one; an explicit <code>{}</code> does not validate until <a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>.</li>
-<li class="">Consumers: treat a missing <code>context</code> as the empty context — an
-instruction&#x27;s <code>context</code> is no longer guaranteed present.</li>
+<li class="">Producers: optional: a producer may omit <code>context</code> on an instruction that
+carries no facts; <code>context</code> is no longer in the <code>required</code> list. An explicit
+<code>{}</code> does not validate until <a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>.</li>
+<li class="">Consumers: required: treat a missing instruction <code>context</code> as the empty
+context (<code>{}</code>). <code>context</code> is no longer in the <code>required</code> list of
+<strong>ethdebug/format/program/instruction</strong>.</li>
 </ul>
 </li>
 <li class="">
@@ -473,8 +572,11 @@ it to <strong>must</strong>. The <code>required</code> list is not actually chan
 that. (<a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/materials/compilation</strong></li>
-<li class="">Producers: start emitting <code>id</code> on every compilation.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: no change needed. <code>id</code> is not in the <code>required</code> list at this
+point, and its uniqueness rule relaxes from <strong>must</strong> to <strong>should</strong>.</li>
+<li class="">Consumers: required: do not rely on <code>id</code> to be globally unique. Its
+description now says <strong>should</strong> where it said <strong>must</strong>, so two compilations
+with the same <code>id</code> can now conform.</li>
 </ul>
 </li>
 <li class="">
@@ -482,9 +584,11 @@ that. (<a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel
 source contents, and is otherwise required. (<a href="https://github.com/ethdebug/format/pull/107" target="_blank" rel="noopener noreferrer" class="">#107<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/materials/source-range</strong></li>
-<li class="">Producers: optional shorthand; previously <code>range</code> was always required.</li>
-<li class="">Consumers: treat a source range with no <code>range</code> as offset 0 through the full
-length of the referenced source&#x27;s contents.</li>
+<li class="">Producers: optional: a source range that spans the entire source contents
+may omit <code>range</code>.</li>
+<li class="">Consumers: required: treat a source range with no <code>range</code> as offset 0
+through the full length of the contents of the referenced source. <code>range</code> is
+no longer in the <code>required</code> list.</li>
 </ul>
 </li>
 </ul>
@@ -504,38 +608,48 @@ stays open, since it holds settings in a format native to the compiler, and
 <strong>ethdebug/format/program/context/function/return</strong>,
 <strong>ethdebug/format/program/context/function/revert</strong>,
 <strong>ethdebug/format/pointer/collection/list</strong></li>
-<li class="">Producers: drop extension keys from these objects; a misspelled or extra key
-is now a validation error instead of silently accepted. Compiler-native
-extension data belongs in <code>settings</code>.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: required: remove unknown keys. <code>unevaluatedProperties: false</code> now
+closes the top-level object of the first five schemas above and a
+compilation&#x27;s <code>compiler</code> object. <code>additionalProperties: false</code> now closes
+<code>data</code> and <code>success</code> of a return, <code>reason</code> of a revert, and <code>list</code> of a list
+collection. A compilation&#x27;s <code>settings</code> stays open.</li>
+<li class="">Consumers: no change needed. The change only narrows what producers can
+emit.</li>
 </ul>
 </li>
 <li class="">
 <p>An elementary type <strong>must not</strong> carry <code>contains</code>, which is what discriminates
 it from a complex type; a <code>function</code> complex type requires <code>kind</code> and
 <code>contains</code>; <code>contract</code>&#x27;s <code>library</code> and <code>interface</code> flags are booleans; a
-context <code>name</code> must be non-empty; and a region requires <code>location</code>. (<a href="https://github.com/ethdebug/format/pull/279" target="_blank" rel="noopener noreferrer" class="">#279<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+context <code>name</code> must be non-empty; and a region requires <code>location</code>. A
+<code>function</code> type&#x27;s <code>parameters</code> wrapper and an external <code>function</code> type&#x27;s
+<code>contract</code> wrapper also accept an <strong>ethdebug/format/type/reference</strong> in place
+of an inline type. (<a href="https://github.com/ethdebug/format/pull/279" target="_blank" rel="noopener noreferrer" class="">#279<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/elementary</strong>,
 <strong>ethdebug/format/type/complex/function</strong>,
 <strong>ethdebug/format/type/elementary/contract</strong>,
 <strong>ethdebug/format/program/context/name</strong>, <strong>ethdebug/format/pointer/region</strong></li>
-<li class="">Producers: output that relied on any of these gaps no longer validates —
-<code>{kind: bool, contains: ...}</code>, <code>{external: true}</code> alone,
-<code>{kind: function, internal: true}</code> with no <code>contains</code>,
-<code>{kind: contract, library: true, interface: 42}</code>, and <code>name: &quot;&quot;</code>.</li>
-<li class="">Consumers: no change needed; each fix rejects an instance that was never
-meaningful. A location-less region now produces one clear error rather than
-implicating all seven region types at once.</li>
+<li class="">Producers: required: output that relied on these gaps no longer validates:
+an elementary type with <code>contains</code> (a new <code>not</code> schema), a <code>function</code> type
+with no <code>contains</code> (<code>required</code>), a non-boolean <code>library</code> or <code>interface</code>
+(<code>type: boolean</code>), and an empty context <code>name</code> (<code>minLength: 1</code>). The new
+<code>required</code> for a region&#x27;s <code>location</code> rejects nothing new.</li>
+<li class="">Consumers: required: accept an <strong>ethdebug/format/type/reference</strong> as the
+<code>type</code> of a function type&#x27;s <code>contains.parameters</code> wrapper and of an external
+function type&#x27;s <code>contains.contract</code> wrapper (a new <code>oneOf</code> in each). The
+other fixes need no change.</li>
 </ul>
 </li>
 <li class="">
 <p>A compilation&#x27;s <code>id</code> is <code>required</code>. (<a href="https://github.com/ethdebug/format/pull/138" target="_blank" rel="noopener noreferrer" class="">#138<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/materials/compilation</strong></li>
-<li class="">Producers: emit <code>id</code> on every compilation. <a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> dropped the &quot;optional&quot;
-wording but left <code>id</code> out of <code>required</code>.</li>
-<li class="">Consumers: <code>id</code> may now be relied on as present.</li>
+<li class="">Producers: required: emit <code>id</code> on every compilation; <code>id</code> is now in the
+<code>required</code> list. <a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> dropped the &quot;optional&quot; wording but left <code>id</code> out of
+<code>required</code>.</li>
+<li class="">Consumers: no change needed. A consumer may now rely on <code>id</code> as present in
+every valid compilation.</li>
 </ul>
 </li>
 <li class="">
@@ -543,9 +657,11 @@ wording but left <code>id</code> out of <code>required</code>.</li>
 properties the format does not define. (<a href="https://github.com/ethdebug/format/pull/127" target="_blank" rel="noopener noreferrer" class="">#127<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program/context/variables</strong></li>
-<li class="">Producers: drop extension keys from variable objects, and emit no empty
-variable entries.</li>
-<li class="">Consumers: no change needed.</li>
+<li class="">Producers: required: drop extension keys from variable objects and emit no
+empty ones (<code>unevaluatedProperties: false</code>, which permits only <code>identifier</code>,
+<code>declaration</code>, <code>type</code>, and <code>pointer</code>; <code>minProperties: 1</code>).</li>
+<li class="">Consumers: no change needed. The change only narrows what producers can
+emit.</li>
 </ul>
 </li>
 </ul>
