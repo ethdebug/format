@@ -1,0 +1,219 @@
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { readWorkspaces } from "./publish-tagged.js";
+
+const defaultBase = "origin/main";
+
+function touchesSchemas(changedPaths: string[]): boolean {
+  return changedPaths.some((path) => path.startsWith("schemas/"));
+}
+
+// colocated test files carry no consumer-visible change, and this also
+// covers the *.examples.test.ts suites
+const testFile = /\.test\.tsx?$/;
+
+function touchesPackage(changedPaths: string[], prefix: string): boolean {
+  return changedPaths.some(
+    (path) =>
+      !testFile.test(path) &&
+      (path.startsWith(`${prefix}/src/`) ||
+        path.startsWith(`${prefix}/bin/`) ||
+        path === `${prefix}/package.json`),
+  );
+}
+
+export function missingPackageChangelogs(
+  changedPaths: string[],
+  packagePrefixes: string[],
+): string[] {
+  const changed = new Set(changedPaths);
+  return packagePrefixes
+    .filter((prefix) => touchesPackage(changedPaths, prefix))
+    .map((prefix) => `${prefix}/CHANGELOG.md`)
+    .filter((path) => !changed.has(path));
+}
+
+export function needsChangelog(
+  changedPaths: string[],
+  packagePrefixes: string[] = [],
+): boolean {
+  const schemasViolation =
+    touchesSchemas(changedPaths) && !changedPaths.includes("CHANGELOG.md");
+  return (
+    schemasViolation ||
+    missingPackageChangelogs(changedPaths, packagePrefixes).length > 0
+  );
+}
+
+export function changelogMessage(
+  changedPaths: string[],
+  packagePrefixes: string[] = [],
+): string {
+  const lines: string[] = [];
+
+  if (touchesSchemas(changedPaths) && !changedPaths.includes("CHANGELOG.md")) {
+    const schemaPaths = changedPaths.filter((path) =>
+      path.startsWith("schemas/"),
+    );
+    lines.push(
+      "This PR changes schema files without updating CHANGELOG.md:",
+      ...schemaPaths.map((path) => `  ${path}`),
+      "",
+      'Add an entry under "## Unreleased" in CHANGELOG.md.',
+    );
+  }
+
+  const missing = missingPackageChangelogs(changedPaths, packagePrefixes);
+  if (missing.length > 0) {
+    if (lines.length > 0) {
+      lines.push("");
+    }
+    lines.push(
+      "This PR changes package files without updating the matching",
+      "package CHANGELOG.md:",
+      ...missing.map((path) => `  ${path}`),
+      "",
+      'Add an entry under "## Unreleased" in each file listed above.',
+    );
+  }
+
+  if (lines.length > 0) {
+    lines.push(
+      "",
+      'Apply the "changelog: skip" label to this PR if no entry is needed.',
+    );
+  }
+
+  return lines.join("\n");
+}
+
+const impactPrefixes = ["no change needed.", "optional:", "required:"];
+
+// a real sub-item is indented two spaces and has a bare label; the intro
+// bullets that describe the sub-items start at column 0 with a code span
+const impactLabel = /^ {2}- (Producers|Consumers):(.*)$/;
+
+function startsWithImpactPrefix(text: string): boolean {
+  return impactPrefixes.some(
+    (prefix) =>
+      text.startsWith(prefix) &&
+      (text.length === prefix.length || /\s/.test(text[prefix.length])),
+  );
+}
+
+export function impactLineProblems(text: string): string[] {
+  const lines = text.split("\n");
+  const allowed = impactPrefixes.map((prefix) => `"${prefix}"`).join(", ");
+  return lines.flatMap((line, index) => {
+    const match = impactLabel.exec(line);
+    if (!match) {
+      return [];
+    }
+    const [, label, rest] = match;
+    // the text starts on the label line after one space, or, when the
+    // label stands alone, on the continuation line below it
+    const conforms =
+      rest.trim().length > 0
+        ? rest.startsWith(" ") && startsWithImpactPrefix(rest.slice(1))
+        : startsWithImpactPrefix((lines[index + 1] ?? "").trimStart());
+    return conforms
+      ? []
+      : [`line ${index + 1}: "${label}:" must start with one of: ${allowed}`];
+  });
+}
+
+const sectionNames = ["Added", "Changed"];
+
+// the prefixes carry the obligations, so a section only says whether a
+// change adds something new or alters something that exists
+export function sectionProblems(text: string): string[] {
+  const allowed = sectionNames.map((name) => `"### ${name}"`).join(", ");
+  return text.split("\n").flatMap((line, index) => {
+    if (!line.startsWith("### ")) {
+      return [];
+    }
+    return sectionNames.includes(line.slice(4).trim())
+      ? []
+      : [`line ${index + 1}: section heading must be one of: ${allowed}`];
+  });
+}
+
+export function formatProblemsMessage(problems: string[]): string {
+  if (problems.length === 0) {
+    return "";
+  }
+  return [
+    "CHANGELOG.md does not follow the entry format:",
+    ...problems.map((problem) => `  ${problem}`),
+  ].join("\n");
+}
+
+function resolvesToCommit(root: string, ref: string): boolean {
+  try {
+    execFileSync(
+      "git",
+      ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`],
+      {
+        cwd: root,
+        stdio: "ignore",
+      },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function changedPaths(root: string, base: string): string[] {
+  const stdout = execFileSync(
+    "git",
+    ["diff", "--name-only", `${base}...HEAD`],
+    { cwd: root, encoding: "utf8" },
+  );
+  return stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function publicPackagePrefixes(root: string): string[] {
+  return readWorkspaces(root)
+    .filter((workspace) => !workspace.private)
+    .map((workspace) => relative(root, workspace.dir));
+}
+
+export function main(argv: string[]): number {
+  const base = argv[0] ?? defaultBase;
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  if (!resolvesToCommit(root, base)) {
+    console.error(
+      `check-changelog: cannot resolve the base ref "${base}"; fetch it` +
+        " first, or name one that exists.",
+    );
+    return 1;
+  }
+  const paths = changedPaths(root, base);
+  const packagePrefixes = publicPackagePrefixes(root);
+  // the format lint runs on every diff, not only on schema changes
+  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const problems = [
+    ...impactLineProblems(changelog),
+    ...sectionProblems(changelog),
+  ];
+  const messages = [
+    changelogMessage(paths, packagePrefixes),
+    formatProblemsMessage(problems),
+  ].filter((message) => message.length > 0);
+  if (messages.length > 0) {
+    console.error(messages.join("\n\n"));
+    return 1;
+  }
+  console.log("changelog: ok");
+  return 0;
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(main(process.argv.slice(2)));
+}

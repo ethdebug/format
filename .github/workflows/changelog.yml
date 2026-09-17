@@ -1,0 +1,37 @@
+name: Changelog
+on:
+  pull_request:
+    # labeled and unlabeled re-run this workflow when the
+    # "changelog: skip" label is applied or removed. Actions cannot
+    # filter those events by label name, so the changelog check lives
+    # here rather than in ci.yml, where every label change would
+    # re-run the whole suite.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    if: >-
+      ${{ !contains(github.event.pull_request.labels.*.name,
+      'changelog: skip') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Check changelogs are updated
+        run: >-
+          yarn tsx bin/check-changelog.ts
+          "origin/${{ github.base_ref || 'main' }}"

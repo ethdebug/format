@@ -4,6 +4,7 @@ const allowed = [
   /^package\.json$/,
   /^README[^/]*$/,
   /^LICENSE[^/]*$/,
+  /^CHANGELOG[^/]*$/,
   /^dist\/src\//,
   /^dist\/bin\//,
 ];
