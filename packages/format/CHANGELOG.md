@@ -6,6 +6,19 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-2 — 2026-09-17
+
+### Added
+
+- The published package includes this `CHANGELOG.md` ([#300]).
+
+### Changed
+
+- The bundled schemas are those of specification `0.1.0-2`: segment offsets
+  carry across slots ([#284]), pointer expressions are two-sorted ([#286]), and
+  the operand pointers of an external-call `invoke` resolve before the marked
+  instruction ([#303]). See the root [`CHANGELOG.md`](../../CHANGELOG.md).
+
 ## 0.1.0-1 — 2026-09-16
 
 ### Added
@@ -93,7 +106,11 @@ First publication.
 [#245]: https://github.com/ethdebug/format/pull/245
 [#246]: https://github.com/ethdebug/format/pull/246
 [#276]: https://github.com/ethdebug/format/pull/276
+[#284]: https://github.com/ethdebug/format/pull/284
+[#286]: https://github.com/ethdebug/format/pull/286
 [#293]: https://github.com/ethdebug/format/pull/293
+[#300]: https://github.com/ethdebug/format/pull/300
+[#303]: https://github.com/ethdebug/format/pull/303
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

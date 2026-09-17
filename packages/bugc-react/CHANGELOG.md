@@ -7,6 +7,12 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-2 — 2026-09-17
+
+### Added
+
+- The published package includes this `CHANGELOG.md` ([#300]).
+
 ### Changed
 
 - `yarn watch` now copies stylesheet changes into `dist/` on every
@@ -18,3 +24,4 @@ specification itself are tracked in the root
 First publication.
 
 [#299]: https://github.com/ethdebug/format/pull/299
+[#300]: https://github.com/ethdebug/format/pull/300

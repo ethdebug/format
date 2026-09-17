@@ -7,6 +7,12 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-2 — 2026-09-17
+
+### Added
+
+- The published package includes this `CHANGELOG.md` ([#300]).
+
 ### Changed
 
 - Fixed the documented CSS import paths in comments; the stylesheets
@@ -22,3 +28,4 @@ First publication.
 
 [#298]: https://github.com/ethdebug/format/pull/298
 [#299]: https://github.com/ethdebug/format/pull/299
+[#300]: https://github.com/ethdebug/format/pull/300

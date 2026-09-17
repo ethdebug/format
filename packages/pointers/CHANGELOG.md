@@ -6,6 +6,12 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-2 — 2026-09-17
+
+### Added
+
+- The published package includes this `CHANGELOG.md` ([#300]).
+
 ### Changed
 
 - `dereference` resolves a region whose segment `offset` carries past the end of
@@ -78,6 +84,7 @@ First publication.
 [#284]: https://github.com/ethdebug/format/pull/284
 [#286]: https://github.com/ethdebug/format/pull/286
 [#293]: https://github.com/ethdebug/format/pull/293
+[#300]: https://github.com/ethdebug/format/pull/300
 [`0697233`]: https://github.com/ethdebug/format/commit/0697233
 [`1a8a752`]: https://github.com/ethdebug/format/commit/1a8a752
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

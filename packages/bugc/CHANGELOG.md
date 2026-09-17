@@ -7,6 +7,12 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-2 — 2026-09-17
+
+### Added
+
+- The published package includes this `CHANGELOG.md` ([#300]).
+
 ### Changed
 
 - The pointer expressions that compute a mapping or array-element slot
@@ -23,3 +29,4 @@ First publication.
 
 [#286]: https://github.com/ethdebug/format/pull/286
 [#298]: https://github.com/ethdebug/format/pull/298
+[#300]: https://github.com/ethdebug/format/pull/300
