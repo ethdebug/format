@@ -240,10 +240,12 @@ GitHub Actions the script does not pass `--provenance`.
 - `bin/check-tarballs.ts` (CI, `run-tests` job) lists the files that
   `npm pack` would put in each public package's tarball and fails if
   any file lies outside `package.json`, `README*`, `LICENSE*`,
-  `dist/src/` or `dist/bin/`, or if any `.test.` or `.tsbuildinfo`
-  file is included. It catches a wrong `files` field, test files
-  leaking into the package, and stale build output. The publish
-  script runs the same check before every publish.
+  `CHANGELOG*`, `dist/src/` or `dist/bin/`, or if any `.test.` or
+  `.tsbuildinfo` file is included. It catches a wrong `files` field,
+  test files leaking into the package, and stale build output. The
+  publish script runs the same check before every publish. npm ships
+  `package.json`, `README*` and `LICENSE*` whatever `files` says, but
+  not `CHANGELOG.md`, so every public package lists it in `files`.
 - `bin/smoke-tarballs.ts` (CI, `run-tests` job) packs every public
   package, installs each tarball into a throwaway consumer project
   together with the tarballs of its sibling dependencies, imports

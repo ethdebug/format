@@ -8,6 +8,7 @@ describe("checkPackList", () => {
         "package.json",
         "README.md",
         "LICENSE",
+        "CHANGELOG.md",
         "dist/src/index.js",
         "dist/src/a/b.d.ts",
         "dist/bin/bugc.js",
