@@ -105,7 +105,7 @@ examples:
       - identifier: x
         declaration:
           source:
-            id: 5
+            id: "5"
           range:
             offset: 10
             length: 56
@@ -116,7 +116,7 @@ examples:
           slot: 0
     code:
       source:
-        id: 5
+        id: "5"
       range:
         offset: 68
         length: 16

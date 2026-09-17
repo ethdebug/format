@@ -81,7 +81,7 @@ examples:
       name: "Incrementer"
       definition:
         source:
-          id: 0
+          id: "0"
     environment: call
     context:
       variables:

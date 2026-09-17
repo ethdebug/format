@@ -25,7 +25,7 @@ examples:
   - name: Ballot
     location:
       source:
-        id: 5
+        id: "5"
       range:
         offset: 10
         length: 56

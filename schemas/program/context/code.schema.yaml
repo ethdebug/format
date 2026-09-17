@@ -16,7 +16,7 @@ required:
 examples:
   - code:
       source:
-        id: 5
+        id: "5"
       range:
         offset: 68
         length: 16
