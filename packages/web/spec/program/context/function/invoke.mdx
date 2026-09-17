@@ -21,23 +21,30 @@ contexts to reconstruct call stacks.
 
 ## Pointer evaluation and instruction placement
 
-An instruction's context describes what is known _following_
-that instruction's execution: the fact that a function was
-invoked holds from that point forward. Pointers within the
-context reference the machine state at the instruction's trace
-step — the state a debugger observes when it encounters the
-instruction.
+An instruction's context holds _following_ that instruction's
+execution: the fact that a function was invoked holds from that
+point forward, and pointers within the context resolve against
+the machine state after the instruction has executed (see
+[instruction](/spec/program/instruction)). The operand pointers
+of an external call or contract creation are the one exception.
 
 For **internal calls**, this context is typically placed on the
-callee's entry JUMPDEST rather than the caller's JUMP. JUMP
-consumes its destination operand from the stack; at the entry
-JUMPDEST, the remaining stack (return address followed by
-arguments) is stable and directly addressable.
+callee's entry JUMPDEST. The caller's JUMP has consumed its
+destination operand by then, and JUMPDEST leaves the stack
+unchanged, so after it executes the remaining stack (return
+address followed by arguments) is stable and directly
+addressable.
 
 For **external calls** and **contract creations**, this context
 marks the CALL/DELEGATECALL/STATICCALL/CREATE/CREATE2
-instruction itself, where the call parameters are visible on
-the stack.
+instruction itself: the invocation occurs when that instruction
+executes. The pointer fields of a `message` or `create`
+invocation (`target`, `gas`, `value`, `input`, `salt`) describe
+the operands of the marked instruction, which the instruction
+consumes. These pointers therefore resolve against the machine
+state immediately **before** the marked instruction executes. A
+debugger that is paused about to execute the CALL can resolve
+them against the state it observes.
 
 <SchemaViewer
   schema={{ id: "schema:ethdebug/format/program/context/function/invoke" }}

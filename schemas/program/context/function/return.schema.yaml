@@ -95,10 +95,11 @@ examples:
   # -----------------------------------------------------------
   # External call return: processing result of a CALL
   # -----------------------------------------------------------
-  # This context would mark an instruction after a CALL that
-  # completed successfully. The EVM places a success flag on
-  # the stack, and the callee's return data is accessible via
-  # the returndata buffer:
+  # This context would mark an instruction on the path that
+  # follows a CALL that completed successfully. The EVM places
+  # a success flag on the stack, and the callee's return data
+  # is accessible via the returndata buffer. After the marked
+  # instruction executes:
   #
   #   stack slot 0: success flag (1 = success)
   #   returndata 0x00..0x1f: ABI-encoded return value (32 bytes)

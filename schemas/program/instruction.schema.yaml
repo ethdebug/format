@@ -46,7 +46,11 @@ properties:
       instruction. Both its semantic facts (source location, variables in
       scope, function invocation, etc.) and any pointers it contains resolve
       against the machine state **after** the instruction has executed
-      (its postcondition).
+      (its postcondition). The one exception is the operand pointers of
+      an external call or contract creation in
+      **ethdebug/format/program/context/function/invoke**: they describe
+      what the marked instruction consumes, so they resolve against the
+      state immediately before it executes.
 
       Instruction contexts form a chain. The program-level `context` is the
       base case: the precondition that holds before the first instruction

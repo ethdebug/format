@@ -25,9 +25,9 @@ Each `Producers:` and `Consumers:` sub-item starts with one of three prefixes:
   sub-item says what the party may now do.
 - `required:` Output that was valid in the previous published version no longer
   validates, or the specification adds or changes a normative **must**, or the
-  meaning of data that was already valid changes. The sub-item names the schema keyword, or
-  quotes the specification prose, that imposes the obligation. Prose that says
-  **should** or "preferred" is never `required:`.
+  meaning of data that was already valid changes. The sub-item names the schema
+  keyword, or quotes the specification prose, that imposes the obligation. Prose
+  that says **should** or "preferred" is never `required:`.
 
 A consumer has an obligation only where producers can now emit something that a
 conforming consumer would otherwise misread or reject, or where the meaning of
@@ -54,6 +54,24 @@ The sections do not signal obligations; the prefixes do.
 ## Unreleased
 
 ### Changed
+
+- The pointer fields of an external call or contract creation `invoke`
+  (`target`, `gas`, `value`, `input`, `salt`) describe the operands that the
+  marked CALL or CREATE instruction consumes, so they resolve against the state
+  immediately before that instruction executes. This is the one exception to
+  the rule from [#281] that a context's pointers resolve after its instruction.
+  The `invoke` description had kept the earlier "trace step" sentence, which
+  contradicted that rule; the context itself stays on the call instruction
+  ([#303]).
+  - Schemas: **ethdebug/format/program/context/function/invoke**,
+    **ethdebug/format/program/instruction**,
+    **ethdebug/format/program/context/function/return**
+  - Producers: no change needed. The `invoke` examples already placed the
+    context on the call instruction with pointers to its operands.
+  - Consumers: required: resolve the pointer fields of a `message` or `create`
+    `invoke` against the state before the marked instruction executes (a new
+    exception in the `context` description). A consumer that followed the
+    `invoke` examples already does this.
 
 - A segment's `offset` is no longer limited to a value below `$wordsize`: an
   offset at or past `$wordsize` now carries into later slots. The default
@@ -590,3 +608,4 @@ First published version of the specification.
 [#284]: https://github.com/ethdebug/format/pull/284
 [#285]: https://github.com/ethdebug/format/pull/285
 [#286]: https://github.com/ethdebug/format/pull/286
+[#303]: https://github.com/ethdebug/format/pull/303
