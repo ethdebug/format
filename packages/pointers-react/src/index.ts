@@ -42,8 +42,10 @@ export {
 export type { Pointer } from "@ethdebug/format";
 export type { Cursor, Machine, Data } from "@ethdebug/pointers";
 
-// CSS - consumers should import these stylesheets
-// import "@ethdebug/pointers-react/components/variables.css";
-// import "@ethdebug/pointers-react/components/ResolutionVisualizer.css";
-// import "@ethdebug/pointers-react/components/RegionMap.css";
-// import "@ethdebug/pointers-react/components/RegionOutput.css";
+// CSS - the package ships stylesheets under dist/src/components/.
+// Import variables.css first (the component stylesheets use its
+// --pointers-* custom properties without fallbacks), then whichever
+// component stylesheets you use:
+// import "@ethdebug/pointers-react/dist/src/components/variables.css";
+// Available: variables.css, ResolutionVisualizer.css, RegionMap.css,
+//   RegionOutput.css
