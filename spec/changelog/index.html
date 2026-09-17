@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/spec/changelog"}]}</script><link rel="stylesheet" href="/format/assets/css/styles.c9557740.css">
-<script src="/format/assets/js/runtime~main.a744720f.js" defer="defer"></script>
-<script src="/format/assets/js/main.f7eefe9c.js" defer="defer"></script>
+<script src="/format/assets/js/runtime~main.b303b164.js" defer="defer"></script>
+<script src="/format/assets/js/main.8c3d3171.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -36,9 +36,9 @@ previous published version changes. No party is obliged to do anything. The
 sub-item says what the party may now do.</li>
 <li class=""><code>required:</code> Output that was valid in the previous published version no longer
 validates, or the specification adds or changes a normative <strong>must</strong>, or the
-meaning of data that was already valid changes. The sub-item names the schema keyword, or
-quotes the specification prose, that imposes the obligation. Prose that says
-<strong>should</strong> or &quot;preferred&quot; is never <code>required:</code>.</li>
+meaning of data that was already valid changes. The sub-item names the schema
+keyword, or quotes the specification prose, that imposes the obligation. Prose
+that says <strong>should</strong> or &quot;preferred&quot; is never <code>required:</code>.</li>
 </ul>
 <p>A consumer has an obligation only where producers can now emit something that a
 conforming consumer would otherwise misread or reject, or where the meaning of
@@ -61,6 +61,27 @@ The sections do not signal obligations; the prefixes do.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Direct link to Unreleased" title="Direct link to Unreleased" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="changed">Changed<a href="#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed" translate="no">​</a></h3>
 <ul>
+<li class="">
+<p>The pointer fields of an external call or contract creation <code>invoke</code>
+(<code>target</code>, <code>gas</code>, <code>value</code>, <code>input</code>, <code>salt</code>) describe the operands that the
+marked CALL or CREATE instruction consumes, so they resolve against the state
+immediately before that instruction executes. This is the one exception to
+the rule from <a href="https://github.com/ethdebug/format/pull/281" target="_blank" rel="noopener noreferrer" class="">#281<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> that a context&#x27;s pointers resolve after its instruction.
+The <code>invoke</code> description had kept the earlier &quot;trace step&quot; sentence, which
+contradicted that rule; the context itself stays on the call instruction
+(<a href="https://github.com/ethdebug/format/pull/303" target="_blank" rel="noopener noreferrer" class="">#303<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/program/context/function/invoke</strong>,
+<strong>ethdebug/format/program/instruction</strong>,
+<strong>ethdebug/format/program/context/function/return</strong></li>
+<li class="">Producers: no change needed. The <code>invoke</code> examples already placed the
+context on the call instruction with pointers to its operands.</li>
+<li class="">Consumers: required: resolve the pointer fields of a <code>message</code> or <code>create</code>
+<code>invoke</code> against the state before the marked instruction executes (a new
+exception in the <code>context</code> description). A consumer that followed the
+<code>invoke</code> examples already does this.</li>
+</ul>
+</li>
 <li class="">
 <p>A segment&#x27;s <code>offset</code> is no longer limited to a value below <code>$wordsize</code>: an
 offset at or past <code>$wordsize</code> now carries into later slots. The default
