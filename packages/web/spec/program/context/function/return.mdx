@@ -38,11 +38,12 @@ either return normally or revert, with no separate success flag.
 
 ## External call return
 
-An external call return marks an instruction after a CALL,
-DELEGATECALL, or STATICCALL that completed successfully. The
-EVM places a success flag on the stack (1 for success, 0 for
-failure), and the callee's output is accessible via the
-returndata buffer.
+An external call return marks an instruction on the path that
+follows a CALL, DELEGATECALL, or STATICCALL that completed
+successfully. The EVM places a success flag on the stack (1 for
+success, 0 for failure), and the callee's output is accessible
+via the returndata buffer. As with any context, the pointers
+resolve against the state after the marked instruction executes.
 
 The `success` field is specific to external call returns. It
 contains a pointer to the boolean success value on the stack,
