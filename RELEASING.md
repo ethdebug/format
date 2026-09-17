@@ -43,7 +43,53 @@ guards that run in CI live in `bin/check-tarballs.ts` and
    yarn lerna list --all --json
    ```
 
-3. Bump to an explicit version. Lerna commits the result as
+3. Update the changelogs before bumping. The root `CHANGELOG.md`
+   tracks the spec version; each public package under
+   `packages/*/CHANGELOG.md` tracks that package's own version.
+
+   See which packages the next step will move:
+
+   ```console
+   yarn lerna changed
+   ```
+
+   The bump in step 4 moves every package that command lists, plus
+   every package that depends on one of them.
+
+   For the root file, and for each package about to be bumped,
+   rename its `## Unreleased` heading to
+   `## <version> — <YYYY-MM-DD>`: that package's own new version,
+   then today's date. Leave a fresh, empty `## Unreleased` heading
+   above the section you renamed. A package that is not being bumped
+   needs no change.
+
+   When you rename `## Unreleased` in the root file, reconcile its
+   entries against the previous published version. Each `Producers:`
+   and `Consumers:` line states the net effect for a party that
+   moves from that version to the new one. If one Unreleased entry
+   reverses an obligation of another Unreleased entry, neither
+   impact line keeps that obligation; the summaries may still tell
+   the history.
+
+   A package that is bumped only because a dependency of it changed
+   has nothing under `## Unreleased`. Give it a `### Changed` entry
+   reading "Updated `@ethdebug/<dep>` to `<version>`.", so that every
+   published version has a section of its own.
+
+   Commit the renamed files on their own, right before the version
+   bump in the next step:
+
+   ```console
+   git add CHANGELOG.md packages/*/CHANGELOG.md
+   git commit -m "docs: cut changelog entries for <version>"
+   ```
+
+   Pre-flight check: in each file you touched, the only remaining
+   `## Unreleased` section is the empty one at the top. Never publish
+   with entries still sitting under `## Unreleased` in a changelog
+   for a package (or the spec) being released.
+
+4. Bump to an explicit version. Lerna commits the result as
    `Publish` and creates one tag per bumped workspace on that
    commit:
 
@@ -62,22 +108,22 @@ guards that run in CI live in `bin/check-tarballs.ts` and
    - `--no-push`: Lerna would otherwise run
      `git push --follow-tags --no-verify --atomic <remote> <branch>`
      and, when the error text mentions "atomic", silently retry
-     WITHOUT `--atomic`. The push happens by hand in step 5 instead:
+     WITHOUT `--atomic`. The push happens by hand in step 6 instead:
      no non-atomic fallback, no `--no-verify` skipping the pre-push
-     hooks, and step 4's inspection happens before anything reaches
+     hooks, and step 5's inspection happens before anything reaches
      the remote.
    - `--yes`: skips the confirmation prompt. Preview with the command
      in step 2 first; do not use `--no-git-tag-version` as a
      preview, because it still rewrites every `package.json`.
 
-4. Inspect the result before pushing:
+5. Inspect the result before pushing:
 
    ```console
    git show --stat HEAD
    git tag --points-at HEAD   # expect one tag per bumped workspace
    ```
 
-5. Push the commit and the tags in one atomic operation:
+6. Push the commit and the tags in one atomic operation:
 
    ```console
    git push --atomic origin main --follow-tags
@@ -110,7 +156,7 @@ guards that run in CI live in `bin/check-tarballs.ts` and
    git push origin :refs/tags/<tag>
    ```
 
-6. Watch the workflow and confirm the result on the registry:
+7. Watch the workflow and confirm the result on the registry:
 
    ```console
    gh run list --workflow publish.yml --limit 3
