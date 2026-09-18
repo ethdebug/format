@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   classifyView,
+  distTag,
   npmEnv,
   parseTags,
   publishArgs,
@@ -102,16 +103,24 @@ describe("topoSort", () => {
 describe("classifyView", () => {
   it("treats E404 as unpublished", () => {
     expect(
-      classifyView(1, '{"error":{"code":"E404","summary":"x"}}', "0.1.0-1"),
+      classifyView(1, '{"error":{"code":"E404","summary":"x"}}', "0.1.0-1")
+        .result,
     ).toBe("unpublished");
   });
   it("treats a version present in the array as published", () => {
-    expect(classifyView(0, '["0.1.0-0","0.1.0-1"]', "0.1.0-1")).toBe(
+    expect(classifyView(0, '["0.1.0-0","0.1.0-1"]', "0.1.0-1").result).toBe(
       "published",
     );
   });
   it("treats a version absent from the array as unpublished", () => {
-    expect(classifyView(0, '["0.1.0-0"]', "0.1.0-1")).toBe("unpublished");
+    expect(classifyView(0, '["0.1.0-0"]', "0.1.0-1").result).toBe(
+      "unpublished",
+    );
+  });
+  it("returns the known versions from the registry", () => {
+    expect(
+      classifyView(0, '["0.1.0-1","0.1.0-2"]', "0.1.0-2").versions,
+    ).toEqual(["0.1.0-1", "0.1.0-2"]);
   });
   it("aborts on any other error", () => {
     expect(() =>
@@ -247,7 +256,7 @@ describe("readWorkspaces", () => {
 
 describe("publishArgs", () => {
   it("tags a publish as latest, on registry.npmjs.org", () => {
-    expect(publishArgs(false, {})).toEqual([
+    expect(publishArgs(false, {}, "latest")).toEqual([
       "publish",
       "--access",
       "public",
@@ -258,8 +267,21 @@ describe("publishArgs", () => {
     ]);
   });
 
+  it("tags a publish with the given dist-tag", () => {
+    expect(publishArgs(false, {}, "draft")).toContain("draft");
+    expect(publishArgs(false, {}, "draft")).toEqual([
+      "publish",
+      "--access",
+      "public",
+      "--tag",
+      "draft",
+      "--registry",
+      registry,
+    ]);
+  });
+
   it("appends --dry-run when requested", () => {
-    expect(publishArgs(true, {})).toEqual([
+    expect(publishArgs(true, {}, "latest")).toEqual([
       "publish",
       "--access",
       "public",
@@ -272,7 +294,7 @@ describe("publishArgs", () => {
   });
 
   it("appends --provenance under GitHub Actions", () => {
-    expect(publishArgs(false, { GITHUB_ACTIONS: "true" })).toEqual([
+    expect(publishArgs(false, { GITHUB_ACTIONS: "true" }, "latest")).toEqual([
       "publish",
       "--access",
       "public",
@@ -285,13 +307,47 @@ describe("publishArgs", () => {
   });
 
   it("omits --provenance outside GitHub Actions", () => {
-    expect(publishArgs(false, {})).not.toContain("--provenance");
+    expect(publishArgs(false, {}, "latest")).not.toContain("--provenance");
   });
 
   it("always includes --registry pointing at registry.npmjs.org", () => {
-    expect(publishArgs(false, {})).toContain(registry);
-    expect(publishArgs(true, {})).toContain(registry);
-    expect(publishArgs(false, { GITHUB_ACTIONS: "true" })).toContain(registry);
-    expect(publishArgs(true, { GITHUB_ACTIONS: "true" })).toContain(registry);
+    expect(publishArgs(false, {}, "latest")).toContain(registry);
+    expect(publishArgs(true, {}, "latest")).toContain(registry);
+    expect(publishArgs(false, { GITHUB_ACTIONS: "true" }, "latest")).toContain(
+      registry,
+    );
+    expect(publishArgs(true, { GITHUB_ACTIONS: "true" }, "latest")).toContain(
+      registry,
+    );
+  });
+});
+
+describe("distTag", () => {
+  it(
+    "publishes a prerelease under latest while no stable version " + "exists",
+    () => {
+      expect(distTag("0.1.0-draft.0", ["0.1.0-0", "0.1.0-1", "0.1.0-2"])).toBe(
+        "latest",
+      );
+      expect(distTag("0.1.0-preview.0", [])).toBe("latest");
+    },
+  );
+
+  it("publishes a prerelease under its identifier once a stable exists", () => {
+    expect(distTag("0.2.0-draft.0", ["0.1.0-draft.3", "0.1.0"])).toBe("draft");
+    expect(distTag("0.2.0-preview.1", ["0.1.0"])).toBe("preview");
+  });
+
+  it("publishes the highest stable version under latest", () => {
+    expect(distTag("0.1.0", ["0.1.0-draft.4"])).toBe("latest");
+    expect(distTag("0.2.1", ["0.1.0", "0.2.0"])).toBe("latest");
+  });
+
+  it("keeps latest from moving backwards on a back-port", () => {
+    expect(distTag("0.1.1", ["0.1.0", "0.2.0"])).toBe("release-0.1");
+  });
+
+  it("rejects an identifier that is not a valid tag name", () => {
+    expect(() => distTag("0.1.0-3", ["0.1.0"])).toThrow(/dist-tag/);
   });
 });
