@@ -9,8 +9,8 @@ on:
         type: boolean
         default: true
 
-# lerna.json sets no commit message; adding "[skip ci]" there would
-# silently stop this workflow from publishing.
+# bin/version.ts commits the bump as "Publish" with no "[skip ci]";
+# adding one would silently stop this workflow from publishing.
 
 jobs:
   check:
