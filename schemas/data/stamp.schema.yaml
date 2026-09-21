@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/data/stamp"
+
+title: ethdebug/format/data/stamp
+description: |
+  Names the schema an object conforms to and the version of the
+  specification that defines that schema.
+
+  `schema` is the name of the schema, for example
+  `ethdebug/format/program`; the `$id` of that schema is `schema:`
+  followed by this name. `version` is the version of the specification
+  that defines it, as a semver string.
+
+type: object
+
+properties:
+  schema:
+    type: string
+    title: Schema identifier
+    description: |
+      The name of the schema this object conforms to, for example
+      `ethdebug/format/program`. The schema's `$id` is `schema:`
+      followed by this name.
+
+  version:
+    type: string
+    title: Specification version
+    description: |
+      The version of the specification that defines
+      `schema`, as a semver string without build metadata.
+    pattern: "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$"
+
+required:
+  - schema
+  - version
+
+additionalProperties: false
+
+examples:
+  - schema: "ethdebug/format/program"
+    version: "0.1.0-draft.0"

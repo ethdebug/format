@@ -20,6 +20,7 @@ export interface EthdebugArtifact {
   programs: EthdebugProgramArtifact[];
   compilation?: Materials.Compilation;
   resources?: {
+    ethdebug?: { schema: string; version: string };
     compilation: Materials.Compilation;
     types: Record<string, unknown>;
     pointers: Record<string, unknown>;

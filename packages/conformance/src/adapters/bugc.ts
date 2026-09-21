@@ -113,6 +113,10 @@ export async function compileBugc(
     programs,
     compilation,
     resources: {
+      ethdebug: {
+        schema: "ethdebug/format/info/resources",
+        version: "0.1.0-draft.0",
+      },
       compilation,
       types: {},
       pointers: {},

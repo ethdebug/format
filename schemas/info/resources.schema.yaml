@@ -8,6 +8,20 @@ description: |
 type: object
 
 properties:
+  ethdebug:
+    title: Stamp
+    description: |
+      Names this schema and the specification version. A resources
+      object must carry this field. All objects of one compilation
+      must name the same `version`.
+    allOf:
+      - $ref: "schema:ethdebug/format/data/stamp"
+      # note: whitespace chars are \255 (nbsp)
+      - title: '{ "schema": "ethdebug/format/info/resources" }'
+        properties:
+          schema:
+            $dynamicRef: "#SchemaName"
+
   types:
     title: Types by name
     description: |
@@ -28,11 +42,24 @@ properties:
     $ref: "schema:ethdebug/format/materials/compilation"
 
 required:
+  - ethdebug
   - types
   - pointers
 
+$defs:
+  SchemaName:
+    $dynamicAnchor: SchemaName
+    description: |
+      The schema name that the `ethdebug` field's `schema` must give. A
+      schema that references this one can supply its own name here with
+      a `SchemaName` dynamic anchor.
+    const: "ethdebug/format/info/resources"
+
 examples:
-  - types:
+  - ethdebug:
+      schema: "ethdebug/format/info/resources"
+      version: "0.1.0-draft.0"
+    types:
       "struct__Coordinate":
         kind: struct
         contains:
