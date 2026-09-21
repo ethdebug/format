@@ -409,6 +409,44 @@ export function rewriteManifest(
   return `${JSON.stringify(json, null, 2)}\n`;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// the version literal a schema example carries, whatever its quoting;
+// a comment or a longer version is not a match
+export function rewriteSchemaVersions(
+  text: string,
+  oldVersion: string,
+  newVersion: string,
+): { text: string; count: number } {
+  const pattern = new RegExp(
+    `^(\\s*version:\\s*)(["']?)${escapeRegExp(oldVersion)}\\2(\\s*(?:#.*)?)$`,
+    "gm",
+  );
+  let count = 0;
+  const rewritten = text.replace(pattern, (_, head, quote, tail) => {
+    count += 1;
+    return `${head}${quote}${newVersion}${quote}${tail}`;
+  });
+  return { text: rewritten, count };
+}
+
+// how many version literals a schema file is expected to carry: one per
+// `ethdebug:` block under its top-level `examples:`, plus one for the
+// identification schema, whose own example carries the literal directly.
+// The `ethdebug:` property that declares the field sits above
+// `examples:` and does not count
+export function expectedVersionSites(text: string): number {
+  const examples = text.search(/^examples:[ \t\r]*$/m);
+  const region = examples === -1 ? "" : text.slice(examples);
+  const blocks = region.match(/^\s*(?:- )?ethdebug:\s*$/gm)?.length ?? 0;
+  const own = /^\$id: "schema:ethdebug\/format\/identification"$/m.test(text)
+    ? 1
+    : 0;
+  return blocks + own;
+}
+
 function git(root: string, args: string[]): string {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 }
@@ -603,6 +641,53 @@ function writeManifests(
   return written;
 }
 
+// the schema files whose examples name the specification version, each
+// with the text it gets when @ethdebug/format moves. `count` is what
+// the rewrite found and `expected` what the files ask for; the two must
+// agree, or an example no longer carries the version the release names
+interface SchemaRewrites {
+  files: { path: string; text: string }[];
+  count: number;
+  expected: number;
+}
+
+function schemaPaths(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return schemaPaths(path);
+    }
+    return entry.name.endsWith(".schema.yaml") ? [path] : [];
+  });
+}
+
+function planSchemaRewrites(
+  root: string,
+  from: string,
+  to: string,
+): SchemaRewrites {
+  const files: { path: string; text: string }[] = [];
+  let count = 0;
+  let expected = 0;
+  for (const path of schemaPaths(join(root, "schemas"))) {
+    const before = readFileSync(path, "utf8");
+    const rewritten = rewriteSchemaVersions(before, from, to);
+    count += rewritten.count;
+    expected += expectedVersionSites(before);
+    if (rewritten.text !== before) {
+      files.push({ path: relative(root, path), text: rewritten.text });
+    }
+  }
+  return { files, count, expected };
+}
+
+function writeSchemas(root: string, rewrites: SchemaRewrites): string[] {
+  for (const { path, text } of rewrites.files) {
+    writeFileSync(join(root, path), text);
+  }
+  return rewrites.files.map(({ path }) => path);
+}
+
 // appends every tag it creates to `created`, so a failure partway
 // leaves the caller with the exact list to undo
 function commitAndTag(
@@ -636,7 +721,7 @@ export function undoAdvice(created: string[], committed: boolean): string {
   if (tags.length > 0) {
     return `undo: ${tags}`;
   }
-  return "undo: git checkout HEAD -- packages/*/package.json";
+  return "undo: git checkout HEAD -- packages/*/package.json schemas/";
 }
 
 function report(plan: Move[]): void {
@@ -681,6 +766,19 @@ export function main(argv: string[]): number {
     all,
   });
   const problems = planProblems(plan, manifests, keyword);
+  // the schemas ship inside @ethdebug/format, so their examples name
+  // the version it moves to; when it stays put they are left alone
+  const specMove = plan.find((move) => move.name === specPackage);
+  const schemas =
+    specMove === undefined
+      ? undefined
+      : planSchemaRewrites(root, specMove.from, specMove.to);
+  if (schemas !== undefined && schemas.count !== schemas.expected) {
+    problems.push(
+      `schemas/: found ${schemas.count} version literals, ` +
+        `expected ${schemas.expected}`,
+    );
+  }
   if (problems.length > 0) {
     for (const problem of problems) {
       console.error(problem);
@@ -700,6 +798,10 @@ export function main(argv: string[]): number {
   }
   console.log(`${keyword}: ${plan.length} workspace(s) move`);
   report(plan);
+  if (specMove !== undefined && schemas !== undefined) {
+    const literals = `${schemas.count} version literals`;
+    console.log(`  schemas: ${literals} -> ${specMove.to}`);
+  }
 
   const changelogs = changelogProblems(
     requiredChangelogs(plan, manifests, root).map(({ path, version }) => ({
@@ -729,9 +831,15 @@ export function main(argv: string[]): number {
   // every release
   const headBefore = git(root, ["rev-parse", "HEAD"]);
   let written: string[] = [];
+  let schemaCount = 0;
   const created: string[] = [];
   try {
     written = writeManifests(root, manifests, plan);
+    if (schemas !== undefined) {
+      const files = writeSchemas(root, schemas);
+      schemaCount = files.length;
+      written.push(...files);
+    }
     commitAndTag(root, written, plan, created);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -742,7 +850,12 @@ export function main(argv: string[]): number {
   }
   console.log(`tagged: ${created.join(", ")}`);
   if (written.length > 0) {
-    console.log(`committed Publish with ${written.length} manifest(s)`);
+    const schemaNote =
+      schemaCount > 0 ? ` and ${schemaCount} schema file(s)` : "";
+    console.log(
+      `committed Publish with ${written.length - schemaCount} ` +
+        `manifest(s)${schemaNote}`,
+    );
     console.log("next: git push --atomic origin main --follow-tags");
     return 0;
   }
