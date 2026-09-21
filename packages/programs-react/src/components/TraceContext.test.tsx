@@ -6,10 +6,10 @@
  * at the first step). See effectiveContextForStep.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
-import type { Program } from "@ethdebug/format";
+import { version as formatVersion, type Program } from "@ethdebug/format";
 import { TraceProvider, useTraceContext } from "./TraceContext.js";
 import type { TraceStep } from "#utils/mockTrace";
 
@@ -197,5 +197,80 @@ describe("TraceProvider call-stack timing", () => {
     expect(x.name).toBe("x");
     expect(x.error).toBeUndefined();
     expect(BigInt(x.value!)).toBe(42n);
+  });
+});
+
+describe("TraceProvider specification verdict", () => {
+  const specTrace: TraceStep[] = [{ pc: 0, opcode: "JUMPDEST" }];
+
+  function renderWithProgram(specProgram: Program) {
+    return renderHook(() => useTraceContext(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <TraceProvider
+          trace={specTrace}
+          program={specProgram}
+          templates={templates}
+          resolveVariables={false}
+        >
+          {children}
+        </TraceProvider>
+      ),
+    });
+  }
+
+  it("judges a matching version as ok", () => {
+    const specProgram = {
+      ethdebug: {
+        schema: "schema:ethdebug/format/program",
+        version: formatVersion,
+      },
+      instructions: [instr(0, {})],
+    } as unknown as Program;
+
+    const { result } = renderWithProgram(specProgram);
+    expect(result.current.specification).toEqual({
+      verdict: "ok",
+      version: formatVersion,
+      supported: formatVersion,
+    });
+  });
+
+  it("judges a differing compatibility key as unsupported", () => {
+    const specProgram = {
+      ethdebug: {
+        schema: "schema:ethdebug/format/program",
+        version: "0.2.0-draft.0",
+      },
+      instructions: [instr(0, {})],
+    } as unknown as Program;
+
+    expect(() => {
+      const { result } = renderWithProgram(specProgram);
+      expect(result.current.specification?.verdict).toBe("unsupported");
+    }).not.toThrow();
+  });
+
+  it("leaves specification undefined when the program has no field", () => {
+    const specProgram = {
+      instructions: [instr(0, {})],
+    } as unknown as Program;
+
+    const { result } = renderWithProgram(specProgram);
+    expect(result.current.specification).toBeUndefined();
+  });
+
+  it("warns once when the program names a newer version", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const specProgram = {
+      ethdebug: { schema: "schema:ethdebug/format/program", version: "0.1.0" },
+      instructions: [instr(0, {})],
+    } as unknown as Program;
+
+    const { result } = renderWithProgram(specProgram);
+    expect(result.current.specification?.verdict).toBe("newer");
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    warn.mockRestore();
   });
 });

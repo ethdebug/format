@@ -82,7 +82,16 @@ function TraceViewerContent({
   showVariables,
   showStack,
 }: TraceViewerContentProps): JSX.Element {
-  const { currentStep, currentInstruction } = useTraceContext();
+  const { currentStep, currentInstruction, specification } = useTraceContext();
+
+  if (specification?.verdict === "unsupported") {
+    return (
+      <div className="trace-viewer-notice">
+        This viewer supports ethdebug/format {specification.supported}; the
+        program names {specification.version}, which it cannot read.
+      </div>
+    );
+  }
 
   // Find source range for current instruction
   const sourceRange =
