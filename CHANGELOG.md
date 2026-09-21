@@ -53,6 +53,11 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+## 0.1.0-draft.0 — 2026-09-21
+
+The version scheme changed: prerelease versions of the specification are now
+`draft.<n>`, and `0.1.0-draft.0` follows `0.1.0-2`. No schema changed.
+
 ## 0.1.0-2 — 2026-09-17
 
 ### Changed

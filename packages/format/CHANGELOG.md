@@ -6,6 +6,11 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-draft.0 — 2026-09-21
+
+The version scheme changed: prerelease versions are now `draft.<n>`, matching
+the specification, and `0.1.0-draft.0` follows `0.1.0-2`. No changes.
+
 ## 0.1.0-2 — 2026-09-17
 
 ### Added

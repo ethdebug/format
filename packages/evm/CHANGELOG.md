@@ -7,6 +7,11 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.0 — 2026-09-21
+
+The version scheme changed: prerelease versions are now `preview.<n>`, and
+`0.1.0-preview.0` follows `0.1.0-2`. No changes.
+
 ## 0.1.0-2 — 2026-09-17
 
 ### Added
