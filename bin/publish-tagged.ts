@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import semver from "semver";
 import { checkPackList, packList } from "./packlist.js";
 
 export const registry = "https://registry.npmjs.org";
@@ -122,11 +123,16 @@ export function topoSort(workspaces: Workspace[]): Workspace[] {
 
 export type ViewResult = "published" | "unpublished";
 
+export interface View {
+  result: ViewResult;
+  versions: string[];
+}
+
 export function classifyView(
   status: number,
   stdout: string,
   version: string,
-): ViewResult {
+): View {
   let parsed: unknown;
   try {
     parsed = JSON.parse(stdout);
@@ -136,17 +142,21 @@ export function classifyView(
   if (status !== 0) {
     const code = (parsed as { error?: { code?: string } }).error?.code;
     if (code === "E404") {
-      return "unpublished";
+      return { result: "unpublished", versions: [] };
     }
     throw new Error(`npm view failed: ${code ?? stdout}`);
   }
   if (!Array.isArray(parsed)) {
     throw new Error(`npm view: unexpected non-array result: ${stdout}`);
   }
-  return parsed.includes(version) ? "published" : "unpublished";
+  const versions = parsed as string[];
+  return {
+    result: versions.includes(version) ? "published" : "unpublished",
+    versions,
+  };
 }
 
-export function viewVersions(name: string, version: string): ViewResult {
+export function viewVersions(name: string, version: string): View {
   const result = spawnSync(
     "npm",
     ["view", name, "versions", "--json", "--registry", registry],
@@ -163,13 +173,61 @@ export function viewVersions(name: string, version: string): ViewResult {
   }
 }
 
-export function publishArgs(dryRun: boolean, env: NodeJS.ProcessEnv): string[] {
+// versions that this repository has already tagged for the package;
+// the registry document can lag minutes behind a publish, tags do not
+export function localTagVersions(root: string, name: string): string[] {
+  return execFileSync("git", ["tag", "--list", `${name}@*`], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\n")
+    .map((line) => line.trim().slice(name.length + 1))
+    .filter((version) => semver.valid(version) !== null);
+}
+
+// A stable version is `latest` when nothing stable is higher; a
+// prerelease is `latest` only while the package has no stable version,
+// and its identifier (`draft`, `preview`) after that. CI can set one
+// tag per publish, so this is the only tag a version gets.
+export function distTag(version: string, knownVersions: string[]): string {
+  const stable = knownVersions.filter(
+    (known) =>
+      semver.valid(known) !== null && semver.prerelease(known) === null,
+  );
+  const prerelease = semver.prerelease(version);
+  if (prerelease === null) {
+    const highest = [version, ...stable].sort(semver.rcompare)[0];
+    return highest === version
+      ? "latest"
+      : `release-${semver.major(version)}.${semver.minor(version)}`;
+  }
+  if (stable.length === 0) {
+    return "latest";
+  }
+  const identifier = prerelease[0];
+  if (
+    typeof identifier !== "string" ||
+    semver.validRange(identifier) !== null
+  ) {
+    throw new Error(
+      `${version}: prerelease identifier "${identifier}" is not a ` +
+        "valid dist-tag",
+    );
+  }
+  return identifier;
+}
+
+export function publishArgs(
+  dryRun: boolean,
+  env: NodeJS.ProcessEnv,
+  tag: string,
+): string[] {
   const args = [
     "publish",
     "--access",
     "public",
     "--tag",
-    "latest",
+    tag,
     "--registry",
     registry,
   ];
@@ -182,8 +240,8 @@ export function publishArgs(dryRun: boolean, env: NodeJS.ProcessEnv): string[] {
   return args;
 }
 
-function publish(workspace: Workspace, dryRun: boolean): void {
-  const args = publishArgs(dryRun, process.env);
+function publish(workspace: Workspace, dryRun: boolean, tag: string): void {
+  const args = publishArgs(dryRun, process.env, tag);
   const result = spawnSync("npm", args, {
     cwd: workspace.dir,
     stdio: "inherit",
@@ -214,7 +272,8 @@ export function main(argv: string[]): number {
     for (const workspace of selected) {
       const label = `${workspace.name}@${workspace.version}`;
       failed = label;
-      if (viewVersions(workspace.name, workspace.version) === "published") {
+      const view = viewVersions(workspace.name, workspace.version);
+      if (view.result === "published") {
         console.log(`${label}: already published, skipping`);
         skipped.push(label);
         failed = undefined;
@@ -226,8 +285,14 @@ export function main(argv: string[]): number {
           `${label}: disallowed files in tarball:\n  ${bad.join("\n  ")}`,
         );
       }
-      console.log(`${label}: publishing${dryRun ? " (dry run)" : ""}`);
-      publish(workspace, dryRun);
+      const tag = distTag(workspace.version, [
+        ...view.versions,
+        ...localTagVersions(root, workspace.name),
+      ]);
+      console.log(
+        `${label}: publishing under ${tag}${dryRun ? " (dry run)" : ""}`,
+      );
+      publish(workspace, dryRun, tag);
       published.push(label);
       failed = undefined;
     }
