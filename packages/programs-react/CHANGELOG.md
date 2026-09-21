@@ -7,6 +7,14 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `specification` in the trace state: `undefined` when the program has
+  no `ethdebug` identification, otherwise the program's version, the
+  version this package supports, and a verdict of `"ok"`, `"newer"` or
+  `"unsupported"`. The Docusaurus trace viewer shows a notice in place
+  of the trace when the verdict is `"unsupported"` ([#305]).
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and
@@ -33,3 +41,4 @@ First publication.
 [#298]: https://github.com/ethdebug/format/pull/298
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
+[#305]: https://github.com/ethdebug/format/pull/305

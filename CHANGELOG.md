@@ -53,6 +53,29 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- An `ethdebug` field on **ethdebug/format/info**,
+  **ethdebug/format/info/resources** and **ethdebug/format/program** names
+  the schema the object conforms to and the specification version that
+  defines it, through the new **ethdebug/format/identification** schema.
+  The field is optional now and becomes required at `0.1.0`. An object
+  without it predates the field ([#305]).
+  - Schemas: **ethdebug/format/identification**, **ethdebug/format/info**,
+    **ethdebug/format/info/resources**, **ethdebug/format/program**
+  - Producers: optional: emit `ethdebug: { schema, version }` with the
+    `@ethdebug/format` version the producer was built against; a program
+    inside a container may omit it, and when both carry it the versions
+    must be equal.
+  - Consumers: optional: read the field to learn which changelog entries
+    apply; reject an object only when its compatibility key (the major
+    version, or `major.minor` while the major is 0) differs from the
+    supported one, and warn when the version is newer.
+    **ethdebug/format/program** and **ethdebug/format/info** are closed
+    objects (`unevaluatedProperties: false`), so a consumer that
+    validates against the previous release's schemas rejects an
+    identified object until it updates its schemas.
+
 ## 0.1.0-draft.0 — 2026-09-21
 
 The version scheme changed: prerelease versions of the specification are now
@@ -616,3 +639,4 @@ First published version of the specification.
 [#285]: https://github.com/ethdebug/format/pull/285
 [#286]: https://github.com/ethdebug/format/pull/286
 [#303]: https://github.com/ethdebug/format/pull/303
+[#305]: https://github.com/ethdebug/format/pull/305
