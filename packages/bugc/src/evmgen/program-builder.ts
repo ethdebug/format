@@ -2,7 +2,7 @@
  * Build Format.Program objects from EVM generation output
  */
 
-import type * as Format from "@ethdebug/format";
+import * as Format from "@ethdebug/format";
 import type * as Evm from "#evm";
 import type * as Ir from "#ir";
 
@@ -82,6 +82,7 @@ export function buildProgram(
   };
 
   const program: Format.Program = {
+    ethdebug: Format.identify("schema:ethdebug/format/program"),
     contract,
     environment,
     instructions: formatInstructions,
