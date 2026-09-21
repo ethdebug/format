@@ -119,6 +119,20 @@ function validResources() {
   };
 }
 
+function programWithVersion(version: string) {
+  return {
+    ...validProgram(),
+    ethdebug: { schema: "schema:ethdebug/format/program", version },
+  };
+}
+
+function resourcesWithVersion(version: string) {
+  return {
+    ...validResources(),
+    ethdebug: { schema: "schema:ethdebug/format/info/resources", version },
+  };
+}
+
 function validArtifact(
   overrides: Partial<EthdebugArtifact> = {},
 ): EthdebugArtifact {
@@ -378,6 +392,53 @@ describe("@ethdebug/conformance", () => {
     expect(result.issues.some((issue) => issue.path === "resources")).toBe(
       true,
     );
+  });
+
+  it("rejects a program naming a different specification version than resources", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      programs: [
+        {
+          name: "Counter:runtime",
+          program: programWithVersion("0.1.0-draft.0") as any,
+        },
+      ],
+      resources: resourcesWithVersion("0.1.0-draft.1") as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.issues.some(
+        (issue) => issue.path === "programs[0].ethdebug.version",
+      ),
+    ).toBe(true);
+  });
+
+  it("accepts a program and resources naming the same specification version", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      programs: [
+        {
+          name: "Counter:runtime",
+          program: programWithVersion("0.1.0-draft.0") as any,
+        },
+      ],
+      resources: resourcesWithVersion("0.1.0-draft.0") as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts a program or resources with no specification version named", async () => {
+    const result = await validateStaticConformance(validArtifact());
+
+    expect(result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
   });
 
   it("materializes non-empty resources into SolDB debug directories", async () => {

@@ -149,6 +149,22 @@ export async function validateStaticConformance(
     );
   }
 
+  const resourcesVersion = artifact.resources?.ethdebug?.version;
+  if (resourcesVersion !== undefined) {
+    artifact.programs.forEach((program, index) => {
+      const programVersion = program.program.ethdebug?.version;
+      if (programVersion !== undefined && programVersion !== resourcesVersion) {
+        issues.push(
+          issue(
+            `programs[${index}].ethdebug.version`,
+            `${program.name} names ethdebug/format ${programVersion} but ` +
+              `resources names ${resourcesVersion}`,
+          ),
+        );
+      }
+    });
+  }
+
   if (artifact.compilation && !Materials.isCompilation(artifact.compilation)) {
     issues.push(
       issue("compilation", "compilation is not valid materials/compilation"),
