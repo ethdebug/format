@@ -1,0 +1,47 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/identification"
+
+title: ethdebug/format/identification
+description: |
+  Names the schema an object conforms to and the version of the
+  specification that defines that schema.
+
+  `schema` is the `$id` of the schema; `version` is the version of the
+  `@ethdebug/format` package whose schemas define it. A producer writes
+  the version it was built against. An object without this field
+  predates it. Inside a container that carries the field, a nested
+  object may omit it; if both carry it, their versions must be equal.
+
+  A consumer accepts an object whose version shares its compatibility
+  key (the major version, or `major.minor` while the major is 0), warns
+  when the version is newer than the one it supports, and rejects only
+  a differing key.
+
+type: object
+
+properties:
+  schema:
+    type: string
+    title: Schema identifier
+    description: |
+      The `$id` of the schema this object conforms to, for example
+      `schema:ethdebug/format/program`.
+
+  version:
+    type: string
+    title: Specification version
+    description: |
+      The version of the specification (the version of the
+      `@ethdebug/format` package) whose schemas define `schema`, as a
+      semver string without build metadata.
+    pattern: "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$"
+
+required:
+  - schema
+  - version
+
+additionalProperties: false
+
+examples:
+  - schema: "schema:ethdebug/format/program"
+    version: "0.1.0-draft.0"

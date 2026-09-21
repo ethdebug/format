@@ -72,4 +72,7 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/function": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
+  "schema:ethdebug/format/info": {
+    extends: new Set(["schema:ethdebug/format/info/resources"]),
+  },
 };

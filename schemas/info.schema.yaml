@@ -10,6 +10,17 @@ type: object
 $ref: "schema:ethdebug/format/info/resources"
 
 properties:
+  ethdebug:
+    title: Identification
+    description: |
+      Names this schema and the specification version. Optional until
+      the stable `0.1.0` release, where it becomes required.
+    allOf:
+      - $ref: "schema:ethdebug/format/identification"
+      - properties:
+          schema:
+            const: "schema:ethdebug/format/info"
+
   programs:
     type: array
     items:
@@ -25,7 +36,10 @@ required:
 unevaluatedProperties: false
 
 examples:
-  - compilation:
+  - ethdebug:
+      schema: "schema:ethdebug/format/info"
+      version: "0.1.0-draft.0"
+    compilation:
       id: __301f3b6d85831638
       compiler:
         name: egc
