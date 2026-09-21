@@ -3,6 +3,8 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { Data } from "@ethdebug/format";
+
 import type {
   EthdebugArtifact,
   SoldbCommand,
@@ -100,11 +102,11 @@ function ethdebugResources(artifact: EthdebugArtifact): unknown {
   }
 
   if (artifact.compilation) {
-    return {
+    return Data.stamp("ethdebug/format/info/resources", {
       compilation: artifact.compilation,
       types: {},
       pointers: {},
-    };
+    });
   }
 
   throw new Error(

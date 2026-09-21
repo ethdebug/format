@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Materials } from "@ethdebug/format";
+import { Data } from "@ethdebug/format";
 import { VERSION, compile } from "@ethdebug/bugc";
 
 import type { BugcCompileOptions, EthdebugArtifact } from "../types.js";
@@ -112,15 +113,11 @@ export async function compileBugc(
     sources,
     programs,
     compilation,
-    resources: {
-      ethdebug: {
-        schema: "ethdebug/format/info/resources",
-        version: "0.1.0-draft.0",
-      },
+    resources: Data.stamp("ethdebug/format/info/resources", {
       compilation,
       types: {},
       pointers: {},
-    },
+    }),
     raw: result.value,
   };
 }
