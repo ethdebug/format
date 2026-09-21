@@ -5,6 +5,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import semver from "semver";
 
+import {
+  checkVersions,
+  readSchemas,
+  setVersions,
+} from "./release/schema-versions.js";
+
 // the schemas ship inside this package, so its version is the version
 // of the specification
 export const specPackage = "@ethdebug/format";
@@ -636,7 +642,7 @@ export function undoAdvice(created: string[], committed: boolean): string {
   if (tags.length > 0) {
     return `undo: ${tags}`;
   }
-  return "undo: git checkout HEAD -- packages/*/package.json";
+  return "undo: git checkout HEAD -- packages/*/package.json schemas/";
 }
 
 function report(plan: Move[]): void {
@@ -681,6 +687,32 @@ export function main(argv: string[]): number {
     all,
   });
   const problems = planProblems(plan, manifests, keyword);
+  // the schemas ship inside @ethdebug/format, so their examples name
+  // the version it moves to; when it stays put they are left alone
+  const specMove = plan.find((move) => move.name === specPackage);
+  let schemas: { path: string; text: string }[] = [];
+  let siteCount = 0;
+  if (specMove !== undefined) {
+    const files = readSchemas(root);
+    siteCount = files.flatMap((file) => file.sites).length;
+    if (siteCount === 0) {
+      problems.push(
+        "schemas/: no example names the specification version; " +
+          "the release would rewrite nothing",
+      );
+    }
+    problems.push(
+      ...files.flatMap((file) => checkVersions(file, specMove.from)),
+    );
+    schemas = files
+      .map((file) => ({
+        path: file.path,
+        text: setVersions(file.text, specMove.to),
+        before: file.text,
+      }))
+      .filter((file) => file.text !== file.before)
+      .map(({ path, text }) => ({ path, text }));
+  }
   if (problems.length > 0) {
     for (const problem of problems) {
       console.error(problem);
@@ -700,6 +732,10 @@ export function main(argv: string[]): number {
   }
   console.log(`${keyword}: ${plan.length} workspace(s) move`);
   report(plan);
+  if (specMove !== undefined) {
+    const literals = `${siteCount} version literals`;
+    console.log(`  schemas: ${literals} -> ${specMove.to}`);
+  }
 
   const changelogs = changelogProblems(
     requiredChangelogs(plan, manifests, root).map(({ path, version }) => ({
@@ -729,9 +765,15 @@ export function main(argv: string[]): number {
   // every release
   const headBefore = git(root, ["rev-parse", "HEAD"]);
   let written: string[] = [];
+  let schemaCount = 0;
   const created: string[] = [];
   try {
     written = writeManifests(root, manifests, plan);
+    for (const { path, text } of schemas) {
+      writeFileSync(join(root, path), text);
+      written.push(path);
+    }
+    schemaCount = schemas.length;
     commitAndTag(root, written, plan, created);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -742,7 +784,12 @@ export function main(argv: string[]): number {
   }
   console.log(`tagged: ${created.join(", ")}`);
   if (written.length > 0) {
-    console.log(`committed Publish with ${written.length} manifest(s)`);
+    const schemaNote =
+      schemaCount > 0 ? ` and ${schemaCount} schema file(s)` : "";
+    console.log(
+      `committed Publish with ${written.length - schemaCount} ` +
+        `manifest(s)${schemaNote}`,
+    );
     console.log("next: git push --atomic origin main --follow-tags");
     return 0;
   }

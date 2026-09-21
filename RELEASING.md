@@ -130,6 +130,21 @@ guards that run in CI live in `bin/check-tarballs.ts` and
    yarn tsx bin/version.ts [keyword] [--all]
    ```
 
+   When `@ethdebug/format` moves, the `Publish` commit also rewrites
+   the specification version in the schema examples, so `schemas/` may
+   appear in that commit beside the manifests; the dry run prints the
+   count of version literals it rewrites.
+
+   A `schemas/: no example names the specification version` problem
+   means every `ethdebug` block was removed from the examples; a
+   `names X, expected Y` problem means one drifted from the version
+   `@ethdebug/format` carries. Edit the example and re-run.
+
+   After the bump, run `yarn build` before running
+   `yarn test packages/format` again: the generated
+   `src/version.ts` still names the old version until the build
+   regenerates it. CI does this step in the publish workflow.
+
    The script never pushes. If it fails after it started writing, it
    prints the undo commands for the stage it reached. The dry run of
    step 3 reports the same guards and findings as this run, but it
