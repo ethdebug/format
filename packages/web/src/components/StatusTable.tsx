@@ -11,6 +11,7 @@ const schemaOrder = [
   "data",
   "materials",
   "info",
+  "identification",
 ] as const;
 
 const schemaNames: Record<string, string> = {
@@ -20,6 +21,7 @@ const schemaNames: Record<string, string> = {
   data: "ethdebug/format/data",
   materials: "ethdebug/format/materials",
   info: "ethdebug/format/info",
+  identification: "ethdebug/format/identification",
 };
 
 export default function StatusTable(): JSX.Element {

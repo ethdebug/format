@@ -1,0 +1,123 @@
+---
+sidebar_position: 5
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+import StatusBanner from "@site/src/components/StatusBanner";
+
+# Identification
+
+:::tip[Summary]
+
+An object that arrives on its own — separated from whatever produced
+it — cannot say what it is unless it says so itself.
+**ethdebug/format/identification** is a small shared schema for
+exactly that: it names the schema an object conforms to and the
+version of the specification that defines that schema, so a consumer
+can tell what it holds without any other context.
+
+:::
+
+This format defines the **ethdebug/format/identification** schema and
+includes it, under the key `ethdebug`, in each of the three root
+schemas: **ethdebug/format/program**, **ethdebug/format/info**, and
+**ethdebug/format/info/resources**. An object in any of these schemas
+may carry a field shaped like this:
+
+```json
+{
+  "ethdebug": {
+    "schema": "schema:ethdebug/format/program",
+    "version": "<the current version>"
+  }
+}
+```
+
+`schema` is the `$id` of the schema the object conforms to; each root
+schema pins this to its own id (or, for
+**ethdebug/format/info/resources**, to either its own id or
+**ethdebug/format/info**'s — see below). `version` is the current
+version of the specification, meaning the version of the
+`@ethdebug/format` package whose schemas define `schema`.
+
+<SchemaViewer schema={{ id: "schema:ethdebug/format/identification" }} />
+
+## Rules
+
+### Which version to write
+
+A producer writes the version of the `@ethdebug/format` package whose
+schemas it targets — the version it was built against. Two producers
+built against the same release write the same value.
+
+### Absent field
+
+An object without this field predates it. A consumer treats an object
+with no `ethdebug` field as conforming to the last release before the
+field existed — `0.1.0-draft.0` — and applies no version check.
+
+### Required later
+
+The field is optional for now. It becomes required in the stable
+`0.1.0` release. **ethdebug/format/program** and
+**ethdebug/format/info** are closed objects
+(`unevaluatedProperties: false`), so a consumer that validates
+against the previous release's schemas rejects an identified object
+until it updates its schemas.
+
+### Nesting
+
+A program nested inside an info document (at `programs[i]`) may omit
+the field even when the containing info document carries it. If both
+the container and the nested program carry the field, their `version`
+values **must** be equal; a consumer that finds them unequal reports
+the mismatch and uses the container's version rather than rejecting
+the document. If only the nested program carries the field, its
+version stands on its own.
+
+The same rule applies when a program sits beside a resources object
+instead of inside an info document — for example in solc's standard
+JSON output, where `evm.bytecode.ethdebug` and
+`evm.deployedBytecode.ethdebug` are programs that sit beside the
+top-level `ethdebug` wrapper, whose `resources` member is the
+resources object. There, the resources object plays the container's
+role: on a mismatch, a consumer reports it and uses the resources
+object's version.
+
+### Consumer rule
+
+A consumer rejects an object only when its compatibility key differs
+from the one the consumer supports. It accepts every other version,
+and **may** warn when the version is newer than the one it was built
+against.
+
+The compatibility key follows semver: the major version at `1.0.0`
+and above, or `major.minor` while the major version is `0`, since
+semver — and npm's caret range — both treat a minor bump as breaking
+during `0.x`. A `0.1` consumer accepts every `0.1.x` version,
+drafts included, and rejects `0.2.0-draft.0` with "unsupported
+specification version 0.2". A `version` that the semver parser cannot
+read, or a `supported` version it cannot read, is treated as a
+differing key: `unsupported`. Validate the field with
+`isIdentification` first; `supports` is not a validity check.
+
+One consequence follows directly from that key: it cannot tell drafts
+within one key apart. Every `0.1.x` document — drafts and numbered
+prereleases alike — is accepted by a `0.1` consumer, even though the
+changelog records obligations that differ between individual releases
+before `0.1.0`. The field tells a consumer which changelog entries
+might apply to a document; it does not enforce them.
+
+### Resolution of ids
+
+A `schema:ethdebug/format/<path>` id names the schema whose source is
+`schemas/<path>.schema.yaml` in the ethdebug/format repository, at the
+version named alongside it. The `@ethdebug/format` package for that
+version exports the schema text under that same id, in its `schemas`
+map. The id is an identifier, resolved through that package — it is
+not a web address, and emitted data **should not** place it in a
+`$schema` key: editors treat `$schema` as a URL and report an error.
+
+## Status
+
+<StatusBanner schema="identification" />

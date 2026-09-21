@@ -284,6 +284,10 @@ const infoSchemaIndex: SchemaIndex = {
   "schema:ethdebug/format/info/resources": {
     href: "/spec/info/resources",
   },
+  "schema:ethdebug/format/identification": {
+    title: "ethdebug/format/identification",
+    href: "/spec/identification",
+  },
 };
 
 export const schemaIndex: SchemaIndex = {
