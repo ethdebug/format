@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/bugc",
-  "version": "0.1.0-2",
+  "version": "0.1.0-preview.0",
   "description": "The BUG language compiler with ethdebug/format debug information support",
   "type": "module",
   "main": "dist/src/index.js",
@@ -209,8 +209,8 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@ethdebug/evm": "^0.1.0-2",
-    "@ethdebug/pointers": "^0.1.0-2",
+    "@ethdebug/evm": "^0.1.0-preview.0",
+    "@ethdebug/pointers": "^0.1.0-preview.0",
     "@hyperjump/browser": "^1.2.0",
     "@hyperjump/json-schema": "^1.11.0",
     "@types/node": "^20.0.0",
@@ -226,7 +226,7 @@
     "yaml": "^2.8.2"
   },
   "dependencies": {
-    "@ethdebug/format": "^0.1.0-2",
+    "@ethdebug/format": "^0.1.0-draft.0",
     "ethereum-cryptography": "^3.2.0",
     "fp-ts": "^2.16.11",
     "parsimmon": "^1.18.1"
