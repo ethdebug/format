@@ -20,7 +20,11 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
   const rootSchemaInfo = describeSchema(props);
   const { id, rootSchema, yaml: _yaml, pointer } = rootSchemaInfo;
 
-  const transformedSchema = transformSchema(rootSchema, id || "");
+  // the schema this page shows is outermost in the dynamic scope, so its
+  // dynamic anchors take precedence over those of any schema it references
+  const pageAnchors = dynamicAnchors(rootSchema);
+
+  const transformedSchema = transformSchema(rootSchema, id || "", pageAnchors);
 
   return (
     <Tabs>
@@ -39,10 +43,13 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
                 schema: {
                   resolve: (uri: URL) => {
                     const id = uri.toString();
-                    const { schema } = describeSchema({
+                    const { schema, rootSchema } = describeSchema({
                       schema: { id },
                     });
-                    return transformSchema(schema, id);
+                    return transformSchema(schema, id, {
+                      ...dynamicAnchors(rootSchema),
+                      ...pageAnchors,
+                    });
                   },
                 },
               },
@@ -97,8 +104,81 @@ export default function SchemaViewer(props: SchemaViewerProps): JSX.Element {
   );
 }
 
-function transformSchema(schema: JSONSchema, id: string): JSONSchema {
-  return insertIds(ensureRefsLackSiblings(schema), `${id}#`);
+type DynamicAnchors = { [name: string]: JSONSchema };
+
+function transformSchema(
+  schema: JSONSchema,
+  id: string,
+  anchors: DynamicAnchors,
+): JSONSchema {
+  return insertIds(
+    ensureRefsLackSiblings(resolveDynamicRefs(schema, anchors)),
+    `${id}#`,
+  );
+}
+
+// collects the schemas in a root schema's `$defs` that declare a
+// `$dynamicAnchor`, keyed by anchor name
+function dynamicAnchors(rootSchema: JSONSchema): DynamicAnchors {
+  const anchors: DynamicAnchors = {};
+
+  const definitions =
+    (typeof rootSchema === "object" && rootSchema.$defs) || {};
+
+  for (const definition of Object.values(definitions)) {
+    if (typeof definition !== "object") {
+      continue;
+    }
+
+    const { $dynamicAnchor, ...rest } = definition as {
+      $dynamicAnchor?: string;
+    };
+
+    if (typeof $dynamicAnchor === "string") {
+      anchors[$dynamicAnchor] = rest as JSONSchema;
+    }
+  }
+
+  return anchors;
+}
+
+// recursively replaces each `{ $dynamicRef: "#name" }` with the schema
+// that the dynamic anchor `name` resolves to.
+//
+// docusaurus-json-schema-plugin reports any `$dynamicRef` as an unresolved
+// reference, so this integration resolves them itself. The caller supplies
+// the anchors in dynamic-scope order: those of the page's own schema
+// override those of a schema that the page references.
+function resolveDynamicRefs<T>(obj: T, anchors: DynamicAnchors): T {
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => resolveDynamicRefs(item, anchors)) as T;
+  }
+
+  const { $dynamicRef, ...rest } = obj as T & object & { $dynamicRef?: string };
+
+  const result = Object.entries(rest).reduce((newObj, [key, value]) => {
+    // @ts-expect-error dynamic key assignment
+    newObj[key] = resolveDynamicRefs(value, anchors);
+    return newObj;
+  }, {} as T);
+
+  if ($dynamicRef === undefined) {
+    return result;
+  }
+
+  const anchor = $dynamicRef.startsWith("#")
+    ? anchors[$dynamicRef.slice(1)]
+    : undefined;
+
+  if (!anchor) {
+    throw new Error(`Could not resolve $dynamicRef "${$dynamicRef}"`);
+  }
+
+  return { ...anchor, ...result };
 }
 
 function insertIds<T>(obj: T, rootId: string): T {

@@ -1,0 +1,53 @@
+---
+sidebar_position: 4
+---
+
+import SchemaViewer from "@site/src/components/SchemaViewer";
+
+# Stamp
+
+:::tip[Summary]
+
+**ethdebug/format/data/stamp** names the schema an object conforms to
+and the version of the specification that defines that schema. An
+object carries its stamp in an `ethdebug` field.
+
+:::
+
+Each of the three root schemas, **ethdebug/format/program**,
+**ethdebug/format/info** and **ethdebug/format/info/resources**,
+includes **ethdebug/format/data/stamp** under the key `ethdebug`. The
+stamp has this shape:
+
+```json
+{
+  "ethdebug": {
+    "schema": "ethdebug/format/program",
+    "version": "<the current version>"
+  }
+}
+```
+
+`schema` is the name of the schema the object conforms to; each root
+schema pins this to its own name. The schema's `$id` is `schema:`
+followed by this name. `version` is the version of the specification
+that defines `schema`.
+
+<SchemaViewer schema={{ id: "schema:ethdebug/format/data/stamp" }} />
+
+## Where the stamp appears
+
+An **ethdebug/format/info** document and an
+**ethdebug/format/info/resources** object **must** carry the stamp.
+Both schemas list `ethdebug` in `required`.
+
+A program inside an info document (at `programs[i]`) **should not**
+carry the stamp. The stamp of the info document covers it.
+
+A program emitted outside an info document **should** carry the stamp.
+For example, in solc's standard JSON output, `evm.bytecode.ethdebug`
+and `evm.deployedBytecode.ethdebug` are programs that sit beside the
+top-level `ethdebug` wrapper, whose `resources` member is the resources
+object. Each of these programs should carry its own stamp.
+
+All objects of one compilation **must** name the same `version`.
