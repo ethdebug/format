@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Identification | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-305/spec/identification"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Identification | ethdebug format"><meta data-rh="true" name="description" content="An object that arrives on its own — separated from whatever produced"><meta data-rh="true" property="og:description" content="An object that arrives on its own — separated from whatever produced"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-305/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/identification"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/identification" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/identification" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Identification","item":"https://ethdebug.github.io/format/pr-preview/pr-305/spec/identification"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-305/assets/css/styles.5ac529e3.css">
-<script src="/format/pr-preview/pr-305/assets/js/runtime~main.1477a7d2.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-305/assets/js/main.2b10cbbd.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-305/assets/js/runtime~main.b1167b89.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-305/assets/js/main.3ba090c5.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -42,7 +42,11 @@ with no <code>ethdebug</code> field as conforming to the last release before the
 field existed — <code>0.1.0-draft.0</code> — and applies no version check.</p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="required-later">Required later<a href="#required-later" class="hash-link" aria-label="Direct link to Required later" title="Direct link to Required later" translate="no">​</a></h3>
 <p>The field is optional for now. It becomes required in the stable
-<code>0.1.0</code> release.</p>
+<code>0.1.0</code> release. <strong>ethdebug/format/program</strong> and
+<strong>ethdebug/format/info</strong> are closed objects
+(<code>unevaluatedProperties: false</code>), so a consumer that validates
+against the previous release&#x27;s schemas rejects an identified object
+until it updates its schemas.</p>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="nesting">Nesting<a href="#nesting" class="hash-link" aria-label="Direct link to Nesting" title="Direct link to Nesting" translate="no">​</a></h3>
 <p>A program nested inside an info document (at <code>programs[i]</code>) may omit
 the field even when the containing info document carries it. If both
@@ -52,7 +56,7 @@ the mismatch and uses the container&#x27;s version rather than rejecting
 the document. If only the nested program carries the field, its
 version stands on its own.</p>
 <p>The same rule applies when a program sits beside a resources object
-instead of inside an info document — for example in solc&#x27;s standard
+instead of inside an info document   — for example in solc&#x27;s standard
 JSON output, where <code>evm.bytecode.ethdebug</code> and
 <code>evm.deployedBytecode.ethdebug</code> are programs that sit beside the
 top-level <code>ethdebug</code> wrapper, whose <code>resources</code> member is the
@@ -69,9 +73,10 @@ and above, or <code>major.minor</code> while the major version is <code>0</code>
 semver — and npm&#x27;s caret range — both treat a minor bump as breaking
 during <code>0.x</code>. A <code>0.1</code> consumer accepts every <code>0.1.x</code> version,
 drafts included, and rejects <code>0.2.0-draft.0</code> with &quot;unsupported
-specification version 0.2&quot;. A <code>version</code> string that does not parse as
-semver, or a <code>supported</code> version that does not, is treated as a
-differing key: <code>unsupported</code>.</p>
+specification version 0.2&quot;. A <code>version</code> that the semver parser cannot
+read, or a <code>supported</code> version it cannot read, is treated as a
+differing key: <code>unsupported</code>. Validate the field with
+<code>isIdentification</code> first; <code>supports</code> is not a validity check.</p>
 <p>One consequence follows directly from that key: it cannot tell drafts
 within one key apart. Every <code>0.1.x</code> document — drafts and numbered
 prereleases alike — is accepted by a <code>0.1</code> consumer, even though the

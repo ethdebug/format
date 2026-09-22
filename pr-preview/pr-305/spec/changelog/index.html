@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-305/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-305/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-305/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-305/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-305/assets/css/styles.5ac529e3.css">
-<script src="/format/pr-preview/pr-305/assets/js/runtime~main.1477a7d2.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-305/assets/js/main.2b10cbbd.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-305/assets/js/runtime~main.b1167b89.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-305/assets/js/main.3ba090c5.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -66,7 +66,7 @@ The sections do not signal obligations; the prefixes do.</p>
 the schema the object conforms to and the specification version that
 defines it, through the new <strong>ethdebug/format/identification</strong> schema.
 The field is optional now and becomes required at <code>0.1.0</code>. An object
-without it predates the field (<a href="https://github.com/ethdebug/format/pull/NNN" target="_blank" rel="noopener noreferrer" class="">#NNN<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).<!-- -->
+without it predates the field (<a href="https://github.com/ethdebug/format/pull/305" target="_blank" rel="noopener noreferrer" class="">#305<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).<!-- -->
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/identification</strong>, <strong>ethdebug/format/info</strong>,
 <strong>ethdebug/format/info/resources</strong>, <strong>ethdebug/format/program</strong></li>
@@ -77,7 +77,11 @@ must be equal.</li>
 <li class="">Consumers: optional: read the field to learn which changelog entries
 apply; reject an object only when its compatibility key (the major
 version, or <code>major.minor</code> while the major is 0) differs from the
-supported one, and warn when the version is newer.</li>
+supported one, and warn when the version is newer.
+<strong>ethdebug/format/program</strong> and <strong>ethdebug/format/info</strong> are closed
+objects (<code>unevaluatedProperties: false</code>), so a consumer that
+validates against the previous release&#x27;s schemas rejects an
+identified object until it updates its schemas.</li>
 </ul>
 </li>
 </ul>
