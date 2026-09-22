@@ -8,6 +8,19 @@ description: |
 type: object
 
 properties:
+  ethdebug:
+    title: Identification
+    description: |
+      Names this schema and the specification version. Optional until
+      the stable `0.1.0` release, where it becomes required.
+    allOf:
+      - $ref: "schema:ethdebug/format/identification"
+      - properties:
+          schema:
+            enum:
+              - "schema:ethdebug/format/info/resources"
+              - "schema:ethdebug/format/info"
+
   types:
     title: Types by name
     description: |
@@ -32,7 +45,10 @@ required:
   - pointers
 
 examples:
-  - types:
+  - ethdebug:
+      schema: "schema:ethdebug/format/info/resources"
+      version: "0.1.0-draft.0"
+    types:
       "struct__Coordinate":
         kind: struct
         contains:

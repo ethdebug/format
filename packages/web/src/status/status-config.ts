@@ -106,6 +106,14 @@ export const schemaStatus: Record<string, SchemaStatusInfo> = {
     caveats: [],
     detailsPath: "/spec/info/overview#status",
   },
+  identification: {
+    level: "implementable",
+    summary:
+      "Names the schema an object conforms to and the specification " +
+      "version that defines it. Optional until 0.1.0.",
+    caveats: [],
+    detailsPath: "/spec/identification#status",
+  },
 };
 
 /**

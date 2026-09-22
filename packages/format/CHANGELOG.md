@@ -6,6 +6,17 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `version`, the package's own version string, generated at build time from
+  `package.json` ([#305]).
+- `Identification` and `isIdentification`, the type and guard for the new
+  **ethdebug/format/identification** schema; `identify(schema)` builds one
+  from `version`, and `supports(version, supported)` judges a version
+  against the one a consumer supports, returning `"ok"`, `"newer"` or
+  `"unsupported"` ([#305]).
+- `Program.ethdebug`, an optional `Identification` ([#305]).
+
 ## 0.1.0-draft.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `draft.<n>`, matching
@@ -116,6 +127,7 @@ First publication.
 [#293]: https://github.com/ethdebug/format/pull/293
 [#300]: https://github.com/ethdebug/format/pull/300
 [#303]: https://github.com/ethdebug/format/pull/303
+[#305]: https://github.com/ethdebug/format/pull/305
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

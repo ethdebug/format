@@ -1,4 +1,4 @@
-import type { Materials, Program } from "@ethdebug/format";
+import type { Identification, Materials, Program } from "@ethdebug/format";
 
 export type CompilerKind = "bugc" | "solc";
 
@@ -20,6 +20,7 @@ export interface EthdebugArtifact {
   programs: EthdebugProgramArtifact[];
   compilation?: Materials.Compilation;
   resources?: {
+    ethdebug?: Identification;
     compilation: Materials.Compilation;
     types: Record<string, unknown>;
     pointers: Record<string, unknown>;

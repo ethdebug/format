@@ -1,3 +1,4 @@
+import { Identification, isIdentification } from "#types/identification";
 import { Materials } from "#types/materials";
 
 import { Context as _Context, isContext as _isContext } from "./context.js";
@@ -8,6 +9,7 @@ import {
 } from "./instruction.js";
 
 export interface Program {
+  ethdebug?: Identification;
   compilation?: Materials.Reference<Materials.Compilation>;
   contract: Program.Contract;
   environment: Program.Environment;
@@ -27,7 +29,8 @@ export const isProgram = (value: unknown): value is Program =>
   value.instructions.every(Program.isInstruction) &&
   (!("compilation" in value) ||
     Materials.isReference<Materials.Compilation>(value.compilation)) &&
-  (!("context" in value) || Program.isContext(value.context));
+  (!("context" in value) || Program.isContext(value.context)) &&
+  (!("ethdebug" in value) || isIdentification(value.ethdebug));
 
 export namespace Program {
   export import Context = _Context;

@@ -37,6 +37,12 @@ This specification currently contains the following primary schemas:
   programs, shared types, sources, and compilation metadata.
 </dd>
 
+<dt>[**ethdebug/format/identification**](/spec/identification)</dt>
+<dd>
+  A schema for naming the schema an object conforms to and the specification
+  version that defines it.
+</dd>
+
 </dl>
 
 In addition, this format defines namespaces containing schemas for common
@@ -70,6 +76,20 @@ documents, draft 2020-12.
 For the full collection of raw schema listings (in YAML format), please see the
 [`schemas/` directory](https://github.com/ethdebug/format/tree/main/schemas)
 in this project's GitHub repository.
+
+A `schema:ethdebug/format/<path>` id, as seen throughout this
+specification, names the schema whose source is
+`schemas/<path>.schema.yaml` in that repository, at whatever version
+of the specification is in question. The `@ethdebug/format` package
+for that version exports the schema text under that same id, in its
+`schemas` map — the id is an identifier, resolved through that
+package, and not a web address. Emitted data **should not** place it
+in a `$schema` key: editors treat `$schema` as a URL and report an
+error. **ethdebug/format/info** and **ethdebug/format/program** reject
+a `$schema` key outright, through `unevaluatedProperties: false`;
+**ethdebug/format/info/resources** stays open to one for now. See
+[Identification](/spec/identification) for how objects in this format
+name the schema they conform to.
 
 ## Conventions used by this format
 

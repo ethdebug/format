@@ -34,6 +34,10 @@ guards that run in CI live in `bin/check-tarballs.ts` and
   workspace that depends on a moving one, directly or transitively.
   Every workspace depends on `@ethdebug/format`, so a specification
   change moves all ten.
+- When `@ethdebug/format` moves, the `Publish` commit also rewrites
+  the specification version in the schema examples, so `schemas/` may
+  appear in that commit beside the manifests; the dry run prints the
+  count of version literals it rewrites.
 - Series convention, for now: all workspaces start a `major.minor`
   series together and graduate together with the spec; between those
   events each workspace moves only when it or a dependency changed,
@@ -129,6 +133,21 @@ guards that run in CI live in `bin/check-tarballs.ts` and
    ```console
    yarn tsx bin/version.ts [keyword] [--all]
    ```
+
+   When `@ethdebug/format` moves, the `Publish` commit also rewrites
+   the specification version in the schema examples, so `schemas/` may
+   appear in that commit beside the manifests; the dry run prints the
+   count of version literals it rewrites.
+
+   A `found N version literals, expected M` plan problem means a
+   schema example gained or lost an `ethdebug` block without its
+   `version:` line, or lost the line while keeping the block; edit
+   the example and re-run.
+
+   After the bump, run `yarn build` before running
+   `yarn test packages/format` again: the generated
+   `src/version.ts` still names the old version until the build
+   regenerates it. CI does this step in the publish workflow.
 
    The script never pushes. If it fails after it started writing, it
    prints the undo commands for the stage it reached. The dry run of

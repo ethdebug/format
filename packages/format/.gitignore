@@ -1,2 +1,3 @@
 dist
 src/schemas/yamls.ts
+src/version.ts

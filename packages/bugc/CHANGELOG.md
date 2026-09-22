@@ -7,6 +7,12 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Changed
+
+- Every program `bugc` emits now carries an `ethdebug` field naming
+  **ethdebug/format/program** and the `@ethdebug/format` version `bugc`
+  was built against ([#305]).
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and
@@ -35,3 +41,4 @@ First publication.
 [#286]: https://github.com/ethdebug/format/pull/286
 [#298]: https://github.com/ethdebug/format/pull/298
 [#300]: https://github.com/ethdebug/format/pull/300
+[#305]: https://github.com/ethdebug/format/pull/305

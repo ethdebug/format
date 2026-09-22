@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   changelogProblems,
+  expectedVersionSites,
   forcedNames,
   hasReleaseSection,
   hasUnreleasedEntries,
@@ -15,6 +16,7 @@ import {
   planProblems,
   requiredChangelogs,
   rewriteManifest,
+  rewriteSchemaVersions,
   undoAdvice,
 } from "./version.js";
 
@@ -608,7 +610,7 @@ describe("undoAdvice", () => {
 
   it("restores the manifests when nothing was committed or tagged", () => {
     expect(undoAdvice([], false)).toBe(
-      "undo: git checkout HEAD -- packages/*/package.json",
+      "undo: git checkout HEAD -- packages/*/package.json schemas/",
     );
   });
 });
@@ -645,5 +647,106 @@ describe("a plan of first releases only", () => {
     ];
     const versions = new Map(plan.map((move) => [move.name, move.to]));
     expect(rewriteManifest(text, versions)).toBe(text);
+  });
+});
+
+describe("rewriteSchemaVersions", () => {
+  const text = [
+    "examples:",
+    "  - ethdebug:",
+    '      schema: "schema:ethdebug/format/program"',
+    '      version: "0.1.0-draft.0"',
+    "    compilation:",
+    "      compiler:",
+    "        version: 0.2.3+commit.8b37fa7a",
+    '  # version: "0.1.0-draft.0" in a comment stays',
+    "",
+  ].join("\n");
+
+  it("rewrites the quoted literal and leaves compiler versions alone", () => {
+    const result = rewriteSchemaVersions(
+      text,
+      "0.1.0-draft.0",
+      "0.1.0-draft.1",
+    );
+    expect(result.count).toBe(1);
+    expect(result.text).toContain('version: "0.1.0-draft.1"');
+    expect(result.text).toContain("version: 0.2.3+commit.8b37fa7a");
+    expect(result.text).toContain('# version: "0.1.0-draft.0" in a comment');
+  });
+
+  it("accepts single quotes and no quotes, keeping the style", () => {
+    expect(
+      rewriteSchemaVersions(
+        "version: '0.1.0-draft.0'\n",
+        "0.1.0-draft.0",
+        "0.2.0",
+      ).text,
+    ).toBe("version: '0.2.0'\n");
+    expect(
+      rewriteSchemaVersions(
+        "  version: 0.1.0-draft.0\n",
+        "0.1.0-draft.0",
+        "0.2.0",
+      ).text,
+    ).toBe("  version: 0.2.0\n");
+  });
+
+  it("does not match a prefix of a longer version", () => {
+    expect(
+      rewriteSchemaVersions('version: "0.1.0-draft.10"\n', "0.1.0-draft.1", "x")
+        .count,
+    ).toBe(0);
+  });
+
+  it("keeps a trailing comment on the line it rewrites", () => {
+    const result = rewriteSchemaVersions(
+      '    version: "0.1.0-draft.0" # the spec version\n',
+      "0.1.0-draft.0",
+      "0.1.0-draft.1",
+    );
+    expect(result.count).toBe(1);
+    expect(result.text).toBe(
+      '    version: "0.1.0-draft.1" # the spec version\n',
+    );
+  });
+
+  it("leaves the version mentioned in prose alone", () => {
+    const prose = "    description: Written by 0.1.0-draft.0 producers.\n";
+    expect(rewriteSchemaVersions(prose, "0.1.0-draft.0", "0.2.0")).toEqual({
+      text: prose,
+      count: 0,
+    });
+  });
+});
+
+describe("expectedVersionSites", () => {
+  it("counts ethdebug blocks and the identification example", () => {
+    const withBlocks =
+      'examples:\n  - ethdebug:\n      schema: x\n      version: "1"\n' +
+      '  - foo:\n    ethdebug:\n      version: "1"\n';
+    expect(expectedVersionSites(withBlocks)).toBe(2);
+    const identification =
+      '$id: "schema:ethdebug/format/identification"\n' +
+      'examples:\n  - schema: x\n    version: "1"\n';
+    expect(expectedVersionSites(identification)).toBe(1);
+  });
+
+  // the property that declares the field is not an example of it
+  it("ignores the ethdebug property of a root schema", () => {
+    const root =
+      '$id: "schema:ethdebug/format/program"\n' +
+      "properties:\n  ethdebug:\n    allOf:\n      - $ref: x\n" +
+      'examples:\n  - ethdebug:\n      version: "1"\n';
+    expect(expectedVersionSites(root)).toBe(1);
+  });
+
+  // what the count check compares: a literal left behind falls short
+  it("exceeds the count when an example keeps the old version", () => {
+    const stale =
+      'examples:\n  - ethdebug:\n      version: "0.1.0-draft.0"\n' +
+      '  - ethdebug:\n      version: "0.1.0-draft.0"\n';
+    const { count } = rewriteSchemaVersions(stale, "0.1.0-draft.1", "x");
+    expect(count).toBeLessThan(expectedVersionSites(stale));
   });
 });

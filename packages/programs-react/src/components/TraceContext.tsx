@@ -11,7 +11,12 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import type { Pointer, Program } from "@ethdebug/format";
+import {
+  supports,
+  version as supportedVersion,
+  type Pointer,
+  type Program,
+} from "@ethdebug/format";
 import { dereference, Data } from "@ethdebug/pointers";
 import {
   type TraceStep,
@@ -172,6 +177,17 @@ export interface TraceState {
   /** Whether we're at the last step */
   isAtEnd: boolean;
 
+  /** The specification version the program names, judged against the
+   *  version this package supports; undefined when the program has no
+   *  identification */
+  specification:
+    | {
+        verdict: "ok" | "newer" | "unsupported";
+        version: string;
+        supported: string;
+      }
+    | undefined;
+
   /** Move to the next trace step */
   stepForward(): void;
   /** Move to the previous trace step */
@@ -277,6 +293,25 @@ export function TraceProvider({
     () => buildPcToInstructionMap(program),
     [program],
   );
+
+  const specification = useMemo(() => {
+    const identification = program.ethdebug;
+    if (!identification) {
+      return undefined;
+    }
+    const verdict = supports(identification.version, supportedVersion);
+    if (verdict === "newer") {
+      console.warn(
+        `ethdebug/format ${identification.version} is newer than the ` +
+          `supported ${supportedVersion}; proceeding`,
+      );
+    }
+    return {
+      verdict,
+      version: identification.version,
+      supported: supportedVersion,
+    };
+  }, [program]);
 
   const currentStep = trace[currentStepIndex];
   const currentInstruction = currentStep
@@ -643,6 +678,7 @@ export function TraceProvider({
     currentCallInfo,
     isAtStart: currentStepIndex === 0,
     isAtEnd: currentStepIndex >= trace.length - 1,
+    specification,
     stepForward,
     stepBackward,
     stepToNextSource,

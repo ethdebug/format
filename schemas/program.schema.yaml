@@ -8,6 +8,17 @@ description: |
 type: object
 
 properties:
+  ethdebug:
+    title: Identification
+    description: |
+      Names this schema and the specification version. Optional until
+      the stable `0.1.0` release, where it becomes required.
+    allOf:
+      - $ref: "schema:ethdebug/format/identification"
+      - properties:
+          schema:
+            const: "schema:ethdebug/format/program"
+
   compilation:
     title: Compilation reference by ID
     description: |
@@ -77,6 +88,9 @@ examples:
     #   storedValue += 1;
     # };
     # ```
+    ethdebug:
+      schema: "schema:ethdebug/format/program"
+      version: "0.1.0-draft.0"
     contract:
       name: "Incrementer"
       definition:
