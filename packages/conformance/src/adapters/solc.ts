@@ -107,7 +107,9 @@ export async function compileSolc(
       experimental: true,
       viaIR: options.viaIR ?? true,
       debug: {
-        debugInfo: ["ethdebug"],
+        // solc requires ast-id alongside ethdebug since
+        // argotorg/solidity#16961 (2026-09-19)
+        debugInfo: ["ethdebug", "ast-id"],
       },
       outputSelection: {
         "*": {
