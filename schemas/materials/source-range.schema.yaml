@@ -54,7 +54,7 @@ required:
 
 examples:
   - source:
-      id: 5
+      id: "5"
     range:
       offset: 20
       length: 100

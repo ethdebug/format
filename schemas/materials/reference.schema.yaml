@@ -19,4 +19,4 @@ required: [id]
 unevaluatedProperties: false
 
 examples:
-  - id: 1
+  - id: "1"
