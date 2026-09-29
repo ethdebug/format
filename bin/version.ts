@@ -60,15 +60,16 @@ export function parseArgs(argv: string[]): Options {
   if (unknown.length > 0) {
     throw new Error(`unknown option: ${unknown.join(", ")}`);
   }
+  const keyword = positional[0];
   // an empty positional is a usage error too, not a missing keyword
-  if (positional.length > 1 || positional.some((arg) => !isKeyword(arg))) {
+  if (positional.length > 1 || (keyword !== undefined && !isKeyword(keyword))) {
     throw new Error(
       "usage: tsx bin/version.ts [keyword] [--all] [--dry-run]\n" +
         `  keyword is one of: ${keywords.join(", ")} (default prerelease)`,
     );
   }
   return {
-    keyword: positional[0] ?? "prerelease",
+    keyword: keyword ?? "prerelease",
     all: options.includes("--all"),
     dryRun: options.includes("--dry-run"),
   };
