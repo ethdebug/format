@@ -1,9 +1,13 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import semver from "semver";
-import { checkPackList, packList } from "./packlist.js";
+import * as git from "./release/git.js";
+import { checkPackList, packList } from "./release/packlist.js";
+import { distTag, parseReleaseTag, releaseVersions } from "./release/policy.js";
+import {
+  readWorkspaces,
+  topoSort,
+  type Workspace,
+} from "./release/workspaces.js";
 
 export const registry = "https://registry.npmjs.org";
 
@@ -17,57 +21,9 @@ export function npmEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return clean;
 }
 
-export interface Workspace {
-  name: string;
-  version: string;
-  dir: string;
-  private: boolean;
-  dependencies: string[];
-}
-
 export interface Tag {
   name: string;
   version: string;
-}
-
-export function parseTags(lines: string[]): Tag[] {
-  const tags: Tag[] = [];
-  for (const line of lines) {
-    const match = /^(@ethdebug\/[^@]+)@(.+)$/.exec(line.trim());
-    if (match) {
-      tags.push({ name: match[1], version: match[2] });
-    }
-  }
-  return tags;
-}
-
-export function readWorkspaces(root: string): Workspace[] {
-  const packagesDir = join(root, "packages");
-  return readdirSync(packagesDir)
-    .filter((entry) => existsSync(join(packagesDir, entry, "package.json")))
-    .map((entry) => {
-      const dir = join(packagesDir, entry);
-      const manifest = JSON.parse(
-        readFileSync(join(dir, "package.json"), "utf8"),
-      ) as {
-        name: string;
-        version: string;
-        private?: boolean;
-        dependencies?: Record<string, string>;
-        peerDependencies?: Record<string, string>;
-      };
-      const dependencies = Object.keys({
-        ...manifest.dependencies,
-        ...manifest.peerDependencies,
-      }).filter((dep) => dep.startsWith("@ethdebug/"));
-      return {
-        name: manifest.name,
-        version: manifest.version,
-        dir,
-        private: manifest.private === true,
-        dependencies,
-      };
-    });
 }
 
 export function selectPackages(
@@ -93,32 +49,6 @@ export function selectPackages(
     selected.push(workspace);
   }
   return selected;
-}
-
-export function topoSort(workspaces: Workspace[]): Workspace[] {
-  const byName = new Map(workspaces.map((w) => [w.name, w]));
-  const done = new Set<string>();
-  const sorted: Workspace[] = [];
-  const visit = (workspace: Workspace, trail: string[]) => {
-    if (done.has(workspace.name)) {
-      return;
-    }
-    if (trail.includes(workspace.name)) {
-      throw new Error(`dependency cycle: ${trail.join(" -> ")}`);
-    }
-    for (const dep of workspace.dependencies) {
-      const target = byName.get(dep);
-      if (target) {
-        visit(target, [...trail, workspace.name]);
-      }
-    }
-    done.add(workspace.name);
-    sorted.push(workspace);
-  };
-  for (const workspace of workspaces) {
-    visit(workspace, []);
-  }
-  return sorted;
 }
 
 export type ViewResult = "published" | "unpublished";
@@ -173,50 +103,6 @@ export function viewVersions(name: string, version: string): View {
   }
 }
 
-// versions that this repository has already tagged for the package;
-// the registry document can lag minutes behind a publish, tags do not
-export function localTagVersions(root: string, name: string): string[] {
-  return execFileSync("git", ["tag", "--list", `${name}@*`], {
-    cwd: root,
-    encoding: "utf8",
-  })
-    .split("\n")
-    .map((line) => line.trim().slice(name.length + 1))
-    .filter((version) => semver.valid(version) !== null);
-}
-
-// A stable version is `latest` when nothing stable is higher; a
-// prerelease is `latest` only while the package has no stable version,
-// and its identifier (`draft`, `preview`) after that. CI can set one
-// tag per publish, so this is the only tag a version gets.
-export function distTag(version: string, knownVersions: string[]): string {
-  const stable = knownVersions.filter(
-    (known) =>
-      semver.valid(known) !== null && semver.prerelease(known) === null,
-  );
-  const prerelease = semver.prerelease(version);
-  if (prerelease === null) {
-    const highest = [version, ...stable].sort(semver.rcompare)[0];
-    return highest === version
-      ? "latest"
-      : `release-${semver.major(version)}.${semver.minor(version)}`;
-  }
-  if (stable.length === 0) {
-    return "latest";
-  }
-  const identifier = prerelease[0];
-  if (
-    typeof identifier !== "string" ||
-    semver.validRange(identifier) !== null
-  ) {
-    throw new Error(
-      `${version}: prerelease identifier "${identifier}" is not a ` +
-        "valid dist-tag",
-    );
-  }
-  return identifier;
-}
-
 export function publishArgs(
   dryRun: boolean,
   env: NodeJS.ProcessEnv,
@@ -255,15 +141,16 @@ function publish(workspace: Workspace, dryRun: boolean, tag: string): void {
 export function main(argv: string[]): number {
   const dryRun = argv.includes("--dry-run");
   const root = fileURLToPath(new URL("..", import.meta.url));
-  const tagLines = execFileSync("git", ["tag", "--points-at", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  }).split("\n");
-  const tags = parseTags(tagLines);
+  const tags = git
+    .run(root, ["tag", "--points-at", "HEAD"])
+    .split("\n")
+    .flatMap((line) => parseReleaseTag(line) ?? []);
   if (tags.length === 0) {
     console.log("no @ethdebug package tags at HEAD; nothing to publish");
     return 0;
   }
+  // the registry document can lag minutes behind a publish, tags do not
+  const allTags = git.run(root, ["tag", "--list"]).split("\n");
   const selected = topoSort(selectPackages(tags, readWorkspaces(root)));
   const published: string[] = [];
   const skipped: string[] = [];
@@ -287,7 +174,7 @@ export function main(argv: string[]): number {
       }
       const tag = distTag(workspace.version, [
         ...view.versions,
-        ...localTagVersions(root, workspace.name),
+        ...releaseVersions(allTags, workspace.name),
       ]);
       console.log(
         `${label}: publishing under ${tag}${dryRun ? " (dry run)" : ""}`,

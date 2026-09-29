@@ -4,9 +4,7 @@ import {
   forcedNames,
   hasReleaseSection,
   hasUnreleasedEntries,
-  identifierFor,
   keywordProblems,
-  type Manifest,
   type Move,
   nextVersion,
   parseArgs,
@@ -14,23 +12,30 @@ import {
   planMoves,
   planProblems,
   requiredChangelogs,
-  rewriteManifest,
   undoAdvice,
 } from "./version.js";
+import { identifierFor } from "./release/policy.js";
+import { rewriteManifest, type Workspace } from "./release/workspaces.js";
 
 function manifest(
   name: string,
   version: string,
   dependencies: string[] = [],
   isPrivate = false,
-): Manifest {
+): Workspace {
   return {
     name,
     version,
     dir: `/repo/packages/${name.replace("@ethdebug/", "")}`,
     private: isPrivate,
-    dependencies,
+    text: "{}",
     json: { name, version },
+    runtime: dependencies,
+    peer: [],
+    dev: [],
+    optional: [],
+    dependencies,
+    all: dependencies,
   };
 }
 

@@ -1,8 +1,8 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { readWorkspaces } from "./publish-tagged.js";
+import * as git from "./release/git.js";
+import { readWorkspaces } from "./release/workspaces.js";
 
 const defaultBase = "origin/main";
 
@@ -151,27 +151,18 @@ export function formatProblemsMessage(problems: string[]): string {
 }
 
 function resolvesToCommit(root: string, ref: string): boolean {
-  try {
-    execFileSync(
-      "git",
-      ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`],
-      {
-        cwd: root,
-        stdio: "ignore",
-      },
-    );
-    return true;
-  } catch {
-    return false;
-  }
+  return (
+    git.status(root, [
+      "rev-parse",
+      "--verify",
+      "--quiet",
+      `${ref}^{commit}`,
+    ]) === 0
+  );
 }
 
 function changedPaths(root: string, base: string): string[] {
-  const stdout = execFileSync(
-    "git",
-    ["diff", "--name-only", `${base}...HEAD`],
-    { cwd: root, encoding: "utf8" },
-  );
+  const stdout = git.run(root, ["diff", "--name-only", `${base}...HEAD`]);
   return stdout
     .split("\n")
     .map((line) => line.trim())

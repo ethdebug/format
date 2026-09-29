@@ -1,45 +1,31 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import semver from "semver";
 
+import * as git from "./release/git.js";
+import {
+  identifierFor,
+  ignoredChanges,
+  isPrerelease,
+  keywords,
+  type Keyword,
+  seriesStartKeywords,
+  specPackage,
+  tuple,
+} from "./release/policy.js";
 import {
   checkVersions,
   readSchemas,
   setVersions,
 } from "./release/schema-versions.js";
-
-// the schemas ship inside this package, so its version is the version
-// of the specification
-export const specPackage = "@ethdebug/format";
-
-export const keywords = [
-  "prerelease",
-  "patch",
-  "preminor",
-  "premajor",
-  "minor",
-  "major",
-] as const;
-export type Keyword = (typeof keywords)[number];
-
-// a series start moves every workspace to the same major.minor
-export const seriesStartKeywords: Keyword[] = [
-  "preminor",
-  "premajor",
-  "minor",
-  "major",
-];
-
-// files whose change does not call for a release; the same list goes
-// to `lerna changed` and to the direct-change diff, so the two agree
-export const ignoredChanges = [
-  "**/CHANGELOG.md",
-  "**/*.test.ts",
-  "**/*.test.tsx",
-];
+import {
+  readWorkspaces,
+  rewriteManifest,
+  type Workspace,
+} from "./release/workspaces.js";
 
 export interface Options {
   keyword: Keyword;
@@ -75,34 +61,11 @@ export function parseArgs(argv: string[]): Options {
   };
 }
 
-export function identifierFor(name: string): "draft" | "preview" {
-  return name === specPackage ? "draft" : "preview";
-}
-
-export interface Manifest {
-  name: string;
-  version: string;
-  dir: string;
-  private: boolean;
-  // @ethdebug/* names over all four dependency kinds
-  dependencies: string[];
-  json: Record<string, unknown>;
-}
-
-function isPrerelease(version: string): boolean {
-  return (semver.prerelease(version) ?? []).length > 0;
-}
-
-function tuple(version: string): string {
-  const parsed = semver.parse(version);
-  return parsed ? `${parsed.major}.${parsed.minor}.${parsed.patch}` : "";
-}
-
 // the guards of the series-start keywords
 export function keywordProblems(
   keyword: string,
   all: boolean,
-  manifests: Manifest[],
+  manifests: Workspace[],
 ): string[] {
   if (!(seriesStartKeywords as string[]).includes(keyword)) {
     return [];
@@ -225,38 +188,6 @@ export function changelogProblems(files: ChangelogFile[]): string[] {
   });
 }
 
-const dependencyKinds = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-  "optionalDependencies",
-] as const;
-
-export function readManifests(root: string): Manifest[] {
-  const packagesDir = join(root, "packages");
-  return readdirSync(packagesDir)
-    .filter((entry) => existsSync(join(packagesDir, entry, "package.json")))
-    .map((entry) => {
-      const dir = join(packagesDir, entry);
-      const json = JSON.parse(
-        readFileSync(join(dir, "package.json"), "utf8"),
-      ) as Record<string, unknown>;
-      const dependencies = dependencyKinds.flatMap((kind) =>
-        Object.keys((json[kind] as Record<string, string> | undefined) ?? {}),
-      );
-      return {
-        name: json.name as string,
-        version: json.version as string,
-        dir,
-        private: json.private === true,
-        dependencies: [...new Set(dependencies)].filter((dep) =>
-          dep.startsWith("@ethdebug/"),
-        ),
-        json,
-      };
-    });
-}
-
 export type Reason = "changed" | "schemas" | "graduates" | "dependent" | "all";
 
 export interface Move {
@@ -270,7 +201,7 @@ export interface Move {
 // names to pass to `lerna changed --force-publish`; Lerna then adds
 // their transitive dependents
 export function forcedNames(
-  manifests: Manifest[],
+  manifests: Workspace[],
   keyword: string,
   schemasChanged: boolean,
 ): string[] {
@@ -286,7 +217,7 @@ export function forcedNames(
 }
 
 export interface PlanInput {
-  manifests: Manifest[];
+  manifests: Workspace[];
   // names from `lerna changed`, forced names and dependents included
   listed: string[];
   // names whose own directory differs from their tag, ignores applied
@@ -328,7 +259,7 @@ export function planMoves(input: PlanInput): Move[] {
 
 export function planProblems(
   plan: Move[],
-  manifests: Manifest[],
+  manifests: Workspace[],
   keyword: string,
 ): string[] {
   const problems: string[] = [];
@@ -344,7 +275,7 @@ export function planProblems(
     }
     if (!isPrerelease(move.to)) {
       const manifest = manifests.find((m) => m.name === move.name);
-      for (const dep of manifest?.dependencies ?? []) {
+      for (const dep of manifest?.all ?? []) {
         const version = after.get(dep);
         if (version !== undefined && isPrerelease(version)) {
           problems.push(
@@ -371,7 +302,7 @@ export function planProblems(
 // heading must carry
 export function requiredChangelogs(
   plan: Move[],
-  manifests: Manifest[],
+  manifests: Workspace[],
   root: string,
 ): { path: string; version: string }[] {
   const spec = plan.find((move) => move.name === specPackage);
@@ -391,55 +322,22 @@ export function requiredChangelogs(
   return [...root_, ...packages];
 }
 
-// sets the version when the manifest's own workspace moves, and
-// points every internal range at the new version of a moving workspace
-export function rewriteManifest(
-  text: string,
-  versions: Map<string, string>,
-): string {
-  const json = JSON.parse(text) as Record<string, unknown>;
-  const own = versions.get(json.name as string);
-  if (own !== undefined) {
-    json.version = own;
-  }
-  for (const kind of dependencyKinds) {
-    const ranges = json[kind] as Record<string, string> | undefined;
-    if (!ranges) {
-      continue;
-    }
-    for (const [dep, version] of versions) {
-      if (dep in ranges) {
-        ranges[dep] = `^${version}`;
-      }
-    }
-  }
-  return `${JSON.stringify(json, null, 2)}\n`;
-}
-
-function git(root: string, args: string[]): string {
-  return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
-}
-
-// exit status of a git command that uses its status as a result
-function gitStatus(root: string, args: string[]): number {
-  const result = spawnSync("git", args, { cwd: root, stdio: "pipe" });
-  return result.status ?? 128;
-}
-
 function lastSpecTag(root: string): string | undefined {
-  const result = spawnSync(
-    "git",
-    ["describe", "--tags", "--abbrev=0", "--match", `${specPackage}@*`],
-    { cwd: root, encoding: "utf8" },
-  );
-  return result.status === 0 ? result.stdout.trim() : undefined;
+  const result = git.tryRun(root, [
+    "describe",
+    "--tags",
+    "--abbrev=0",
+    "--match",
+    `${specPackage}@*`,
+  ]);
+  return result.ok ? result.stdout : undefined;
 }
 
 function schemasChangedSince(root: string, tag: string | undefined): boolean {
   if (tag === undefined) {
     return true;
   }
-  const status = gitStatus(root, [
+  const status = git.status(root, [
     "diff",
     "--quiet",
     tag,
@@ -453,14 +351,14 @@ function schemasChangedSince(root: string, tag: string | undefined): boolean {
   return status === 1;
 }
 
-function releasedNames(root: string, manifests: Manifest[]): string[] {
+function releasedNames(root: string, manifests: Workspace[]): string[] {
   return manifests
-    .filter((m) => git(root, ["tag", "--list", `${m.name}@*`]).length > 0)
+    .filter((m) => git.run(root, ["tag", "--list", `${m.name}@*`]).length > 0)
     .map((m) => m.name);
 }
 
 // pathspecs for one workspace directory with the ignored files removed
-function workspacePathspecs(root: string, manifest: Manifest): string[] {
+function workspacePathspecs(root: string, manifest: Workspace): string[] {
   const dir = relative(root, manifest.dir);
   return [
     `:(top)${dir}`,
@@ -468,14 +366,14 @@ function workspacePathspecs(root: string, manifest: Manifest): string[] {
   ];
 }
 
-function directlyChangedNames(root: string, manifests: Manifest[]): string[] {
+function directlyChangedNames(root: string, manifests: Workspace[]): string[] {
   return manifests
     .filter((m) => {
       const tag = `${m.name}@${m.version}`;
-      if (git(root, ["tag", "--list", tag]).length === 0) {
+      if (git.run(root, ["tag", "--list", tag]).length === 0) {
         return true;
       }
-      const status = gitStatus(root, [
+      const status = git.status(root, [
         "diff",
         "--quiet",
         tag,
@@ -507,32 +405,28 @@ function lernaChanged(root: string, forced: string[]): string[] {
 // tags only and no name filter. The nearest annotated tag must
 // therefore be the nearest release tag, lightweight ones included.
 function tagCheck(root: string): string | undefined {
-  const annotated = spawnSync(
-    "git",
-    ["describe", "--first-parent", "--abbrev=0"],
-    { cwd: root, encoding: "utf8" },
-  );
-  const release = spawnSync(
-    "git",
-    [
-      "describe",
-      "--tags",
-      "--first-parent",
-      "--abbrev=0",
-      "--match",
-      "@ethdebug/*@*",
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  if (annotated.status !== 0 || release.status !== 0) {
+  const annotated = git.tryRun(root, [
+    "describe",
+    "--first-parent",
+    "--abbrev=0",
+  ]);
+  const release = git.tryRun(root, [
+    "describe",
+    "--tags",
+    "--first-parent",
+    "--abbrev=0",
+    "--match",
+    "@ethdebug/*@*",
+  ]);
+  if (!annotated.ok || !release.ok) {
     return "no annotated release tag is reachable from HEAD";
   }
-  const a = git(root, ["rev-list", "-n", "1", annotated.stdout.trim()]);
-  const r = git(root, ["rev-list", "-n", "1", release.stdout.trim()]);
+  const a = git.run(root, ["rev-list", "-n", "1", annotated.stdout]);
+  const r = git.run(root, ["rev-list", "-n", "1", release.stdout]);
   if (a !== r) {
     return (
-      `the nearest annotated tag ${annotated.stdout.trim()} is not the ` +
-      `nearest release tag ${release.stdout.trim()}; Lerna would miss ` +
+      `the nearest annotated tag ${annotated.stdout} is not the ` +
+      `nearest release tag ${release.stdout}; Lerna would miss ` +
       "changes (a foreign tag, or a release tag that is not annotated)"
     );
   }
@@ -542,11 +436,12 @@ function tagCheck(root: string): string | undefined {
 function existingTags(root: string, plan: Move[]): string[] {
   return plan
     .map((move) => `${move.name}@${move.to}`)
-    .filter((tag) => git(root, ["tag", "--list", tag]).length > 0);
+    .filter((tag) => git.run(root, ["tag", "--list", tag]).length > 0);
 }
 
 function releaseTagsAtHead(root: string): string[] {
-  return git(root, ["tag", "--points-at", "HEAD", "--list", "@ethdebug/*@*"])
+  return git
+    .run(root, ["tag", "--points-at", "HEAD", "--list", "@ethdebug/*@*"])
     .split("\n")
     .filter((tag) => tag.length > 0);
 }
@@ -557,11 +452,13 @@ function preflight(
   directlyChanged: string[],
 ): string[] {
   const findings: string[] = [];
-  const branch = git(root, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  const branch = git.run(root, ["rev-parse", "--abbrev-ref", "HEAD"]);
   if (branch !== "main") {
     findings.push(`on branch ${branch}, not main`);
   }
-  if (git(root, ["status", "--porcelain", "--untracked-files=no"]).length > 0) {
+  if (
+    git.run(root, ["status", "--porcelain", "--untracked-files=no"]).length > 0
+  ) {
     findings.push("the working tree has uncommitted changes");
   }
   const tags = tagCheck(root);
@@ -593,7 +490,7 @@ function preflight(
 
 function writeManifests(
   root: string,
-  manifests: Manifest[],
+  manifests: Workspace[],
   plan: Move[],
 ): string[] {
   const versions = new Map(plan.map((move) => [move.name, move.to]));
@@ -619,8 +516,8 @@ function commitAndTag(
   created: string[],
 ): void {
   if (files.length > 0) {
-    git(root, ["add", "--", ...files]);
-    git(root, ["commit", "--no-verify", "--quiet", "-m", "Publish"]);
+    git.run(root, ["add", "--", ...files]);
+    git.run(root, ["commit", "--no-verify", "--quiet", "-m", "Publish"]);
   } else {
     // a plan of first releases only: each manifest already carries the
     // version it is tagged at, so there is nothing to commit
@@ -628,7 +525,7 @@ function commitAndTag(
   }
   for (const move of plan) {
     const tag = `${move.name}@${move.to}`;
-    git(root, ["tag", "-a", tag, "-m", tag]);
+    git.run(root, ["tag", "-a", tag, "-m", tag]);
     created.push(tag);
   }
 }
@@ -659,7 +556,7 @@ function report(plan: Move[]): void {
 export function main(argv: string[]): number {
   const { keyword, all, dryRun } = parseArgs(argv);
   const root = fileURLToPath(new URL("..", import.meta.url));
-  const manifests = readManifests(root);
+  const manifests = readWorkspaces(root);
 
   const guard = keywordProblems(keyword, all, manifests);
   if (guard.length > 0) {
@@ -764,7 +661,7 @@ export function main(argv: string[]): number {
   // HEAD right before the writes: the only reliable sign of whether
   // this run committed, since HEAD already is a Publish commit after
   // every release
-  const headBefore = git(root, ["rev-parse", "HEAD"]);
+  const headBefore = git.run(root, ["rev-parse", "HEAD"]);
   let written: string[] = [];
   let schemaCount = 0;
   const created: string[] = [];
@@ -779,7 +676,7 @@ export function main(argv: string[]): number {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`bump failed: ${message}`);
-    const committed = git(root, ["rev-parse", "HEAD"]) !== headBefore;
+    const committed = git.run(root, ["rev-parse", "HEAD"]) !== headBefore;
     console.error(undoAdvice(created, committed));
     return 1;
   }
