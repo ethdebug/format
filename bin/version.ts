@@ -1,21 +1,24 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import semver from "semver";
-
+import { ApplyFailure, applyRelease, undoAdvice } from "./release/apply.js";
 import { changelogProblems } from "./release/changelog.js";
 import * as git from "./release/git.js";
 import { lernaChanged } from "./release/lerna.js";
 import {
-  identifierFor,
+  forcedNames,
+  keywordProblems,
+  type Move,
+  planMoves,
+  planProblems,
+  requiredChangelogs,
+} from "./release/plan.js";
+import {
   ignoredChanges,
-  isPrerelease,
   keywords,
   type Keyword,
-  seriesStartKeywords,
   specPackage,
-  tuple,
 } from "./release/policy.js";
 import {
   checkVersions,
@@ -60,199 +63,6 @@ export function parseArgs(argv: string[]): Options {
     all: options.includes("--all"),
     dryRun: options.includes("--dry-run"),
   };
-}
-
-// the guards of the series-start keywords
-export function keywordProblems(
-  keyword: string,
-  all: boolean,
-  manifests: Workspace[],
-): string[] {
-  if (!(seriesStartKeywords as string[]).includes(keyword)) {
-    return [];
-  }
-  const problems: string[] = [];
-  if (!all) {
-    problems.push(`${keyword} starts a series for every workspace: pass --all`);
-  }
-  const prereleases = manifests.filter((m) => isPrerelease(m.version));
-  const tuples = new Set(manifests.map((m) => tuple(m.version)));
-  // a whole-repository draft series can be abandoned for the next draft
-  // series without a stable release, so `preminor` / `premajor` may run
-  // while every workspace is a prerelease of one and the same X.Y.Z.
-  // `minor` / `major` must NOT take that exception: on a prerelease
-  // they graduate in place (0.1.0-draft.3 + minor -> 0.1.0), which is
-  // an unannounced stable release, not a series start.
-  const graduatesInPlace = keyword === "minor" || keyword === "major";
-  const wholeSeries =
-    !graduatesInPlace &&
-    prereleases.length === manifests.length &&
-    tuples.size === 1;
-  if (prereleases.length > 0 && !wholeSeries) {
-    const names = prereleases.map((m) => m.name).join(", ");
-    problems.push(
-      `cannot start a series while ${names} ${
-        prereleases.length === 1 ? "is a prerelease" : "are prereleases"
-      }; run \`patch\` first`,
-    );
-  }
-  return problems;
-}
-
-// a workspace that was never released keeps the version its manifest
-// carries: that is its first version, and it is tagged at it
-export function nextVersion(
-  current: string,
-  keyword: string,
-  name: string,
-  released: boolean,
-): string {
-  if (!released) {
-    return current;
-  }
-  const next = semver.inc(
-    current,
-    keyword as semver.ReleaseType,
-    identifierFor(name),
-  );
-  if (next === null) {
-    throw new Error(`cannot apply ${keyword} to ${name}@${current}`);
-  }
-  return next;
-}
-
-export type Reason = "changed" | "schemas" | "graduates" | "dependent" | "all";
-
-export interface Move {
-  name: string;
-  from: string;
-  to: string;
-  reason: Reason;
-  firstRelease: boolean;
-}
-
-// names to pass to `lerna changed --force-publish`; Lerna then adds
-// their transitive dependents
-export function forcedNames(
-  manifests: Workspace[],
-  keyword: string,
-  schemasChanged: boolean,
-): string[] {
-  const forced = schemasChanged ? [specPackage] : [];
-  if (keyword === "patch") {
-    for (const manifest of manifests) {
-      if (isPrerelease(manifest.version) && !forced.includes(manifest.name)) {
-        forced.push(manifest.name);
-      }
-    }
-  }
-  return forced;
-}
-
-export interface PlanInput {
-  manifests: Workspace[];
-  // names from `lerna changed`, forced names and dependents included
-  listed: string[];
-  // names whose own directory differs from their tag, ignores applied
-  directlyChanged: string[];
-  // names that have at least one release tag
-  released: string[];
-  schemasChanged: boolean;
-  keyword: string;
-  all: boolean;
-}
-
-export function planMoves(input: PlanInput): Move[] {
-  const { manifests, listed, directlyChanged, released, keyword } = input;
-  return manifests
-    .filter((m) => input.all || listed.includes(m.name))
-    .map((m) => {
-      const firstRelease = !released.includes(m.name);
-      let reason: Reason;
-      if (directlyChanged.includes(m.name) || firstRelease) {
-        reason = "changed";
-      } else if (m.name === specPackage && input.schemasChanged) {
-        reason = "schemas";
-      } else if (keyword === "patch" && isPrerelease(m.version)) {
-        reason = "graduates";
-      } else if (listed.includes(m.name)) {
-        reason = "dependent";
-      } else {
-        reason = "all";
-      }
-      return {
-        name: m.name,
-        from: m.version,
-        to: nextVersion(m.version, keyword, m.name, !firstRelease),
-        reason,
-        firstRelease,
-      };
-    });
-}
-
-export function planProblems(
-  plan: Move[],
-  manifests: Workspace[],
-  keyword: string,
-): string[] {
-  const problems: string[] = [];
-  const after = new Map(manifests.map((m) => [m.name, m.version]));
-  for (const move of plan) {
-    after.set(move.name, move.to);
-  }
-  for (const move of plan) {
-    if (!move.firstRelease && !semver.gt(move.to, move.from)) {
-      problems.push(
-        `${move.name}: ${move.to} does not sort after ${move.from}`,
-      );
-    }
-    if (!isPrerelease(move.to)) {
-      const manifest = manifests.find((m) => m.name === move.name);
-      for (const dep of manifest?.all ?? []) {
-        const version = after.get(dep);
-        if (version !== undefined && isPrerelease(version)) {
-          problems.push(
-            `${move.name}: stable ${move.to} would depend on ${dep} ${version}`,
-          );
-        }
-      }
-    }
-  }
-  if ((seriesStartKeywords as string[]).includes(keyword)) {
-    // identifiers differ (draft / preview); the tuple must not
-    const tuples = [...new Set(plan.map((move) => tuple(move.to)))];
-    if (tuples.length > 1) {
-      problems.push(
-        "a series start must give every workspace the same " +
-          `major.minor.patch; got ${tuples.join(", ")}`,
-      );
-    }
-  }
-  return problems;
-}
-
-// the changelogs the release must have cut, each with the version its
-// heading must carry
-export function requiredChangelogs(
-  plan: Move[],
-  manifests: Workspace[],
-  root: string,
-): { path: string; version: string }[] {
-  const spec = plan.find((move) => move.name === specPackage);
-  const root_ = spec ? [{ path: "CHANGELOG.md", version: spec.to }] : [];
-  const packages = plan.flatMap((move) => {
-    const manifest = manifests.find((m) => m.name === move.name);
-    if (!manifest || manifest.private) {
-      return [];
-    }
-    return [
-      {
-        path: join(relative(root, manifest.dir), "CHANGELOG.md"),
-        version: move.to,
-      },
-    ];
-  });
-  return [...root_, ...packages];
 }
 
 function lastSpecTag(root: string): string | undefined {
@@ -409,61 +219,6 @@ function preflight(
   return findings;
 }
 
-function writeManifests(
-  root: string,
-  manifests: Workspace[],
-  plan: Move[],
-): string[] {
-  const versions = new Map(plan.map((move) => [move.name, move.to]));
-  const written: string[] = [];
-  for (const manifest of manifests) {
-    const path = join(manifest.dir, "package.json");
-    const before = readFileSync(path, "utf8");
-    const after = rewriteManifest(before, versions);
-    if (after !== before) {
-      writeFileSync(path, after);
-      written.push(relative(root, path));
-    }
-  }
-  return written;
-}
-
-// appends every tag it creates to `created`, so a failure partway
-// leaves the caller with the exact list to undo
-function commitAndTag(
-  root: string,
-  files: string[],
-  plan: Move[],
-  created: string[],
-): void {
-  if (files.length > 0) {
-    git.run(root, ["add", "--", ...files]);
-    git.run(root, ["commit", "--no-verify", "--quiet", "-m", "Publish"]);
-  } else {
-    // a plan of first releases only: each manifest already carries the
-    // version it is tagged at, so there is nothing to commit
-    console.log("no manifest changed; tagging HEAD");
-  }
-  for (const move of plan) {
-    const tag = `${move.name}@${move.to}`;
-    git.run(root, ["tag", "-a", tag, "-m", tag]);
-    created.push(tag);
-  }
-}
-
-// what a failed bump left behind, and how to remove it
-export function undoAdvice(created: string[], committed: boolean): string {
-  const tags = created.length > 0 ? `git tag -d ${created.join(" ")}` : "";
-  if (committed) {
-    const prefix = tags.length > 0 ? `${tags} && ` : "";
-    return `undo: ${prefix}git reset --hard HEAD~1`;
-  }
-  if (tags.length > 0) {
-    return `undo: ${tags}`;
-  }
-  return "undo: git checkout HEAD -- packages/*/package.json schemas/";
-}
-
 function report(plan: Move[]): void {
   const width = Math.max(...plan.map((move) => move.name.length));
   for (const move of plan) {
@@ -579,28 +334,32 @@ export function main(argv: string[]): number {
     return 1;
   }
 
-  // HEAD right before the writes: the only reliable sign of whether
-  // this run committed, since HEAD already is a Publish commit after
-  // every release
-  const headBefore = git.run(root, ["rev-parse", "HEAD"]);
-  let written: string[] = [];
-  let schemaCount = 0;
-  const created: string[] = [];
+  const versions = new Map(plan.map((move) => [move.name, move.to]));
+  const manifestTexts = manifests
+    .map((manifest) => ({
+      path: relative(root, join(manifest.dir, "package.json")),
+      before: manifest.text,
+      text: rewriteManifest(manifest.text, versions),
+    }))
+    .filter((file) => file.text !== file.before)
+    .map(({ path, text }) => ({ path, text }));
+  let applied;
   try {
-    written = writeManifests(root, manifests, plan);
-    for (const { path, text } of schemas) {
-      writeFileSync(join(root, path), text);
-      written.push(path);
-    }
-    schemaCount = schemas.length;
-    commitAndTag(root, written, plan, created);
+    applied = applyRelease(root, {
+      moves: plan,
+      manifests: manifestTexts,
+      schemas,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`bump failed: ${message}`);
-    const committed = git.run(root, ["rev-parse", "HEAD"]) !== headBefore;
-    console.error(undoAdvice(created, committed));
+    if (!(error instanceof ApplyFailure)) {
+      throw error;
+    }
+    console.error(`bump failed: ${error.message}`);
+    console.error(undoAdvice(error.created, error.committed));
     return 1;
   }
+  const { written, created } = applied;
+  const schemaCount = schemas.length;
   console.log(`tagged: ${created.join(", ")}`);
   if (written.length > 0) {
     const schemaNote =
