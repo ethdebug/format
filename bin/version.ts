@@ -2,14 +2,19 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { ApplyFailure, applyRelease, undoAdvice } from "./release/apply.js";
-import { changelogProblems } from "./release/changelog.js";
+import {
+  type Applied,
+  ApplyFailure,
+  applyRelease,
+  undoAdvice,
+} from "./release/apply.js";
+import { type ChangelogFile, changelogProblems } from "./release/changelog.js";
 import * as git from "./release/git.js";
 import { lernaChanged } from "./release/lerna.js";
 import {
   forcedNames,
   keywordProblems,
-  type Move,
+  type Plan,
   planMoves,
   planProblems,
   requiredChangelogs,
@@ -18,11 +23,16 @@ import {
   ignoredChanges,
   keywords,
   type Keyword,
+  releaseTag,
+  parseReleaseTag,
+  isReleaseTag,
+  scope,
   specPackage,
 } from "./release/policy.js";
 import {
   checkVersions,
   readSchemas,
+  type SchemaFile,
   setVersions,
 } from "./release/schema-versions.js";
 import {
@@ -65,28 +75,48 @@ export function parseArgs(argv: string[]): Options {
   };
 }
 
-function lastSpecTag(root: string): string | undefined {
-  const result = git.tryRun(root, [
-    "describe",
-    "--tags",
-    "--abbrev=0",
-    "--match",
-    `${specPackage}@*`,
-  ]);
-  return result.ok ? result.stdout : undefined;
+export interface Survey {
+  root: string;
+  workspaces: Workspace[];
+  // every tag in the repository, unfiltered; policy decides which are
+  // releases, so a glob and a regex cannot disagree
+  tags: string[];
+  // names whose own directory differs from their tag, ignores applied
+  directlyChanged: string[];
+  // `lerna changed`, forced names and their dependents included
+  listed: string[];
+  specTag: string | undefined;
+  schemasChanged: boolean;
+  schemas: SchemaFile[];
+  // the root file and every public package's, read whether or not the
+  // plan needs them, so `check` can filter in memory
+  changelogs: Omit<ChangelogFile, "version">[];
+  repo: {
+    branch: string;
+    dirty: boolean;
+    tagsAtHead: string[];
+    nearestAnnotated: { name: string; commit: string } | undefined;
+    nearestRelease: { name: string; commit: string } | undefined;
+  };
 }
 
-function schemasChangedSince(root: string, tag: string | undefined): boolean {
-  if (tag === undefined) {
-    return true;
-  }
+export interface Problems {
+  // guards and plan problems: exit 1, even under --dry-run
+  errors: string[];
+  // repo state: blocks a real run
+  findings: string[];
+  // uncut changelogs: block a real run, printed after the report
+  changelogs: string[];
+}
+
+function changedSince(root: string, tag: string, paths: string[]): boolean {
   const status = git.status(root, [
     "diff",
     "--quiet",
     tag,
     "HEAD",
     "--",
-    "schemas/",
+    ...paths,
   ]);
   if (status !== 0 && status !== 1) {
     throw new Error(`git diff against ${tag} failed`);
@@ -94,108 +124,182 @@ function schemasChangedSince(root: string, tag: string | undefined): boolean {
   return status === 1;
 }
 
-function releasedNames(root: string, manifests: Workspace[]): string[] {
-  return manifests
-    .filter((m) => git.run(root, ["tag", "--list", `${m.name}@*`]).length > 0)
-    .map((m) => m.name);
-}
-
 // pathspecs for one workspace directory with the ignored files removed
-function workspacePathspecs(root: string, manifest: Workspace): string[] {
-  const dir = relative(root, manifest.dir);
+function workspacePathspecs(root: string, workspace: Workspace): string[] {
+  const dir = relative(root, workspace.dir);
   return [
     `:(top)${dir}`,
     ...ignoredChanges.map((glob) => `:(top,exclude,glob)${dir}/${glob}`),
   ];
 }
 
-function directlyChangedNames(root: string, manifests: Workspace[]): string[] {
-  return manifests
-    .filter((m) => {
-      const tag = `${m.name}@${m.version}`;
-      if (git.run(root, ["tag", "--list", tag]).length === 0) {
-        return true;
-      }
-      const status = git.status(root, [
-        "diff",
-        "--quiet",
-        tag,
-        "HEAD",
-        "--",
-        ...workspacePathspecs(root, m),
-      ]);
-      if (status !== 0 && status !== 1) {
-        throw new Error(`git diff against ${tag} failed`);
-      }
-      return status === 1;
-    })
-    .map((m) => m.name);
-}
-
-// Lerna finds the last release with a plain `git describe`, annotated
-// tags only and no name filter. The nearest annotated tag must
-// therefore be the nearest release tag, lightweight ones included.
-function tagCheck(root: string): string | undefined {
-  const annotated = git.tryRun(root, [
+// the nearest tag `git describe` finds, and the commit it names
+function nearest(root: string, args: string[]) {
+  const found = git.tryRun(root, [
     "describe",
     "--first-parent",
     "--abbrev=0",
+    ...args,
   ]);
-  const release = git.tryRun(root, [
+  if (!found.ok) {
+    return undefined;
+  }
+  const commit = git.run(root, ["rev-list", "-n", "1", found.stdout]);
+  return { name: found.stdout, commit };
+}
+
+function readText(root: string, path: string): string | undefined {
+  const full = join(root, path);
+  return existsSync(full) ? readFileSync(full, "utf8") : undefined;
+}
+
+// the only read: everything this run needs from git, Lerna and disk
+export function surveyRelease(
+  root: string,
+  workspaces: Workspace[],
+  options: Options,
+): Survey {
+  const tags = git.run(root, ["tag", "--list"]).split("\n").filter(Boolean);
+  const described = git.tryRun(root, [
     "describe",
     "--tags",
-    "--first-parent",
     "--abbrev=0",
     "--match",
-    "@ethdebug/*@*",
+    `${specPackage}@*`,
   ]);
-  if (!annotated.ok || !release.ok) {
-    return "no annotated release tag is reachable from HEAD";
+  const specTag = described.ok ? described.stdout : undefined;
+  const schemasChanged =
+    specTag === undefined || changedSince(root, specTag, ["schemas/"]);
+  // the one decision inside the read: --force-publish needs the names
+  const forced = forcedNames(workspaces, options.keyword, schemasChanged);
+  const directlyChanged = workspaces
+    .filter((w) => {
+      const tag = releaseTag(w.name, w.version);
+      return (
+        !tags.includes(tag) ||
+        changedSince(root, tag, workspacePathspecs(root, w))
+      );
+    })
+    .map((w) => w.name);
+  const changelogPaths = [
+    "CHANGELOG.md",
+    ...workspaces
+      .filter((w) => !w.private)
+      .map((w) => join(relative(root, w.dir), "CHANGELOG.md")),
+  ];
+  const releaseGlob = `${scope}*@*`;
+  return {
+    root,
+    workspaces,
+    tags,
+    directlyChanged,
+    listed: lernaChanged(root, forced),
+    specTag,
+    schemasChanged,
+    schemas: readSchemas(root),
+    changelogs: changelogPaths.map((path) => ({
+      path,
+      text: readText(root, path),
+    })),
+    repo: {
+      branch: git.run(root, ["rev-parse", "--abbrev-ref", "HEAD"]),
+      dirty:
+        git.run(root, ["status", "--porcelain", "--untracked-files=no"])
+          .length > 0,
+      tagsAtHead: git
+        .run(root, ["tag", "--points-at", "HEAD"])
+        .split("\n")
+        .filter(isReleaseTag),
+      nearestAnnotated: nearest(root, []),
+      nearestRelease: nearest(root, ["--tags", "--match", releaseGlob]),
+    },
+  };
+}
+
+function specMove(plan: Plan) {
+  return plan.moves.find((move) => move.name === specPackage);
+}
+
+// pure: the moves, and the exact bytes a real run would write
+export function decide(survey: Survey, options: Options): Plan {
+  const { root, workspaces, tags } = survey;
+  const moves = planMoves({
+    manifests: workspaces,
+    listed: survey.listed,
+    directlyChanged: survey.directlyChanged,
+    released: workspaces
+      .filter((w) => tags.some((t) => parseReleaseTag(t)?.name === w.name))
+      .map((w) => w.name),
+    schemasChanged: survey.schemasChanged,
+    keyword: options.keyword,
+    all: options.all,
+  });
+  const versions = new Map(moves.map((move) => [move.name, move.to]));
+  const manifests = workspaces.map((w) => ({
+    path: relative(root, join(w.dir, "package.json")),
+    before: w.text,
+    text: rewriteManifest(w.text, versions),
+  }));
+  // the schemas ship inside @ethdebug/format, so their examples name
+  // the version it moves to; when it stays put they are left alone
+  const spec = moves.find((move) => move.name === specPackage);
+  const schemas = survey.schemas.map((file) => ({
+    path: file.path,
+    before: file.text,
+    text: spec ? setVersions(file.text, spec.to) : file.text,
+  }));
+  const changed = (files: typeof manifests) =>
+    files
+      .filter((file) => file.text !== file.before)
+      .map(({ path, text }) => ({ path, text }));
+  return { moves, manifests: changed(manifests), schemas: changed(schemas) };
+}
+
+// Lerna finds the last release with a plain `git describe`, so the
+// nearest annotated tag must be the nearest release tag, lightweight
+// ones included
+function tagCheck(repo: Survey["repo"]): string[] {
+  const { nearestAnnotated: annotated, nearestRelease: release } = repo;
+  if (annotated === undefined || release === undefined) {
+    return ["no annotated release tag is reachable from HEAD"];
   }
-  const a = git.run(root, ["rev-list", "-n", "1", annotated.stdout]);
-  const r = git.run(root, ["rev-list", "-n", "1", release.stdout]);
-  if (a !== r) {
-    return (
-      `the nearest annotated tag ${annotated.stdout} is not the ` +
-      `nearest release tag ${release.stdout}; Lerna would miss ` +
-      "changes (a foreign tag, or a release tag that is not annotated)"
-    );
+  if (annotated.commit !== release.commit) {
+    return [
+      `the nearest annotated tag ${annotated.name} is not the ` +
+        `nearest release tag ${release.name}; Lerna would miss ` +
+        "changes (a foreign tag, or a release tag that is not annotated)",
+    ];
   }
-  return undefined;
+  return [];
 }
 
-function existingTags(root: string, plan: Move[]): string[] {
-  return plan
-    .map((move) => `${move.name}@${move.to}`)
-    .filter((tag) => git.run(root, ["tag", "--list", tag]).length > 0);
-}
+// pure; the order of each list is the order it prints in
+export function check(survey: Survey, plan: Plan, options: Options): Problems {
+  const { workspaces, repo } = survey;
+  const spec = specMove(plan);
+  const sites = survey.schemas.flatMap((file) => file.sites);
+  const errors = [
+    ...keywordProblems(options.keyword, options.all, workspaces),
+    ...planProblems(plan.moves, workspaces, options.keyword),
+    ...(spec !== undefined && sites.length === 0
+      ? [
+          "schemas/: no example names the specification version; " +
+            "the release would rewrite nothing",
+        ]
+      : []),
+    ...(spec === undefined
+      ? []
+      : survey.schemas.flatMap((file) => checkVersions(file, spec.from))),
+  ];
 
-function releaseTagsAtHead(root: string): string[] {
-  return git
-    .run(root, ["tag", "--points-at", "HEAD", "--list", "@ethdebug/*@*"])
-    .split("\n")
-    .filter((tag) => tag.length > 0);
-}
-
-function preflight(
-  root: string,
-  plan: Move[],
-  directlyChanged: string[],
-): string[] {
   const findings: string[] = [];
-  const branch = git.run(root, ["rev-parse", "--abbrev-ref", "HEAD"]);
-  if (branch !== "main") {
-    findings.push(`on branch ${branch}, not main`);
+  if (repo.branch !== "main") {
+    findings.push(`on branch ${repo.branch}, not main`);
   }
-  if (
-    git.run(root, ["status", "--porcelain", "--untracked-files=no"]).length > 0
-  ) {
+  if (repo.dirty) {
     findings.push("the working tree has uncommitted changes");
   }
-  const tags = tagCheck(root);
-  if (tags !== undefined) {
-    findings.push(tags);
-  }
+  findings.push(...tagCheck(repo));
   // with a release tag at HEAD, `lerna changed` reports "Current HEAD
   // is already released" and lists nothing, so the listing hides every
   // change. Release tags at HEAD are legitimate right after a
@@ -203,163 +307,71 @@ function preflight(
   // is then nothing left to release and the next run must still work.
   // The finding therefore fires only when a direct change exists, that
   // is when the empty listing really is hiding something.
-  if (directlyChanged.length > 0) {
-    const atHead = releaseTagsAtHead(root);
-    if (atHead.length > 0) {
-      findings.push(
-        `HEAD already carries release tags: ${atHead.join(", ")}; ` +
-          "Lerna skips change detection here",
-      );
-    }
+  if (survey.directlyChanged.length > 0 && repo.tagsAtHead.length > 0) {
+    findings.push(
+      `HEAD already carries release tags: ${repo.tagsAtHead.join(", ")}; ` +
+        "Lerna skips change detection here",
+    );
   }
-  const taken = existingTags(root, plan);
+  const taken = plan.moves
+    .map((move) => releaseTag(move.name, move.to))
+    .filter((tag) => survey.tags.includes(tag));
   if (taken.length > 0) {
     findings.push(`tags already exist: ${taken.join(", ")}`);
   }
-  return findings;
+
+  const texts = new Map(
+    survey.changelogs.map((file) => [file.path, file.text]),
+  );
+  const changelogs = changelogProblems(
+    requiredChangelogs(plan.moves, workspaces, survey.root).map((file) => ({
+      ...file,
+      text: texts.get(file.path),
+    })),
+  );
+  return { errors, findings, changelogs };
 }
 
-function report(plan: Move[]): void {
-  const width = Math.max(...plan.map((move) => move.name.length));
-  for (const move of plan) {
+// prints the findings, then the moves and the changelog problems
+export function report(
+  survey: Survey,
+  plan: Plan,
+  problems: Problems,
+  options: Options,
+): void {
+  // findings come before the nothing-moves line: a release tag at HEAD
+  // is exactly what makes the plan look empty
+  for (const finding of problems.findings) {
+    console.log(`not ready to bump: ${finding}`);
+  }
+  if (plan.moves.length === 0) {
+    console.log("nothing to release: no workspace changed since its tag");
+    return;
+  }
+  console.log(`${options.keyword}: ${plan.moves.length} workspace(s) move`);
+  const width = Math.max(...plan.moves.map((move) => move.name.length));
+  for (const move of plan.moves) {
     const arrow = move.firstRelease
       ? `first release -> ${move.to}`
       : `${move.from} -> ${move.to}`;
     console.log(`  ${move.name.padEnd(width)}  ${arrow}  (${move.reason})`);
   }
-}
-
-export function main(argv: string[]): number {
-  const { keyword, all, dryRun } = parseArgs(argv);
-  const root = fileURLToPath(new URL("..", import.meta.url));
-  const manifests = readWorkspaces(root);
-
-  const guard = keywordProblems(keyword, all, manifests);
-  if (guard.length > 0) {
-    for (const problem of guard) {
-      console.error(problem);
-    }
-    return 1;
+  const spec = specMove(plan);
+  if (spec !== undefined) {
+    const count = survey.schemas.flatMap((file) => file.sites).length;
+    console.log(`  schemas: ${count} version literals -> ${spec.to}`);
   }
-
-  const specTag = lastSpecTag(root);
-  const schemasChanged = schemasChangedSince(root, specTag);
-  console.log(
-    schemasChanged
-      ? `schemas/ changed since ${specTag ?? "the beginning"}`
-      : `schemas/ unchanged since ${specTag}`,
-  );
-  const forced = forcedNames(manifests, keyword, schemasChanged);
-  const directlyChanged = directlyChangedNames(root, manifests);
-  const plan = planMoves({
-    manifests,
-    listed: lernaChanged(root, forced),
-    directlyChanged,
-    released: releasedNames(root, manifests),
-    schemasChanged,
-    keyword,
-    all,
-  });
-  const problems = planProblems(plan, manifests, keyword);
-  // the schemas ship inside @ethdebug/format, so their examples name
-  // the version it moves to; when it stays put they are left alone
-  const specMove = plan.find((move) => move.name === specPackage);
-  let schemas: { path: string; text: string }[] = [];
-  let siteCount = 0;
-  if (specMove !== undefined) {
-    const files = readSchemas(root);
-    siteCount = files.flatMap((file) => file.sites).length;
-    if (siteCount === 0) {
-      problems.push(
-        "schemas/: no example names the specification version; " +
-          "the release would rewrite nothing",
-      );
-    }
-    problems.push(
-      ...files.flatMap((file) => checkVersions(file, specMove.from)),
-    );
-    schemas = files
-      .map((file) => ({
-        path: file.path,
-        text: setVersions(file.text, specMove.to),
-        before: file.text,
-      }))
-      .filter((file) => file.text !== file.before)
-      .map(({ path, text }) => ({ path, text }));
-  }
-  if (problems.length > 0) {
-    for (const problem of problems) {
-      console.error(problem);
-    }
-    return 1;
-  }
-
-  // findings come before the nothing-moves exit: a release tag at HEAD
-  // is exactly what makes the plan look empty
-  const findings = preflight(root, plan, directlyChanged);
-  for (const finding of findings) {
-    console.log(`not ready to bump: ${finding}`);
-  }
-  if (plan.length === 0) {
-    console.log("nothing to release: no workspace changed since its tag");
-    return 0;
-  }
-  console.log(`${keyword}: ${plan.length} workspace(s) move`);
-  report(plan);
-  if (specMove !== undefined) {
-    const literals = `${siteCount} version literals`;
-    console.log(`  schemas: ${literals} -> ${specMove.to}`);
-  }
-
-  const changelogs = changelogProblems(
-    requiredChangelogs(plan, manifests, root).map(({ path, version }) => ({
-      path,
-      version,
-      text: existsSync(join(root, path))
-        ? readFileSync(join(root, path), "utf8")
-        : undefined,
-    })),
-  );
-  if (changelogs.length > 0) {
+  if (problems.changelogs.length > 0) {
     console.log("changelogs not cut for this release:");
-    for (const problem of changelogs) {
+    for (const problem of problems.changelogs) {
       console.log(`  ${problem}`);
     }
   }
-  if (dryRun) {
-    return 0;
-  }
-  if (findings.length > 0 || changelogs.length > 0) {
-    console.error("fix the items above, then re-run");
-    return 1;
-  }
+}
 
-  const versions = new Map(plan.map((move) => [move.name, move.to]));
-  const manifestTexts = manifests
-    .map((manifest) => ({
-      path: relative(root, join(manifest.dir, "package.json")),
-      before: manifest.text,
-      text: rewriteManifest(manifest.text, versions),
-    }))
-    .filter((file) => file.text !== file.before)
-    .map(({ path, text }) => ({ path, text }));
-  let applied;
-  try {
-    applied = applyRelease(root, {
-      moves: plan,
-      manifests: manifestTexts,
-      schemas,
-    });
-  } catch (error) {
-    if (!(error instanceof ApplyFailure)) {
-      throw error;
-    }
-    console.error(`bump failed: ${error.message}`);
-    console.error(undoAdvice(error.created, error.committed));
-    return 1;
-  }
+function reportApplied(plan: Plan, applied: Applied): void {
   const { written, created } = applied;
-  const schemaCount = schemas.length;
+  const schemaCount = plan.schemas.length;
   console.log(`tagged: ${created.join(", ")}`);
   if (written.length > 0) {
     const schemaNote =
@@ -369,7 +381,7 @@ export function main(argv: string[]): number {
         `manifest(s)${schemaNote}`,
     );
     console.log("next: git push --atomic origin main --follow-tags");
-    return 0;
+    return;
   }
   // publish.yml runs `on: push: branches: [main]`; with no commit the
   // push moves no branch, so nothing triggers it
@@ -378,7 +390,55 @@ export function main(argv: string[]): number {
       "will not trigger; push the tags (`git push origin --tags`) and " +
       "then dispatch the workflow or publish locally, see RELEASING.md",
   );
-  return 0;
+}
+
+export function main(argv: string[]): number {
+  const options = parseArgs(argv);
+  const root = fileURLToPath(new URL("..", import.meta.url));
+
+  // the workspaces are cheap, and the keyword guard must stay cheap:
+  // `minor` without --all fails before any git or Lerna work
+  const workspaces = readWorkspaces(root);
+  const guard = keywordProblems(options.keyword, options.all, workspaces);
+  if (guard.length > 0) {
+    guard.forEach((problem) => console.error(problem));
+    return 1;
+  }
+
+  const survey = surveyRelease(root, workspaces, options);
+  console.log(
+    survey.schemasChanged
+      ? `schemas/ changed since ${survey.specTag ?? "the beginning"}`
+      : `schemas/ unchanged since ${survey.specTag}`,
+  );
+  const plan = decide(survey, options);
+  const problems = check(survey, plan, options);
+  if (problems.errors.length > 0) {
+    problems.errors.forEach((problem) => console.error(problem));
+    return 1;
+  }
+  report(survey, plan, problems, options);
+  if (plan.moves.length === 0) {
+    return 0;
+  }
+  if (options.dryRun) {
+    return 0;
+  }
+  if (problems.findings.length > 0 || problems.changelogs.length > 0) {
+    console.error("fix the items above, then re-run");
+    return 1;
+  }
+  try {
+    reportApplied(plan, applyRelease(root, plan));
+    return 0;
+  } catch (error) {
+    if (!(error instanceof ApplyFailure)) {
+      throw error;
+    }
+    console.error(`bump failed: ${error.message}`);
+    console.error(undoAdvice(error.created, error.committed));
+    return 1;
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
