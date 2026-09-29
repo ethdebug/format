@@ -1,11 +1,12 @@
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import semver from "semver";
 
+import { changelogProblems } from "./release/changelog.js";
 import * as git from "./release/git.js";
+import { lernaChanged } from "./release/lerna.js";
 import {
   identifierFor,
   ignoredChanges,
@@ -118,74 +119,6 @@ export function nextVersion(
     throw new Error(`cannot apply ${keyword} to ${name}@${current}`);
   }
   return next;
-}
-
-// `lerna changed` exits non-zero both when nothing changed and when it
-// fails; only the first is an empty list
-export function parseChanged(
-  stdout: string,
-  stderr: string,
-  status: number | null,
-): string[] {
-  if (status !== 0) {
-    if (/No changed packages/i.test(stderr)) {
-      return [];
-    }
-    throw new Error(`lerna changed failed:\n${stderr.trim()}`);
-  }
-  const start = stdout.indexOf("[");
-  if (start === -1) {
-    return [];
-  }
-  const listed = JSON.parse(stdout.slice(start)) as { name: string }[];
-  return listed.map(({ name }) => name);
-}
-
-// true when the changelog has a section for the version with at least
-// one entry or sentence in it
-export function hasReleaseSection(text: string, version: string): boolean {
-  const lines = text.split(/\r?\n/);
-  const start = lines.findIndex(
-    (line) => line === `## ${version}` || line.startsWith(`## ${version} `),
-  );
-  if (start === -1) {
-    return false;
-  }
-  const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => line.startsWith("## "));
-  const body = end === -1 ? rest : rest.slice(0, end);
-  return body.some(
-    (line) =>
-      line.trim().length > 0 &&
-      !line.startsWith("#") &&
-      !/^\[[^\]]+\]: /.test(line),
-  );
-}
-
-export function hasUnreleasedEntries(text: string): boolean {
-  return hasReleaseSection(text, "Unreleased");
-}
-
-export interface ChangelogFile {
-  path: string;
-  version: string;
-  text: string | undefined;
-}
-
-export function changelogProblems(files: ChangelogFile[]): string[] {
-  return files.flatMap(({ path, version, text }) => {
-    if (text === undefined) {
-      return [`${path}: file is missing`];
-    }
-    return [
-      ...(hasReleaseSection(text, version)
-        ? []
-        : [`${path}: no "## ${version}" section with an entry`]),
-      ...(hasUnreleasedEntries(text)
-        ? [`${path}: entries remain under "## Unreleased"`]
-        : []),
-    ];
-  });
 }
 
 export type Reason = "changed" | "schemas" | "graduates" | "dependent" | "all";
@@ -387,18 +320,6 @@ function directlyChangedNames(root: string, manifests: Workspace[]): string[] {
       return status === 1;
     })
     .map((m) => m.name);
-}
-
-function lernaChanged(root: string, forced: string[]): string[] {
-  const args = ["-s", "lerna", "changed", "--all", "--json"];
-  for (const glob of ignoredChanges) {
-    args.push("--ignore-changes", glob);
-  }
-  if (forced.length > 0) {
-    args.push(`--force-publish=${forced.join(",")}`);
-  }
-  const result = spawnSync("yarn", args, { cwd: root, encoding: "utf8" });
-  return parseChanged(result.stdout ?? "", result.stderr ?? "", result.status);
 }
 
 // Lerna finds the last release with a plain `git describe`, annotated

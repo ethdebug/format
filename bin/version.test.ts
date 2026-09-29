@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  changelogProblems,
   forcedNames,
-  hasReleaseSection,
-  hasUnreleasedEntries,
   keywordProblems,
   type Move,
   nextVersion,
   parseArgs,
-  parseChanged,
   planMoves,
   planProblems,
   requiredChangelogs,
@@ -171,100 +167,6 @@ describe("nextVersion", () => {
     expect(() =>
       nextVersion("banana", "patch", "@ethdebug/bugc", true),
     ).toThrow(/banana/);
-  });
-});
-
-const cut = [
-  "# Changelog",
-  "",
-  "## Unreleased",
-  "",
-  "## 0.1.0-draft.0 — 2026-09-18",
-  "",
-  "### Changed",
-  "",
-  "- Something changed ([#310]).",
-  "",
-  "## 0.1.0-2 — 2026-09-17",
-  "",
-  "No changes to the specification.",
-  "",
-  "[#310]: https://github.com/ethdebug/format/pull/310",
-].join("\n");
-
-describe("hasReleaseSection", () => {
-  it("finds a dated section that has an entry", () => {
-    expect(hasReleaseSection(cut, "0.1.0-draft.0")).toBe(true);
-  });
-
-  it("accepts a section that holds one sentence", () => {
-    expect(hasReleaseSection(cut, "0.1.0-2")).toBe(true);
-  });
-
-  it("does not match a longer version with the same prefix", () => {
-    expect(hasReleaseSection(cut, "0.1.0")).toBe(false);
-    expect(hasReleaseSection(cut, "0.1.0-draft.0.1")).toBe(false);
-  });
-
-  it(
-    "is false for a section with only sub-headings or link " + "definitions",
-    () => {
-      expect(
-        hasReleaseSection("## 0.1.0\n\n### Changed\n\n## 0.0.1\n", "0.1.0"),
-      ).toBe(false);
-      expect(
-        hasReleaseSection("## 0.1.0\n\n[#1]: https://example.com\n", "0.1.0"),
-      ).toBe(false);
-    },
-  );
-
-  it("reads CRLF line endings", () => {
-    const text =
-      "## Unreleased\r\n\r\n- Left.\r\n\r\n## 0.1.0\r\n\r\n- Entry.\r\n";
-    expect(hasUnreleasedEntries(text)).toBe(true);
-    expect(hasReleaseSection(text, "0.1.0")).toBe(true);
-  });
-});
-
-describe("changelogProblems", () => {
-  it("is empty for a changelog that was cut", () => {
-    expect(
-      changelogProblems([
-        { path: "CHANGELOG.md", version: "0.1.0-draft.0", text: cut },
-      ]),
-    ).toEqual([]);
-  });
-
-  it("reports a missing section, leftovers, and a missing file", () => {
-    const leftover = "## Unreleased\n\n- Left behind.\n";
-    expect(
-      changelogProblems([
-        { path: "a/CHANGELOG.md", version: "0.1.0-preview.1", text: leftover },
-        { path: "b/CHANGELOG.md", version: "0.1.0-preview.1", text: undefined },
-      ]),
-    ).toEqual([
-      'a/CHANGELOG.md: no "## 0.1.0-preview.1" section with an entry',
-      'a/CHANGELOG.md: entries remain under "## Unreleased"',
-      "b/CHANGELOG.md: file is missing",
-    ]);
-  });
-});
-
-describe("parseChanged", () => {
-  it("reads names from the JSON that follows any log noise", () => {
-    const stdout = 'lerna notice\n[\n  { "name": "@ethdebug/evm" }\n]\n';
-    expect(parseChanged(stdout, "", 0)).toEqual(["@ethdebug/evm"]);
-  });
-
-  it("is empty when Lerna says nothing changed", () => {
-    expect(parseChanged("", "lerna info No changed packages found", 1)).toEqual(
-      [],
-    );
-  });
-
-  it("throws for any other failure", () => {
-    expect(() => parseChanged("", "lerna ERR! boom", 1)).toThrow(/boom/);
-    expect(() => parseChanged("", "", null)).toThrow(/lerna changed failed/);
   });
 });
 
