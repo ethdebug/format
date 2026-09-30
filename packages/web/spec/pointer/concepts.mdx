@@ -283,6 +283,9 @@ This format currently defines two such addressing schemes:
 single continuous byte array and addressing a slot or collection of slots
 in a word-arranged locaton (respectively).
 
+Within a slot, the segment scheme numbers bytes from the most significant
+byte: byte `0` is the first byte of the slot's big-endian word.
+
 <details>
 <summary>
 **Example**: Slice-based region
