@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-308/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-308/assets/css/styles.8e67e0ac.css">
-<script src="/format/pr-preview/pr-308/assets/js/runtime~main.7d4af754.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-308/assets/js/main.edfceae5.js" defer="defer"></script>
+<title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-308/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-308/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-308/assets/css/styles.92987fc1.css">
+<script src="/format/pr-preview/pr-308/assets/js/runtime~main.d2c5fc78.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-308/assets/js/main.e2f6b63c.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -72,13 +72,10 @@ object without it predates the field (<a href="https://github.com/ethdebug/forma
 <strong>ethdebug/format/info</strong>, <strong>ethdebug/format/info/resources</strong>,
 <strong>ethdebug/format/program</strong></li>
 <li class="">Producers: optional: emit <code>ethdebug: { schema, version }</code> with the
-<code>@ethdebug/format</code> version the producer was built against; a program
-inside a container may omit it, and when both carry it the versions
-must be equal.</li>
-<li class="">Consumers: optional: read the field to learn which changelog entries
-apply; reject an object only when its compatibility key (the major
-version, or <code>major.minor</code> while the major is 0) differs from the
-supported one, and warn when the version is newer.
+version of the specification whose schemas the producer targets; a
+program inside a container may omit it, and when both carry it the
+versions must be equal.</li>
+<li class="">Consumers: optional: a consumer may read the field.
 <strong>ethdebug/format/program</strong> and <strong>ethdebug/format/info</strong> are closed
 objects (<code>unevaluatedProperties: false</code>), so a consumer that
 validates against the previous release&#x27;s schemas rejects an
