@@ -53,6 +53,22 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Changed
+
+- The `offset` of a segment counts bytes from the most significant byte of the
+  slot: byte `0` is the first byte of the slot's big-endian word. The
+  description now says so, says how to convert from a layout that counts from
+  the low-order end (`$wordsize - o - n`), and allows writing that conversion as
+  an expression. New segment examples pack an `address` and a `uint32` into
+  one slot, each written with literal offsets (`12` and `8`) and with an
+  expression that takes the value's size from the region's own `length`
+  (`{ ".length": "$this" }`) ([#309]).
+  - Schemas: **ethdebug/format/pointer/scheme/segment**
+  - Producers: no change needed. The reference implementation and bugc already
+    resolve offsets this way; the text states existing meaning.
+  - Consumers: no change needed. A consumer that resolved `offset` against the
+    big-endian word already follows this.
+
 ## 0.1.0-draft.0 — 2026-09-21
 
 The version scheme changed: prerelease versions of the specification are now
@@ -616,3 +632,4 @@ First published version of the specification.
 [#285]: https://github.com/ethdebug/format/pull/285
 [#286]: https://github.com/ethdebug/format/pull/286
 [#303]: https://github.com/ethdebug/format/pull/303
+[#309]: https://github.com/ethdebug/format/pull/309
