@@ -53,6 +53,30 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- A stamp in an `ethdebug` field on **ethdebug/format/info**,
+  **ethdebug/format/info/resources** and **ethdebug/format/program** names
+  the schema the object conforms to and the specification version that
+  defines it. The new **ethdebug/format/data/stamp** schema defines the
+  stamp. Info documents and resources objects must carry the stamp
+  ([#305]).
+  - Schemas: **ethdebug/format/data/stamp**,
+    **ethdebug/format/info**, **ethdebug/format/info/resources**,
+    **ethdebug/format/program**
+  - Producers: required: **ethdebug/format/info** and
+    **ethdebug/format/info/resources** list `ethdebug` in `required`, so
+    an info document or resources object must carry
+    `ethdebug: { schema, version }`. A program emitted outside an info
+    document **should** carry the stamp; a program inside an info
+    document **should not**. All objects of one compilation must name the
+    same `version`.
+  - Consumers: required: a consumer that validates data against the
+    schemas must use this version's schemas. **ethdebug/format/program**
+    and **ethdebug/format/info** are closed objects
+    (`unevaluatedProperties: false`), so the previous version's schemas
+    reject the `ethdebug` key.
+
 ### Changed
 
 - The `offset` of a segment counts bytes from the most significant byte of the
@@ -632,4 +656,5 @@ First published version of the specification.
 [#285]: https://github.com/ethdebug/format/pull/285
 [#286]: https://github.com/ethdebug/format/pull/286
 [#303]: https://github.com/ethdebug/format/pull/303
+[#305]: https://github.com/ethdebug/format/pull/305
 [#309]: https://github.com/ethdebug/format/pull/309

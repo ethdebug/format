@@ -8,6 +8,21 @@ description: |
 type: object
 
 properties:
+  ethdebug:
+    title: Stamp
+    description: |
+      Names this schema and the specification version. A program
+      emitted outside an info document should carry this field. A
+      program inside an info document (in `programs`) should not; the
+      stamp of the info document covers it.
+    allOf:
+      - $ref: "schema:ethdebug/format/data/stamp"
+      # note: whitespace chars are \255 (nbsp)
+      - title: '{ "schema": "ethdebug/format/program" }'
+        properties:
+          schema:
+            const: "ethdebug/format/program"
+
   compilation:
     title: Compilation reference by ID
     description: |
@@ -77,6 +92,9 @@ examples:
     #   storedValue += 1;
     # };
     # ```
+    ethdebug:
+      schema: "ethdebug/format/program"
+      version: "0.1.0-draft.0"
     contract:
       name: "Incrementer"
       definition:

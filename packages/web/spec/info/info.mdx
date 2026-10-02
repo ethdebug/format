@@ -9,3 +9,9 @@ import SchemaViewer from "@site/src/components/SchemaViewer";
 # Schema
 
 <SchemaViewer schema={{ id: "schema:ethdebug/format/info" }} />
+
+## Stamp
+
+This object **must** carry a stamp in its `ethdebug` field that names
+**ethdebug/format/info**. A program in `programs` **should not** carry
+the stamp. See [Stamp](/spec/data/stamp).

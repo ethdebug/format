@@ -608,7 +608,7 @@ describe("undoAdvice", () => {
 
   it("restores the manifests when nothing was committed or tagged", () => {
     expect(undoAdvice([], false)).toBe(
-      "undo: git checkout HEAD -- packages/*/package.json",
+      "undo: git checkout HEAD -- packages/*/package.json schemas/",
     );
   });
 });

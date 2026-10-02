@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { version } from "@ethdebug/format";
+
 import {
   deployBytecode,
   sendContractTransaction,
@@ -100,6 +102,10 @@ function validProgram() {
 
 function validResources() {
   return {
+    ethdebug: {
+      schema: "ethdebug/format/info/resources",
+      version: "0.1.0-draft.0",
+    },
     compilation: validCompilation(),
     types: {
       CounterSlot: {
@@ -114,6 +120,50 @@ function validResources() {
           location: "storage",
           slot: "slot",
         },
+      },
+    },
+  };
+}
+
+function programWithVersion(version: string) {
+  return {
+    ...validProgram(),
+    ethdebug: { schema: "ethdebug/format/program", version },
+  };
+}
+
+function resourcesWithVersion(version: string) {
+  return {
+    ...validResources(),
+    ethdebug: { schema: "ethdebug/format/info/resources", version },
+  };
+}
+
+// Expected failure (#311): solc does not emit the stamp on its resources
+// object yet. Until it does, the solc tests add the stamp to a copy of the
+// artifact before they validate it, so the rest of resources is still
+// checked. The check below fails once solc emits the stamp; then remove
+// this function and validate the artifact as it is.
+function withSolcResourcesStamp(artifact: EthdebugArtifact): EthdebugArtifact {
+  expect(
+    artifact.resources?.ethdebug,
+    "solc now emits the stamp on its resources object; " +
+      "remove withSolcResourcesStamp",
+  ).toBeUndefined();
+  if (!artifact.resources) {
+    return artifact;
+  }
+
+  const programVersion = artifact.programs.find(
+    ({ program }) => program.ethdebug,
+  )?.program.ethdebug?.version;
+  return {
+    ...artifact,
+    resources: {
+      ...artifact.resources,
+      ethdebug: {
+        schema: "ethdebug/format/info/resources",
+        version: programVersion ?? version,
       },
     },
   };
@@ -164,7 +214,9 @@ describe("@ethdebug/conformance", () => {
         sourcePath: path.join(root, "test/fixtures/solc/Counter.sol"),
       });
 
-      const result = await validateStaticConformance(artifact);
+      const result = await validateStaticConformance(
+        withSolcResourcesStamp(artifact),
+      );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
       expect(
@@ -215,7 +267,9 @@ describe("@ethdebug/conformance", () => {
           path.join(sourceDir, "Math.sol"),
         ],
       });
-      const result = await validateStaticConformance(artifact);
+      const result = await validateStaticConformance(
+        withSolcResourcesStamp(artifact),
+      );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
 
@@ -359,6 +413,21 @@ describe("@ethdebug/conformance", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("rejects resources without the stamp", async () => {
+    const { ethdebug: _, ...resources } = validResources();
+    const artifact = validArtifact({
+      compilation: undefined,
+      resources: resources as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "resources")).toBe(
+      true,
+    );
+  });
+
   it("rejects malformed resources lookup tables through JSON-Schema validation", async () => {
     const artifact = validArtifact({
       compilation: undefined,
@@ -378,6 +447,68 @@ describe("@ethdebug/conformance", () => {
     expect(result.issues.some((issue) => issue.path === "resources")).toBe(
       true,
     );
+  });
+
+  it("rejects mismatched versions", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      programs: [
+        {
+          name: "Counter:runtime",
+          program: programWithVersion("0.1.0-draft.0") as any,
+        },
+      ],
+      resources: resourcesWithVersion("0.1.0-draft.1") as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.issues.some(
+        (issue) => issue.path === "programs[0].ethdebug.version",
+      ),
+    ).toBe(true);
+  });
+
+  it("accepts equal versions", async () => {
+    const artifact = validArtifact({
+      compilation: undefined,
+      programs: [
+        {
+          name: "Counter:runtime",
+          program: programWithVersion("0.1.0-draft.0") as any,
+        },
+      ],
+      resources: resourcesWithVersion("0.1.0-draft.0") as any,
+    });
+
+    const result = await validateStaticConformance(artifact);
+
+    expect(result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts programs without the stamp", async () => {
+    const result = await validateStaticConformance(validArtifact());
+
+    expect(result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("stamps the resources it synthesizes for SolDB", async () => {
+    const debugDir = await writeSoldbDebugDir(validArtifact(), {
+      contractName: "Counter",
+    });
+
+    const resources = JSON.parse(
+      await readFile(path.join(debugDir.debugDir, "ethdebug.json"), "utf8"),
+    );
+
+    expect(resources.ethdebug).toEqual({
+      schema: "ethdebug/format/info/resources",
+      version,
+    });
   });
 
   it("materializes non-empty resources into SolDB debug directories", async () => {

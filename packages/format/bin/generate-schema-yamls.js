@@ -61,3 +61,13 @@ const tempPath = outputPath + ".tmp";
 // Write to temp file, then rename atomically to avoid race conditions
 fs.writeFileSync(tempPath, output);
 fs.renameSync(tempPath, outputPath);
+
+const packageJson = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8"),
+);
+const versionOutput = `// THIS FILE GETS AUTO-GENERATED AS PART OF THIS PACKAGE'S BUILD PROCESS
+// Please do not modify it directly or allow it to get checked into source control.
+
+export const version: string = ${JSON.stringify(packageJson.version)};
+`;
+fs.writeFileSync(path.resolve(__dirname, "../src/version.ts"), versionOutput);

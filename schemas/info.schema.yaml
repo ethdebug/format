@@ -10,6 +10,21 @@ type: object
 $ref: "schema:ethdebug/format/info/resources"
 
 properties:
+  ethdebug:
+    title: Stamp
+    description: |
+      Names this schema and the specification version. An info document
+      must carry this field. A program in `programs` should not carry
+      one; the stamp of this document covers it. All objects of one
+      compilation must name the same `version`.
+    allOf:
+      - $ref: "schema:ethdebug/format/data/stamp"
+      # note: whitespace chars are \255 (nbsp)
+      - title: '{ "schema": "ethdebug/format/info" }'
+        properties:
+          schema:
+            $dynamicRef: "#SchemaName"
+
   programs:
     type: array
     items:
@@ -19,13 +34,26 @@ properties:
     $ref: "schema:ethdebug/format/materials/compilation"
 
 required:
+  - ethdebug
   - compilation
   - programs
 
 unevaluatedProperties: false
 
+$defs:
+  SchemaName:
+    $dynamicAnchor: SchemaName
+    description: |
+      The schema name that the `ethdebug` field's `schema` must give.
+      This fills the slot that **ethdebug/format/info/resources**
+      declares, so that an info document names **ethdebug/format/info**.
+    const: "ethdebug/format/info"
+
 examples:
-  - compilation:
+  - ethdebug:
+      schema: "ethdebug/format/info"
+      version: "0.1.0-draft.0"
+    compilation:
       id: __301f3b6d85831638
       compiler:
         name: egc

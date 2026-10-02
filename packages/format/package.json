@@ -51,13 +51,17 @@
       "types": "./src/types/type/index.ts",
       "default": "./dist/src/types/type/index.js"
     },
+    "#version": {
+      "types": "./src/version.ts",
+      "default": "./dist/src/version.js"
+    },
     "#test/*": "./test/*.ts"
   },
   "scripts": {
     "prepare:yamls": "node ./bin/generate-schema-yamls.js",
     "build": "yarn prepare:yamls && rm -rf dist && tsc --build tsconfig.build.json",
     "prepare": "yarn build",
-    "clean": "rm -rf dist && rm src/schemas/yamls.ts",
+    "clean": "rm -rf dist && rm -f src/schemas/yamls.ts src/version.ts",
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "vitest",
     "watch:typescript": "tsc --watch",
