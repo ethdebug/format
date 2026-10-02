@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Specification overview | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-308/spec/overview"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Specification overview | ethdebug format"><meta data-rh="true" name="description" content="ethdebug/format is currently in the design phase and specification is"><meta data-rh="true" property="og:description" content="ethdebug/format is currently in the design phase and specification is"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-308/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/overview"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/overview" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-308/spec/overview" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Specification overview","item":"https://ethdebug.github.io/format/pr-preview/pr-308/spec/overview"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-308/assets/css/styles.92987fc1.css">
-<script src="/format/pr-preview/pr-308/assets/js/runtime~main.c5b524dc.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-308/assets/js/main.d2841388.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-308/assets/js/runtime~main.51e213a7.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-308/assets/js/main.21f6a242.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -34,17 +34,11 @@ documents, draft 2020-12.</p>
 <p>For the full collection of raw schema listings (in YAML format), please see the
 <a href="https://github.com/ethdebug/format/tree/main/schemas" target="_blank" rel="noopener noreferrer" class=""><code>schemas/</code> directory<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>
 in this project&#x27;s GitHub repository.</p>
-<p>A <code>schema:ethdebug/format/&lt;path&gt;</code> id, as seen throughout this
-specification, names the schema whose source is
-<code>schemas/&lt;path&gt;.schema.yaml</code> in that repository, at whatever version
-of the specification is in question. The id is an identifier, not a
-web address. Emitted data <strong>should not</strong> place it
-in a <code>$schema</code> key: editors treat <code>$schema</code> as a URL and report an
-error. <strong>ethdebug/format/info</strong> and <strong>ethdebug/format/program</strong> reject
-a <code>$schema</code> key outright, through <code>unevaluatedProperties: false</code>;
-<strong>ethdebug/format/info/resources</strong> stays open to one for now. See
-<a class="" href="/format/pr-preview/pr-308/spec/data/identification">Identification</a> for how objects in this format
-name the schema they conform to.</p>
+<p>A <code>schema:ethdebug/format/&lt;path&gt;</code> id names the schema whose source is
+<code>schemas/&lt;path&gt;.schema.yaml</code> in that repository. The id is an
+identifier, not a web address. Emitted data <strong>should not</strong> place it in a
+<code>$schema</code> key. See <a class="" href="/format/pr-preview/pr-308/spec/data/identification">Identification</a> for how
+objects name the schema they conform to.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="conventions-used-by-this-format">Conventions used by this format<a href="#conventions-used-by-this-format" class="hash-link" aria-label="Direct link to Conventions used by this format" title="Direct link to Conventions used by this format" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="terminology">Terminology<a href="#terminology" class="hash-link" aria-label="Direct link to Terminology" title="Direct link to Terminology" translate="no">​</a></h3>
 <p>This specification uses the term &quot;this format&quot; to refer to the entirety of
