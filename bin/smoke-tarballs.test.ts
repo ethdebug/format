@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { siblingTarballs } from "./smoke-tarballs.js";
-import type { Workspace } from "./publish-tagged.js";
+import type { Workspace } from "./release/workspaces.js";
 
 const ws = (dependencies: string[]): Workspace => ({
   name: "@ethdebug/x",
   version: "1.0.0",
   dir: "/repo/packages/x",
   private: false,
+  text: "{}",
+  json: {},
+  runtime: dependencies,
+  peer: [],
+  dev: [],
+  optional: [],
   dependencies,
+  all: dependencies,
 });
 
 describe("siblingTarballs", () => {

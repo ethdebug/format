@@ -26,6 +26,9 @@ jobs:
       - name: Type-check
         run: yarn typecheck
 
+      - name: Type-check bin
+        run: yarn typecheck:bin
+
       - name: Check type-check programs use live source
         run: yarn tsx bin/check-typecheck-sources.ts
 

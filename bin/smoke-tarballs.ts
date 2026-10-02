@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { readWorkspaces, topoSort, type Workspace } from "./publish-tagged.js";
+import {
+  readWorkspaces,
+  topoSort,
+  type Workspace,
+} from "./release/workspaces.js";
 
 export function siblingTarballs(
   workspace: Workspace,
