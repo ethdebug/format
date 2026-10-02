@@ -29,6 +29,18 @@ const returnValueCode = "602a60005260206000f3";
 //   RETURN              =>  f3
 const constructorCode = "65602a600055006000526006601af3";
 
+// mcopy: PUSH1 0x2a PUSH1 0x00 MSTORE
+//        PUSH1 0x20 PUSH1 0x00 PUSH1 0x20 MCOPY
+//        PUSH1 0x20 PUSH1 0x20 RETURN
+//   Copies a word from offset 0 to offset 0x20 and returns it.
+const mcopyCode = "602a600052" + "602060006020" + "5e" + "60206020f3";
+
+// transient: PUSH1 0x2a PUSH1 0x01 TSTORE
+//            PUSH1 0x01 TLOAD PUSH1 0x00 MSTORE
+//            PUSH1 0x20 PUSH1 0x00 RETURN
+//   Stores 42 in transient slot 1, loads it and returns it.
+const transientCode = "602a60015d" + "60015c600052" + "60206000f3";
+
 describe("Executor", () => {
   let executor: Executor;
 
@@ -129,6 +141,22 @@ describe("Executor", () => {
       const after = executor.getContractAddress();
       // CREATE computes a new address
       expect(after).not.toEqual(before);
+    });
+  });
+
+  describe("cancun opcodes", () => {
+    it("executes MCOPY", async () => {
+      const result = await executor.executeCode(mcopyCode);
+      expect(result.error).toBeUndefined();
+      expect(result.success).toBe(true);
+      expect(bytesToHex(result.returnValue)).toBe("2a".padStart(64, "0"));
+    });
+
+    it("executes TSTORE and TLOAD", async () => {
+      const result = await executor.executeCode(transientCode);
+      expect(result.error).toBeUndefined();
+      expect(result.success).toBe(true);
+      expect(bytesToHex(result.returnValue)).toBe("2a".padStart(64, "0"));
     });
   });
 });
