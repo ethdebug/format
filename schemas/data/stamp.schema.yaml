@@ -38,4 +38,4 @@ additionalProperties: false
 
 examples:
   - schema: "ethdebug/format/program"
-    version: "0.1.0-draft.0"
+    version: "0.1.0-draft.1"
