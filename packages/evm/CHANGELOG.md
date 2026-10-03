@@ -7,11 +7,13 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.1 — 2026-10-03
+
 ### Fixed
 
 - The executor now runs with the Prague hardfork instead of Shanghai, so
   bytecode from current `solc` (which uses `MCOPY`, `TLOAD` and `TSTORE`)
-  executes.
+  executes ([#314]).
 
 ## 0.1.0-preview.0 — 2026-09-21
 
@@ -33,3 +35,4 @@ The version scheme changed: prerelease versions are now `preview.<n>`, and
 First publication.
 
 [#300]: https://github.com/ethdebug/format/pull/300
+[#314]: https://github.com/ethdebug/format/pull/314

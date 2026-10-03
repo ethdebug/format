@@ -6,6 +6,8 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-draft.1 — 2026-10-03
+
 ### Added
 
 - `version`, the package's own version string, generated at build time from

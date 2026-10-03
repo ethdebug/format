@@ -6,16 +6,18 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.1 — 2026-10-03
+
 ### Fixed
 
 - `dereference` composes the `yields` renames of nested template references.
   A region now takes the rename of each enclosing reference, innermost first,
-  where only the innermost rename used to apply.
+  where only the innermost rename used to apply ([#315]).
 - `dereference` accepts regions named like object properties, such as
   `length` or `constructor`. A region named `length` made `cursor.view` throw
   a `TypeError`; this is how solc's pointer templates name the length of a
   top-level dynamic array. Such a region is reachable by `regions.lookup` and
-  `regions.named`, but not as a property of `regions` itself.
+  `regions.named`, but not as a property of `regions` itself ([#316]).
 
 ## 0.1.0-preview.0 — 2026-09-21
 
@@ -108,3 +110,5 @@ First publication.
 [`3866cec`]: https://github.com/ethdebug/format/commit/3866cec
 [`4e9d0ac`]: https://github.com/ethdebug/format/commit/4e9d0ac
 [`59a5c38`]: https://github.com/ethdebug/format/commit/59a5c38
+[#315]: https://github.com/ethdebug/format/pull/315
+[#316]: https://github.com/ethdebug/format/pull/316

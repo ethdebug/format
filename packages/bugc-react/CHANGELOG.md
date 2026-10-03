@@ -7,6 +7,10 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.1 — 2026-10-03
+
+Updated `@ethdebug/bugc` to `0.1.0-preview.1`.
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and

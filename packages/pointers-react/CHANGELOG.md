@@ -7,6 +7,11 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.1 — 2026-10-03
+
+Updated `@ethdebug/format` to `0.1.0-draft.1` and `@ethdebug/pointers` to
+`0.1.0-preview.1`.
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and

@@ -7,6 +7,8 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.1 — 2026-10-03
+
 ### Changed
 
 - Every program `bugc` emits carries a stamp in its `ethdebug` field,

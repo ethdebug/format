@@ -53,6 +53,8 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+## 0.1.0-draft.1 — 2026-10-03
+
 ### Added
 
 - A stamp in an `ethdebug` field on **ethdebug/format/info**,
