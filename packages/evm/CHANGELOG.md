@@ -7,6 +7,12 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+### Fixed
+
+- The executor now runs with the Prague hardfork instead of Shanghai, so
+  bytecode from current `solc` (which uses `MCOPY`, `TLOAD` and `TSTORE`)
+  executes.
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and

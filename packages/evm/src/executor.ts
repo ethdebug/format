@@ -8,11 +8,17 @@
 import { EVM } from "@ethereumjs/evm";
 import type { InterpreterStep } from "@ethereumjs/evm";
 import { SimpleStateManager } from "@ethereumjs/statemanager";
-import { Common, Mainnet } from "@ethereumjs/common";
+import { Common, Hardfork, Mainnet } from "@ethereumjs/common";
 import { Address, Account } from "@ethereumjs/util";
 import { hexToBytes, bytesToHex } from "ethereum-cryptography/utils";
 
 import type { TraceStep, TraceHandler } from "#trace";
+
+/**
+ * Hardfork used for execution. Current solc targets prague by default,
+ * so this must be at least cancun (MCOPY, TLOAD, TSTORE, ...).
+ */
+const hardfork = Hardfork.Prague;
 
 /**
  * Options for executing a contract call.
@@ -75,7 +81,7 @@ export class Executor {
   constructor() {
     const common = new Common({
       chain: Mainnet,
-      hardfork: "shanghai",
+      hardfork,
     });
     this.stateManager = new SimpleStateManager();
     this.evm = new EVM({
@@ -299,7 +305,7 @@ export class Executor {
     this.evm = new EVM({
       common: new Common({
         chain: Mainnet,
-        hardfork: "shanghai",
+        hardfork,
       }),
       stateManager: this.stateManager,
     });
