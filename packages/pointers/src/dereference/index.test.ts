@@ -306,6 +306,67 @@ describe("dereference", () => {
     expect(regions[0].length).toEqual(Data.fromNumber(32));
   });
 
+  it("scopes defined variables to their `in`", async () => {
+    const pointer: Pointer = {
+      define: { slot: "0x00" },
+      in: {
+        group: [
+          {
+            define: { slot: { $sum: ["slot", 1] } },
+            in: { location: "storage", slot: "slot", name: "a" },
+          },
+          {
+            location: "storage",
+            slot: { $sum: ["slot", 2] },
+            name: "b",
+          },
+        ],
+      },
+    };
+
+    const cursor = await dereference(pointer);
+
+    const { regions } = await cursor.view(state);
+
+    expect(regions.map(({ name }) => name)).toEqual(["a", "b"]);
+    expect(regions[0]).toMatchObject({ slot: Data.fromNumber(1) });
+    expect(regions[1]).toMatchObject({ slot: Data.fromNumber(2) });
+  });
+
+  it("scopes variables defined inside referenced templates", async () => {
+    const pointer: Pointer = {
+      define: { slot: "0x00" },
+      in: {
+        templates: {
+          shifted: {
+            expect: ["slot"],
+            for: {
+              define: { slot: { $sum: ["slot", 1] } },
+              in: { location: "storage", slot: "slot", name: "a" },
+            },
+          },
+        },
+        in: {
+          group: [
+            { template: "shifted" },
+            {
+              location: "storage",
+              slot: { $sum: ["slot", 2] },
+              name: "b",
+            },
+          ],
+        },
+      },
+    };
+
+    const cursor = await dereference(pointer);
+
+    const { regions } = await cursor.view(state);
+
+    expect(regions[0]).toMatchObject({ slot: Data.fromNumber(1) });
+    expect(regions[1]).toMatchObject({ slot: Data.fromNumber(2) });
+  });
+
   it("works for templates", async () => {
     const templates: Pointer.Templates = {
       "memory-range": {
