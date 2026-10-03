@@ -84,12 +84,12 @@ For a dynamic array where the length is at slot 2 and elements start at
     { "name": "array-length", "location": "storage", "slot": "0x2" },
     {
       "list": {
-        "count": { "$read": "array-length" },
+        "count": { "~read": "array-length" },
         "each": "i",
         "is": {
           "location": "storage",
           "slot": {
-            "$sum": [{ "$keccak256": [{ "$wordsized": "0x2" }] }, "i"]
+            "~sum": [{ "~keccak256": [{ "~wordsized": "0x2" }] }, "i"]
           }
         }
       }
@@ -97,6 +97,10 @@ For a dynamic array where the length is at slot 2 and elements start at
   ]
 }`}
 </SchemaExample>
+
+Operators and constants such as `~read`, `~sum` and `~wordsize` start with
+`~`. Names that you choose, such as `array-length` and `i` here, never start
+with `~`.
 
 ## Integration approach
 

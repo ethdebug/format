@@ -15,19 +15,19 @@ hashed to derive them.
 ## Integers and bytes
 
 Every expression evaluates to a value of one of two sorts. An **integer** is
-an unbounded, non-negative number with no width: JSON numbers, `$wordsize`,
+an unbounded, non-negative number with no width: JSON numbers, `~wordsize`,
 variables, lookups, arithmetic results, and odd-digit hexadecimal literals
 are integers. **Bytes** are a finite sequence with a definite width:
-even-digit hexadecimal literals, `$read`, `$keccak256`, `$concat`, and the
+even-digit hexadecimal literals, `~read`, `~keccak256`, `~concat`, and the
 resize forms produce bytes.
 
 Where an integer is expected (arithmetic operands, a list `count`, a
 segment's `slot`, `offset`, or `length`), a bytes value is read as the
 non-negative integer its bytes encode, big-endian. Where bytes are expected
-(the operands of `$concat` and `$keccak256`, whose results depend on operand
+(the operands of `~concat` and `~keccak256`, whose results depend on operand
 widths), the operand **must** be width-bearing; a bare integer there is
-invalid and **must** first be given a width with `$sized<N>` or
-`$wordsized`. There is no implicit widening: the resize forms are the only
+invalid and **must** first be given a width with `~sized<N>` or
+`~wordsized`. There is no implicit widening: the resize forms are the only
 bridge from an integer to bytes.
 
 ## Literal values
@@ -55,6 +55,10 @@ resize form.
 
 An expression can be a string value equal to the identifier for a known
 scalar variable introduced by some pointer representation.
+
+The format's own terms start with `~` (`~wordsize`, `~this`, `~sum`, and so
+on). Names of variables, regions and templates never start with `~`, so a
+name can never be confused with one of these terms.
 
 For an example where scalar variables may appear, see the
 [List collection schema](/spec/pointer/collection/list).
@@ -89,7 +93,7 @@ that value is an **integer**.
 
 ## Reading from the EVM
 
-An expression can be an object of the form `{ "$read": "<region>" }`, where
+An expression can be an object of the form `{ "~read": "<region>" }`, where
 `<region>` references a particular region defined in some root pointer.
 
 The value of such an expression is the concatenation of bytes present in the
@@ -103,7 +107,7 @@ region: **bytes** whose width is the length of that region.
 
 ## Keccak256 hashes
 
-An expression can be an object of form `{ "$keccak256": [...] }`, indicating
+An expression can be an object of form `{ "~keccak256": [...] }`, indicating
 that the value of the expression is a Solidity-style, tightly-packed keccak256
 hash of the concatenation of bytes specified by the list. Each operand
 **must** be bytes, and the result is **bytes** of width 32.
@@ -115,7 +119,7 @@ hash of the concatenation of bytes specified by the list. Each operand
 
 ## Bytes concatenation
 
-An expression can be an object of form `{ "$concat": [...] }`, indicating
+An expression can be an object of form `{ "~concat": [...] }`, indicating
 that the value of the expression is the concatenation of bytes from each
 value in the list. Each operand **must** be bytes; the byte width of each
 operand is preserved, no padding is added or removed between operands, and
@@ -144,11 +148,11 @@ bytes.
 ## Region references
 
 Regions can be referenced either by name (which **must** be a defined region),
-or by use of the literal string value `"$this"` (which indicates that the
+or by use of the literal string value `"~this"` (which indicates that the
 referenced region is the region containing the expression itself).
 
 In cases where an expression is used outside the context of a particular
-region definition, the use of `"$this"` is **prohibited**.
+region definition, the use of `"~this"` is **prohibited**.
 
 Individual properties **may not** be defined with any reference to themselves.
 Properties also **may not** be defined in terms of mutual reference to each

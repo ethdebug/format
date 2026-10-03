@@ -121,7 +121,7 @@ explicit EVM lookup, and a few builtin operations.
 {
   "location": "memory",
   "offset": {
-    "$sum": [1, 1]
+    "~sum": [1, 1]
   },
   "length": 1
 }
@@ -153,7 +153,7 @@ known at some point in execution to be the value at the top of the stack.
       "name": "storage-slot",
       "location": "storage",
       "slot": {
-        "$read": "pointer-to-storage-slot"
+        "~read": "pointer-to-storage-slot"
       }
     }
   ]
@@ -185,7 +185,7 @@ and length.
       "name": "record-x",
       "location": "memory",
       "offset": {
-        "$read": "record-pointer"
+        "~read": "record-pointer"
       },
       "length": 32
     },
@@ -193,7 +193,7 @@ and length.
       "name": "record-y",
       "location": "memory",
       "offset": {
-        "$sum": [{ ".offset": "record-x" }, { ".length": "record-x" }]
+        "~sum": [{ ".offset": "record-x" }, { ".length": "record-x" }]
       },
       "length": 32
     }
@@ -240,16 +240,16 @@ item's index in the list, and the underlying pointer for the item itself.
     },
     {
       "list": {
-        "count": { "$read": "array-count" },
+        "count": { "~read": "array-count" },
         "each": "item-index",
         "is": {
           "name": "array-item",
           "location": "memory",
           "offset": {
-            "$sum": [
+            "~sum": [
               { ".offset": "array-count" },
               { ".length": "array-count" },
-              "$product": [
+              "~product": [
                 "item-index",
                 { ".length": "array-item" }
               ]
