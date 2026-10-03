@@ -12,8 +12,10 @@ export function createCursor(
         list.push(region);
       }
 
-      const named: { [name: string]: Cursor.Region[] } = {};
-      const current: { [name: string]: Cursor.Region } = {};
+      // no prototype, so that names like `constructor` or `__proto__` are
+      // ordinary keys
+      const named: { [name: string]: Cursor.Region[] } = Object.create(null);
+      const current: { [name: string]: Cursor.Region } = Object.create(null);
 
       const propertyFlags = {
         writable: false,
@@ -44,25 +46,29 @@ export function createCursor(
         }
       }
 
+      Object.defineProperties(regions, {
+        named: {
+          value: (name: string) => (name in named ? named[name] : []),
+          ...propertyFlags,
+        },
+        lookup: {
+          value: current,
+          ...propertyFlags,
+        },
+      });
+
+      // Also expose each name as a property of the array, unless it would
+      // shadow a property the array already has (e.g. `length`); those
+      // regions remain reachable by `named` and `lookup`.
       for (const [name, region] of Object.entries(current)) {
+        if (name in regions) {
+          continue;
+        }
         Object.defineProperty(regions, name, {
           value: region,
           ...propertyFlags,
         });
       }
-
-      Object.defineProperties(regions, {
-        named: {
-          value: (name: string) => named[name] || [],
-          ...propertyFlags,
-        },
-        lookup: {
-          value: {
-            ...current,
-          },
-          ...propertyFlags,
-        },
-      });
 
       return {
         regions,
