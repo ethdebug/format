@@ -10,6 +10,11 @@ description: |
   expression by identifier. Variables are specified **in order**, so that
   later appearing variables may reference earlier ones in the same object.
 
+  The variables are visible only within `in`. Pointers outside this scope
+  do not see them: later members of an enclosing group, for example, see
+  only the variables of their own enclosing scopes. A variable defined here
+  with the same identifier as an outer variable shadows it within `in`.
+
 type: object
 
 properties:
