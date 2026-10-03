@@ -64,7 +64,7 @@ export async function* generateRegions(
           // nested yields compose
           if (region.name) {
             const name = renameStack.reduceRight(
-              (name, mapping) => mapping[name] ?? name,
+              (name, mapping) => (hasOwn(mapping, name) ? mapping[name] : name),
               region.name,
             );
             if (name !== region.name) {
@@ -123,6 +123,9 @@ export async function* generateRegions(
   }
 }
 
+const hasOwn = (object: object, key: string) =>
+  Object.prototype.hasOwnProperty.call(object, key);
+
 async function initializeProcessOptions({
   templates,
   state,
@@ -131,8 +134,10 @@ async function initializeProcessOptions({
   const currentStackLength = await state.stack.length;
   const stackLengthChange = currentStackLength - initialStackLength;
 
-  const regions: Record<string, Cursor.Region> = {};
-  const variables: Record<string, Value> = {};
+  // no prototype, so that names like `constructor` or `__proto__` are
+  // ordinary keys
+  const regions: Record<string, Cursor.Region> = Object.create(null);
+  const variables: Record<string, Value> = Object.create(null);
 
   return {
     templates,

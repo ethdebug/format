@@ -138,9 +138,10 @@ async function* processScope(
 ): Process {
   const { define: variableExpressions, in: in_ } = collection;
 
-  const allVariables = {
-    ...options.variables,
-  };
+  const allVariables: Record<string, Value> = Object.assign(
+    Object.create(null),
+    options.variables,
+  );
   const newVariables: { [identifier: string]: Value } = {};
   for (const [identifier, expression] of Object.entries(variableExpressions)) {
     const value = await evaluate(expression, {

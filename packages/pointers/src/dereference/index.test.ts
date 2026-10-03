@@ -537,6 +537,51 @@ describe("dereference", () => {
     expect(regions.named("outer-data")).toHaveLength(2);
   });
 
+  describe.each(["length", "constructor", "__proto__", "toString"])(
+    "regions named like object properties (%s)",
+    (name) => {
+      it("allows referencing the region by name", async () => {
+        const pointer: Pointer = {
+          group: [
+            { name, location: "memory", offset: 32, length: 4 },
+            {
+              name: "data",
+              location: "memory",
+              offset: { ".offset": name },
+              length: { ".length": name },
+            },
+          ],
+        };
+
+        const cursor = await dereference(pointer);
+        const { regions } = await cursor.view(state);
+
+        expect(regions).toHaveLength(2);
+        expect(regions[1].offset).toEqual(Data.fromNumber(32));
+        expect(regions[1].length).toEqual(Data.fromNumber(4));
+      });
+
+      it("allows renaming the region with yields", async () => {
+        const templates: Pointer.Templates = {
+          leaf: {
+            expect: [],
+            for: { name, location: "memory", offset: 0, length: 1 },
+          },
+        };
+        const pointer: Pointer = {
+          template: "leaf",
+          yields: { [name]: "renamed" },
+        };
+
+        const cursor = await dereference(pointer, { templates });
+        const { regions } = await cursor.view(state);
+
+        expect(regions).toHaveLength(1);
+        expect(regions[0].name).toEqual("renamed");
+      });
+    },
+  );
+
   it("composes yields renames across nested template references", async () => {
     const templates: Pointer.Templates = {
       leaf: {
