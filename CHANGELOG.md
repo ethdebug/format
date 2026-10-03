@@ -55,6 +55,34 @@ The sections do not signal obligations; the prefixes do.
 
 ### Changed
 
+- The format's own vocabulary inside pointer expressions uses the sigil `~`
+  instead of `$`, which leaves `$` free for source-language names (Solidity
+  allows a name to start with `$`). The terms are the constants and
+  references `~wordsize` and `~this`, and the operators `~sum`,
+  `~difference`, `~product`, `~quotient`, `~remainder`, `~read`, `~keccak256`,
+  `~concat`, `~wordsized`, and `~sized<N>`. An identifier still must not
+  start with `~` ([#323]).
+  - Schemas: **ethdebug/format/pointer/expression**,
+    **ethdebug/format/pointer/identifier**, **ethdebug/format/pointer**,
+    **ethdebug/format/pointer/collection/group**,
+    **ethdebug/format/pointer/collection/scope**,
+    **ethdebug/format/pointer/region/stack**,
+    **ethdebug/format/pointer/region/storage**,
+    **ethdebug/format/pointer/region/transient**,
+    **ethdebug/format/pointer/scheme/segment**, **ethdebug/format/info**,
+    **ethdebug/format/info/resources**
+  - Producers: required: emit `~` for the operators, constants and the
+    `~this` reference; the `$` forms no longer validate.
+    **ethdebug/format/pointer/expression** names the operators in
+    `properties` (`~sum`, `~read`, `~keccak256`, and so on) and
+    `patternProperties` (`^~sized([1-9]+[0-9]*)$`, `^~wordsized$`), the
+    constant in `enum` (`~wordsize`), and the reference in `const`
+    (`~this`).
+  - Consumers: required: read the `~` operators, constants and reference
+    named by **ethdebug/format/pointer/expression**'s `properties`,
+    `patternProperties`, `enum` and `const`. The `$` spellings, such as
+    `"$wordsize"` and `{ "$sum": [...] }`, are no longer format terms.
+
 - The variables of a scope (`define`/`in`) are visible only within its `in`.
   Pointers outside the scope, such as later members of an enclosing group, do
   not see them, and a variable defined with an outer variable's identifier
@@ -675,3 +703,4 @@ First published version of the specification.
 [#309]: https://github.com/ethdebug/format/pull/309
 [#317]: https://github.com/ethdebug/format/pull/317
 [#318]: https://github.com/ethdebug/format/pull/318
+[#323]: https://github.com/ethdebug/format/pull/323
