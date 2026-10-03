@@ -85,7 +85,9 @@ evaluates to a non-zero value.
 ## Scope
 
 A **scope** defines variables that can be used in a nested pointer. Variables
-are evaluated in order, so later variables can reference earlier ones.
+are evaluated in order, so later variables can reference earlier ones. They are
+visible only within `in`: pointers outside the scope, such as later members of
+an enclosing group, do not see them.
 
 Scopes help break complex pointer definitions into readable steps. For examples
 combining scopes with keccak256 for storage slot computation, see the

@@ -53,6 +53,19 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Changed
+
+- The variables of a scope (`define`/`in`) are visible only within its `in`.
+  Pointers outside the scope, such as later members of an enclosing group, do
+  not see them, and a variable defined with an outer variable's identifier
+  shadows it only within `in`. The description now says so ([#318]).
+  - Schemas: **ethdebug/format/pointer/collection/scope**
+  - Producers: no change needed. The text states the existing meaning; solc's
+    storage templates already depend on it.
+  - Consumers: required: a consumer that keeps a scope's variables after its
+    `in` must discard them there. `@ethdebug/pointers` does so from
+    [#317].
+
 ## 0.1.0-draft.1 — 2026-10-03
 
 ### Added
@@ -660,3 +673,5 @@ First published version of the specification.
 [#303]: https://github.com/ethdebug/format/pull/303
 [#305]: https://github.com/ethdebug/format/pull/305
 [#309]: https://github.com/ethdebug/format/pull/309
+[#317]: https://github.com/ethdebug/format/pull/317
+[#318]: https://github.com/ethdebug/format/pull/318
