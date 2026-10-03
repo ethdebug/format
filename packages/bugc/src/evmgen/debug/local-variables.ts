@@ -38,8 +38,8 @@
  * lives in memory at `FRAME_POINTER` (0x80); a frame-homed local is at
  * `mem[ mem[FRAME_POINTER] + delta ]`, expressed as a `group` naming
  * the frame region `-frame` (no BUG identifier starts with `-`) and a
- * data region whose offset reads it (`$read`) and adds the static
- * delta (`$sum`). Functions without a frame (main/create) home locals
+ * data region whose offset reads it (`~read`) and adds the static
+ * delta (`~sum`). Functions without a frame (main/create) home locals
  * at a static memory offset.
  */
 import type * as Format from "@ethdebug/format";
@@ -91,7 +91,7 @@ function memoryPointer(
       {
         name: identifier,
         location: "memory",
-        offset: { $sum: [{ $read: FRAME }, offset] },
+        offset: { "~sum": [{ "~read": FRAME }, offset] },
         length: size,
       },
     ],
@@ -151,8 +151,8 @@ function dataPointers(
       {
         name: `${name}-data`,
         location: "memory",
-        offset: { $sum: [base, 32] },
-        length: { $read: `${name}-length` },
+        offset: { "~sum": [base, 32] },
+        length: { "~read": `${name}-length` },
       },
     ];
   }
@@ -162,7 +162,7 @@ function dataPointers(
   const index = `i${depth}`;
   const element = `${name}-element`;
   const wordOffset = (within: number): Format.Pointer.Expression => ({
-    $sum: [base, 32 + within, { $product: [index, 32] }],
+    "~sum": [base, 32 + within, { "~product": [index, 32] }],
   });
   const elementType = fromBugType(type.element);
   let is: Format.Pointer;
@@ -176,7 +176,7 @@ function dataPointers(
     };
   } else {
     const nested = dataPointers(
-      { $read: element },
+      { "~read": element },
       type.element,
       element,
       depth + 1,
@@ -197,7 +197,7 @@ function dataPointers(
 
   return [
     length,
-    { list: { count: { $read: `${name}-length` }, each: index, is } },
+    { list: { count: { "~read": `${name}-length` }, each: index, is } },
   ];
 }
 
@@ -211,8 +211,8 @@ function calldataPointer(name: string): Format.Pointer {
   return {
     name: `${name}-data`,
     location: "calldata",
-    offset: { $quotient: [{ $read: name }, half] },
-    length: { $remainder: [{ $read: name }, half] },
+    offset: { "~quotient": [{ "~read": name }, half] },
+    length: { "~remainder": [{ "~read": name }, half] },
   };
 }
 
@@ -661,7 +661,7 @@ function snapshotAt(
       data = [calldataPointer(name)];
     } else {
       if (type.kind !== "ref" || type.location !== "memory") continue;
-      data = dataPointers({ $read: name }, type.origin, name);
+      data = dataPointers({ "~read": name }, type.origin, name);
       if (!data) continue;
     }
     const allocation = info.allocations[located.temp];

@@ -37,9 +37,9 @@ additionalProperties: false
 examples:
   - define:
       example-offset:
-        $sum: [1, 2]
+        ~sum: [1, 2]
       example-length:
-        $product: [2, $wordsize]
+        ~product: [2, ~wordsize]
     in:
       name: example
       location: memory

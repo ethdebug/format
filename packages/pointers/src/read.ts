@@ -95,8 +95,8 @@ const wordsize = 32n;
  * words) and `length` may run across word boundaries (concatenating
  * sequentially-addressed words).
  *
- * Given offset `n`, the segment begins at byte `n mod $wordsize` of the
- * word `floor(n / $wordsize)` words after the one specified. When `length`
+ * Given offset `n`, the segment begins at byte `n mod ~wordsize` of the
+ * word `floor(n / ~wordsize)` words after the one specified. When `length`
  * is omitted, the segment ends at the end of the word in which it begins.
  *
  * `readWord(carry, slice)` reads bytes from the word `carry` words after

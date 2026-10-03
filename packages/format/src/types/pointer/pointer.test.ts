@@ -14,6 +14,8 @@ describe("Pointer.isIdentifier", () => {
     "", // empty
     "0abc", // leading digit
     "$x", // leading $
+    "~x", // leading ~, reserved for the format's own terms
+    "~wordsize", // the constant, not an identifier
     "a b", // space
     "foo\\bar", // embedded backslash — accepted before the fix
     "\\", // lone backslash
@@ -43,6 +45,21 @@ describe("Pointer.isIdentifier", () => {
     for (const value of [undefined, null, 42, {}, ["a"]]) {
       expect(Pointer.isIdentifier(value)).toBe(false);
     }
+  });
+});
+
+describe("the ~ sigil", () => {
+  it("reads ~-prefixed terms as the format's own", () => {
+    expect(Pointer.Expression.isConstant("~wordsize")).toBe(true);
+    expect(Pointer.Expression.isReference("~this")).toBe(true);
+    expect(Pointer.Expression.Arithmetic.isSum({ "~sum": [1, 2] })).toBe(true);
+  });
+
+  it("does not read the old $-prefixed terms", () => {
+    expect(Pointer.Expression.isConstant("$wordsize")).toBe(false);
+    expect(Pointer.isExpression("$wordsize")).toBe(false);
+    expect(Pointer.Expression.isReference("$this")).toBe(false);
+    expect(Pointer.isExpression({ $sum: [1, 2] })).toBe(false);
   });
 });
 

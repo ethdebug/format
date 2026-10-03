@@ -4,6 +4,10 @@ $id: "schema:ethdebug/format/pointer/identifier"
 title: ethdebug/format/pointer/identifier
 description: |
   An identifier for use within the context of a root pointer
+
+  An identifier **must not** start with `~`: that prefix is reserved for the
+  format's own terms in pointer expressions (e.g., `~wordsize`, `~this`,
+  `~sum`), so a name can never be confused with one of them.
 type: string
 pattern: "^[a-zA-Z_\\-]+[a-zA-Z0-9$_\\-]*$"
 

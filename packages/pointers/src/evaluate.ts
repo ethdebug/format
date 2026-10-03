@@ -9,11 +9,11 @@ import { keccak256 } from "ethereum-cryptography/keccak";
  * The result of evaluating an expression: one of two sorts of value.
  *
  * An **integer** is an unbounded non-negative integer with no width; it
- * is produced by JSON-number literals, `$wordsize`, lookups, arithmetic,
+ * is produced by JSON-number literals, `~wordsize`, lookups, arithmetic,
  * and odd-digit hex literals.
  *
  * **Bytes** are a byte sequence with a definite width; they are produced
- * by even-digit hex literals, `$read`, and the resize forms.
+ * by even-digit hex literals, `~read`, and the resize forms.
  *
  * Variables carry the sort of the expression that defined them.
  */
@@ -124,8 +124,46 @@ export async function evaluate(
   throw new Error(
     `Unexpected runtime failure to recognize kind of expression: ${JSON.stringify(
       expression,
-    )}`,
+    )}${sigilHint(...namesIn(expression))}`,
   );
+}
+
+const formerTerm = new RegExp(
+  "^\\$(wordsize|this|sum|difference|product|quotient|remainder|read|" +
+    "keccak256|concat|wordsized|sized\\d+)$",
+);
+
+/**
+ * The strings in an unrecognized expression that may be old `$` terms: the
+ * expression itself, or an object's keys and string values (as in
+ * `{ ".offset": "$this" }`)
+ */
+function namesIn(expression: unknown): string[] {
+  if (typeof expression === "string") {
+    return [expression];
+  }
+  if (expression && typeof expression === "object") {
+    return [
+      ...Object.keys(expression),
+      ...Object.values(expression).filter(
+        (value): value is string => typeof value === "string",
+      ),
+    ];
+  }
+  return [];
+}
+
+/**
+ * For an error message: if one of `names` is a format term written with
+ * the old `$` sigil, suggest its `~` spelling. The value still fails;
+ * `$` is not an alias.
+ */
+function sigilHint(...names: string[]): string {
+  const name = names.find((name) => formerTerm.test(name));
+  return name
+    ? `; did you mean \`~${name.slice(1)}\`? ` +
+        "(the expression sigil changed from `$` to `~`)"
+    : "";
 }
 
 /**
@@ -139,11 +177,11 @@ async function evaluateInteger(
 }
 
 /**
- * Evaluate the operands of a width-sensitive operation (`$concat`,
- * `$keccak256`), each of which must evaluate to bytes
+ * Evaluate the operands of a width-sensitive operation (`~concat`,
+ * `~keccak256`), each of which must evaluate to bytes
  */
 async function evaluateBytesOperands(
-  operation: "$concat" | "$keccak256",
+  operation: "~concat" | "~keccak256",
   operands: Pointer.Expression[],
   options: EvaluateOptions,
 ): Promise<Data[]> {
@@ -156,7 +194,7 @@ async function evaluateBytesOperands(
           [
             `Operand ${index} of ${operation} (${JSON.stringify(operand)}) `,
             `evaluates to the integer ${value.value}, which has no byte `,
-            `width; give it a width with $wordsized or $sizedN`,
+            `width; give it a width with ~wordsized or ~sizedN`,
           ].join(""),
         );
       }
@@ -189,7 +227,7 @@ async function evaluateConstant(
   constant: Pointer.Expression.Constant,
 ): Promise<Value> {
   switch (constant) {
-    case "$wordsize":
+    case "~wordsize":
       return Value.integer(32n);
   }
 }
@@ -220,21 +258,21 @@ async function evaluateArithmetic(
   );
 
   switch (operation) {
-    case "$sum":
+    case "~sum":
       return Value.integer(operands.reduce((sum, value) => sum + value, 0n));
-    case "$difference": {
+    case "~difference": {
       const [a, b] = operands;
       return Value.integer(a > b ? a - b : 0n);
     }
-    case "$product":
+    case "~product":
       return Value.integer(
         operands.reduce((product, value) => product * value, 1n),
       );
-    case "$quotient": {
+    case "~quotient": {
       const [a, b] = operands;
       return Value.integer(a / b);
     }
-    case "$remainder": {
+    case "~remainder": {
       const [a, b] = operands;
       return Value.integer(a % b);
     }
@@ -248,8 +286,8 @@ async function evaluateKeccak256(
   options: EvaluateOptions,
 ): Promise<Value> {
   const operands = await evaluateBytesOperands(
-    "$keccak256",
-    expression.$keccak256,
+    "~keccak256",
+    expression["~keccak256"],
     options,
   );
 
@@ -263,8 +301,8 @@ async function evaluateConcat(
   options: EvaluateOptions,
 ): Promise<Value> {
   const operands = await evaluateBytesOperands(
-    "$concat",
-    expression.$concat,
+    "~concat",
+    expression["~concat"],
     options,
   );
 
@@ -278,7 +316,7 @@ async function evaluateResize(
   const [[operation, subexpression]] = Object.entries(expression);
 
   const newLength = Pointer.Expression.Resize.isToNumber(expression)
-    ? Number(operation.match(/^\$sized([1-9]+[0-9]*)$/)![1])
+    ? Number(operation.match(/^~sized([1-9]+[0-9]*)$/)![1])
     : 32;
 
   const value = await evaluate(subexpression, options);
@@ -318,7 +356,7 @@ async function evaluateRead(
 ): Promise<Value> {
   const { state: _state, regions } = options;
 
-  const identifier = expression.$read;
+  const identifier = expression["~read"];
   const region = regions[identifier];
   if (!region) {
     throw new Error(`Region not found: ${identifier}`);

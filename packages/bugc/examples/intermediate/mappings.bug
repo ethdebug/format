@@ -29,7 +29,7 @@ code {
             for:
               define:
                 slot:
-                  $keccak256: [{ $wordsized: key }, { $wordsized: slot }]
+                  ~keccak256: [{ ~wordsized: key }, { ~wordsized: slot }]
               in: { location: storage, slot: slot, name: value }
         in: { location: storage, slot: 0 }
   */

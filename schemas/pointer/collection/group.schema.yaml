@@ -22,5 +22,5 @@ examples:
         slot: 0
       - location: memory
         offset:
-          $read: "data-pointer"
+          ~read: "data-pointer"
         length: 32

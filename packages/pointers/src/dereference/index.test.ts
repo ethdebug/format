@@ -52,7 +52,7 @@ describe("dereference", () => {
     const pointer: Pointer = {
       location: "memory",
       offset: {
-        $sum: [0x40, 0x20],
+        "~sum": [0x40, 0x20],
       },
       length: 0x20,
     };
@@ -76,14 +76,14 @@ describe("dereference", () => {
           name: "a",
           location: "memory",
           offset: {
-            $sum: [0x40, 0x20],
+            "~sum": [0x40, 0x20],
           },
           length: 0x20,
         },
         {
           location: "memory",
           offset: {
-            $sum: [{ ".offset": "a" }, { ".length": "a" }],
+            "~sum": [{ ".offset": "a" }, { ".length": "a" }],
           },
           length: { ".length": "a" },
         },
@@ -117,7 +117,7 @@ describe("dereference", () => {
           name: "item",
           location: "memory",
           offset: {
-            $product: ["i", 32],
+            "~product": ["i", 32],
           },
           length: 32,
         },
@@ -141,11 +141,11 @@ describe("dereference", () => {
     }
   });
 
-  it("allows referencing previous fields by way of $this", async () => {
+  it("allows referencing previous fields by way of ~this", async () => {
     const pointer: Pointer = {
       location: "memory",
       offset: 32,
-      length: { ".offset": "$this" },
+      length: { ".offset": "~this" },
     };
 
     const cursor = await dereference(pointer);
@@ -160,10 +160,10 @@ describe("dereference", () => {
     });
   });
 
-  it("allows referencing later fields by way of $this", async () => {
+  it("allows referencing later fields by way of ~this", async () => {
     const pointer: Pointer = {
       location: "memory",
-      offset: { ".length": "$this" },
+      offset: { ".length": "~this" },
       length: 32,
     };
 
@@ -182,8 +182,8 @@ describe("dereference", () => {
   it("allows referencing fields that reference other fields", async () => {
     const pointer: Pointer = {
       location: "storage",
-      slot: { ".offset": "$this" },
-      offset: { ".length": "$this" },
+      slot: { ".offset": "~this" },
+      offset: { ".length": "~this" },
       length: 32,
     };
 
@@ -200,7 +200,7 @@ describe("dereference", () => {
     });
   });
 
-  it("resolves .length lookups of $this inside list items", async () => {
+  it("resolves .length lookups of ~this inside list items", async () => {
     // mirrors the shape of the `struct Record[] memory` schema example,
     // where each item's offset is computed from its own length
     const pointer: Pointer = {
@@ -211,7 +211,10 @@ describe("dereference", () => {
           name: "item",
           location: "memory",
           offset: {
-            $sum: [64, { $product: ["item-index", { ".length": "$this" }] }],
+            "~sum": [
+              64,
+              { "~product": ["item-index", { ".length": "~this" }] },
+            ],
           },
           length: 32,
         },
@@ -229,38 +232,38 @@ describe("dereference", () => {
     ]);
   });
 
-  it("throws an error on a self-referential $this lookup", async () => {
+  it("throws an error on a self-referential ~this lookup", async () => {
     const pointer: Pointer = {
       location: "memory",
       offset: 0,
-      length: { ".length": "$this" },
+      length: { ".length": "~this" },
     };
 
     const cursor = await dereference(pointer);
 
     await expect(cursor.view(state)).rejects.toThrow(
-      "Circular reference detected: $this.length",
+      "Circular reference detected: ~this.length",
     );
   });
 
   it("throws an error on circular reference", async () => {
     const pointer: Pointer = {
       location: "memory",
-      offset: { ".length": "$this" },
-      length: { ".offset": "$this" },
+      offset: { ".length": "~this" },
+      length: { ".offset": "~this" },
     };
 
     const cursor = await dereference(pointer);
 
     await expect(cursor.view(state)).rejects.toThrow(
-      "Circular reference detected: $this.offset",
+      "Circular reference detected: ~this.offset",
     );
   });
 
   it("works for conditionals", async () => {
     const pointer: Pointer = {
       if: {
-        $difference: [5, 5],
+        "~difference": [5, 5],
       },
       then: {
         name: "a",
@@ -312,12 +315,12 @@ describe("dereference", () => {
       in: {
         group: [
           {
-            define: { slot: { $sum: ["slot", 1] } },
+            define: { slot: { "~sum": ["slot", 1] } },
             in: { location: "storage", slot: "slot", name: "a" },
           },
           {
             location: "storage",
-            slot: { $sum: ["slot", 2] },
+            slot: { "~sum": ["slot", 2] },
             name: "b",
           },
         ],
@@ -341,7 +344,7 @@ describe("dereference", () => {
           shifted: {
             expect: ["slot"],
             for: {
-              define: { slot: { $sum: ["slot", 1] } },
+              define: { slot: { "~sum": ["slot", 1] } },
               in: { location: "storage", slot: "slot", name: "a" },
             },
           },
@@ -351,7 +354,7 @@ describe("dereference", () => {
             { template: "shifted" },
             {
               location: "storage",
-              slot: { $sum: ["slot", 2] },
+              slot: { "~sum": ["slot", 2] },
               name: "b",
             },
           ],
@@ -479,7 +482,7 @@ describe("dereference", () => {
         for: {
           group: [
             { name: "a", location: "storage", slot: "slot" },
-            { name: "b", location: "storage", slot: { $sum: ["slot", 1] } },
+            { name: "b", location: "storage", slot: { "~sum": ["slot", 1] } },
           ],
         },
       },
@@ -519,7 +522,7 @@ describe("dereference", () => {
               name: "second",
               location: "memory",
               offset: {
-                $sum: [{ ".offset": "first" }, { ".length": "first" }],
+                "~sum": [{ ".offset": "first" }, { ".length": "first" }],
               },
               length: { ".length": "first" },
             },
@@ -572,7 +575,7 @@ describe("dereference", () => {
               in: { template: "inner" },
             },
             {
-              define: { slot: { $sum: ["base-slot", 1] } },
+              define: { slot: { "~sum": ["base-slot", 1] } },
               in: { template: "inner" },
             },
           ],
@@ -811,5 +814,19 @@ describe("dereference", () => {
     expect(regions).toHaveLength(1);
     expect(regions[0].name).toEqual("my-slot-value");
     expect(regions.lookup["my-slot-value"]).toBeDefined();
+  });
+
+  it("rejects a $ operator", async () => {
+    const pointer = {
+      location: "memory",
+      offset: { $sum: [1, 2] },
+      length: 0x20,
+    } as unknown as Pointer;
+
+    const cursor = await dereference(pointer);
+
+    await expect(cursor.view(state)).rejects.toThrow(
+      "Unexpected unknown kind of pointer",
+    );
   });
 });

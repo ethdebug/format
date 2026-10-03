@@ -12,7 +12,7 @@ description: |
 
   In such cases, this schema defines the range as the concatenation of bytes
   across slots such that the address of the first byte after the end of slot
-  `p` (i.e., `{ "offset": "$wordsize" }`) is interpreted as the first byte of
+  `p` (i.e., `{ "offset": "~wordsize" }`) is interpreted as the first byte of
   slot `p + 1`.
 
 type: object
@@ -25,10 +25,10 @@ properties:
       The starting byte index within the slot.
 
       Bytes within a slot are numbered from the most significant byte. A
-      slot's value is its `$wordsize`-byte big-endian word, and byte `0` is
+      slot's value is its `~wordsize`-byte big-endian word, and byte `0` is
       the first byte of that word, as if the word were written to memory. An
       `offset` of `0` therefore addresses the most significant byte of the
-      slot, and an `offset` of `$wordsize - 1` addresses the least
+      slot, and an `offset` of `~wordsize - 1` addresses the least
       significant byte.
 
       This field is **optional**. If unspecified, it has the default value of
@@ -37,13 +37,13 @@ properties:
 
       A data layout that counts bytes from the low-order end of a slot must
       convert: a value of `n` bytes that sits `o` bytes from the low-order end
-      is at `offset` `$wordsize - o - n`. An emitter may write that number as
+      is at `offset` `~wordsize - o - n`. An emitter may write that number as
       a literal, which is the simplest form to read and resolve. It may also
       write the conversion as an expression, such as
 
       ```json
       {
-        "$difference": ["$wordsize", { "$sum": [o, { ".length": "$this" }] }]
+        "~difference": ["~wordsize", { "~sum": [o, { ".length": "~this" }] }]
       }
       ```
 
@@ -53,15 +53,15 @@ properties:
 
       This field's expression must resolve to a non-negative value. It is
       **not** bounded by the word size: an offset that meets or exceeds
-      `$wordsize` carries into subsequent slots. Given a `slot` value `p`
+      `~wordsize` carries into subsequent slots. Given a `slot` value `p`
       and an `offset` value `n`, the segment begins at byte
-      `n mod $wordsize` of slot `p + floor(n / $wordsize)`. (Equivalently,
-      byte `{ "offset": "$wordsize" }` of slot `p` is byte `0` of slot
+      `n mod ~wordsize` of slot `p + floor(n / ~wordsize)`. (Equivalently,
+      byte `{ "offset": "~wordsize" }` of slot `p` is byte `0` of slot
       `p + 1`, consistent with the multi-slot note above.) Emitters may
       therefore chain byte sums across a slot boundary without decomposing
       into slot and byte components themselves; a resolver recovers the
       effective slot and byte by division and remainder against
-      `$wordsize`.
+      `~wordsize`.
     $ref: "schema:ethdebug/format/pointer/expression"
     default: 0
   length:
@@ -78,11 +78,11 @@ properties:
       following the slot specified.
     $ref: "schema:ethdebug/format/pointer/expression"
     default:
-      $difference:
-        - $wordsize
-        - $remainder:
-            - .offset: $this
-            - $wordsize
+      ~difference:
+        - ~wordsize
+        - ~remainder:
+            - .offset: ~this
+            - ~wordsize
 
 required:
   - slot
@@ -91,14 +91,14 @@ examples:
   - slot: 0
   - slot: 1
     length:
-      $product:
-        - $wordsize
+      ~product:
+        - ~wordsize
         - 3
-  # a carry example: an offset at or beyond `$wordsize` addresses a later
-  # slot. Here `offset: $wordsize` is byte 0 of slot 1, so this segment is
+  # a carry example: an offset at or beyond `~wordsize` addresses a later
+  # slot. Here `offset: ~wordsize` is byte 0 of slot 1, so this segment is
   # the 4 bytes beginning there.
   - slot: 0
-    offset: $wordsize
+    offset: ~wordsize
     length: 4
   # packed values: an `address` (20 bytes) at the low-order end of slot 2,
   # and a `uint32` (4 bytes) just above it, written with literal offsets
@@ -108,19 +108,19 @@ examples:
   - slot: 2
     offset: 8
     length: 4
-  # the same two values with the conversion `$wordsize - (o + n)` written as
+  # the same two values with the conversion `~wordsize - (o + n)` written as
   # an expression that takes `n` from the region's own length
   - slot: 2
     offset:
-      $difference:
-        - $wordsize
-        - .length: $this
+      ~difference:
+        - ~wordsize
+        - .length: ~this
     length: 20
   - slot: 2
     offset:
-      $difference:
-        - $wordsize
-        - $sum:
+      ~difference:
+        - ~wordsize
+        - ~sum:
             - 20
-            - .length: $this
+            - .length: ~this
     length: 4

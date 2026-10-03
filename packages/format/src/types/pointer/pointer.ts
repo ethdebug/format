@@ -252,9 +252,9 @@ export namespace Pointer {
       typeof value === "number" ||
       (typeof value === "string" && /^0x[0-9a-fA-F]+$/.test(value));
 
-    export type Constant = "$wordsize";
+    export type Constant = "~wordsize";
     export const isConstant = (value: unknown): value is Constant =>
-      typeof value === "string" && ["$wordsize"].includes(value);
+      typeof value === "string" && ["~wordsize"].includes(value);
 
     export type Variable = string;
     export const isVariable = (value: unknown): value is Variable =>
@@ -306,46 +306,46 @@ export namespace Pointer {
         isOperands(value) && value.length === 2;
 
       export interface Sum {
-        $sum: Expression[];
+        "~sum": Expression[];
       }
-      export const isSum = makeIsOperation<"$sum", Sum>("$sum", isOperands);
+      export const isSum = makeIsOperation<"~sum", Sum>("~sum", isOperands);
 
       export interface Difference {
-        $difference: [Expression, Expression];
+        "~difference": [Expression, Expression];
       }
-      export const isDifference = makeIsOperation<"$difference", Difference>(
-        "$difference",
+      export const isDifference = makeIsOperation<"~difference", Difference>(
+        "~difference",
         isTwoOperands,
       );
 
       export interface Product {
-        $product: Expression[];
+        "~product": Expression[];
       }
-      export const isProduct = makeIsOperation<"$product", Product>(
-        "$product",
+      export const isProduct = makeIsOperation<"~product", Product>(
+        "~product",
         isOperands,
       );
 
       export interface Quotient {
-        $quotient: [Expression, Expression];
+        "~quotient": [Expression, Expression];
       }
-      export const isQuotient = makeIsOperation<"$quotient", Quotient>(
-        "$quotient",
+      export const isQuotient = makeIsOperation<"~quotient", Quotient>(
+        "~quotient",
         isTwoOperands,
       );
 
       export interface Remainder {
-        $remainder: [Expression, Expression];
+        "~remainder": [Expression, Expression];
       }
-      export const isRemainder = makeIsOperation<"$remainder", Remainder>(
-        "$remainder",
+      export const isRemainder = makeIsOperation<"~remainder", Remainder>(
+        "~remainder",
         isTwoOperands,
       );
     }
 
-    export type Reference = Identifier | "$this";
+    export type Reference = Identifier | "~this";
     export const isReference = (value: unknown): value is Reference =>
-      isIdentifier(value) || value === "$this";
+      isIdentifier(value) || value === "~this";
 
     export type Lookup = Lookup.Offset | Lookup.Length | Lookup.Slot;
     export const isLookup = (value: unknown): value is Lookup =>
@@ -392,23 +392,23 @@ export namespace Pointer {
     }
 
     export interface Read {
-      $read: Reference;
+      "~read": Reference;
     }
-    export const isRead = makeIsOperation<"$read", Read>("$read", isReference);
+    export const isRead = makeIsOperation<"~read", Read>("~read", isReference);
 
     export interface Keccak256 {
-      $keccak256: Expression[];
+      "~keccak256": Expression[];
     }
-    export const isKeccak256 = makeIsOperation<"$keccak256", Keccak256>(
-      "$keccak256",
+    export const isKeccak256 = makeIsOperation<"~keccak256", Keccak256>(
+      "~keccak256",
       isOperands,
     );
 
     export interface Concat {
-      $concat: Expression[];
+      "~concat": Expression[];
     }
-    export const isConcat = makeIsOperation<"$concat", Concat>(
-      "$concat",
+    export const isConcat = makeIsOperation<"~concat", Concat>(
+      "~concat",
       isOperands,
     );
 
@@ -422,7 +422,7 @@ export namespace Pointer {
 
     export namespace Resize {
       export type ToNumber<N extends number> = {
-        [K in `$sized${N}`]: Expression;
+        [K in `~sized${N}`]: Expression;
       };
       export const isToNumber = <N extends number>(
         value: unknown,
@@ -436,19 +436,19 @@ export namespace Pointer {
         }
         const [key] = Object.keys(value);
 
-        return typeof key === "string" && /^\$sized([1-9]+[0-9]*)$/.test(key);
+        return typeof key === "string" && /^~sized([1-9]+[0-9]*)$/.test(key);
       };
 
       export type ToWordsize = {
-        $wordsized: Expression;
+        "~wordsized": Expression;
       };
       export const isToWordsize = (value: unknown): value is ToWordsize =>
         !!value &&
         typeof value === "object" &&
         Object.keys(value).length === 1 &&
-        "$wordsized" in value &&
-        typeof value.$wordsized !== "undefined" &&
-        isExpression(value.$wordsized);
+        "~wordsized" in value &&
+        typeof value["~wordsized"] !== "undefined" &&
+        isExpression(value["~wordsized"]);
     }
   }
 
