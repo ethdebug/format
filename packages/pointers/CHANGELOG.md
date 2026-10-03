@@ -6,6 +6,12 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Fixed
+
+- `dereference` composes the `yields` renames of nested template references.
+  A region now takes the rename of each enclosing reference, innermost first,
+  where only the innermost rename used to apply.
+
 ## 0.1.0-preview.0 — 2026-09-21
 
 The version scheme changed: prerelease versions are now `preview.<n>`, and

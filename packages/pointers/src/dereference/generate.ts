@@ -60,12 +60,15 @@ export async function* generateRegions(
         while (!result.done) {
           let region = result.value;
 
-          // Apply rename if in context and region has a name in mapping
-          const currentMapping = renameStack[renameStack.length - 1];
-          if (currentMapping && region.name) {
-            const newName = currentMapping[region.name];
-            if (newName && newName !== region.name) {
-              region = { ...region, name: newName };
+          // Apply every active rename, innermost template first, so that
+          // nested yields compose
+          if (region.name) {
+            const name = renameStack.reduceRight(
+              (name, mapping) => mapping[name] ?? name,
+              region.name,
+            );
+            if (name !== region.name) {
+              region = { ...region, name };
             }
           }
 

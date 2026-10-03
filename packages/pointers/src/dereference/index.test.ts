@@ -537,6 +537,36 @@ describe("dereference", () => {
     expect(regions.named("outer-data")).toHaveLength(2);
   });
 
+  it("composes yields renames across nested template references", async () => {
+    const templates: Pointer.Templates = {
+      leaf: {
+        expect: ["slot"],
+        for: { name: "data", location: "storage", slot: "slot" },
+      },
+      middle: {
+        expect: ["slot"],
+        for: {
+          template: "leaf",
+          yields: { data: "name-data" },
+        },
+      },
+    };
+
+    const pointer: Pointer = {
+      define: { slot: 10 },
+      in: {
+        template: "middle",
+        yields: { "name-data": "value-name-data" },
+      },
+    };
+
+    const cursor = await dereference(pointer, { templates });
+    const { regions } = await cursor.view(state);
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0].name).toEqual("value-name-data");
+  });
+
   it("works for inline template definitions", async () => {
     const pointer: Pointer = {
       templates: {
