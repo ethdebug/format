@@ -6,6 +6,14 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Fixed
+
+- `dereference` scopes the variables of a `define` to its `in`. They used to
+  stay defined after the `in` finished, so a `define` inside one member of a
+  `group` changed the variables seen by the later members. This is how solc's
+  template for a struct with a string member read the members after it one slot
+  too far ([#317]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 ### Fixed
@@ -112,3 +120,4 @@ First publication.
 [`59a5c38`]: https://github.com/ethdebug/format/commit/59a5c38
 [#315]: https://github.com/ethdebug/format/pull/315
 [#316]: https://github.com/ethdebug/format/pull/316
+[#317]: https://github.com/ethdebug/format/pull/317

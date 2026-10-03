@@ -9,6 +9,7 @@ export type Memo =
   | Memo.DereferencePointer
   | Memo.SaveRegions
   | Memo.SaveVariables
+  | Memo.RestoreVariables
   | Memo.PushRegionRenames
   | Memo.PopRegionRenames
   | Memo.PushTemplates
@@ -72,6 +73,25 @@ export namespace Memo {
     variables: Record<string, Value>,
   ): SaveVariables => ({
     kind: "save-variables",
+    variables,
+  });
+
+  /**
+   * A request to replace the stateful map of variable values with a
+   * snapshot taken earlier, discarding every variable saved since.
+   */
+  export interface RestoreVariables {
+    kind: "restore-variables";
+    variables: Record<string, Value>;
+  }
+
+  /**
+   * Initialize a RestoreVariables memo
+   */
+  export const restoreVariables = (
+    variables: Record<string, Value>,
+  ): RestoreVariables => ({
+    kind: "restore-variables",
     variables,
   });
 

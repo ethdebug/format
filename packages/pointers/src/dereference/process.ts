@@ -153,7 +153,14 @@ async function* processScope(
     newVariables[identifier] = value;
   }
 
-  return [Memo.saveVariables(newVariables), Memo.dereferencePointer(in_)];
+  // variables defined here are visible only within `in`
+  return [
+    Memo.saveVariables(newVariables),
+    Memo.dereferencePointer(in_),
+    Memo.restoreVariables(
+      Object.assign(Object.create(null), options.variables),
+    ),
+  ];
 }
 
 async function* processReference(

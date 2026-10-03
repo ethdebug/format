@@ -89,6 +89,13 @@ export async function* generateRegions(
         Object.assign(variables, memo.variables);
         break;
       }
+      case "restore-variables": {
+        for (const name of Object.keys(variables)) {
+          delete variables[name];
+        }
+        Object.assign(variables, memo.variables);
+        break;
+      }
       case "push-region-renames": {
         renameStack.push(memo.mapping);
         break;
