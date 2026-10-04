@@ -25,6 +25,7 @@ import {
 } from "@ethdebug/bugc-react";
 import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
 import { dereference, Data, type Machine } from "@ethdebug/pointers";
+import { storageByStep } from "./storageByStep";
 import {
   buildCallStack,
   effectiveContextForStep,
@@ -82,7 +83,14 @@ function TraceDrawerContent(): JSX.Element {
   const [currentStep, setCurrentStep] = useState(0);
   const [isTracing, setIsTracing] = useState(false);
   const [traceError, setTraceError] = useState<string | null>(null);
-  const [storage, setStorage] = useState<Record<string, string>>({});
+  const [initialStorage, setInitialStorage] = useState<Record<string, string>>(
+    {},
+  );
+  const storages = useMemo(
+    () => storageByStep(trace, initialStorage),
+    [trace, initialStorage],
+  );
+  const storage = storages[currentStep] ?? initialStorage;
   const [showInstructionObject, setShowInstructionObject] = useState(false);
   const [objectHeight, setObjectHeight] = useState(OBJECT_DEFAULT_HEIGHT);
   const [isResizingObject, setIsResizingObject] = useState(false);
@@ -342,7 +350,7 @@ function TraceDrawerContent(): JSX.Element {
       const step = trace[frame.stepIndex];
       if (!step) return;
 
-      const state = traceStepToState(step, storage);
+      const state = traceStepToState(step, storages[frame.stepIndex] ?? {});
       const args: ResolvedArg[] = ptrs.map((_, i) => ({
         name: names?.[i] ?? `_${i}`,
       }));
@@ -376,7 +384,7 @@ function TraceDrawerContent(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [callStack, trace, storage]);
+  }, [callStack, trace, storages]);
 
   // Resolve the current instruction's variable values by
   // dereferencing each variable's pointer against the step
@@ -437,7 +445,7 @@ function TraceDrawerContent(): JSX.Element {
       setTrace([]);
       setCurrentStep(0);
       setTraceError(null);
-      setStorage({});
+      setInitialStorage({});
 
       let bytecode: BytecodeOutput | undefined;
 
@@ -489,13 +497,7 @@ function TraceDrawerContent(): JSX.Element {
           await executor.deploy(createHex);
         }
 
-        const [handler, getTrace] = createTraceCollector();
-        await executor.execute({}, handler);
-
-        const collectedTrace = getTrace();
-        setTrace(collectedTrace.steps);
-        setCurrentStep(0);
-
+        // storage before execution (e.g. set by the constructor)
         const storageEntries: Record<string, string> = {};
         for (let i = 0n; i < 16n; i++) {
           const value = await executor.getStorage(i);
@@ -504,7 +506,14 @@ function TraceDrawerContent(): JSX.Element {
             storageEntries[slot] = `0x${value.toString(16).padStart(64, "0")}`;
           }
         }
-        setStorage(storageEntries);
+
+        const [handler, getTrace] = createTraceCollector();
+        await executor.execute({}, handler);
+
+        const collectedTrace = getTrace();
+        setTrace(collectedTrace.steps);
+        setCurrentStep(0);
+        setInitialStorage(storageEntries);
       } catch (e) {
         setTraceError(e instanceof Error ? e.message : String(e));
       } finally {
