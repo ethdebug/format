@@ -615,4 +615,63 @@ code {
       expect(result.returnValue.length).toBe(0);
     });
   });
+
+  describe("modulo", () => {
+    const program = (expr: string) => `name Modulo;
+
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] result: uint256;
+}
+
+create {
+  a = 1071;
+  b = 462;
+  result = 99;
+}
+
+code { result = ${expr}; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should compute % at optimization level ${level}`, async () => {
+        const result = await executeProgram(program("a % b"), {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(2n)).toBe(147n);
+      });
+
+      it(`should yield 0 for x % 0 at optimization level ${level}`, async () => {
+        const result = await executeProgram(program("a % (b - b)"), {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(2n)).toBe(0n);
+      });
+
+      it(`should match / for a zero divisor at level ${level}`, async () => {
+        const result = await executeProgram(program("a / (b - b)"), {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(2n)).toBe(0n);
+      });
+
+      it(`should fold constant % at optimization level ${level}`, async () => {
+        const result = await executeProgram(program("1071 % 462"), {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(await result.getStorage(2n)).toBe(147n);
+      });
+    }
+  });
 });

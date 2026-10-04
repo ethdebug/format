@@ -198,6 +198,7 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           case "-":
           case "*":
           case "/":
+          case "%":
             if (
               !Type.isElementary(leftType) ||
               !Type.isElementary(rightType) ||

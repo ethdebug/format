@@ -127,6 +127,21 @@ describe("generateModule", () => {
       // We no longer generate "add 0" for assignments - the result is directly used
     });
 
+    it("should generate a mod instruction for %", () => {
+      const ir = buildIR(`
+        name Modulo;
+        storage {}
+        code {
+          let x = 1071 % 462;
+        }
+      `);
+      const entry = ir.main.blocks.get("entry")!;
+
+      expect(entry.instructions).toContainEqual(
+        expect.objectContaining({ kind: "binary", op: "mod" }),
+      );
+    });
+
     it("should generate IR for comparison expressions", () => {
       const source = `
         name Comparison;

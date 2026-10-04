@@ -106,6 +106,32 @@ describe("checkProgram", () => {
       expect(Result.hasMessages(result)).toBe(false);
     });
 
+    it("should type check the modulo operator", () => {
+      const result = check(`
+        name Test;
+        storage {}
+        code {
+          let x = 10 % 3;
+          let y = x % 2;
+        }
+      `);
+
+      expect(result.success).toBe(true);
+      expect(Result.hasMessages(result)).toBe(false);
+    });
+
+    it("should reject the modulo operator on non-numeric operands", () => {
+      const result = check(`
+        name Test;
+        storage {}
+        code {
+          let x = true % 3;
+        }
+      `);
+
+      expect(result.success).toBe(false);
+    });
+
     it("should type check comparison operators", () => {
       const result = check(`
         name Test;
