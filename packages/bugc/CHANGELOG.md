@@ -7,6 +7,13 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Fixed
+
+- At optimization level 3, block merging now renames the incoming block of
+  every phi that named a merged block. Before, a `for` loop that carries a
+  local across iterations (and so any loop that calls an internal function
+  to update one) compiled to bytecode that reverted ([#320]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 ### Changed
@@ -44,3 +51,4 @@ First publication.
 [#298]: https://github.com/ethdebug/format/pull/298
 [#300]: https://github.com/ethdebug/format/pull/300
 [#305]: https://github.com/ethdebug/format/pull/305
+[#320]: https://github.com/ethdebug/format/pull/320
