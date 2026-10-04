@@ -110,6 +110,7 @@ const Lang = {
   minus: token("-"),
   multiply: token("*"),
   divide: token("/"),
+  modulo: token("%"),
   lt: token("<"),
   gt: token(">"),
   lte: token("<="),
@@ -705,7 +706,7 @@ const binaryOperators = [
   ["==", "!="],
   ["<", ">", "<=", ">="],
   ["+", "-"],
-  ["*", "/"],
+  ["*", "/", "%"],
 ];
 
 // Build precedence parser

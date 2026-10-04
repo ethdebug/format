@@ -7,6 +7,11 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Added
+
+- The `%` operator, with the precedence of `*` and `/`. It compiles to
+  the EVM's unsigned `MOD`, so `x % 0` is `0`, as `x / 0` is ([#321]).
+
 ### Fixed
 
 - At optimization level 3, block merging now renames the incoming block of
@@ -52,3 +57,4 @@ First publication.
 [#300]: https://github.com/ethdebug/format/pull/300
 [#305]: https://github.com/ethdebug/format/pull/305
 [#320]: https://github.com/ethdebug/format/pull/320
+[#321]: https://github.com/ethdebug/format/pull/321

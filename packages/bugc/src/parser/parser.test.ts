@@ -353,6 +353,29 @@ code {}`;
       expect(exprs[3].operands).toHaveLength(1);
     });
 
+    it("should parse % with the precedence of * and /", () => {
+      const parseResult = parse(`
+        name Test;
+        storage {}
+        code {
+          a + b % c * d;
+        }
+      `);
+
+      expect(parseResult.success).toBe(true);
+      if (!parseResult.success) throw new Error("Parse failed");
+      const stmts = parseResult.value.body?.items as Ast.Statement.Express[];
+      const sum = stmts[0].expression as Ast.Expression.Operator;
+      expect(sum.operator).toBe("+");
+
+      // left-associative with *: (b % c) * d
+      const product = sum.operands[1] as Ast.Expression.Operator;
+      expect(product.operator).toBe("*");
+      const mod = product.operands[0] as Ast.Expression.Operator;
+      expect(mod.operator).toBe("%");
+      expect(mod.operands).toHaveLength(2);
+    });
+
     it("should parse access expressions", () => {
       const input = `
         name Test;

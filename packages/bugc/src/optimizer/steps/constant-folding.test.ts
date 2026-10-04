@@ -159,4 +159,54 @@ describe("ConstantFoldingStep", () => {
       dest: "t3",
     });
   });
+
+  describe("mod", () => {
+    function foldMod(left: bigint, right: bigint) {
+      const uint = Ir.Type.Scalar.uint256;
+      const module = createTestModule([
+        {
+          kind: "const",
+          value: left,
+          type: uint,
+          dest: "t0",
+          operationDebug: {},
+        },
+        {
+          kind: "const",
+          value: right,
+          type: uint,
+          dest: "t1",
+          operationDebug: {},
+        },
+        {
+          kind: "binary",
+          op: "mod",
+          left: { kind: "temp", id: "t0", type: uint },
+          right: { kind: "temp", id: "t1", type: uint },
+          dest: "t2",
+          operationDebug: {},
+        },
+      ]);
+      const context: OptimizationContext = {
+        trackTransformation: () => {},
+        getTransformations: () => [],
+        getAnalysis: () => undefined,
+        setAnalysis: () => {},
+      };
+      return step.run(module, context).main.blocks.get("entry")!
+        .instructions[2];
+    }
+
+    it("should fold constant operands", () => {
+      expect(foldMod(1071n, 462n)).toMatchObject({
+        kind: "const",
+        value: 147n,
+        dest: "t2",
+      });
+    });
+
+    it("should leave a zero divisor to run time", () => {
+      expect(foldMod(7n, 0n)).toMatchObject({ kind: "binary", op: "mod" });
+    });
+  });
 });
