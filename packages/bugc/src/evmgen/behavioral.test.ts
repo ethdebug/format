@@ -504,6 +504,50 @@ code {
       expect(result.callSuccess).toBe(true);
       expect(await result.getStorage(0n)).toBe(5n);
     });
+
+    // Block merging (level 3) folds the loop's update block into the
+    // body; the header's phis must then name the merged block.
+    const loopCarried = {
+      "a loop-carried local": [
+        `name LoopCarried;
+storage { [0] total: uint256; }
+code {
+  let acc: uint256 = 0;
+  for (let i: uint256 = 0; i < 3; i = i + 1) { acc = acc + i + 1; }
+  total = acc;
+}`,
+        6n,
+      ],
+      "an internal call in a loop": [
+        `name Weights;
+define {
+  function weight(x: uint256, w: uint256) -> uint256 {
+    return x * w + 1;
+  };
+}
+storage { [0] total: uint256; }
+code {
+  let acc: uint256 = 0;
+  for (let i: uint256 = 0; i < 3; i = i + 1) { acc = acc + weight(i, 7); }
+  total = acc;
+}`,
+        24n,
+      ],
+    } as const;
+
+    for (const [name, [source, expected]] of Object.entries(loopCarried)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should compute ${name} (level ${level})`, async () => {
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        });
+      }
+    }
   });
 
   describe("conditional behavior", () => {

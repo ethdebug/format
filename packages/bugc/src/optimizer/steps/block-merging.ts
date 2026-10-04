@@ -68,6 +68,14 @@ export class BlockMergingStep extends BaseOptimizationStep {
             block.predecessors.add(mergeInto);
           }
 
+          // Phis name their incoming edge by predecessor block
+          for (const phi of block.phis) {
+            renameKey(phi.sources, toMerge, mergeInto);
+            if (phi.sourcesDebug) {
+              renameKey(phi.sourcesDebug, toMerge, mergeInto);
+            }
+          }
+
           // Update jump targets in terminators
           if (
             block.terminator.kind === "jump" &&
@@ -88,4 +96,10 @@ export class BlockMergingStep extends BaseOptimizationStep {
 
     return optimized;
   }
+}
+
+function renameKey<V>(map: Map<string, V>, from: string, to: string): void {
+  if (!map.has(from)) return;
+  map.set(to, map.get(from)!);
+  map.delete(from);
 }
