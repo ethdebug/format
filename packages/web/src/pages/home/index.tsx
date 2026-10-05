@@ -45,7 +45,7 @@ const FeatureList: FeatureItem[] = [
       <>
         <p>
           The <strong>ethdebug format</strong> group seeks to design a{" "}
-          <Link to="http://en.wikipedia.org/wiki/Debugging_data_format">
+          <Link to="https://en.wikipedia.org/wiki/Debugging_data_format">
             debugging data format
             <IconExternalLink />
           </Link>{" "}
@@ -54,7 +54,8 @@ const FeatureList: FeatureItem[] = [
 
         <p>
           We hope to make this format easy for compilers to output directly and
-          for debuggers to read.
+          for debuggers to read. To see it at work, try the{" "}
+          <Link to="/docs/explore">interactive playgrounds</Link>.
         </p>
       </>
     ),
@@ -64,16 +65,26 @@ const FeatureList: FeatureItem[] = [
     description: (
       <>
         <p>
-          The <strong>ethdebug format</strong> project is currently in design
-          phase and seeking to onboard contributors with interest in this area.
-          Our most immediate goals are to establish a v1 formal schema and to
-          increase awareness of our efforts.
+          The <strong>ethdebug format</strong> has{" "}
+          <Link to="https://www.npmjs.com/package/@ethdebug/format">
+            preview releases on npm
+            <IconExternalLink />
+          </Link>{" "}
+          and is working toward 0.1.0. Compilers write it today: solc
+          (experimental), Fe, Solar and bugc, our reference compiler. Debuggers
+          such as Walnut's soldb read it. Next: describing what values mean, and
+          support for local variables and optimized code in solc.
         </p>
 
         <p>
-          The Ethereum Foundation and the Solidity team are graciously funding
-          this effort with a keen interest in building a format that is
-          compatible with current and future EVM languages.
+          ethdebug is a project of the{" "}
+          <Link to="https://argot.org">
+            Argot Collective
+            <IconExternalLink />
+          </Link>
+          , a non-profit that maintains core Ethereum infrastructure, including
+          Solidity and Fe. Argot is funded primarily by the Ethereum Foundation,
+          with ongoing support from other contributors.
         </p>
       </>
     ),
