@@ -83,6 +83,19 @@ The sections do not signal obligations; the prefixes do.
     `patternProperties`, `enum` and `const`. The `$` spellings, such as
     `"$wordsize"` and `{ "$sum": [...] }`, are no longer format terms.
 
+- An identifier may now start with `$`, so a compiler can use a
+  source-language name such as Solidity's `$balance` as it is. This relies on
+  the `~` sigil of [#323]: a name that starts with `$` cannot be confused with
+  a format term ([#325]).
+  - Schemas: **ethdebug/format/pointer/identifier**
+  - Producers: optional: a name may now start with `$`
+    (**ethdebug/format/pointer/identifier** `pattern`
+    `^[a-zA-Z$_\-]+[a-zA-Z0-9$_\-]*$`).
+  - Consumers: required: accept a name that starts with `$`, which
+    **ethdebug/format/pointer/identifier**'s `pattern` now allows. Such a
+    string is a name, not a format term: `"$wordsize"` is a variable and
+    `{ ".offset": "$this" }` looks up a region named `$this`.
+
 - The variables of a scope (`define`/`in`) are visible only within its `in`.
   Pointers outside the scope, such as later members of an enclosing group, do
   not see them, and a variable defined with an outer variable's identifier
@@ -704,3 +717,4 @@ First published version of the specification.
 [#317]: https://github.com/ethdebug/format/pull/317
 [#318]: https://github.com/ethdebug/format/pull/318
 [#323]: https://github.com/ethdebug/format/pull/323
+[#325]: https://github.com/ethdebug/format/pull/325
