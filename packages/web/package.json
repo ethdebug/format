@@ -15,7 +15,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@apideck/better-ajv-errors": "^0.3.6",
     "@docusaurus/core": "^3.9.2",
     "@docusaurus/plugin-content-docs": "^3.9.2",
     "@docusaurus/preset-classic": "^3.9.2",
@@ -32,12 +31,12 @@
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.6",
+    "@hyperjump/json-schema": "^1.17.3",
     "@mdx-js/react": "^3.1.1",
     "@mischnic/json-sourcemap": "^0.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@saucelabs/theme-github-codeblock": "^0.2.3",
     "@shikijs/themes": "^2.5.0",
-    "ajv": "^8.17.1",
     "buffer": "^6.0.3",
     "clsx": "^1.2.1",
     "docusaurus-json-schema-plugin": "^1.15.0",

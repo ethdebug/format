@@ -1,15 +1,11 @@
-import { type SchemaById, describeSchema, schemas } from "@ethdebug/format";
+import { type SchemaById, describeSchema } from "@ethdebug/format";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { useColorMode } from "@docusaurus/theme-common";
 import JSONSourceMap from "@mischnic/json-sourcemap";
-import { betterAjvErrors } from "@apideck/better-ajv-errors";
 
-// To use Ajv with the support of all JSON Schema draft-2019-09/2020-12
-// features you need to use a different export:
-// refer: https://github.com/ajv-validator/ajv/issues/2335
-import Ajv from "ajv/dist/2020";
+import { type ValidationError, validate } from "../validate";
 
 export interface PlaygroundProps {
   schema: SchemaById;
@@ -31,16 +27,6 @@ type Position = {
   pos: number;
 };
 
-type ValidationError = {
-  message: string;
-  suggestion?: string;
-  path: string;
-  context: {
-    errorType: string;
-    allowedValue?: string;
-  };
-};
-
 /* The EthDebug Playground: An interactive component for developers */
 /* and tinkerers to build and test EthDebug schemas.                */
 export default function Playground(props: PlaygroundProps): JSX.Element {
@@ -58,13 +44,6 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
 
   // Tab width
   const TAB_WIDTH = 2;
-
-  // Compile all schemas to Ajv instance
-  const ajv = new Ajv({
-    schemas: Object.values(schemas),
-    allErrors: true,
-    strict: false,
-  });
 
   // State to hold editor input
   const [editorInput, setEditorInput] = useState(exampleSchema);
@@ -86,21 +65,12 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
   }
 
   /**
-   * Validates the schema using Ajv and displays errors in the Monaco editor
+   * Validates the editor input and displays errors in the Monaco editor
    */
-  function validateSchema() {
-    const validate = ajv.getSchema(props.schema.id);
-    if (!validate) return showError("Unable to validate schema");
+  async function validateSchema() {
     const sourceMap = getParsedEditorInput();
-    validate(sourceMap.data);
-    const betterErrors = betterAjvErrors({
-      // @ts-expect-error dynamic schema lookup
-      schema: schemas[props.schema.id],
-      data: sourceMap.data,
-      errors: validate.errors,
-    });
-    console.log(betterErrors, validate.errors);
-    showValidationErrors(betterErrors, sourceMap);
+    const errors = await validate(props.schema.id, sourceMap.data);
+    showValidationErrors(errors, sourceMap);
   }
 
   /**
@@ -116,17 +86,9 @@ export default function Playground(props: PlaygroundProps): JSX.Element {
     if (!model || !monaco) return showError("Unable to validate schema");
     const markers = [];
     if (errors) {
-      for (const [_, error] of Object.entries(errors)) {
-        const instancePath = error.path
-          .replace("{base}", "")
-          .replace(/\./g, "/");
+      for (const { instancePath, message } of errors) {
         const node = sourceMap.pointers[instancePath];
-        let message = error.message.replace("{base}", "").replace(/\./g, "/");
-        if (error.context.errorType == "const") {
-          message = `Expecting a constant value of "${error.context.allowedValue}"`;
-        }
-
-        if (!node || !message) continue;
+        if (!node) continue;
 
         markers.push({
           startLineNumber: node.value.line + 1,
