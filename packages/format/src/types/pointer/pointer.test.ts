@@ -8,12 +8,22 @@ import { Pointer, isPointer } from "./pointer.js";
 const identifierSchema = "schema:ethdebug/format/pointer/identifier";
 
 describe("Pointer.isIdentifier", () => {
-  const valid = ["a", "a0", "-$", "__init__", "_x", "A", "foo-bar", "x$y"];
+  const valid = [
+    "a",
+    "a0",
+    "-$",
+    "__init__",
+    "_x",
+    "A",
+    "foo-bar",
+    "x$y",
+    "$x", // leading $, as Solidity allows
+    "$wordsize", // a source name, not the ~wordsize constant
+  ];
 
   const invalid = [
     "", // empty
     "0abc", // leading digit
-    "$x", // leading $
     "~x", // leading ~, reserved for the format's own terms
     "~wordsize", // the constant, not an identifier
     "a b", // space
@@ -55,10 +65,10 @@ describe("the ~ sigil", () => {
     expect(Pointer.Expression.Arithmetic.isSum({ "~sum": [1, 2] })).toBe(true);
   });
 
-  it("does not read the old $-prefixed terms", () => {
+  it("reads $-prefixed names as identifiers, not format terms", () => {
     expect(Pointer.Expression.isConstant("$wordsize")).toBe(false);
-    expect(Pointer.isExpression("$wordsize")).toBe(false);
-    expect(Pointer.Expression.isReference("$this")).toBe(false);
+    expect(Pointer.Expression.isVariable("$wordsize")).toBe(true);
+    expect(Pointer.Expression.isReference("$this")).toBe(true);
     expect(Pointer.isExpression({ $sum: [1, 2] })).toBe(false);
   });
 });
