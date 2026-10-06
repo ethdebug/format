@@ -12,8 +12,12 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 - `extractVariablesFromInstruction` now reads every `variables` list in a
   context: its own and those of each context in its `gather`. Before, a
   context with its own `variables` hid those in its `gather`, so at
-  bugc's inlined code the storage variables disappeared. Entries for one
-  variable (the same identifier and declaration) compose into one
+  bugc's inlined code the storage variables disappeared. Of a `pick`,
+  only one of whose contexts holds, it now lists only the variables that
+  all of its contexts list alike (the same identifier, declaration and
+  pointer); before, it took the first context with variables. Entries
+  for one variable (the same identifier and declaration, in the same
+  `frame`) compose into one; an entry without a declaration stays apart
   ([#342]).
 
 ## 0.1.0-preview.1 — 2026-10-03

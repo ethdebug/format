@@ -77,6 +77,97 @@ describe("extractVariablesFromInstruction", () => {
       ),
     ).toEqual([{ ...typed, ...located }]);
   });
+
+  const declared = (identifier: string, offset: number, pointer?: unknown) => ({
+    identifier,
+    declaration: { source: { id: 0 }, range: { offset, length: 1 } },
+    ...(pointer ? { pointer } : {}),
+  });
+  const memory = (offset: number) => ({ location: "memory", offset });
+
+  it("lists only what every context of a pick agrees on", () => {
+    const a = declared("a", 1, memory(0));
+    const b = declared("b", 2, memory(32));
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, { pick: [{ variables: [a, b] }, { variables: [b] }] }),
+      ),
+    ).toEqual([b]);
+  });
+
+  it("lists nothing of a pick whose contexts disagree on a pointer", () => {
+    expect(
+      names({
+        pick: [
+          { variables: [declared("a", 1, memory(0))] },
+          { variables: [declared("a", 1, memory(32))] },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("reads a pick within a gather, and gathers within a pick", () => {
+    const a = declared("a", 1, memory(0));
+    const b = declared("b", 2, memory(32));
+    const c = declared("c", 3, memory(64));
+    expect(
+      names({
+        gather: [
+          { variables: [c] },
+          {
+            pick: [
+              { gather: [{ variables: [a] }, { variables: [b] }] },
+              { variables: [b] },
+            ],
+          },
+        ],
+      }),
+    ).toEqual(["c", "b"]);
+  });
+
+  it("keeps entries without a declaration apart", () => {
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, {
+          gather: [
+            { variables: [{ identifier: "x", type: { kind: "uint" } }] },
+            { variables: [{ identifier: "x", pointer: x.pointer }] },
+          ],
+        }),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("keeps entries from different frames apart", () => {
+    const typed = { ...declared("x", 1), type: { kind: "uint" } };
+    const located = declared("x", 1, memory(0));
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, {
+          gather: [
+            { frame: "source", variables: [typed] },
+            { frame: "ir", variables: [located] },
+          ],
+        }),
+      ),
+    ).toEqual([typed, located]);
+  });
+
+  it("matches declarations whatever the order of their keys", () => {
+    const typed = { ...declared("x", 1), type: { kind: "uint" } };
+    const located = {
+      identifier: "x",
+      declaration: { range: { length: 1, offset: 1 }, source: { id: 0 } },
+      pointer: memory(0),
+    };
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, {
+          gather: [{ variables: [typed] }, { variables: [located] }],
+        }),
+      ),
+    ).toHaveLength(1);
+  });
 });
 
 describe("extractTransformFromInstruction", () => {
