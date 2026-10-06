@@ -101,6 +101,10 @@ support. Changes to the specification itself are tracked in the root
 - At optimization level 3, merging adjacent writes to one slot now masks
   each value to its width. Before, a negative signed value written next
   to other fields of a packed struct overwrote them ([#337]).
+- At optimization level 3, merged writes to one slot that do not start
+  at the slot's first byte now land at their fields' offsets. Before,
+  each value was shifted by its field's offset twice, so writing `s.b`
+  and `s.c` but not `s.a` put them in the wrong bytes ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

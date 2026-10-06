@@ -291,8 +291,10 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
         part = emit("and", part, constant((1n << (info.length * 8n)) - 1n));
       }
 
-      if (info.offset > 0n) {
-        part = emit("shl", part, constant(info.offset * 8n));
+      // Place the part relative to the merged write's offset
+      const shift = (info.offset - writeInfos[0].offset) * 8n;
+      if (shift > 0n) {
+        part = emit("shl", part, constant(shift));
       }
 
       combinedValue =

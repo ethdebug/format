@@ -1413,6 +1413,28 @@ code {
         expect(await result.getStorage(0n)).toBe(word);
         expect(await result.getStorage(4n)).toBe(word);
       });
+
+      it(`should keep the fields around writes past offset 0 (level ${level})`, async () => {
+        const source = `name PackedMiddle;
+${define}
+storage { [0] s: S; [1] nc: int256; }
+create { nc = -2 as int256; s.a = -56 as int8; s.e = -3 as int64; }
+code {
+  let b = 7 as uint8;
+  let c = nc as int16;
+  let d = 16909060 as uint32;
+  s.b = b;
+  s.c = c;
+  s.d = d;
+}`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+      });
     }
   });
 
