@@ -220,10 +220,9 @@ export class InliningStep extends BaseOptimizationStep {
     }
     const invokes = [...pendingInvokes, inlineInvoke];
     const returns = [inlineReturn, ...pendingReturns];
-    const returnedJump: Ir.Instruction.Debug = {
-      ...Ir.Utils.addTransform(after, "inline"),
-      ...placement(after),
-    };
+    // The jump back to the continuation runs past the callee's return:
+    // it is the caller's code, with no `inline` transform of its own.
+    const returnedJump: Ir.Instruction.Debug = { ...after };
 
     const entryBlockId = blockRename.get(callee.entry)!;
     const returnBlockIds: string[] = [];
@@ -715,14 +714,6 @@ function withoutActivationsDebug(
   const { context: _, ...rest } = debug ?? {};
   const context = Ir.Utils.withoutActivations(debug?.context);
   return { ...rest, ...(context ? { context } : {}) };
-}
-
-/** A debug's inline sites and origin, which say where it is */
-function placement(debug: Ir.Instruction.Debug): Ir.Instruction.Debug {
-  return {
-    ...(debug.inlineSites ? { inlineSites: debug.inlineSites } : {}),
-    ...(debug.origin ? { origin: debug.origin } : {}),
-  };
 }
 
 /**
