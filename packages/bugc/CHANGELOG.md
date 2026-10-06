@@ -24,6 +24,9 @@ support. Changes to the specification itself are tracked in the root
   At levels 2 and 3, a local assigned in an `if` arm that holds another
   `if` or calls an internal function could read as 0 even on the path that
   assigned it ([#327]).
+- A `for` or `while` loop inside the scope of a local that shadows another
+  now carries the inner local. Before, at any optimization level, the loop
+  started each iteration from the outer local's value ([#330]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -65,3 +68,4 @@ First publication.
 [#320]: https://github.com/ethdebug/format/pull/320
 [#321]: https://github.com/ethdebug/format/pull/321
 [#327]: https://github.com/ethdebug/format/pull/327
+[#330]: https://github.com/ethdebug/format/pull/330

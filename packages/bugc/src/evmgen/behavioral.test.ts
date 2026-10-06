@@ -548,6 +548,43 @@ code {
         });
       }
     }
+
+    // `flag` sets the iteration count. Storage slot 2 (`other`) holds
+    // the result.
+    const loopLocals = {
+      // The loop must carry the inner `w`, not the outer one it shadows
+      "a shadowed local": [
+        `let w: uint256 = 7;
+  if (flag < 5) {
+    let w: uint256 = 1;
+    for (let i: uint256 = 0; i < flag + 1; i = i + 1) { w = w + 1; }
+    other = w;
+  }`,
+        [2n, 3n, 4n, 5n],
+      ],
+    } as const;
+
+    for (const [name, [body, expected]] of Object.entries(loopLocals)) {
+      for (const flag of [0, 1, 2, 3] as const) {
+        for (const level of [0, 1, 2, 3] as const) {
+          it(`should compute ${name} in a loop (flag ${flag}, level ${level})`, async () => {
+            const source = `name LoopLocals;
+storage { [0] flag: uint256; [1] out: uint256; [2] other: uint256; }
+create { flag = ${flag}; }
+code {
+  ${body}
+}`;
+            const result = await executeProgram(source, {
+              calldata: "",
+              optimizationLevel: level,
+            });
+
+            expect(result.callSuccess).toBe(true);
+            expect(await result.getStorage(2n)).toBe(expected[flag]);
+          });
+        }
+      }
+    }
   });
 
   describe("conditional behavior", () => {
