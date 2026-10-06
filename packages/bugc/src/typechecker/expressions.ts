@@ -9,6 +9,7 @@ import {
   assertExhausted,
 } from "./errors.js";
 import { isAssignable, commonType } from "./assignable.js";
+import { fits, integerLiteral, isInteger } from "./literals.js";
 
 /**
  * Type checker for expression nodes.
@@ -191,6 +192,9 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         }
       } else if (node.operands.length === 2) {
         // Binary operator
+        if (integerOperators.has(node.operator)) {
+          adaptLiterals(node, operandTypes, nodeTypes, errors);
+        }
         const [leftType, rightType] = operandTypes;
 
         switch (node.operator) {
@@ -213,6 +217,8 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
                 ErrorCode.INVALID_OPERAND,
               );
               errors.push(error);
+            } else {
+              errors.push(...checkSignedness(node, leftType, rightType));
             }
             resultType = commonType(leftType, rightType) || undefined;
             break;
@@ -235,6 +241,8 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
                 ErrorCode.INVALID_OPERAND,
               );
               errors.push(error);
+            } else {
+              errors.push(...checkSignedness(node, leftType, rightType));
             }
             resultType = Type.Elementary.bool();
             break;
@@ -1112,4 +1120,87 @@ function isValidCast(fromType: Type, toType: Type): boolean {
 
   // No other casts are allowed
   return false;
+}
+
+const integerOperators = new Set([
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "<",
+  ">",
+  "<=",
+  ">=",
+  "==",
+  "!=",
+]);
+
+/**
+ * Give an integer literal operand the type of the other operand, when
+ * the other operand is an integer and not a literal itself. A literal
+ * whose value that type cannot hold is an error.
+ */
+function adaptLiterals(
+  node: Ast.Expression.Operator,
+  operandTypes: Type[],
+  nodeTypes: Map<Ast.Id, Type>,
+  errors: TypeError[],
+): void {
+  const literals = node.operands.map(integerLiteral);
+
+  for (const [index, other] of [
+    [0, 1],
+    [1, 0],
+  ] as const) {
+    const literal = literals[index];
+    const type = operandTypes[other];
+    if (!literal || literals[other] || !isInteger(type)) {
+      continue;
+    }
+
+    if (!fits(literal.value, type)) {
+      errors.push(
+        new TypeError(
+          `Literal ${literal.value} does not fit in ${Type.format(type)}`,
+          literal.nodes[0].loc || undefined,
+          Type.format(type),
+          undefined,
+          ErrorCode.TYPE_MISMATCH,
+        ),
+      );
+      continue;
+    }
+
+    for (const literalNode of literal.nodes) {
+      nodeTypes.set(literalNode.id, type);
+    }
+    operandTypes[index] = type;
+  }
+}
+
+/**
+ * Operands of an arithmetic or comparison operator must be both signed
+ * or both unsigned, as in Solidity
+ */
+function checkSignedness(
+  node: Ast.Expression.Operator,
+  left: Type.Elementary,
+  right: Type.Elementary,
+): TypeError[] {
+  if (Type.Elementary.isInt(left) === Type.Elementary.isInt(right)) {
+    return [];
+  }
+
+  return [
+    new TypeError(
+      `Operator ${node.operator} cannot mix signed and unsigned operands ` +
+        `(${Type.format(left)} and ${Type.format(right)}); cast one ` +
+        `operand to the other's type, as in \`x as ${Type.format(left)}\``,
+      node.loc || undefined,
+      undefined,
+      undefined,
+      ErrorCode.INVALID_OPERAND,
+    ),
+  ];
 }

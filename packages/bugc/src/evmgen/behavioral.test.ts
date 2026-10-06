@@ -1664,6 +1664,55 @@ code {
       }
     });
 
+    describe("literal operands", () => {
+      // A literal takes the type of the other operand
+      const statements = [
+        (x: string, _: string, out: string) =>
+          `if (${x} < 0) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (${x} == 1) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (-1 < ${x}) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (0 >= ${x}) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) => `${out} = ${x} / -2;`,
+      ];
+      const expected = (x: bigint) => [
+        x < 0n ? 1n : 0n,
+        x === 1n ? 1n : 0n,
+        -1n < x ? 1n : 0n,
+        0n >= x ? 1n : 0n,
+        x / -2n,
+      ];
+
+      for (const x of [-3n, -1n, 0n, 1n, 5n]) {
+        for (const type of ["int8", "int256"]) {
+          const source = program(type, [x, 0n], statements, false);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should compare ${type} ${x} with literals (level ${level})`, async () => {
+              await check(source, level, expected(x));
+            });
+          }
+        }
+      }
+
+      it("should reject a literal too large for the other operand", async () => {
+        await expect(
+          executeProgram(`name TooLarge;
+storage { [0] n: int8; }
+code { if (n < 128) { n = 1 as int8; } }`),
+        ).rejects.toThrow("Literal 128 does not fit in int8");
+      });
+
+      it("should reject mixed signedness", async () => {
+        await expect(
+          executeProgram(`name Mixed;
+storage { [0] u: uint256; [1] o: uint256; }
+code { let x = 1 as int8; if (u > x) { o = 1; } }`),
+        ).rejects.toThrow("cannot mix signed and unsigned operands");
+      });
+    });
+
     describe("division and remainder", () => {
       // Division truncates toward zero, and the remainder has the sign
       // of the dividend, as in Solidity (and as bigint does). BUG

@@ -25,6 +25,16 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- An integer literal operand of an arithmetic or comparison operator now
+  takes the type of the other operand when its value fits, so with
+  `x: int8`, `x < 0`, `x == 1` and `-1 < x` compare as `int8`. A literal
+  that type cannot hold, such as `x < 128`, is a type error. Before,
+  every integer literal was a `uint256`, so `x == 1` was a type error
+  while `x < 1` compiled ([#339]).
+- Arithmetic and comparison operators now reject operands of mixed
+  signedness, as Solidity does: cast one operand to the other's type.
+  Before, a comparison such as `u > x`, with `u: uint256` and `x: int8`,
+  compiled ([#339]).
 - A cast now converts its value as Solidity does. A cast to a narrower
   integer type or to `address` keeps the low bits, and a cast to a signed
   type then sign-extends: `300 as uint8` is 44, `200 as int8` is -56, and

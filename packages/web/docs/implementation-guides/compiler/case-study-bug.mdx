@@ -75,6 +75,11 @@ Comparisons, `/`, and `%` on signed integers are signed, as in Solidity.
 Division truncates toward zero, and a remainder has the sign of the
 dividend. Arithmetic does not check for overflow.
 
+Both operands of an arithmetic or comparison operator must be signed, or
+both unsigned; cast one to mix them. An integer literal takes the type of
+the other operand, if that type can hold it, so `x < 0` and `-1 < x` work
+for a signed `x`, and `x < 128` is an error for an `int8`.
+
 ```bug
 (-7 as int8) < (2 as int8);      // true
 (-7 as int8) / (2 as int8);      // -3

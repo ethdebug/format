@@ -19,7 +19,8 @@ export function isSigned(type: Type): boolean {
  * Whether a binary operation acts on signed integers, so that it
  * compares, divides, and takes the remainder of two's complement
  * values. A signed value is sign-extended across its word, so the
- * signed opcodes apply at any width.
+ * signed opcodes apply at any width. The type checker rejects
+ * operands of mixed signedness, so both operands agree.
  */
 export function isSignedBinary(inst: Instruction.BinaryOp): boolean {
   return isSigned(inst.left.type) || isSigned(inst.right.type);
