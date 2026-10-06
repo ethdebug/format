@@ -1323,6 +1323,76 @@ code { size = msg.data.length; }`;
     }
   });
 
+  describe("packed storage writes", () => {
+    // Fields pack from the low-order end of slot 0:
+    // a (1 byte), b (1), c (2), d (4), e (8).
+    const define = `define {
+  struct S { a: int8; b: uint8; c: int16; d: uint32; e: int64; };
+}`;
+
+    // a = -56, b = 7, c = -2, d = 0x01020304, e = -3
+    const word = BigInt(
+      "0x" + "00".repeat(16) + "fffffffffffffffd" + "01020304" + "fffe07c8",
+    );
+
+    const fields = [
+      "s.a = -56 as int8;",
+      "s.b = 7 as uint8;",
+      "s.c = -2 as int16;",
+      "s.d = 16909060 as uint32;",
+      "s.e = -3 as int64;",
+    ];
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should mask constants in create (level ${level})`, async () => {
+        const source = `name PackedCreate;
+${define}
+storage { [0] s: S; [1] x: uint256; }
+create { ${fields.join(" ")} }
+code { x = 1; }`;
+
+        const result = await executeProgram(source, {
+          optimizationLevel: level,
+        });
+        expect(await result.getStorage(0n)).toBe(word);
+      });
+
+      it(`should mask constants in either order (level ${level})`, async () => {
+        const source = `name PackedReverse;
+${define}
+storage { [0] s: S; [1] x: uint256; }
+create { x = 1; }
+code { ${[...fields].reverse().join(" ")} }`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+      });
+    }
+  });
+
+  describe("narrow storage variables", () => {
+    const source = `name Narrow;
+storage { [0] x: int8; [1] y: int16; [2] n: int256; }
+create { x = -56 as int8; n = -2 as int256; }
+code { let v = n as int16; y = v; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should write only their own bytes (level ${level})`, async () => {
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(0xc8n);
+        expect(await result.getStorage(1n)).toBe(0xfffen);
+      });
+    }
+  });
+
   describe("signed storage reads", () => {
     const neg = (n: bigint) => 2n ** 256n - n;
 

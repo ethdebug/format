@@ -92,6 +92,12 @@ support. Changes to the specification itself are tracked in the root
   `int8` that holds `-56` reads as `-56`. Before, at every optimization
   level, a packed field read back as its unsigned bytes, such as `200`
   ([#337]).
+- A write to a storage value narrower than a slot, whether a struct
+  field or a variable such as `x: int8`, now writes only that value's
+  bytes. Before, at every optimization level, a negative signed value
+  such as `-2 as int16` filled every higher byte of the slot with `ff`,
+  so the fields packed above it read back wrong, and `x = -56` stored a
+  full word where Solidity stores one byte ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

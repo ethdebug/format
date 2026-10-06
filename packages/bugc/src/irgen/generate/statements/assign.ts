@@ -7,7 +7,11 @@ import { buildExpression } from "../expressions/index.js";
 import { Process } from "../process.js";
 import type { Context } from "../expressions/context.js";
 
-import { findStorageAccessChain, emitStorageChainStore } from "../storage.js";
+import {
+  findStorageAccessChain,
+  emitStorageChainStore,
+  emitStorageVariableStore,
+} from "../storage.js";
 
 /**
  * Build an assignment statement
@@ -112,18 +116,7 @@ function* assignToTarget(node: Ast.Expression, value: Ir.Value): Process<void> {
     // Check if it's storage
     const storageSlot = yield* Process.Storage.findSlot(name);
     if (storageSlot) {
-      yield* Process.Instructions.emit({
-        kind: "write",
-        location: "storage",
-        slot: Ir.Value.constant(
-          BigInt(storageSlot.slot),
-          Ir.Type.Scalar.uint256,
-        ),
-        offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
-        length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256), // 32 bytes for uint256
-        value,
-        operationDebug: yield* Process.Debug.forAstNode(node),
-      } as Ir.Instruction.Write);
+      yield* emitStorageVariableStore(storageSlot, value, node);
       return;
     }
 

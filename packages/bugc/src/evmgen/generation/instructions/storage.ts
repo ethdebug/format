@@ -435,8 +435,13 @@ function generateStorageWrite<S extends Stack>(
       // current & clearMask
       .then(AND({ debug }), { as: "clearedCurrent" })
 
-      // Prepare new value at offset
-      .then(loadValue(inst.value!, { debug }), { as: "value" })
+      // Prepare new value at offset, masked to its length so that
+      // a sign-extended negative value cannot clobber its neighbors
+      .then(loadValue(inst.value!, { debug }), { as: "b" })
+      .then(PUSHn((1n << (BigInt(length) * 8n)) - 1n, { debug }), {
+        as: "a",
+      })
+      .then(AND({ debug }), { as: "value" })
       .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
       .then(SHL({ debug }), { as: "shiftedValue" })
 

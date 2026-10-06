@@ -129,6 +129,29 @@ function getFieldSize(type: Ir.Type): number {
 }
 
 /**
+ * Emit a write of a whole storage variable. A variable narrower than a
+ * slot writes only its own bytes, at the low-order end of the slot.
+ */
+export function* emitStorageVariableStore(
+  slot: { slot: number; declaration: Ast.Declaration.Storage },
+  value: Ir.Value,
+  node: Ast.Node | undefined,
+): Process<void> {
+  const type = yield* Process.Types.nodeType(slot.declaration);
+  const size = type ? getFieldSize(fromBugType(type)) : 32;
+
+  yield* Process.Instructions.emit({
+    kind: "write",
+    location: "storage",
+    slot: Ir.Value.constant(BigInt(slot.slot), Ir.Type.Scalar.uint256),
+    offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
+    length: Ir.Value.constant(BigInt(size), Ir.Type.Scalar.uint256),
+    value,
+    operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
+  } as Ir.Instruction.Write);
+}
+
+/**
  * Emit a storage chain load
  */
 export function* emitStorageChainLoad(
@@ -277,16 +300,7 @@ export function* emitStorageChainStore(
 ): Process<void> {
   // Handle direct storage variable assignment (no accesses)
   if (chain.accesses.length === 0) {
-    // Direct storage assignment using new unified format
-    yield* Process.Instructions.emit({
-      kind: "write",
-      location: "storage",
-      slot: Ir.Value.constant(BigInt(chain.slot.slot), Ir.Type.Scalar.uint256),
-      offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
-      length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-      value,
-      operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
-    } as Ir.Instruction.Write);
+    yield* emitStorageVariableStore(chain.slot, value, node);
     return;
   }
 
