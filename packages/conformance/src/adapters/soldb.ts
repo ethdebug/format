@@ -73,17 +73,23 @@ export function sourceBreakpointScript(target: string): string {
   return `break ${target}\ncontinue\nq\n`;
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function observeSourceBreakpoint(
   result: SoldbResult,
   target: string,
 ): { set: boolean; hit: boolean; stoppedAtTarget: boolean } {
   return {
     // SolDB numbers breakpoints, e.g. `Breakpoint #1 set at Counter.sol:8` and
-    // `Breakpoint #1 hit at step 88, Counter.sol:8, PC 558`, so match the stable
-    // fragments rather than an exact, unnumbered prefix.
+    // `Breakpoint #1 hit at step 88, Counter.sol:8` (older releases append
+    // `, PC 558`), so match the stable fragments rather than an exact prefix.
     set: result.stdout.includes(`set at ${target}`),
     hit: /Breakpoint #\d+ hit at step/.test(result.stdout),
-    stoppedAtTarget: result.stdout.includes(`${target}, PC`),
+    stoppedAtTarget: new RegExp(`hit at step \\d+, ${escapeRegExp(target)}\\b`).test(
+        result.stdout,
+      ),
   };
 }
 
