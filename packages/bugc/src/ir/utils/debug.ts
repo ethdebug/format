@@ -10,6 +10,27 @@ import type * as Format from "@ethdebug/format";
 export function combineDebugContexts(
   ...debugs: (Ir.Instruction.Debug | Ir.Block.Debug | undefined)[]
 ): Ir.Instruction.Debug {
+  // The first debug is the instruction that stays in place (others
+  // are folded into it), so the result keeps its inline sites and
+  // origin.
+  return withPlacement(combineContexts(debugs), debugs[0]);
+}
+
+/** Keep an instruction's inline sites and origin on a new debug. */
+function withPlacement(
+  debug: Ir.Instruction.Debug,
+  from: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  return {
+    ...debug,
+    ...(from?.inlineSites ? { inlineSites: from.inlineSites } : {}),
+    ...(from?.origin ? { origin: from.origin } : {}),
+  };
+}
+
+function combineContexts(
+  debugs: (Ir.Instruction.Debug | Ir.Block.Debug | undefined)[],
+): Ir.Instruction.Debug {
   // Filter out undefined and empty debug objects
   const contexts = debugs
     .filter((d): d is Ir.Instruction.Debug | Ir.Block.Debug => d !== undefined)
@@ -396,9 +417,8 @@ export function addTransform(
 
   const transform = [...prior, ...ids];
 
-  if (!existing) {
-    return { context: { transform } };
-  }
-
-  return { context: { ...existing, transform } };
+  return withPlacement(
+    { context: { ...(existing ?? {}), transform } as Format.Program.Context },
+    debug,
+  );
 }

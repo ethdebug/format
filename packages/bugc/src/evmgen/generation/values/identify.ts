@@ -1,6 +1,7 @@
 import type * as Ir from "#ir";
 import type { Stack } from "#evm";
 import type { State } from "#evmgen/state";
+import { withStackLocals } from "../../debug/local-variables.js";
 
 /**
  * Get the ID for a value
@@ -33,8 +34,14 @@ export const annotateTop =
       irValue,
     };
 
+    // The value on top came from the last instruction, so a local it
+    // holds is on the stack from that instruction on.
+    const last = state.instructions.at(-1);
     return {
       ...state,
       stack: newStack,
+      instructions: last
+        ? [...state.instructions.slice(0, -1), withStackLocals(last, newStack)]
+        : state.instructions,
     };
   };

@@ -12,6 +12,7 @@ export function* buildFunction(
   parameters: {
     name: string;
     type: Ir.Type;
+    loc?: Ast.SourceLocation;
   }[],
   body: Ast.Block,
 ): Process<Ir.Function> {
@@ -43,8 +44,19 @@ export function* buildFunction(
   const blocks = computePredecessors(blocksBeforeCompute);
   const params = yield* Process.Functions.currentParameters();
 
-  // Collect SSA variable metadata
-  const ssaVariables = yield* Process.Functions.collectSsaMetadata();
+  // Collect SSA variable metadata. A declaration can make a version
+  // whose temp is never defined; mark it, so debug info can tell it
+  // from a version the optimizer removed.
+  const defined = definedTemps(blocks, params);
+  const ssaVariables = new Map(
+    [...(yield* Process.Functions.collectSsaMetadata())].map(
+      ([key, ssa]) =>
+        [
+          key,
+          defined.has(ssa.temp ?? key) ? ssa : { ...ssa, placeholder: true },
+        ] as const,
+    ),
+  );
 
   const module_ = yield* Process.Modules.current();
 
@@ -59,6 +71,26 @@ export function* buildFunction(
   };
 
   return function_;
+}
+
+/** Temps a function defines: parameters, phis, results, call results */
+function definedTemps(
+  blocks: Map<string, Ir.Block>,
+  params: Ir.Function.Parameter[],
+): Set<string> {
+  const defined = new Set(params.map((p) => p.tempId));
+  for (const block of blocks.values()) {
+    for (const phi of block.phis ?? []) defined.add(phi.dest);
+    for (const inst of block.instructions) {
+      if ("dest" in inst && typeof inst.dest === "string") {
+        defined.add(inst.dest);
+      }
+    }
+    if (block.terminator.kind === "call" && block.terminator.dest) {
+      defined.add(block.terminator.dest);
+    }
+  }
+  return defined;
 }
 
 /**

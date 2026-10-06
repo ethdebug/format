@@ -1,5 +1,6 @@
 import * as Evm from "#evm";
 import type { Stack } from "#evm";
+import type * as Ir from "#ir";
 import { type Transition, operations, pipe } from "#evmgen/operations";
 import { Memory } from "#evmgen/analysis";
 
@@ -18,6 +19,11 @@ export const storeValueIfNeeded = <S extends Stack>(
   options?: Evm.InstructionOptions,
 ): Transition<readonly ["value", ...S], readonly ["value", ...S]> => {
   const { PUSHn, ADD, DUP2, SWAP1, MLOAD, MSTORE } = operations;
+
+  // The store itself carries the context that holds once the value is
+  // in memory (contexts are postconditions); the ops before it do not.
+  const { stored } = (options?.debug ?? {}) as Ir.Instruction.Debug;
+  const storeOptions = stored ? { debug: stored } : options;
 
   return (
     pipe<readonly ["value", ...S]>()
@@ -46,7 +52,7 @@ export const storeValueIfNeeded = <S extends Stack>(
             .then(ADD(options), { as: "offset" })
             .then(DUP2(options))
             .then(SWAP1(options))
-            .then(MSTORE(options));
+            .then(MSTORE(storeOptions));
         }
         return builder
           .then(PUSHn(BigInt(allocation.offset), options), {
@@ -54,7 +60,7 @@ export const storeValueIfNeeded = <S extends Stack>(
           })
           .then(DUP2(options))
           .then(SWAP1(options))
-          .then(MSTORE(options));
+          .then(MSTORE(storeOptions));
       })
       .done()
   );

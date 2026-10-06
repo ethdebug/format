@@ -1,6 +1,7 @@
 import * as Format from "@ethdebug/format";
 
 import type { Type } from "./type.js";
+import type { Function } from "./function.js";
 import { Value } from "./value.js";
 
 export type Instruction =
@@ -39,6 +40,30 @@ export namespace Instruction {
 
   export interface Debug {
     context?: Format.Program.Context;
+    /**
+     * Debug for the MSTORE that homes this instruction's result in
+     * memory, where it differs from this one: from that store on, a
+     * local whose value the result is can be listed with a pointer.
+     */
+    stored?: Debug;
+    /**
+     * Inline sites this instruction was inlined through, outermost
+     * first. Only the innermost site's locals are listed here.
+     */
+    inlineSites?: string[];
+    /** Where the instruction was before optimization */
+    origin?: Function.Origin;
+    /**
+     * Listed locals whose value may be on the stack: code generation
+     * gives each a stack pointer where the stack holds its temp.
+     */
+    stackLocals?: Array<{
+      identifier: string;
+      temp: string;
+      size: number;
+      /** For a reference, the pointers to the data it refers to */
+      data?: Format.Pointer[];
+    }>;
   }
 
   // Location types for unified read/write

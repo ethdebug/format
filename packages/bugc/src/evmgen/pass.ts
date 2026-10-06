@@ -9,6 +9,7 @@ import { Error as EvmgenError, ErrorCode } from "#evmgen/errors";
 import { buildProgram } from "#evmgen/program-builder";
 
 import { Layout, Liveness, Memory } from "#evmgen/analysis";
+import { enrich as enrichLocalVariables } from "./debug/local-variables.js";
 
 import { splitPhiBranchEdges } from "./split-edges.js";
 
@@ -60,6 +61,12 @@ const pass: Pass<{
           ),
         );
       }
+
+      // Attach local-variable debug info to the IR before generation,
+      // so it propagates onto the emitted instructions (stack pointers
+      // are resolved as they are emitted). Debug info only: it does not
+      // change the code.
+      enrichLocalVariables(ir, memoryResult.value);
 
       // Analyze block layout
       const blockResult = Layout.Module.perform(ir);

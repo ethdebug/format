@@ -169,6 +169,15 @@ export namespace State {
   export interface Scope {
     readonly ssaVars: Map<string, SsaVariable>; // SSA variable tracking
     readonly usedNames: Map<string, number>; // For handling shadowing
+    readonly range?: Ast.SourceLocation; // Lexical extent of this scope
+    /** Where each name is declared, and the range it is in scope over */
+    readonly declared?: Map<
+      string,
+      { offset: number; range?: Ast.SourceLocation }
+    >;
+    /** The range declarations made now are in scope over, if not this
+     * scope's (a `for` loop's init) */
+    readonly declaringIn?: Ast.SourceLocation;
   }
 
   /**
@@ -191,9 +200,12 @@ export namespace State {
       (read) => (state) => read(state.scopes),
     );
 
-    export const push = () =>
+    export const push = (range?: Ast.SourceLocation) =>
       update((scopes) => ({
-        stack: [...scopes.stack, { ssaVars: new Map(), usedNames: new Map() }],
+        stack: [
+          ...scopes.stack,
+          { ssaVars: new Map(), usedNames: new Map(), range },
+        ],
       }));
 
     export const pop = () =>

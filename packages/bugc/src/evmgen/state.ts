@@ -5,6 +5,7 @@ import { type _ } from "#evm";
 
 import * as Analysis from "#evmgen/analysis";
 import type { Error } from "#evmgen/errors";
+import { withStackLocals } from "./debug/local-variables.js";
 
 // Debug context type for EVM instructions
 export type DebugContext = {
@@ -91,9 +92,14 @@ const unsafe: Evm.Unsafe.StateControls<UnsafeState, UnsafeItem> = {
       nextId: state.nextId + 1,
     },
   }),
+  // `state` is the state after the instruction, so its stack gives
+  // the stack pointers of the locals the instruction lists.
   emit: (state, instruction) => ({
     ...state,
-    instructions: [...state.instructions, instruction],
+    instructions: [
+      ...state.instructions,
+      withStackLocals(instruction, state.stack),
+    ],
   }),
 };
 

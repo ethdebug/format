@@ -313,6 +313,13 @@ export function collectVariablesWithLocations(
 }
 ```
 
+BUG also lists the local variables (parameters and `let`s) in scope at each
+instruction, each with a pointer to its value where the value is located: a
+memory word in the function's frame, or a stack slot. A local hides a storage
+variable of the same name while it is in scope. Under optimization, a local
+whose value the optimizer folded to a constant or removed is listed without a
+pointer. See `packages/bugc/src/evmgen/debug/local-variables.ts`.
+
 ## Testing strategy
 
 BUG tests debug output in several ways:
@@ -379,8 +386,6 @@ failing entirely.
 
 Areas for improvement in BUG's debug support:
 
-- **Memory tracking** — Track memory allocations for local variable pointers
-- **Stack variables** — Generate stack pointers during code generation
 - **Richer contexts** — Add frame information for function calls
 - **Source maps** — More granular source location tracking
 

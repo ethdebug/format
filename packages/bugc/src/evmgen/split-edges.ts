@@ -1,4 +1,4 @@
-import type * as Ir from "#ir";
+import * as Ir from "#ir";
 
 /**
  * Codegen stores a phi's source value just before the predecessor
@@ -73,5 +73,7 @@ function splitFunction(func: Ir.Function): Ir.Function {
     });
   }
 
-  return { ...func, blocks };
+  const result = { ...func, blocks };
+  Ir.Utils.copyDebugInfo(func, result);
+  return result;
 }

@@ -9,6 +9,11 @@ import { Memory } from "#evmgen/analysis";
 import { type Transition, operations, pipe } from "#evmgen/operations";
 
 import { valueId, loadValue } from "../values/index.js";
+import {
+  withStackLocals,
+  withoutFrameLocals,
+} from "../../debug/local-variables.js";
+import { stripActivation } from "../bracket-activation.js";
 
 /**
  * Extract the `code` source-range context from an instruction or
@@ -22,6 +27,28 @@ function codeContext(
     return ctx.code as Format.Program.Context.Code["code"];
   }
   return undefined;
+}
+
+/**
+ * Extract the in-scope `variables` list from an instruction/terminator
+ * debug, if present, so a call's caller JUMP still lists the locals
+ * that are in scope at the call (they must not vanish at the call).
+ */
+function variablesContext(
+  debug: { context?: Format.Program.Context } | undefined,
+): Format.Program.Context.Variables["variables"] | undefined {
+  const ctx = debug?.context as Record<string, unknown> | undefined;
+  if (ctx && Array.isArray(ctx.variables) && ctx.variables.length > 0) {
+    return ctx.variables as Format.Program.Context.Variables["variables"];
+  }
+  return undefined;
+}
+
+/** A terminator's debug without invoke/return discriminators */
+function withoutActivation(debug: Ir.Block.Debug): Ir.Block.Debug {
+  const context = stripActivation(debug.context);
+  const { context: _, ...rest } = debug;
+  return context ? { ...rest, context } : rest;
 }
 
 /**
@@ -88,9 +115,11 @@ export function generateTerminator<S extends Stack>(
       // invoke discriminators. Depth stays constant: one pops,
       // one pushes, on the same instruction. The function's
       // terminal RETURN pops the final iteration's frame normally.
+      // Activation markers already ride the block's instructions.
+      const debug = withoutActivation(term.operationDebug);
       const jumpDebug = term.tailCall
         ? buildTailCallJumpOptions(term.tailCall).debug
-        : undefined;
+        : debug;
 
       // Imperative, like generateCallTerminator/generateReturnEpilogue:
       // drop any leftover block-local scratch so the target block is
@@ -98,13 +127,14 @@ export function generateTerminator<S extends Stack>(
       return ((state: State<S>): State<Stack> => {
         let s = state as State<Stack>;
         while (s.stack.length > 0) {
+          const stack = s.stack.slice(1);
           s = {
             ...s,
             instructions: [
               ...s.instructions,
-              { mnemonic: "POP", opcode: 0x50 },
+              withStackLocals({ mnemonic: "POP", opcode: 0x50, debug }, stack),
             ],
-            stack: s.stack.slice(1),
+            stack,
             brands: s.brands.slice(1),
           };
         }
@@ -114,12 +144,14 @@ export function generateTerminator<S extends Stack>(
           ...s,
           instructions: [
             ...s.instructions,
-            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
-            {
-              mnemonic: "JUMP",
-              opcode: 0x56,
-              ...(jumpDebug ? { debug: jumpDebug } : {}),
-            },
+            withStackLocals(
+              { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0], debug },
+              [{}],
+            ),
+            withStackLocals(
+              { mnemonic: "JUMP", opcode: 0x56, debug: jumpDebug },
+              [],
+            ),
           ],
           patches: [...s.patches, { index: patchIndex, target: term.target }],
           stack: [],
@@ -133,31 +165,49 @@ export function generateTerminator<S extends Stack>(
       // beneath it (SWAP1/POP) so both successors are entered with the
       // canonical empty stack — the JUMPI and the fall-through JUMP
       // consume the condition and the pushed counters.
+      const debug = withoutActivation(term.operationDebug);
       return ((state: State<S>): State<Stack> => {
-        let s: State<Stack> = loadValue(term.condition)(state as State<Stack>);
+        let s: State<Stack> = loadValue(term.condition, { debug })(
+          state as State<Stack>,
+        );
         while (s.stack.length > 1) {
+          const [top, below, ...rest] = s.stack;
           s = {
             ...s,
             instructions: [
               ...s.instructions,
-              { mnemonic: "SWAP1", opcode: 0x90 },
-              { mnemonic: "POP", opcode: 0x50 },
+              withStackLocals({ mnemonic: "SWAP1", opcode: 0x90, debug }, [
+                below,
+                top,
+                ...rest,
+              ]),
+              withStackLocals({ mnemonic: "POP", opcode: 0x50, debug }, [
+                top,
+                ...rest,
+              ]),
             ],
-            stack: [s.stack[0], ...s.stack.slice(2)],
+            stack: [top, ...rest],
             brands: [s.brands[0], ...s.brands.slice(2)],
           };
         }
 
         const trueIndex = s.instructions.length;
         const falseIndex = trueIndex + 2;
+        const condition = s.stack;
         return {
           ...s,
           instructions: [
             ...s.instructions,
-            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
-            { mnemonic: "JUMPI", opcode: 0x57 },
-            { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0] },
-            { mnemonic: "JUMP", opcode: 0x56 },
+            withStackLocals(
+              { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0], debug },
+              [{}, ...condition],
+            ),
+            withStackLocals({ mnemonic: "JUMPI", opcode: 0x57, debug }, []),
+            withStackLocals(
+              { mnemonic: "PUSH2", opcode: 0x61, immediates: [0, 0], debug },
+              [{}],
+            ),
+            withStackLocals({ mnemonic: "JUMP", opcode: 0x56, debug }, []),
           ],
           patches: [
             ...s.patches,
@@ -288,10 +338,12 @@ export function generateCallTerminator<S extends Stack>(
     // flat alongside the invoke, so the caller JUMP maps back to the
     // call expression. invoke and code are disjoint keys.
     const callSiteCode = codeContext(debug);
+    const inScopeVars = variablesContext(debug);
     const invokeContext = {
       context: {
         ...invoke,
         ...(callSiteCode ? { code: callSiteCode } : {}),
+        ...(inScopeVars ? { variables: inScopeVars } : {}),
       } as Format.Program.Context,
     };
 
@@ -402,6 +454,9 @@ function generateReturnEpilogue<S extends Stack>(
     const FP = Memory.regions.FRAME_POINTER;
     const FMP = Memory.regions.FREE_MEMORY_POINTER;
     const pcOff = Memory.frameHeader.SAVED_RETURN_PC;
+    // Restoring the caller's frame pointer ends this frame: from that
+    // MSTORE on, the function's locals are no longer listed.
+    const teardown = withoutFrameLocals(debug);
 
     s = {
       ...s,
@@ -429,18 +484,18 @@ function generateReturnEpilogue<S extends Stack>(
         // mem[FRAME_POINTER] = old_fp
         { mnemonic: "DUP1", opcode: 0x80, debug },
         ...pushImm(FP, debug),
-        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        { mnemonic: "MSTORE", opcode: 0x52, debug: teardown },
         // Stack: [old_fp, fp, return_pc, ...]
 
         // mem[FREE_MEMORY_POINTER] = fp (deallocate)
-        { mnemonic: "POP", opcode: 0x50, debug },
+        { mnemonic: "POP", opcode: 0x50, debug: teardown },
         // Stack: [fp, return_pc, ...]
-        ...pushImm(FMP, debug),
-        { mnemonic: "MSTORE", opcode: 0x52, debug },
+        ...pushImm(FMP, teardown),
+        { mnemonic: "MSTORE", opcode: 0x52, debug: teardown },
         // Stack: [return_pc, ...]
 
         // JUMP
-        { mnemonic: "JUMP", opcode: 0x56, debug },
+        { mnemonic: "JUMP", opcode: 0x56, debug: teardown },
       ],
     };
 

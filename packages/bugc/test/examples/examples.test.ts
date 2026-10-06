@@ -206,42 +206,48 @@ describe("Example Files", async () => {
       const itFn = skip ? it.skip : it;
 
       for (const level of [0, 1, 2, 3] as const) {
-        itFn(`${relativePath} at O${level}`, async () => {
-          const compiler = buildSequence(bytecodeSequence);
-          const result = await compiler.run({
-            source,
-            optimizer: { level },
-          });
-          if (!result.success) {
-            expect.fail(`Compilation failed at O${level}`);
-          }
+        itFn(
+          `${relativePath} at O${level}`,
+          async () => {
+            const compiler = buildSequence(bytecodeSequence);
+            const result = await compiler.run({
+              source,
+              optimizer: { level },
+            });
+            if (!result.success) {
+              expect.fail(`Compilation failed at O${level}`);
+            }
 
-          const { runtimeProgram, createProgram } = result.value.bytecode;
-          const storageNames = (result.value.ast.storage ?? []).map(
-            ({ name }) => name,
-          );
-          for (const program of [runtimeProgram, createProgram]) {
-            if (!program) continue;
-            // validate the program as it is written out, as JSON
-            const output = await validate(
-              "schema:ethdebug/format/program",
-              JSON.parse(JSON.stringify(program)),
-              BASIC,
+            const { runtimeProgram, createProgram } = result.value.bytecode;
+            const storageNames = (result.value.ast.storage ?? []).map(
+              ({ name }) => name,
             );
-            const invalid = output.valid
-              ? []
-              : (output.errors ?? []).map((e) => e.instanceLocation);
-            expect(invalid).toEqual([]);
+            for (const program of [runtimeProgram, createProgram]) {
+              if (!program) continue;
+              // validate the program as it is written out, as JSON
+              const output = await validate(
+                "schema:ethdebug/format/program",
+                JSON.parse(JSON.stringify(program)),
+                BASIC,
+              );
+              const invalid = output.valid
+                ? []
+                : (output.errors ?? []).map((e) => e.instanceLocation);
+              expect(invalid).toEqual([]);
 
-            // every storage variable is in the program-level context
-            const { context } = program;
-            const identifiers =
-              context && Format.Program.Context.isVariables(context)
-                ? context.variables.map(({ identifier }) => identifier)
-                : [];
-            expect(identifiers).toEqual(storageNames);
-          }
-        });
+              // every storage variable is in the program-level context
+              const { context } = program;
+              const identifiers =
+                context && Format.Program.Context.isVariables(context)
+                  ? context.variables.map(({ identifier }) => identifier)
+                  : [];
+              expect(identifiers).toEqual(storageNames);
+            }
+            // A program lists its locals at every instruction, so a long
+            // one takes a while to validate
+          },
+          10_000,
+        );
       }
     }
   });

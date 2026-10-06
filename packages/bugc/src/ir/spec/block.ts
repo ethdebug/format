@@ -1,4 +1,3 @@
-import type * as Format from "@ethdebug/format";
 import type * as Ast from "#ast";
 
 import { Value } from "./value.js";
@@ -21,15 +20,15 @@ export interface Block {
   predecessors: Set<string>;
   /** Debug information (e.g., for if/while blocks) */
   debug: Block.Debug;
+  /** Debug for the block's entry (its JUMPDEST), set by code generation */
+  entryDebug?: Block.Debug;
 }
 
 export namespace Block {
   /**
    * Debug information for blocks, terminators, and phi nodes
    */
-  export interface Debug {
-    context?: Format.Program.Context;
-  }
+  export type Debug = Instruction.Debug;
 
   /**
    * Metadata for a jump that originated as a tail call.

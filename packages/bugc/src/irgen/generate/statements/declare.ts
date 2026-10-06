@@ -98,10 +98,20 @@ function* buildVariableDeclaration(
     } as Ir.Instruction);
 
     // Declare the SSA variable and directly use the allocTemp as its value
+    // With an initializer other than a hex literal, the local's value
+    // is the initializer's (below), not this allocation.
+    const builtLater =
+      !!decl.initializer &&
+      !(
+        Ast.Expression.isLiteral(decl.initializer) &&
+        Ast.Expression.Literal.isHex(decl.initializer)
+      );
     yield* Process.Variables.declareWithExistingTemp(
       decl.name,
       irType,
       allocTemp,
+      decl.loc ?? undefined,
+      { placeholder: builtLater },
     );
 
     // If there's an initializer, store the value in memory
@@ -112,7 +122,7 @@ function* buildVariableDeclaration(
 
       // For reference types, we need to handle initialization
       // Check the initializer type to determine how to store it
-      if (Ast.Expression.isLiteral(decl.initializer)) {
+      if (!builtLater) {
         const hexLiteral = decl.initializer as Ast.Expression.Literal;
         if (Ast.Expression.Literal.isHex(hexLiteral)) {
           const hexValue = hexLiteral.value.startsWith("0x")
@@ -151,7 +161,7 @@ function* buildVariableDeclaration(
           } as Ir.Instruction.Write);
         }
       } else {
-        // For slice expressions and other bytes operations,
+        // For string literals, slice expressions and other bytes operations,
         // the value is already a reference to memory
         // We need to copy the slice result to the new allocation
         // This is a simplified version - a full implementation would need to
@@ -183,7 +193,11 @@ function* buildVariableDeclaration(
       const value = yield* buildExpression(decl.initializer, {
         kind: "rvalue",
       });
-      const ssaVar = yield* Process.Variables.declare(decl.name, irType);
+      const ssaVar = yield* Process.Variables.declare(
+        decl.name,
+        irType,
+        decl.loc ?? undefined,
+      );
 
       // Generate assignment to the new SSA temp
       if (value.kind === "temp") {
@@ -207,7 +221,11 @@ function* buildVariableDeclaration(
       }
     } else {
       // No initializer - declare with default value
-      const ssaVar = yield* Process.Variables.declare(decl.name, irType);
+      const ssaVar = yield* Process.Variables.declare(
+        decl.name,
+        irType,
+        decl.loc ?? undefined,
+      );
       yield* Process.Instructions.emit({
         kind: "const",
         value: 0n,
