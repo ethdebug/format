@@ -246,26 +246,28 @@ export function generate<S extends Stack>(
 }
 
 /**
- * Generate code for phi nodes
+ * Generate code for the phi nodes of the block that `predecessor`
+ * jumps to. The phis copy in parallel: one phi's source may be another
+ * phi's destination (as when a loop swaps two locals), so load every
+ * source before storing any destination.
  */
 function generatePhis<S extends Stack>(
   phis: Ir.Block.Phi[],
   predecessor: string,
 ): Transition<S, S> {
-  return phis
-    .reduce(
-      (builder, phi) => builder.then(generatePhi(phi, predecessor)),
-      pipe<S>(),
-    )
-    .done();
+  // The stack grows by one per load and shrinks by one per store,
+  // which the types cannot follow across a list
+  const steps = [
+    ...phis.map((phi) => loadPhiSource<Stack>(phi, predecessor)),
+    ...phis.map((phi) => storePhiDest<Stack>(phi)).reverse(),
+  ] as unknown as Transition<S, S>[];
+  return (state) => steps.reduce((current, step) => step(current), state);
 }
 
-function generatePhi<S extends Stack>(
+function loadPhiSource<S extends Stack>(
   phi: Ir.Block.Phi,
   predecessor: string,
-): Transition<S, S> {
-  const { PUSHn, ADD, MLOAD, MSTORE } = operations;
-
+): Transition<S, readonly ["value", ...S]> {
   const source = phi.sources.get(predecessor);
   if (!source) {
     throw new Error(
@@ -274,36 +276,40 @@ function generatePhi<S extends Stack>(
     );
   }
 
-  return (
-    pipe<S>()
-      // Load source value and store to phi destination
-      .then(loadValue(source))
-      .peek((state, builder) => {
-        const allocation = state.memory.allocations[phi.dest];
-        if (allocation === undefined) {
-          throw new Error(
-            ErrorCode.MEMORY_ALLOCATION_FAILED,
-            `Phi destination ${phi.dest} not allocated`,
-          );
-        }
-        if (state.memory.frameSize !== undefined) {
-          return builder
-            .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER)), { as: "offset" })
-            .then(MLOAD(), { as: "b" })
-            .then(PUSHn(BigInt(allocation.offset)), {
-              as: "a",
-            })
-            .then(ADD(), { as: "offset" })
-            .then(MSTORE());
-        }
+  return loadValue(source);
+}
+
+function storePhiDest<S extends Stack>(
+  phi: Ir.Block.Phi,
+): Transition<readonly ["value", ...S], S> {
+  const { PUSHn, ADD, MLOAD, MSTORE } = operations;
+
+  return pipe<readonly ["value", ...S]>()
+    .peek((state, builder) => {
+      const allocation = state.memory.allocations[phi.dest];
+      if (allocation === undefined) {
+        throw new Error(
+          ErrorCode.MEMORY_ALLOCATION_FAILED,
+          `Phi destination ${phi.dest} not allocated`,
+        );
+      }
+      if (state.memory.frameSize !== undefined) {
         return builder
+          .then(PUSHn(BigInt(Memory.regions.FRAME_POINTER)), { as: "offset" })
+          .then(MLOAD(), { as: "b" })
           .then(PUSHn(BigInt(allocation.offset)), {
-            as: "offset",
+            as: "a",
           })
+          .then(ADD(), { as: "offset" })
           .then(MSTORE());
-      })
-      .done()
-  );
+      }
+      return builder
+        .then(PUSHn(BigInt(allocation.offset)), {
+          as: "offset",
+        })
+        .then(MSTORE());
+    })
+    .done();
 }
 
 /**

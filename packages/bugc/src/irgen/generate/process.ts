@@ -649,10 +649,10 @@ export namespace Process {
       const scopes = yield* lift(State.Scopes.extract)((s) => s.stack);
       const result = new Map<string, { tempId: string; type: Ir.Type }>();
 
-      // Capture all variables from all scopes
-      for (const scope of scopes) {
+      // Capture the innermost definition of each variable: an outer one
+      // it shadows cannot change while the shadow is in scope
+      for (const scope of [...scopes].reverse()) {
         for (const [name, ssaVar] of scope.ssaVars) {
-          // Only capture the innermost definition of each variable
           if (!result.has(name)) {
             result.set(name, {
               tempId: ssaVar.currentTempId,
