@@ -307,6 +307,12 @@ export function extractSubInstructionContexts(
       }
       break;
 
+    case "assert":
+      if (instruction.conditionDebug?.context) {
+        contexts.push(instruction.conditionDebug.context);
+      }
+      break;
+
     // env has no operands
     case "env":
       break;
@@ -363,6 +369,9 @@ export function extractSubInstructionContexts(
       break;
     case "length":
       addValueDebug(instruction.object);
+      break;
+    case "assert":
+      addValueDebug(instruction.condition);
       break;
   }
 

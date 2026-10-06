@@ -136,6 +136,9 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
       case "length":
         this.collectValueUse(inst.object, used);
         break;
+      case "assert":
+        this.collectValueUse(inst.condition, used);
+        break;
       case "compute_offset":
         this.collectValueUse(inst.base, used);
         if (Ir.Instruction.ComputeOffset.isArray(inst)) {
@@ -166,6 +169,7 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
     switch (inst.kind) {
       case "write":
       case "allocate": // Allocate modifies the free memory pointer
+      case "assert": // Assert may revert
         return true;
       default:
         return false;

@@ -90,6 +90,18 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
             } else {
               newInstructions.push(inst);
             }
+          } else if (
+            inst.kind === "assert" &&
+            this.holds(inst.condition, constants)
+          ) {
+            // A check that always passes does nothing
+            context.trackTransformation({
+              type: "delete",
+              pass: this.name,
+              original: Ir.Utils.extractContexts(inst),
+              result: [],
+              reason: `Removed assert of a true constant`,
+            });
           } else if (inst.kind === "length" && this.canFoldLength(inst)) {
             // Try to fold length operation
             const folded = this.foldLength(inst);
@@ -329,6 +341,17 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
         "fold",
       ),
     };
+  }
+
+  /** Whether `value` is a constant that is not zero or false */
+  private holds(
+    value: Ir.Value,
+    constants: Map<string, bigint | boolean | string>,
+  ): boolean {
+    const constant = this.getConstantValue(value, constants);
+    return (
+      constant === true || (typeof constant === "bigint" && constant !== 0n)
+    );
   }
 
   private canFoldLength(inst: Ir.Instruction): boolean {
