@@ -44,6 +44,11 @@ support. Changes to the specification itself are tracked in the root
   **ethdebug/format/program**. Now each region inside such a member has a
   name qualified by the member's name, such as `ceo-salary` for
   `company.ceo.salary` ([#335]).
+- A storage struct field past the struct's first slot is now read and
+  written in its own slot. Before, at every optimization level, the
+  compiler counted the field's slot offset twice over (once in slots,
+  then again as if in bytes), so every such field used the struct's
+  first slot ([#336]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -89,3 +94,4 @@ First publication.
 [#332]: https://github.com/ethdebug/format/pull/332
 [#333]: https://github.com/ethdebug/format/pull/333
 [#335]: https://github.com/ethdebug/format/pull/335
+[#336]: https://github.com/ethdebug/format/pull/336

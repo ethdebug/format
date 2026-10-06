@@ -217,7 +217,7 @@ export function* emitStorageChainLoad(
             kind: "compute_slot",
             slotKind: "field",
             base: currentSlot,
-            fieldOffset: fieldSlotOffset,
+            fieldOffset: layout.byteOffset,
             dest: tempId,
             operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
           });
@@ -360,7 +360,7 @@ export function* emitStorageChainStore(
               kind: "compute_slot",
               slotKind: "field",
               base: currentSlot,
-              fieldOffset: fieldSlotOffset,
+              fieldOffset: layout.byteOffset,
               dest: tempId,
               operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
             });
