@@ -54,6 +54,9 @@ support. Changes to the specification itself are tracked in the root
   writes counted a field's offset from the low-order end of the slot and
   reads counted it from the high-order end, so such a field read back
   as some other bytes of the slot, often 0 ([#336]).
+- Programs compiled at optimization levels 1 to 3 now carry their storage
+  variables in the program-level context, as at level 0. Before, the
+  optimizer dropped that context ([#336]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
