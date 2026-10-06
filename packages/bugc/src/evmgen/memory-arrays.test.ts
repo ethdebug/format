@@ -50,5 +50,15 @@ code {
 }`,
       [4n],
     ],
+    "read nested elements": [
+      `storage { [0] r: uint256; [1] s: uint256; [2] n: uint256; }
+code {
+  let m: array<array<uint256>> = [[1, 2], [3, 4, 5]];
+  r = m[1][2];
+  s = m[0][1];
+  n = m[1].length;
+}`,
+      [5n, 2n, 3n],
+    ],
   });
 });

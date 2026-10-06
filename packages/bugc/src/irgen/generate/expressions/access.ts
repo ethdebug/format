@@ -13,6 +13,7 @@ import {
   findStorageAccessChain,
   emitStorageChainLoad,
 } from "../storage.js";
+import { emitMemoryElementOffset } from "../memory.js";
 
 /**
  * Build an access expression (array/member access)
@@ -401,36 +402,14 @@ const makeBuildIndexAccess = (
           const index = yield* buildExpression(expr.index, { kind: "rvalue" });
           const elementType = fromBugType(objectType.element);
 
-          // Calculate base + 32 to skip length field
-          const elementsBaseTemp = yield* Process.Variables.newTemp();
-          yield* Process.Instructions.emit({
-            kind: "binary",
-            op: "add",
-            left: object,
-            right: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-            dest: elementsBaseTemp,
-            operationDebug: yield* Process.Debug.forAstNode(expr),
-          } as Ir.Instruction);
-
-          // Compute offset for array element
-          const offsetTemp = yield* Process.Variables.newTemp();
-          yield* Process.Instructions.emit(
-            Ir.Instruction.ComputeOffset.array(
-              "memory",
-              Ir.Value.temp(elementsBaseTemp, Ir.Type.Scalar.uint256),
-              index,
-              32, // array elements are 32 bytes each
-              offsetTemp,
-              yield* Process.Debug.forAstNode(expr),
-            ),
-          );
+          const offset = yield* emitMemoryElementOffset(object, index, expr);
 
           // Read the element at that offset
           const tempId = yield* Process.Variables.newTemp();
           yield* Process.Instructions.emit({
             kind: "read",
             location: "memory",
-            offset: Ir.Value.temp(offsetTemp, Ir.Type.Scalar.uint256),
+            offset,
             length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
             type: elementType,
             dest: tempId,
@@ -457,26 +436,14 @@ const makeBuildIndexAccess = (
       // This would be for complex array access (e.g., returned from function)
       const elementType = fromBugType(objectType.element);
 
-      // Compute offset for array element (no need to add 32 here as the object
-      // should already point to the elements section)
-      const offsetTemp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit(
-        Ir.Instruction.ComputeOffset.array(
-          "memory",
-          object,
-          index,
-          32, // array elements are 32 bytes each
-          offsetTemp,
-          yield* Process.Debug.forAstNode(expr),
-        ),
-      );
+      const offset = yield* emitMemoryElementOffset(object, index, expr);
 
       // Read the element at that offset
       const tempId = yield* Process.Variables.newTemp();
       yield* Process.Instructions.emit({
         kind: "read",
         location: "memory",
-        offset: Ir.Value.temp(offsetTemp, Ir.Type.Scalar.uint256),
+        offset,
         length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
         type: elementType,
         dest: tempId,

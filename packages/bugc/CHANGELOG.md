@@ -171,6 +171,10 @@ support. Changes to the specification itself are tracked in the root
   address of a local array's elements, which `a[0] + a[2]` computes
   twice), the instruction that used it still named the dropped result,
   and code generation failed with "Cannot load value" ([#343]).
+- Reading an element of an array that is itself an array element, as in
+  `m[i][j]`, now skips the inner array's length word. Before, at every
+  optimization level, it read the element before, so `m[i][0]` read the
+  length of `m[i]` ([#343]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
