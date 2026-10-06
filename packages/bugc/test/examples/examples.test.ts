@@ -14,12 +14,16 @@
  * Supports fenced YAML test blocks (see annotations.ts for format).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { promises as fs } from "fs";
 import path from "path";
 import { glob } from "glob";
 import * as Format from "@ethdebug/format";
-import { addSchema, validate } from "@hyperjump/json-schema/draft-2020-12";
+import {
+  addSchema,
+  validate,
+  type Validator,
+} from "@hyperjump/json-schema/draft-2020-12";
 import { BASIC } from "@hyperjump/json-schema/experimental";
 
 import { bytecodeSequence, buildSequence } from "#compiler";
@@ -65,6 +69,57 @@ interface ExampleInfo {
   source: string;
   annotations: ExampleAnnotations;
   testBlocks: TestBlock[];
+}
+
+// Each instruction's context is a $ref to the context schema, so it
+// validates on its own. Most contexts repeat, across a program's
+// instructions and across optimization levels, and contexts make up
+// nearly all of a program's size. So validate each distinct context
+// once, and validate the rest of the program without them.
+const contextErrors = new Map<string, string[]>();
+
+async function invalidLocations(
+  schema: string,
+  value: Parameters<Validator>[0],
+): Promise<string[]> {
+  const output = await validate(schema, value, BASIC);
+  return output.valid
+    ? []
+    : (output.errors ?? []).map((e) => e.instanceLocation);
+}
+
+async function invalidProgramLocations(
+  program: Format.Program,
+): Promise<string[]> {
+  // validate the program as it is written out, as JSON
+  const { instructions, ...rest } = JSON.parse(JSON.stringify(program));
+  const invalid = await invalidLocations("schema:ethdebug/format/program", {
+    ...rest,
+    instructions: instructions.map(
+      ({ context: _, ...instruction }: Format.Program.Instruction) =>
+        instruction,
+    ),
+  });
+
+  for (const [index, { context }] of instructions.entries()) {
+    if (context === undefined) continue;
+    const key = JSON.stringify(context);
+    let errors = contextErrors.get(key);
+    if (!errors) {
+      errors = await invalidLocations(
+        "schema:ethdebug/format/program/context",
+        context,
+      );
+      contextErrors.set(key, errors);
+    }
+    invalid.push(
+      ...errors.map(
+        (location) => `#/instructions/${index}/context${location.slice(1)}`,
+      ),
+    );
+  }
+
+  return invalid;
 }
 
 // Cache for compiled examples
@@ -130,6 +185,13 @@ async function compileExample(
   compilationCache.set(example.relativePath, cacheEntry);
   return cacheEntry;
 }
+
+// The compiler and the schema validator do all their work synchronously,
+// so this file can run start to end without the event loop ever turning.
+// The worker then cannot read vitest's replies to its progress reports,
+// and once that lasts a minute, vitest fails the run with 'Timeout
+// calling "onTaskUpdate"'. Give the event loop a turn after each test.
+afterEach(() => new Promise<void>((resolve) => setImmediate(resolve)));
 
 describe("Example Files", async () => {
   const examples = await loadExamples();
@@ -224,16 +286,7 @@ describe("Example Files", async () => {
             );
             for (const program of [runtimeProgram, createProgram]) {
               if (!program) continue;
-              // validate the program as it is written out, as JSON
-              const output = await validate(
-                "schema:ethdebug/format/program",
-                JSON.parse(JSON.stringify(program)),
-                BASIC,
-              );
-              const invalid = output.valid
-                ? []
-                : (output.errors ?? []).map((e) => e.instanceLocation);
-              expect(invalid).toEqual([]);
+              expect(await invalidProgramLocations(program)).toEqual([]);
 
               // every storage variable is in the program-level context
               const { context } = program;
