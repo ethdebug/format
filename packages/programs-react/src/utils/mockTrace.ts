@@ -61,44 +61,131 @@ export function findInstructionAtPc(
 }
 
 /**
+ * A variable entry, as a `variables` context lists it.
+ */
+type VariableEntry = {
+  identifier?: string;
+  declaration?: unknown;
+  type?: unknown;
+  pointer?: unknown;
+};
+
+/** A variable entry, with the `frame` of the context that lists it */
+interface Listed {
+  entry: VariableEntry;
+  frame?: string;
+}
+
+/**
  * Extract variables that are in scope at a given instruction.
  *
- * This walks the context and extracts variables from Variables contexts.
+ * All of a context's keys apply, and so do all of a `gather`'s
+ * contexts, so this reads every `variables` list: the context's own
+ * and each gathered context's. Only one of a `pick`'s contexts holds,
+ * so of a pick it reads only the variables that every one of its
+ * contexts lists alike (the same identifier, declaration and
+ * pointer), without a type they differ on. Entries for one variable (the same identifier and
+ * declaration, in the same frame) compose into one; an entry without
+ * a declaration stays apart, as does an entry from another frame.
  */
 export function extractVariablesFromInstruction(
   instruction: Program.Instruction,
-): Array<{ identifier?: string; type?: unknown; pointer?: unknown }> {
+): VariableEntry[] {
   if (!instruction.context) {
     return [];
   }
 
-  return extractVariablesFromContext(instruction.context);
+  const joined: Listed[] = [];
+  for (const listed of listedIn(instruction.context)) {
+    const same = joined.find((other) => sameVariable(other, listed));
+    if (same) {
+      same.entry = { ...same.entry, ...listed.entry };
+    } else {
+      joined.push({ ...listed });
+    }
+  }
+  return joined.map(({ entry }) => entry);
 }
 
-function extractVariablesFromContext(
-  context: Program.Context,
-): Array<{ identifier?: string; type?: unknown; pointer?: unknown }> {
-  // Variables context
-  if ("variables" in context && Array.isArray(context.variables)) {
-    return context.variables;
-  }
+function listedIn(context: Program.Context, frame?: string): Listed[] {
+  const ctx = context as unknown as Record<string, unknown>;
+  const here = typeof ctx.frame === "string" ? ctx.frame : frame;
 
-  // Gather context (combines multiple contexts)
-  if ("gather" in context && Array.isArray(context.gather)) {
-    return context.gather.flatMap(extractVariablesFromContext);
-  }
+  const own = Array.isArray(ctx.variables)
+    ? (ctx.variables as VariableEntry[]).map((entry) => ({
+        entry,
+        frame: here,
+      }))
+    : [];
 
-  // Pick context (picks from multiple contexts - take first with variables)
-  if ("pick" in context && Array.isArray(context.pick)) {
-    for (const subContext of context.pick) {
-      const vars = extractVariablesFromContext(subContext);
-      if (vars.length > 0) {
-        return vars;
-      }
+  // Gather context (all of its contexts apply)
+  const gathered = Array.isArray(ctx.gather)
+    ? (ctx.gather as Program.Context[]).flatMap((c) => listedIn(c, here))
+    : [];
+
+  // Pick context (one of its contexts applies): only what all agree on
+  const picked: Listed[] = [];
+  if (Array.isArray(ctx.pick) && ctx.pick.length > 0) {
+    const [first, ...others] = (ctx.pick as Program.Context[]).map((c) =>
+      listedIn(c, here),
+    );
+    for (const listed of first) {
+      const matches = others.map((branch) =>
+        branch.find(
+          (other) =>
+            sameVariable(listed, other) &&
+            same(listed.entry.pointer, other.entry.pointer),
+        ),
+      );
+      if (matches.some((match) => match === undefined)) continue;
+      // A type the contexts differ on holds in only some of them
+      const { type, ...rest } = listed.entry;
+      const typed = matches.every((match) => same(type, match!.entry.type));
+      picked.push({ ...listed, entry: typed ? listed.entry : rest });
     }
   }
 
-  return [];
+  return [...own, ...gathered, ...picked];
+}
+
+/** Whether two entries are for one variable: the same identifier and
+ * declaration (both given), in the same frame */
+function sameVariable(a: Listed, b: Listed): boolean {
+  const x = a.entry.declaration as Declaration | undefined;
+  const y = b.entry.declaration as Declaration | undefined;
+  return (
+    a.frame === b.frame &&
+    a.entry.identifier === b.entry.identifier &&
+    x !== undefined &&
+    y !== undefined &&
+    x.source?.id === y.source?.id &&
+    x.range?.offset === y.range?.offset &&
+    x.range?.length === y.range?.length
+  );
+}
+
+type Declaration = {
+  source?: { id?: unknown };
+  range?: { offset?: unknown; length?: unknown };
+};
+
+/** Structural equality, whatever the order of keys */
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || !a || !b) {
+    return false;
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) =>
+      same(
+        (a as Record<string, unknown>)[key],
+        (b as Record<string, unknown>)[key],
+      ),
+    )
+  );
 }
 
 /**
