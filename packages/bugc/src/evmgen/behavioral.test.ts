@@ -1549,4 +1549,119 @@ code {
       });
     }
   });
+
+  describe("signed operators", () => {
+    const word = 2n ** 256n;
+    const toWord = (n: bigint) => ((n % word) + word) % word;
+    // A negative literal is a cast of its two's complement, which the
+    // optimizer folds (it does not fold negation)
+    const literal = (n: bigint, type: string) => {
+      const bits = BigInt(type.replace(/^u?int/, ""));
+      return `(${n < 0n ? 2n ** bits + n : n} as ${type})`;
+    };
+
+    // Store the result of each statement on operands `a` and `b` of
+    // `type`, read at runtime from int256 storage, or given as
+    // literals, which the optimizer folds
+    const program = (
+      type: string,
+      [a, b]: readonly [bigint, bigint],
+      statements: readonly ((
+        a: string,
+        b: string,
+        out: string,
+        type: string,
+      ) => string)[],
+      folded: boolean,
+    ) => {
+      const out = type.startsWith("u") ? "uint256" : "int256";
+      const outputs = statements.map((_, j) => `[${10 + j}] o${j}: ${out};`);
+      const [x, y] = folded ? [literal(a, type), literal(b, type)] : ["x", "y"];
+      return `name SignedOperators;
+storage {
+  [0] a: int256;
+  [1] b: int256;
+  ${outputs.join("\n  ")}
+}
+create {
+  a = ${literal(a, "int256")};
+  b = ${literal(b, "int256")};
+}
+code {
+  let x = a as ${type};
+  let y = b as ${type};
+  ${statements.map((statement, j) => statement(x, y, `o${j}`, out)).join("\n  ")}
+}`;
+    };
+
+    const check = async (
+      source: string,
+      level: 0 | 1 | 2 | 3,
+      expected: readonly bigint[],
+    ) => {
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: level,
+      });
+      expect(result.callSuccess).toBe(true);
+      const actual = [];
+      for (const j of expected.keys()) {
+        actual.push(await result.getStorage(10n + BigInt(j)));
+      }
+      expect(actual).toEqual(expected.map(toWord));
+    };
+
+    const min = -(2n ** 255n);
+
+    describe("comparisons", () => {
+      const comparisons = [
+        ["<", (a: bigint, b: bigint) => a < b],
+        ["<=", (a: bigint, b: bigint) => a <= b],
+        [">", (a: bigint, b: bigint) => a > b],
+        [">=", (a: bigint, b: bigint) => a >= b],
+        ["==", (a: bigint, b: bigint) => a === b],
+        ["!=", (a: bigint, b: bigint) => a !== b],
+      ] as const;
+
+      // Each comparison stores 1 when it holds
+      const statements = comparisons.map(
+        ([op]) =>
+          (a: string, b: string, out: string, type: string) =>
+            `if (${a} ${op} ${b}) { ${out} = 1 as ${type}; }`,
+      );
+
+      const signed = [
+        [-3n, -2n],
+        [-2n, -3n],
+        [-5n, 4n],
+        [4n, -5n],
+        [-7n, -7n],
+        [6n, 6n],
+      ] as const;
+
+      const cases = [
+        ...["int8", "int16", "int128", "int256"].flatMap((type) =>
+          signed.map((operands) => [type, operands] as const),
+        ),
+        ["int256", [min, -min - 1n]],
+        ["uint256", [2n ** 255n, 1n]],
+        ["uint256", [1n, 2n ** 255n]],
+      ] as const;
+
+      for (const [type, operands] of cases) {
+        const [a, b] = operands;
+        const expected = comparisons.map(([, compare]) =>
+          compare(a, b) ? 1n : 0n,
+        );
+        for (const folded of [false, true]) {
+          const source = program(type, operands, statements, folded);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should compare ${type} ${operands.join(" and ")}${folded ? " as literals" : ""} (level ${level})`, async () => {
+              await check(source, level, expected);
+            });
+          }
+        }
+      }
+    });
+  });
 });

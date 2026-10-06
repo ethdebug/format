@@ -121,6 +121,11 @@ support. Changes to the specification itself are tracked in the root
 - A local initialized with a string literal (`let s = "hello";`) now
   holds the string. Before, it held an empty allocation, so `s.length`
   was `0` ([#328]).
+- Comparisons (`<`, `<=`, `>`, `>=`) of signed integers are now signed.
+  Before, at every optimization level, they compiled to the EVM's
+  unsigned `LT` and `GT`, so a negative value compared greater than any
+  positive one: `(-56 as int8) < (0 as int8)` was false. The optimizer
+  folds constant comparisons by the same rule ([#339]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -170,3 +175,4 @@ First publication.
 [#335]: https://github.com/ethdebug/format/pull/335
 [#336]: https://github.com/ethdebug/format/pull/336
 [#337]: https://github.com/ethdebug/format/pull/337
+[#339]: https://github.com/ethdebug/format/pull/339

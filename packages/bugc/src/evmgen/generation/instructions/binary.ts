@@ -1,4 +1,4 @@
-import type * as Ir from "#ir";
+import * as Ir from "#ir";
 import type { Stack } from "#evm";
 
 import type { State } from "#evmgen/state";
@@ -15,6 +15,8 @@ const {
   EQ,
   LT,
   GT,
+  SLT,
+  SGT,
   AND,
   OR,
   ISZERO,
@@ -30,6 +32,10 @@ export function generateBinary<S extends Stack>(
   inst: Ir.Instruction.BinaryOp,
 ): Transition<S, readonly ["value", ...S]> {
   const debug = inst.operationDebug;
+
+  // Signed operands compare with the signed opcodes
+  const signed = Ir.Utils.isSignedBinary(inst);
+  const [lt, gt] = signed ? [SLT, SGT] : [LT, GT];
 
   const map: {
     [O in Ir.Instruction.BinaryOp["op"]]: (
@@ -71,14 +77,14 @@ export function generateBinary<S extends Stack>(
       .done(),
     // Note: operands are loaded as [left=b, right=a] so EVM comparisons are reversed
     // EVM LT returns a < b (right < left), so use GT for IR lt (left < right)
-    lt: GT({ debug }),
+    lt: gt({ debug }),
     le: pipe<readonly ["a", "b", ...S]>()
-      .then(LT({ debug }), { as: "a" })
+      .then(lt({ debug }), { as: "a" })
       .then(ISZERO({ debug }))
       .done(),
-    gt: LT({ debug }),
+    gt: lt({ debug }),
     ge: pipe<readonly ["a", "b", ...S]>()
-      .then(GT({ debug }), { as: "a" })
+      .then(gt({ debug }), { as: "a" })
       .then(ISZERO({ debug }))
       .done(),
     and: AND({ debug }),
