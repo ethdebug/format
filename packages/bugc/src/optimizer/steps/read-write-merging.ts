@@ -253,79 +253,50 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     let combinedValue: Ir.Value | null = null;
     let combinedDebug: Ir.Instruction.Debug = {};
 
-    for (let i = 0; i < writeInfos.length; i++) {
-      const info = writeInfos[i];
-      const shiftBits = info.offset * 8n;
+    // Emit `dest = left op right` and return dest as a value
+    const emit = (
+      op: "and" | "shl" | "or",
+      left: Ir.Value,
+      right: Ir.Value,
+    ): Ir.Value => {
+      const dest = `t${tempCounter++}`;
+      instructions.push({
+        kind: "binary",
+        op,
+        left,
+        right,
+        dest,
+        operationDebug: combinedDebug,
+      });
+      return { kind: "temp", id: dest, type: Ir.Type.Scalar.uint256 };
+    };
+    const constant = (value: bigint): Ir.Value => ({
+      kind: "const",
+      value,
+      type: Ir.Type.Scalar.uint256,
+    });
 
+    for (const info of writeInfos) {
       // Track debug contexts as we process writes
       combinedDebug = Ir.Utils.combineDebugContexts(
         combinedDebug,
         info.write.operationDebug,
       );
 
-      if (shiftBits > 0n) {
-        // Need to shift the value
-        const shiftTemp = `t${tempCounter++}`;
-        instructions.push({
-          kind: "binary",
-          op: "shl",
-          left: info.write.value,
-          right: {
-            kind: "const",
-            value: shiftBits,
-            type: Ir.Type.Scalar.uint256,
-          },
-          dest: shiftTemp,
-          operationDebug: combinedDebug,
-        });
-
-        const shiftedValue: Ir.Value = {
-          kind: "temp",
-          id: shiftTemp,
-          type: Ir.Type.Scalar.uint256,
-        };
-
-        if (combinedValue === null) {
-          combinedValue = shiftedValue;
-        } else {
-          // OR with previous combined value
-          const orTemp = `t${tempCounter++}`;
-          instructions.push({
-            kind: "binary",
-            op: "or",
-            left: combinedValue,
-            right: shiftedValue,
-            dest: orTemp,
-            operationDebug: combinedDebug,
-          });
-          combinedValue = {
-            kind: "temp",
-            id: orTemp,
-            type: Ir.Type.Scalar.uint256,
-          };
-        }
-      } else {
-        // No shift needed
-        if (combinedValue === null) {
-          combinedValue = info.write.value;
-        } else {
-          // OR with previous combined value
-          const orTemp = `t${tempCounter++}`;
-          instructions.push({
-            kind: "binary",
-            op: "or",
-            left: combinedValue,
-            right: info.write.value,
-            dest: orTemp,
-            operationDebug: combinedDebug,
-          });
-          combinedValue = {
-            kind: "temp",
-            id: orTemp,
-            type: Ir.Type.Scalar.uint256,
-          };
-        }
+      // Mask the value to its length, so that a sign-extended
+      // negative value cannot clobber the other parts. Code generation
+      // masks the merged value to its length, which covers the last part
+      let part = info.write.value;
+      if (info !== writeInfos[writeInfos.length - 1]) {
+        part = emit("and", part, constant((1n << (info.length * 8n)) - 1n));
       }
+
+      if (info.offset > 0n) {
+        part = emit("shl", part, constant(info.offset * 8n));
+      }
+
+      combinedValue =
+        combinedValue === null ? part : emit("or", combinedValue, part);
     }
 
     // Calculate the merged write parameters

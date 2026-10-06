@@ -1371,6 +1371,48 @@ code { ${[...fields].reverse().join(" ")} }`;
         expect(result.callSuccess).toBe(true);
         expect(await result.getStorage(0n)).toBe(word);
       });
+
+      it(`should mask runtime values (level ${level})`, async () => {
+        const source = `name PackedRuntime;
+${define}
+storage {
+  [0] s: S;
+  [1] na: int256;
+  [2] nc: int256;
+  [3] ne: int256;
+  [4] t: S;
+}
+create {
+  na = -56 as int256;
+  nc = -2 as int256;
+  ne = -3 as int256;
+}
+code {
+  let a = na as int8;
+  let b = 7 as uint8;
+  let c = nc as int16;
+  let d = 16909060 as uint32;
+  let e = ne as int64;
+  s.a = a;
+  s.b = b;
+  s.c = c;
+  s.d = d;
+  s.e = e;
+  t.e = s.e;
+  t.d = s.d;
+  t.c = s.c;
+  t.b = s.b;
+  t.a = s.a;
+}`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+        expect(await result.getStorage(4n)).toBe(word);
+      });
     }
   });
 
@@ -1405,6 +1447,8 @@ storage {
   [1] x: int8;
   [2] y: int16;
   [3] m: mapping<uint256, int16>;
+  [4] t: R;
+  [5] n: int256;
   [10] o0: int256;
   [11] o1: int256;
   [12] o2: int256;
@@ -1412,6 +1456,8 @@ storage {
   [14] o4: int256;
   [15] o5: int256;
   [16] o6: int256;
+  [17] o7: int256;
+  [18] o8: int256;
 }
 create {
   s.a = -56 as int8;
@@ -1421,8 +1467,13 @@ create {
   x = -56 as int8;
   y = -300 as int16;
   m[5] = -7 as int16;
+  n = -9 as int256;
 }
 code {
+  let a = n as int8;
+  let b = n as int16;
+  t.a = a;
+  t.b = b;
   o0 = s.a;
   o1 = s.b;
   o2 = s.c;
@@ -1430,9 +1481,11 @@ code {
   o4 = x;
   o5 = y;
   o6 = m[5];
+  o7 = t.a;
+  o8 = t.b;
 }`;
 
-    const expected = [56n, 2n, 3n, 4n, 56n, 300n, 7n].map(neg);
+    const expected = [56n, 2n, 3n, 4n, 56n, 300n, 7n, 9n, 9n].map(neg);
 
     for (const level of [0, 1, 2, 3] as const) {
       it(`should sign-extend narrow signed values (level ${level})`, async () => {

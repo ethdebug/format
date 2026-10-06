@@ -98,6 +98,9 @@ support. Changes to the specification itself are tracked in the root
   such as `-2 as int16` filled every higher byte of the slot with `ff`,
   so the fields packed above it read back wrong, and `x = -56` stored a
   full word where Solidity stores one byte ([#337]).
+- At optimization level 3, merging adjacent writes to one slot now masks
+  each value to its width. Before, a negative signed value written next
+  to other fields of a packed struct overwrote them ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
