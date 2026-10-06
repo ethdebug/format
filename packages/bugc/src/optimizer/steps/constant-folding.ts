@@ -148,9 +148,14 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
       typeof rightValue === "bigint"
         ? Ir.Utils.foldSigned(inst.op, leftValue, rightValue)
         : undefined;
-    const result =
+    const evaluated =
       signed ?? this.evaluateBinary(inst.op, leftValue, rightValue);
-    if (result === undefined) return null;
+    if (evaluated === undefined) return null;
+
+    // Arithmetic wraps at the word, as on the EVM. A narrower result
+    // then wraps to its type by the cast after it.
+    const result =
+      typeof evaluated === "bigint" ? Ir.Utils.toWord(evaluated) : evaluated;
 
     return {
       kind: "const",

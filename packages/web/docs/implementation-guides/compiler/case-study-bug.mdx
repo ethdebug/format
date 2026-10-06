@@ -87,9 +87,24 @@ for a signed `x`, and `x < 128` is an error for an `int8`.
 (7 as int8) % (-2 as int8);      // 1
 ```
 
-A result narrower than a word does not wrap to its type yet:
-`(-128 as int8) / (-1 as int8)` is 128, not -128, and the same goes for a
-narrow `+`, `-` or `*` that overflows. A follow-up change makes them wrap.
+### Arithmetic
+
+Arithmetic wraps, as in a Solidity `unchecked { }` block; BUG has no
+overflow checks. A result narrower than 256 bits wraps to the width of
+its type, as a cast to that type does: an unsigned result keeps its low
+bits, and a signed result then sign-extends. An operation on two integer
+types has the wider type, and a literal takes the other operand's type,
+so `x + 1` with `x: uint8` is a `uint8` and wraps at 8 bits.
+
+```bug
+(255 as uint8) + (1 as uint8);   // 0
+(0 as uint8) - (1 as uint8);     // 255
+(16 as uint8) * (16 as uint8);   // 0
+(127 as int8) + (1 as int8);     // -128
+(-128 as int8) - (1 as int8);    // 127
+(-128 as int8) / (-1 as int8);   // -128
+-(-128 as int8);                 // -128
+```
 
 ## Compilation pipeline
 

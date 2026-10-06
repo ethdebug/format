@@ -1834,4 +1834,217 @@ code { a[1] = n as int16; o0 = a[1]; }`;
       });
     }
   });
+
+  describe("narrow arithmetic", () => {
+    const word = 2n ** 256n;
+    const toWord = (n: bigint) => ((n % word) + word) % word;
+    const bitsOf = (type: string) => BigInt(type.replace(/^u?int/, ""));
+
+    // A result keeps the low bits of its type, as a signed value when
+    // the type is signed
+    const wrap = (n: bigint, type: string) => {
+      const size = 2n ** bitsOf(type);
+      const low = ((n % size) + size) % size;
+      return type.startsWith("u") || low < size / 2n ? low : low - size;
+    };
+
+    // A literal of a type is a cast of its two's complement
+    const literal = (n: bigint, type: string) =>
+      `(${toWord(n) % 2n ** bitsOf(type)} as ${type})`;
+
+    const operators = [
+      ["+", (a: bigint, b: bigint) => a + b],
+      ["-", (a: bigint, b: bigint) => a - b],
+      ["*", (a: bigint, b: bigint) => a * b],
+      ["/", (a: bigint, b: bigint) => a / b],
+      ["%", (a: bigint, b: bigint) => a % b],
+    ] as const;
+
+    // Operands at the boundaries of each type
+    const operandsOf = (type: string): (readonly [bigint, bigint])[] => {
+      const bits = bitsOf(type);
+      if (type.startsWith("u")) {
+        const max = 2n ** bits - 1n;
+        const half = 2n ** (bits / 2n);
+        return [
+          [max, 1n],
+          [0n, 1n],
+          [half, half],
+          [max, max],
+        ];
+      }
+      const max = 2n ** (bits - 1n) - 1n;
+      const min = -max - 1n;
+      return [
+        [max, 1n],
+        [min, 1n],
+        [min, -1n],
+        [-1n, max],
+      ];
+    };
+
+    // Each pair of operands `x` and `y` comes from storage, from
+    // calldata, or from literals, which the optimizer folds. Each
+    // operator and the negation of `x` store a result in its own slot.
+    const sources = ["storage", "calldata", "literals"] as const;
+
+    const program = (
+      type: string,
+      pairs: readonly (readonly [bigint, bigint])[],
+      source: (typeof sources)[number],
+    ) => {
+      const out = type.startsWith("u") ? "uint256" : "int256";
+      const width = operators.length + 1;
+      const operand = (n: bigint, k: number, i: number) => {
+        switch (source) {
+          case "storage":
+            return `s${k}${i}`;
+          case "calldata": {
+            const offset = 32 * (2 * k + i);
+            return `(msg.data[${offset}:${offset + 32}] as bytes32 as uint256 as ${type})`;
+          }
+          case "literals":
+            return literal(n, type);
+        }
+      };
+      const storage = pairs.flatMap((_, k) => [
+        `[${2 * k}] s${k}0: ${type};`,
+        `[${2 * k + 1}] s${k}1: ${type};`,
+        ...Array.from(
+          { length: width },
+          (_, j) => `[${100 + k * width + j}] o${k}${j}: ${out};`,
+        ),
+      ]);
+      const create = pairs.flatMap(([a, b], k) => [
+        `s${k}0 = ${literal(a, type)};`,
+        `s${k}1 = ${literal(b, type)};`,
+      ]);
+      const code = pairs.flatMap(([a, b], k) => {
+        const [x, y] = [operand(a, k, 0), operand(b, k, 1)];
+        return [
+          ...operators.map(([op], j) => `o${k}${j} = ${x} ${op} ${y};`),
+          `o${k}${operators.length} = -${x};`,
+        ];
+      });
+      return `name NarrowArithmetic;
+storage {
+  ${storage.join("\n  ")}
+}
+create {
+  ${create.join("\n  ")}
+}
+code {
+  ${code.join("\n  ")}
+}`;
+    };
+
+    const calldataOf = (pairs: readonly (readonly [bigint, bigint])[]) =>
+      "0x" +
+      pairs
+        .flat()
+        .map((n) => toWord(n).toString(16).padStart(64, "0"))
+        .join("");
+
+    const types = [8, 16, 32, 64, 128, 256].flatMap((bits) => [
+      `uint${bits}`,
+      `int${bits}`,
+    ]);
+
+    for (const type of types) {
+      const pairs = operandsOf(type);
+      const expected = pairs.flatMap(([a, b]) => [
+        ...operators.map(([, apply]) => wrap(apply(a, b), type)),
+        wrap(-a, type),
+      ]);
+      for (const source of sources) {
+        const code = program(type, pairs, source);
+        for (const level of [0, 1, 2, 3] as const) {
+          it(`should wrap ${type} arithmetic on ${source} (level ${level})`, async () => {
+            const result = await executeProgram(code, {
+              calldata: calldataOf(pairs),
+              optimizationLevel: level,
+            });
+            expect(result.callSuccess).toBe(true);
+            const actual = [];
+            for (const j of expected.keys()) {
+              actual.push(await result.getStorage(100n + BigInt(j)));
+            }
+            expect(actual).toEqual(expected.map(toWord));
+          });
+        }
+      }
+    }
+
+    // A wrapped result is the value that later expressions see
+    const compound = (type: string, values: readonly bigint[]) => {
+      const out = type.startsWith("u") ? "uint256" : "int256";
+      const wide = type.replace("8", "16");
+      return `name NarrowCompound;
+storage {
+  [0] a: ${type};
+  [1] b: ${type};
+  [2] c: ${type};
+  [3] s: ${type};
+  [4] w: ${wide};
+  [10] o0: ${out};
+  [11] o1: ${out};
+  [12] o2: ${out};
+  [13] o3: ${out};
+  [14] o4: ${out};
+  [15] o5: ${out};
+  [16] o6: ${out};
+  [17] o7: ${out};
+}
+create {
+  a = ${literal(values[0], type)};
+  b = ${literal(values[1], type)};
+  c = ${literal(values[2], type)};
+  w = ${literal(values[3], wide)};
+}
+code {
+  if (a + b < c) { o0 = 1 as ${out}; }
+  o1 = (a + b) / ${literal(2n, type)};
+  o2 = (a + b) as ${wide};
+  s = a + b;
+  o3 = s;
+  o4 = a + b - c;
+  let t = a * b;
+  o5 = t;
+  o6 = a + w;
+  o7 = -(a + b);
+}`;
+    };
+
+    const compoundCases = [
+      // 200 + 100 wraps to 44, which is less than 50
+      [
+        "uint8",
+        [200n, 100n, 50n, 65400n],
+        [1n, 22n, 44n, 44n, 250n, 32n, 64n, 212n],
+      ],
+      // 100 + 100 wraps to -56, which is less than -50
+      [
+        "int8",
+        [100n, 100n, -50n, 32700n],
+        [1n, -28n, -56n, -56n, -6n, 16n, -32736n, 56n],
+      ],
+    ] as const;
+
+    for (const [type, values, expected] of compoundCases) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should use wrapped ${type} results in later expressions (level ${level})`, async () => {
+          const result = await executeProgram(compound(type, values), {
+            calldata: "",
+            optimizationLevel: level,
+          });
+          expect(result.callSuccess).toBe(true);
+          const actual = [];
+          for (const j of expected.keys()) {
+            actual.push(await result.getStorage(10n + BigInt(j)));
+          }
+          expect(actual).toEqual(expected.map(toWord));
+        });
+      }
+    }
+  });
 });
