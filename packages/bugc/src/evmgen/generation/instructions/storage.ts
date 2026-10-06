@@ -13,6 +13,7 @@ const {
   SSTORE,
   MLOAD,
   MSTORE,
+  MSTORE8,
   SHL,
   SHR,
   AND,
@@ -53,9 +54,22 @@ export function generateRead<S extends Stack>(
 
   // Handle memory reads
   if (inst.location === "memory" && inst.offset) {
+    const length = inst.length?.kind === "const" ? inst.length.value : 32n;
+    if (length === 32n) {
+      return pipe<S>()
+        .then(loadValue(inst.offset, { debug }), { as: "offset" })
+        .then(MLOAD({ debug }), { as: "value" })
+        .then(storeValueIfNeeded(inst.dest, { debug }))
+        .done();
+    }
+
+    // A narrower read: MLOAD reads the bytes left-aligned, so shift
+    // them right, which leaves only those bytes
     return pipe<S>()
       .then(loadValue(inst.offset, { debug }), { as: "offset" })
       .then(MLOAD({ debug }), { as: "value" })
+      .then(PUSHn((32n - BigInt(length)) * 8n, { debug }), { as: "shift" })
+      .then(SHR({ debug }), { as: "value" })
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done();
   }
@@ -366,10 +380,14 @@ export function generateWrite<S extends Stack>(
 
   // Handle memory writes
   if (inst.location === "memory" && inst.offset && inst.value) {
+    const length = inst.length?.kind === "const" ? inst.length.value : 32n;
+    // A one-byte write (a `bytes` element) stores only the value's
+    // low byte
+    const store = length === 1n ? MSTORE8 : MSTORE;
     return pipe<S>()
       .then(loadValue(inst.value, { debug }), { as: "value" })
       .then(loadValue(inst.offset, { debug }), { as: "offset" })
-      .then(MSTORE({ debug }))
+      .then(store({ debug }))
       .done();
   }
 

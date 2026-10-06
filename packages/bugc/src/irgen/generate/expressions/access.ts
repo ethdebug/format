@@ -13,7 +13,7 @@ import {
   findStorageAccessChain,
   emitStorageChainLoad,
 } from "../storage.js";
-import { emitMemoryElementOffset } from "../memory.js";
+import { emitMemoryElementOffset, emitMemoryByteOffset } from "../memory.js";
 
 /**
  * Build an access expression (array/member access)
@@ -361,24 +361,14 @@ const makeBuildIndexAccess = (
       // Bytes indexing returns uint8
       const elementType: Ir.Type = Ir.Type.scalar(1, "synthetic");
 
-      // Compute offset for the byte at the index using byte offset
-      const offsetTemp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit(
-        Ir.Instruction.ComputeOffset.byte(
-          "memory",
-          object,
-          index,
-          offsetTemp,
-          yield* Process.Debug.forAstNode(expr),
-        ),
-      );
+      const offset = yield* emitMemoryByteOffset(object, index, expr);
 
       // Read the byte at that offset
       const tempId = yield* Process.Variables.newTemp();
       yield* Process.Instructions.emit({
         kind: "read",
         location: "memory",
-        offset: Ir.Value.temp(offsetTemp, Ir.Type.Scalar.uint256),
+        offset,
         length: Ir.Value.constant(1n, Ir.Type.Scalar.uint256),
         type: elementType,
         dest: tempId,

@@ -4,15 +4,18 @@ import { executeProgram } from "#test/evm/behavioral";
 
 const word = 2n ** 256n;
 
-// Each program writes its results to storage slots 0, 1, ...
-type Programs = Record<string, [string, bigint[]]>;
+// Each program writes its results to storage slots 0, 1, ...; it is
+// called with the calldata given, if any
+type Programs = Record<string, [string, bigint[], string?]>;
 
 function run(programs: Programs) {
-  for (const [name, [body, expected]] of Object.entries(programs)) {
+  for (const [name, [body, expected, calldata = ""]] of Object.entries(
+    programs,
+  )) {
     for (const level of [0, 1, 2, 3] as const) {
       it(`should ${name} (level ${level})`, async () => {
         const result = await executeProgram(`name Program;\n${body}`, {
-          calldata: "",
+          calldata,
           optimizationLevel: level,
         });
 
@@ -162,6 +165,55 @@ code {
   t = a[2];
 }`,
       [41n, 40n, 42n],
+    ],
+  });
+});
+
+describe("memory bytes", () => {
+  // `msg.data` sliced into memory
+  run({
+    "read bytes": [
+      `storage { [0] r0: uint256; [1] r2: uint256; [2] n: uint256; }
+code {
+  let b = msg.data[0:3];
+  r0 = b[0];
+  r2 = b[2];
+  n = b.length;
+}`,
+      [10n, 12n, 3n],
+      "0x0a0b0c",
+    ],
+    "write a byte": [
+      `storage {
+  [0] r0: uint256; [1] r1: uint256; [2] r2: uint256; [3] n: uint256;
+}
+code {
+  let b = msg.data[0:3];
+  b[1] = 200 as uint8;
+  r0 = b[0];
+  r1 = b[1];
+  r2 = b[2];
+  n = b.length;
+}`,
+      [10n, 200n, 12n, 3n],
+      "0x0a0b0c",
+    ],
+    "write bytes in a loop": [
+      `storage {
+  [0] r0: uint256; [1] r1: uint256; [2] r2: uint256; [3] n: uint256;
+}
+code {
+  let b = msg.data[0:3];
+  for (let i = 0 as uint8; i < 3 as uint8; i = i + 1 as uint8) {
+    b[i] = b[i] + 1 as uint8;
+  }
+  r0 = b[0];
+  r1 = b[1];
+  r2 = b[2];
+  n = b.length;
+}`,
+      [11n, 12n, 13n, 3n],
+      "0x0a0b0c",
     ],
   });
 });

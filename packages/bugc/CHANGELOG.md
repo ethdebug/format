@@ -182,6 +182,11 @@ support. Changes to the specification itself are tracked in the root
   generation error"), because the compiler emitted the element's address
   computation without its kind. That computation also left out the
   length word, so the write would have gone to the element before ([#343]).
+- Indexing `bytes` in memory, as in `b[i]` and `b[i] = x`, now reads and
+  writes the byte at `i`. Before, at every optimization level, a read
+  skipped no length word and read a whole word, so it gave the length's
+  bytes; a write failed with error EVM999, as an array element write did
+  ([#343]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
