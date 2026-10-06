@@ -247,25 +247,37 @@ export class InliningStep extends BaseOptimizationStep {
             inlineReturn,
           );
         }
-        // return -> jump to the caller's continuation
+        // return -> jump to the caller's continuation. Once the
+        // callee has returned, this jump is the caller's code: it
+        // keeps the call's source range, inline sites and origin, so
+        // it lists the caller's variables, not the callee's locals.
+        const { context: callContext, ...callPlacement } =
+          call.operationDebug ?? {};
         terminator = {
           kind: "jump",
           target: call.continuation,
-          operationDebug: Ir.Utils.addTransform(
-            mergeDiscriminator({}, "return", inlineReturn),
-            "inline",
-          ),
+          operationDebug: {
+            ...Ir.Utils.addTransform(
+              mergeDiscriminator(
+                callContext ? { context: callContext } : {},
+                "return",
+                inlineReturn,
+              ),
+              "inline",
+            ),
+            ...callPlacement,
+          },
         };
       } else {
         terminator = remapTerminator(t, remapValue, blockRename);
+        terminator.operationDebug = {
+          ...terminator.operationDebug,
+          inlineSites: inlineSites(t.operationDebug),
+          ...(t.operationDebug?.origin
+            ? { origin: t.operationDebug.origin }
+            : {}),
+        };
       }
-      terminator.operationDebug = {
-        ...terminator.operationDebug,
-        inlineSites: inlineSites(t.operationDebug),
-        ...(t.operationDebug?.origin
-          ? { origin: t.operationDebug.origin }
-          : {}),
-      };
 
       caller.blocks.set(newId, {
         id: newId,

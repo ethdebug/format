@@ -198,6 +198,95 @@ code { r = add(s, 2); }`;
       }
     },
   );
+
+  // `dbl` is inlined into `weight` (and `weight` into the loop at O3)
+  const inlinedSource = `name InlineScope;
+define {
+  function dbl(x: uint256) -> uint256 {
+    return x + x;
+  };
+  function weight(i: uint256, n: uint256) -> uint256 {
+    let w = dbl(i) + n;
+    return w;
+  };
+}
+storage { [0] total: uint256; [1] calls: uint256; }
+create {}
+code {
+  let sum = 0;
+  for (let i = 0; i < 2; i = i + 1) {
+    sum = sum + weight(i, 4);
+  }
+  total = sum;
+  calls = calls + 1;
+}`;
+
+  /** The activation markers (`invoke`/`return`) of a context */
+  const activations = (
+    context: unknown,
+    key: "invoke" | "return",
+  ): string[] => {
+    if (!context || typeof context !== "object") return [];
+    const { gather } = context as { gather?: unknown[] };
+    const own = (context as Record<string, { identifier?: string }>)[key];
+    return [
+      ...(own ? [own.identifier as string] : []),
+      ...(Array.isArray(gather)
+        ? gather.flatMap((c) => activations(c, key))
+        : []),
+    ];
+  };
+
+  it.each([2, 3] as const)(
+    "(h) never lists an inlined function's locals after it returns at O%i",
+    async (level) => {
+      const run = await traceLocals(inlinedSource, level);
+      let returned = false;
+      let seen = 0;
+      for (const step of run.steps) {
+        const context = run.instructionAt(step)?.context;
+        if (activations(context, "invoke").includes("dbl")) returned = false;
+        const names = localsOf(context).map((v) => v.identifier);
+        if (returned) {
+          expect(
+            names,
+            `x listed after dbl returns, pc ${step.pc}`,
+          ).not.toContain("x");
+        } else if (names.includes("x")) {
+          seen++;
+        }
+        // Contexts are postconditions: once past the step that
+        // returns, the callee's locals are out of scope
+        if (activations(context, "return").includes("dbl")) returned = true;
+      }
+      expect(seen).toBeGreaterThan(0);
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(i) lists storage variables in inlined code at O%i",
+    async (level) => {
+      const { program } = await traceLocals(inlinedSource, level);
+      const rows = await listed(inlinedSource, level);
+      const inlined = rows.filter(({ names }) => names.includes("x"));
+      expect(inlined.length).toBeGreaterThan(0);
+      for (const { instruction, names } of inlined) {
+        const where = `${instruction.operation?.mnemonic} at ${instruction.offset}`;
+        expect(names, where).toContain("total");
+        expect(names, where).toContain("calls");
+      }
+      // ... and nowhere apart from the flat list
+      const nested = (context: unknown): boolean => {
+        const { gather } = (context ?? {}) as { gather?: unknown[] };
+        return (gather ?? []).some((c) => localsOf(c).length > 0 || nested(c));
+      };
+      for (const instruction of program.instructions) {
+        expect(nested(instruction.context), `${instruction.offset}`).toBe(
+          false,
+        );
+      }
+    },
+  );
 });
 
 const words: Shape = { kind: "array", element: { kind: "scalar", size: 32 } };

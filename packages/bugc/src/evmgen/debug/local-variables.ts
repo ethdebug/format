@@ -45,6 +45,7 @@ import type * as Format from "@ethdebug/format";
 import * as Ir from "#ir";
 import { Type as BugType } from "#types";
 import { Memory } from "#evmgen/analysis";
+import { carriesActivation } from "../generation/bracket-activation.js";
 import { convertToEthDebugType } from "../../irgen/debug/types.js";
 import { fromBugType } from "../../irgen/type.js";
 
@@ -280,10 +281,14 @@ function buildEntry(
 }
 
 /**
- * Merge variable entries into an instruction's debug context as a
- * flat `variables` sibling, alongside any existing `variables` (the
- * storage variables from irgen) and preserving all other keys. A local
- * in scope hides a storage variable of the same name.
+ * Merge variable entries into an instruction's debug context as one
+ * flat `variables` list, with the existing `variables` (the storage
+ * variables from irgen), and preserving all other keys. Storage
+ * variables in a `gather` (as when inlined code gathers the call
+ * site's `code` with the callee's) move to the flat list too: all of a
+ * gather's contexts apply, so this does not change what it says, and
+ * one list keeps each name once. A local in scope hides a storage
+ * variable of the same name.
  */
 function withVariables(
   debug: Ir.Instruction.Debug | undefined,
@@ -291,23 +296,60 @@ function withVariables(
   stackLocals: StackLocal[],
 ): Ir.Instruction.Debug {
   const { stored: _, stackLocals: __, ...rest } = debug ?? {};
-  if (entries.length === 0) return rest;
+  if (!rest.context) {
+    if (entries.length === 0) return rest;
+    rest.context = {} as Format.Program.Context;
+  }
 
-  const context = (rest.context ?? {}) as Record<string, unknown>;
-  const locals = new Set(entries.map((e) => e.identifier));
-  const storage = (
-    Array.isArray(context.variables)
-      ? (context.variables as VariableEntry[])
-      : []
-  ).filter((v) => !locals.has(v.identifier));
+  const { variables: existing, context } = liftVariables(
+    rest.context as Record<string, unknown>,
+  );
+  const names = new Set(entries.map((e) => e.identifier));
+  const storage = existing.filter((v) => {
+    if (names.has(v.identifier)) return false;
+    names.add(v.identifier);
+    return true;
+  });
+  const variables = [...storage, ...entries];
 
   return {
     ...rest,
-    context: {
-      ...context,
-      variables: [...storage, ...entries],
-    } as Format.Program.Context,
+    context: (variables.length > 0
+      ? { ...context, variables }
+      : context) as Format.Program.Context,
     ...(stackLocals.length > 0 ? { stackLocals } : {}),
+  };
+}
+
+/**
+ * A context's `variables`, its own and those of its `gather`'s
+ * contexts, and the context without them. A gathered context left
+ * empty is dropped; a gather left with one context composes flat (or,
+ * if a key of that context collides, keeps its `variables`).
+ */
+function liftVariables(context: Record<string, unknown>): {
+  variables: VariableEntry[];
+  context: Record<string, unknown>;
+} {
+  const { variables, gather, ...rest } = context;
+  const own = Array.isArray(variables) ? (variables as VariableEntry[]) : [];
+  if (!Array.isArray(gather)) return { variables: own, context: rest };
+
+  const lifted = (gather as Record<string, unknown>[]).map(liftVariables);
+  const kept = lifted
+    .map((l) => l.context)
+    .filter((c) => Object.keys(c).length > 0);
+  if (kept.length === 1 && Object.keys(kept[0]).some((key) => key in rest)) {
+    return { variables: own, context: { ...rest, gather } };
+  }
+  return {
+    variables: [...own, ...lifted.flatMap((l) => l.variables)],
+    context:
+      kept.length === 1
+        ? { ...rest, ...kept[0] }
+        : kept.length > 0
+          ? { ...rest, gather: kept }
+          : rest,
   };
 }
 
@@ -635,11 +677,15 @@ function enrichFunction(
 
   for (const [blockId, block] of func.blocks) {
     // The block's entry: just before its first instruction (or its
-    // terminator), with that instruction's scope and inline site.
+    // terminator), with that instruction's scope and inline site. Just
+    // before an inlined function's invoke, that is the caller's.
     const first = block.instructions[0] ?? block.terminator;
     const result = spilled.get(blockId);
+    const sites = first.operationDebug?.inlineSites;
     const entry = stamp(
-      first.operationDebug,
+      sites && carriesActivation(first.operationDebug?.context, "invoke")
+        ? { ...first.operationDebug, inlineSites: sites.slice(0, -1) }
+        : first.operationDebug,
       blockId,
       0,
       -1,

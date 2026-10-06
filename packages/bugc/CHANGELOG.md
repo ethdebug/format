@@ -21,7 +21,8 @@ support. Changes to the specification itself are tracked in the root
   elements or data it refers to. At optimization levels 1 to 3, a local
   whose current value the optimizer folded to a constant or removed is
   listed without a pointer, and an inlined function's locals are listed
-  in its inlined code ([#328]).
+  in its inlined code, from its invoke to its return, with the storage
+  variables, in one flat `variables` list ([#328], [#341]).
 
 ### Changed
 
@@ -209,3 +210,4 @@ First publication.
 [#337]: https://github.com/ethdebug/format/pull/337
 [#339]: https://github.com/ethdebug/format/pull/339
 [#340]: https://github.com/ethdebug/format/pull/340
+[#341]: https://github.com/ethdebug/format/pull/341
