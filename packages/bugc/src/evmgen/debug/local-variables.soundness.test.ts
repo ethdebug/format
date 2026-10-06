@@ -908,6 +908,38 @@ code {
     },
   },
   {
+    name: "array elements written in a loop",
+    source: `name WriteArr;
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 3; }
+code {
+  let items: array<uint256> = [0, 0, 0];
+  for (let i = 0; i < s; i = i + 1) {
+    items[i] = i * 10 + 1;
+  }
+  r = items[2];
+}`,
+    locals: {
+      items: {
+        shape: words,
+        values: [
+          [0n, 0n, 0n],
+          ...[
+            [1n, 0n, 0n],
+            [1n, 11n, 0n],
+            [1n, 11n, 21n],
+          ].map((value) => ({ value, after: "items[i] = i * 10 + 1" })),
+        ],
+      },
+      i: {
+        values: [
+          0n,
+          ...[1n, 2n, 3n].map((value) => ({ value, after: "i = i + 1" })),
+        ],
+      },
+    },
+  },
+  {
     name: "strings",
     source: `name Strings;
 storage { [0] r: uint256; [1] s: uint256; }

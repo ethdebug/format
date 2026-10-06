@@ -224,7 +224,19 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
           // Array compute_slot no longer has index field
         }
         break;
+      case "compute_offset":
+        result.base = replaceValue(result.base);
+        if (Ir.Instruction.ComputeOffset.isArray(result)) {
+          result.index = replaceValue(result.index);
+        } else if (Ir.Instruction.ComputeOffset.isByte(result)) {
+          result.offset = replaceValue(result.offset);
+        }
+        break;
+      case "allocate":
+        result.size = replaceValue(result.size);
+        break;
       case "hash":
+      case "cast":
         result.value = replaceValue(result.value);
         break;
       case "length":

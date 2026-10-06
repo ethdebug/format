@@ -165,6 +165,28 @@ support. Changes to the specification itself are tracked in the root
   was 256, and `(127 as int8) + (1 as int8)` was 128. The optimizer folds
   constants by the same rule, and now wraps 256-bit results at the word,
   where it failed to compile a constant result outside it ([#340]).
+- At optimization levels 2 and 3, common subexpression elimination now
+  renames the operands of an offset computation, a cast and an
+  allocation. Before, when it dropped a repeated computation (such as the
+  address of a local array's elements, which `a[0] + a[2]` computes
+  twice), the instruction that used it still named the dropped result,
+  and code generation failed with "Cannot load value" ([#343]).
+- Reading an element of an array that is itself an array element, as in
+  `m[i][j]`, now skips the inner array's length word. Before, at every
+  optimization level, it read the element before, so `m[i][0]` read the
+  length of `m[i]` ([#343]).
+- A write to an element of a memory array now compiles: `a[i] = x` for a
+  local or a parameter, `m[i][j] = x` for a nested array, and
+  `names[i] = "x"` for an array of strings. Before, at every optimization
+  level, code generation failed with error EVM999 ("Internal code
+  generation error"), because the compiler emitted the element's address
+  computation without its kind. That computation also left out the
+  length word, so the write would have gone to the element before ([#343]).
+- Indexing `bytes` in memory, as in `b[i]` and `b[i] = x`, now reads and
+  writes the byte at `i`. Before, at every optimization level, a read
+  skipped no length word and read a whole word, so it gave the length's
+  bytes; a write failed with error EVM999, as an array element write did
+  ([#343]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -217,3 +239,4 @@ First publication.
 [#339]: https://github.com/ethdebug/format/pull/339
 [#340]: https://github.com/ethdebug/format/pull/340
 [#341]: https://github.com/ethdebug/format/pull/341
+[#343]: https://github.com/ethdebug/format/pull/343
