@@ -142,7 +142,14 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
 
     if (leftValue === undefined || rightValue === undefined) return null;
 
-    const result = this.evaluateBinary(inst.op, leftValue, rightValue);
+    const signed =
+      Ir.Utils.isSignedBinary(inst) &&
+      typeof leftValue === "bigint" &&
+      typeof rightValue === "bigint"
+        ? Ir.Utils.foldSigned(inst.op, leftValue, rightValue)
+        : undefined;
+    const result =
+      signed ?? this.evaluateBinary(inst.op, leftValue, rightValue);
     if (result === undefined) return null;
 
     return {

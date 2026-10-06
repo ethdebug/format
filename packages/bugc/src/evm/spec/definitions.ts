@@ -189,7 +189,7 @@ export const makeOperations = <U, I>(controls: State.Controls<U, I>) => {
       }),
     ),
     ...mapInstruction(
-      { opcode: 0x13, mnemonic: "SGT" },
+      { opcode: 0x13, mnemonic: "SGT" } as const,
       makeOperationForInstruction({
         consumes: ["a", "b"] as const,
         produces: ["a > b"] as const,

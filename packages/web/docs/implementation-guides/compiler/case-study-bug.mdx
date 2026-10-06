@@ -69,6 +69,28 @@ msg.data[0:4] as bytes4;         // the function selector
 msg.data[4:36] as bytes32 as address;  // an ABI-encoded address
 ```
 
+### Signed operators
+
+Comparisons, `/`, and `%` on signed integers are signed, as in Solidity.
+Division truncates toward zero, and a remainder has the sign of the
+dividend. Arithmetic does not check for overflow.
+
+Both operands of an arithmetic or comparison operator must be signed, or
+both unsigned; cast one to mix them. An integer literal takes the type of
+the other operand, if that type can hold it, so `x < 0` and `-1 < x` work
+for a signed `x`, and `x < 128` is an error for an `int8`.
+
+```bug
+(-7 as int8) < (2 as int8);      // true
+(-7 as int8) / (2 as int8);      // -3
+(-7 as int8) % (2 as int8);      // -1
+(7 as int8) % (-2 as int8);      // 1
+```
+
+A result narrower than a word does not wrap to its type yet:
+`(-128 as int8) / (-1 as int8)` is 128, not -128, and the same goes for a
+narrow `+`, `-` or `*` that overflows. A follow-up change makes them wrap.
+
 ## Compilation pipeline
 
 BUG uses a multi-stage compilation pipeline:

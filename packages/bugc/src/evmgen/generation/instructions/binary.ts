@@ -1,4 +1,4 @@
-import type * as Ir from "#ir";
+import * as Ir from "#ir";
 import type { Stack } from "#evm";
 
 import type { State } from "#evmgen/state";
@@ -11,10 +11,14 @@ const {
   SUB,
   MUL,
   DIV,
+  SDIV,
   MOD,
+  SMOD,
   EQ,
   LT,
   GT,
+  SLT,
+  SGT,
   AND,
   OR,
   ISZERO,
@@ -30,6 +34,11 @@ export function generateBinary<S extends Stack>(
   inst: Ir.Instruction.BinaryOp,
 ): Transition<S, readonly ["value", ...S]> {
   const debug = inst.operationDebug;
+
+  // Signed operands compare and divide with the signed opcodes
+  const signed = Ir.Utils.isSignedBinary(inst);
+  const [lt, gt] = signed ? [SLT, SGT] : [LT, GT];
+  const [div, mod] = signed ? [SDIV, SMOD] : [DIV, MOD];
 
   const map: {
     [O in Ir.Instruction.BinaryOp["op"]]: (
@@ -49,12 +58,12 @@ export function generateBinary<S extends Stack>(
     div: pipe<readonly ["a", "b", ...S]>()
       .then(SWAP1({ debug }))
       .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
-      .then(DIV({ debug }))
+      .then(div({ debug }))
       .done(),
     mod: pipe<readonly ["a", "b", ...S]>()
       .then(SWAP1({ debug }))
       .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
-      .then(MOD({ debug }))
+      .then(mod({ debug }))
       .done(),
     shl: pipe<readonly ["a", "b", ...S]>()
       .then(rebrand<"a", "shift", "b", "value">({ 1: "shift", 2: "value" }))
@@ -71,14 +80,14 @@ export function generateBinary<S extends Stack>(
       .done(),
     // Note: operands are loaded as [left=b, right=a] so EVM comparisons are reversed
     // EVM LT returns a < b (right < left), so use GT for IR lt (left < right)
-    lt: GT({ debug }),
+    lt: gt({ debug }),
     le: pipe<readonly ["a", "b", ...S]>()
-      .then(LT({ debug }), { as: "a" })
+      .then(lt({ debug }), { as: "a" })
       .then(ISZERO({ debug }))
       .done(),
-    gt: LT({ debug }),
+    gt: lt({ debug }),
     ge: pipe<readonly ["a", "b", ...S]>()
-      .then(GT({ debug }), { as: "a" })
+      .then(gt({ debug }), { as: "a" })
       .then(ISZERO({ debug }))
       .done(),
     and: AND({ debug }),

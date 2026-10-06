@@ -183,6 +183,59 @@ describe("checkProgram", () => {
     });
   });
 
+  describe("Integer literals and signedness", () => {
+    const program = (body: string) => `
+      name Test;
+      storage { [0] n: int8; [1] u: uint256; }
+      code { let x = n; ${body} }
+    `;
+
+    for (const body of [
+      "let a = x < 0;",
+      "let b = x == 1;",
+      "let c = -1 < x;",
+      "let d = x + 1;",
+      "let e = x / -2;",
+      "let f = x != -128;",
+      "let g = u > 0;",
+    ]) {
+      it(`should give a literal the other operand's type: \`${body}\``, () => {
+        const result = check(program(body));
+        expect(result.success).toBe(true);
+        expect(Result.hasMessages(result)).toBe(false);
+      });
+    }
+
+    for (const [body, message] of [
+      ["let a = x < 128;", "Literal 128 does not fit in int8"],
+      ["let b = x == -129;", "Literal -129 does not fit in int8"],
+      ["let c = u > -1;", "Literal -1 does not fit in uint256"],
+    ]) {
+      it(`should reject a literal that does not fit: \`${body}\``, () => {
+        const result = check(program(body));
+        expect(result.success).toBe(false);
+        expect(result).toHaveMessage({ severity: Severity.Error, message });
+      });
+    }
+
+    for (const body of [
+      "let a = u > x;",
+      "let b = x <= u;",
+      "let c = x + u;",
+      "let d = u / x;",
+      "let e = u % x;",
+    ]) {
+      it(`should reject mixed signedness: \`${body}\``, () => {
+        const result = check(program(body));
+        expect(result.success).toBe(false);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message: "cannot mix signed and unsigned operands",
+        });
+      });
+    }
+  });
+
   describe("Structs", () => {
     it("should type check struct field access", () => {
       const result = check(`

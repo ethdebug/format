@@ -1549,4 +1549,289 @@ code {
       });
     }
   });
+
+  describe("signed operators", () => {
+    const word = 2n ** 256n;
+    const toWord = (n: bigint) => ((n % word) + word) % word;
+    // A negative literal is a cast of its two's complement, which the
+    // optimizer folds (it does not fold negation)
+    const literal = (n: bigint, type: string) => {
+      const bits = BigInt(type.replace(/^u?int/, ""));
+      return `(${n < 0n ? 2n ** bits + n : n} as ${type})`;
+    };
+
+    // Store the result of each statement on operands `a` and `b` of
+    // `type`, read at runtime from int256 storage, or given as
+    // literals, which the optimizer folds
+    const program = (
+      type: string,
+      [a, b]: readonly [bigint, bigint],
+      statements: readonly ((
+        a: string,
+        b: string,
+        out: string,
+        type: string,
+      ) => string)[],
+      folded: boolean,
+    ) => {
+      const out = type.startsWith("u") ? "uint256" : "int256";
+      const outputs = statements.map((_, j) => `[${10 + j}] o${j}: ${out};`);
+      const [x, y] = folded ? [literal(a, type), literal(b, type)] : ["x", "y"];
+      return `name SignedOperators;
+storage {
+  [0] a: int256;
+  [1] b: int256;
+  ${outputs.join("\n  ")}
+}
+create {
+  a = ${literal(a, "int256")};
+  b = ${literal(b, "int256")};
+}
+code {
+  let x = a as ${type};
+  let y = b as ${type};
+  ${statements.map((statement, j) => statement(x, y, `o${j}`, out)).join("\n  ")}
+}`;
+    };
+
+    const check = async (
+      source: string,
+      level: 0 | 1 | 2 | 3,
+      expected: readonly bigint[],
+    ) => {
+      const result = await executeProgram(source, {
+        calldata: "",
+        optimizationLevel: level,
+      });
+      expect(result.callSuccess).toBe(true);
+      const actual = [];
+      for (const j of expected.keys()) {
+        actual.push(await result.getStorage(10n + BigInt(j)));
+      }
+      expect(actual).toEqual(expected.map(toWord));
+    };
+
+    const min = -(2n ** 255n);
+
+    describe("comparisons", () => {
+      const comparisons = [
+        ["<", (a: bigint, b: bigint) => a < b],
+        ["<=", (a: bigint, b: bigint) => a <= b],
+        [">", (a: bigint, b: bigint) => a > b],
+        [">=", (a: bigint, b: bigint) => a >= b],
+        ["==", (a: bigint, b: bigint) => a === b],
+        ["!=", (a: bigint, b: bigint) => a !== b],
+      ] as const;
+
+      // Each comparison stores 1 when it holds
+      const statements = comparisons.map(
+        ([op]) =>
+          (a: string, b: string, out: string, type: string) =>
+            `if (${a} ${op} ${b}) { ${out} = 1 as ${type}; }`,
+      );
+
+      const signed = [
+        [-3n, -2n],
+        [-2n, -3n],
+        [-5n, 4n],
+        [4n, -5n],
+        [-7n, -7n],
+        [6n, 6n],
+      ] as const;
+
+      const cases = [
+        ...["int8", "int16", "int128", "int256"].flatMap((type) =>
+          signed.map((operands) => [type, operands] as const),
+        ),
+        ["int256", [min, -min - 1n]],
+        ["uint256", [2n ** 255n, 1n]],
+        ["uint256", [1n, 2n ** 255n]],
+      ] as const;
+
+      for (const [type, operands] of cases) {
+        const [a, b] = operands;
+        const expected = comparisons.map(([, compare]) =>
+          compare(a, b) ? 1n : 0n,
+        );
+        for (const folded of [false, true]) {
+          const source = program(type, operands, statements, folded);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should compare ${type} ${operands.join(" and ")}${folded ? " as literals" : ""} (level ${level})`, async () => {
+              await check(source, level, expected);
+            });
+          }
+        }
+      }
+    });
+
+    describe("literal operands", () => {
+      // A literal takes the type of the other operand
+      const statements = [
+        (x: string, _: string, out: string) =>
+          `if (${x} < 0) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (${x} == 1) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (-1 < ${x}) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) =>
+          `if (0 >= ${x}) { ${out} = 1 as int256; }`,
+        (x: string, _: string, out: string) => `${out} = ${x} / -2;`,
+      ];
+      const expected = (x: bigint) => [
+        x < 0n ? 1n : 0n,
+        x === 1n ? 1n : 0n,
+        -1n < x ? 1n : 0n,
+        0n >= x ? 1n : 0n,
+        x / -2n,
+      ];
+
+      for (const x of [-3n, -1n, 0n, 1n, 5n]) {
+        for (const type of ["int8", "int256"]) {
+          const source = program(type, [x, 0n], statements, false);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should compare ${type} ${x} with literals (level ${level})`, async () => {
+              await check(source, level, expected(x));
+            });
+          }
+        }
+      }
+
+      it("should reject a literal too large for the other operand", async () => {
+        await expect(
+          executeProgram(`name TooLarge;
+storage { [0] n: int8; }
+code { if (n < 128) { n = 1 as int8; } }`),
+        ).rejects.toThrow("Literal 128 does not fit in int8");
+      });
+
+      it("should reject mixed signedness", async () => {
+        await expect(
+          executeProgram(`name Mixed;
+storage { [0] u: uint256; [1] o: uint256; }
+code { let x = 1 as int8; if (u > x) { o = 1; } }`),
+        ).rejects.toThrow("cannot mix signed and unsigned operands");
+      });
+    });
+
+    describe("division and remainder", () => {
+      // Division truncates toward zero, and the remainder has the sign
+      // of the dividend, as in Solidity (and as bigint does). BUG
+      // arithmetic does not check for overflow, so the minimum int256
+      // divided by -1 wraps to itself.
+      const statements = [
+        (a: string, b: string, out: string) => `${out} = ${a} / ${b};`,
+        (a: string, b: string, out: string) => `${out} = ${a} % ${b};`,
+      ];
+
+      const signed = [
+        [7n, 2n],
+        [-7n, 2n],
+        [7n, -2n],
+        [-7n, -2n],
+        [-6n, 3n],
+        [5n, -7n],
+      ] as const;
+
+      const cases = [
+        ...["int8", "int16", "int128", "int256"].flatMap((type) =>
+          signed.map((operands) => [type, operands, null] as const),
+        ),
+        ["int256", [min, -1n], [min, 0n]],
+        ["uint256", [word - 2n, 2n], null],
+        ["uint256", [word - 7n, 2n ** 255n], null],
+      ] as const;
+
+      for (const [type, [a, b], wrapped] of cases) {
+        const expected = wrapped ?? [a / b, a % b];
+        for (const folded of [false, true]) {
+          const source = program(type, [a, b], statements, folded);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should divide ${type} ${a} by ${b}${folded ? " as literals" : ""} (level ${level})`, async () => {
+              await check(source, level, expected);
+            });
+          }
+        }
+      }
+    });
+  });
+
+  describe("narrow mapping values and array elements", () => {
+    const neg = (n: bigint) => 2n ** 256n - n;
+    const pad = (n: bigint) => n.toString(16).padStart(64, "0");
+    const hash = (hex: string) =>
+      BigInt("0x" + bytesToHex(keccak256(Buffer.from(hex, "hex"))));
+
+    const mappings = `name NarrowMappings;
+storage {
+  [0] m8: mapping<uint256, int8>;
+  [1] m16: mapping<uint256, int16>;
+  [2] m128: mapping<uint256, int128>;
+  [3] n: int256;
+  [10] o0: int256;
+  [11] o1: int256;
+  [12] o2: int256;
+  [13] o3: int256;
+  [14] o4: int256;
+  [15] o5: int256;
+}
+create { n = -2 as int256; }
+code {
+  m8[5] = n as int8;
+  m16[5] = n as int16;
+  m128[5] = n as int128;
+  m8[6] = -3 as int8;
+  m16[6] = -3 as int16;
+  m128[6] = -3 as int128;
+  o0 = m8[5];
+  o1 = m16[5];
+  o2 = m128[5];
+  o3 = m8[6];
+  o4 = m16[6];
+  o5 = m128[6];
+}`;
+
+    // bugc gives each array element its own slot
+    const arrays = `name NarrowArrays;
+storage { [0] a: array<int16, 3>; [1] n: int256; [10] o0: int256; }
+create { n = -2 as int256; }
+code { a[1] = n as int16; o0 = a[1]; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should write only a mapping value's bytes (level ${level})`, async () => {
+        const result = await executeProgram(mappings, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        for (const [key, value] of [
+          [5n, 2n],
+          [6n, 3n],
+        ] as const) {
+          for (const [slot, bytes] of [
+            [0n, 1n],
+            [1n, 2n],
+            [2n, 16n],
+          ] as const) {
+            expect(await result.getStorage(hash(pad(key) + pad(slot)))).toBe(
+              2n ** (8n * bytes) - value,
+            );
+          }
+        }
+        const expected = [2n, 2n, 2n, 3n, 3n, 3n].map(neg);
+        for (const [j, value] of expected.entries()) {
+          expect(await result.getStorage(10n + BigInt(j))).toBe(value);
+        }
+      });
+
+      it(`should write only an array element's bytes (level ${level})`, async () => {
+        const result = await executeProgram(arrays, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(hash(pad(0n)) + 1n)).toBe(0xfffen);
+        expect(await result.getStorage(10n)).toBe(neg(2n));
+      });
+    }
+  });
 });
