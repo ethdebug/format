@@ -34,6 +34,9 @@ support. Changes to the specification itself are tracked in the root
   or is live across a block boundary. Before, at any optimization level,
   such a value got no home in memory, and code generation failed with
   "Cannot load value" ([#332]).
+- `msg.data.length` now reads the calldata size. Before, it was 0 at
+  every optimization level, because the code looked for "msg_data" in the
+  name of a temp such as `t1` ([#333]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -77,3 +80,4 @@ First publication.
 [#327]: https://github.com/ethdebug/format/pull/327
 [#330]: https://github.com/ethdebug/format/pull/330
 [#332]: https://github.com/ethdebug/format/pull/332
+[#333]: https://github.com/ethdebug/format/pull/333

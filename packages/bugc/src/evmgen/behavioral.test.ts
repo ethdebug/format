@@ -968,4 +968,32 @@ code { result = ${expr}; }`;
       });
     }
   });
+
+  describe("msg.data.length", () => {
+    const source = `name DataLength;
+
+storage {
+  [0] size: uint256;
+}
+
+create {
+  size = 99;
+}
+
+code { size = msg.data.length; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      for (const bytes of [0, 4, 36, 100]) {
+        it(`should be ${bytes} for ${bytes} bytes of calldata (level ${level})`, async () => {
+          const result = await executeProgram(source, {
+            calldata: "ab".repeat(bytes),
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(BigInt(bytes));
+        });
+      }
+    }
+  });
 });

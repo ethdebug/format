@@ -13,17 +13,15 @@ const { PUSHn, CALLDATASIZE, SLOAD, MLOAD, SUB, SHR } = operations;
  */
 export function generateLength<S extends Stack>(
   inst: Ir.Instruction.Length,
+  msgDataIds: ReadonlySet<string> = new Set(),
 ): Transition<S, readonly ["value", ...S]> {
   const debug = inst.operationDebug;
 
-  // Check if this is msg.data (calldata) - use CALLDATASIZE
+  // msg.data is a temp defined by an env `msg_data` instruction, so
+  // the caller passes the ids of those temps
   const objectId = valueId(inst.object);
-  const isCalldata =
-    objectId.includes("calldata") ||
-    objectId.includes("msg_data") ||
-    objectId.includes("msg.data");
 
-  if (isCalldata) {
+  if (msgDataIds.has(objectId)) {
     return pipe<S>()
       .then(CALLDATASIZE({ debug }), { as: "value" })
       .then(storeValueIfNeeded(inst.dest, { debug }))
