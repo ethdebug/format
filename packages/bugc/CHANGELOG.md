@@ -165,6 +165,12 @@ support. Changes to the specification itself are tracked in the root
   was 256, and `(127 as int8) + (1 as int8)` was 128. The optimizer folds
   constants by the same rule, and now wraps 256-bit results at the word,
   where it failed to compile a constant result outside it ([#340]).
+- At optimization levels 2 and 3, common subexpression elimination now
+  renames the operands of an offset computation, a cast and an
+  allocation. Before, when it dropped a repeated computation (such as the
+  address of a local array's elements, which `a[0] + a[2]` computes
+  twice), the instruction that used it still named the dropped result,
+  and code generation failed with "Cannot load value" ([#343]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -217,3 +223,4 @@ First publication.
 [#339]: https://github.com/ethdebug/format/pull/339
 [#340]: https://github.com/ethdebug/format/pull/340
 [#341]: https://github.com/ethdebug/format/pull/341
+[#343]: https://github.com/ethdebug/format/pull/343
