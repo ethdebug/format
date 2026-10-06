@@ -1322,4 +1322,231 @@ code { size = msg.data.length; }`;
       }
     }
   });
+
+  describe("packed storage writes", () => {
+    // Fields pack from the low-order end of slot 0:
+    // a (1 byte), b (1), c (2), d (4), e (8).
+    const define = `define {
+  struct S { a: int8; b: uint8; c: int16; d: uint32; e: int64; };
+}`;
+
+    // a = -56, b = 7, c = -2, d = 0x01020304, e = -3
+    const word = BigInt(
+      "0x" + "00".repeat(16) + "fffffffffffffffd" + "01020304" + "fffe07c8",
+    );
+
+    const fields = [
+      "s.a = -56 as int8;",
+      "s.b = 7 as uint8;",
+      "s.c = -2 as int16;",
+      "s.d = 16909060 as uint32;",
+      "s.e = -3 as int64;",
+    ];
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should mask constants in create (level ${level})`, async () => {
+        const source = `name PackedCreate;
+${define}
+storage { [0] s: S; [1] x: uint256; }
+create { ${fields.join(" ")} }
+code { x = 1; }`;
+
+        const result = await executeProgram(source, {
+          optimizationLevel: level,
+        });
+        expect(await result.getStorage(0n)).toBe(word);
+      });
+
+      it(`should mask constants in either order (level ${level})`, async () => {
+        const source = `name PackedReverse;
+${define}
+storage { [0] s: S; [1] x: uint256; }
+create { x = 1; }
+code { ${[...fields].reverse().join(" ")} }`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+      });
+
+      it(`should mask runtime values (level ${level})`, async () => {
+        const source = `name PackedRuntime;
+${define}
+storage {
+  [0] s: S;
+  [1] na: int256;
+  [2] nc: int256;
+  [3] ne: int256;
+  [4] t: S;
+}
+create {
+  na = -56 as int256;
+  nc = -2 as int256;
+  ne = -3 as int256;
+}
+code {
+  let a = na as int8;
+  let b = 7 as uint8;
+  let c = nc as int16;
+  let d = 16909060 as uint32;
+  let e = ne as int64;
+  s.a = a;
+  s.b = b;
+  s.c = c;
+  s.d = d;
+  s.e = e;
+  t.e = s.e;
+  t.d = s.d;
+  t.c = s.c;
+  t.b = s.b;
+  t.a = s.a;
+}`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+        expect(await result.getStorage(4n)).toBe(word);
+      });
+
+      it(`should keep the fields around writes past offset 0 (level ${level})`, async () => {
+        const source = `name PackedMiddle;
+${define}
+storage { [0] s: S; [1] nc: int256; }
+create { nc = -2 as int256; s.a = -56 as int8; s.e = -3 as int64; }
+code {
+  let b = 7 as uint8;
+  let c = nc as int16;
+  let d = 16909060 as uint32;
+  s.b = b;
+  s.c = c;
+  s.d = d;
+}`;
+
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(word);
+      });
+
+      // Writes to one field: the later write replaces the earlier
+      for (const [writes, expected] of [
+        ["s.a = a; s.a = ua;", 0x03n],
+        ["s.b = b; s.a = a; s.b = ub;", 0x0003c8n],
+      ] as const) {
+        it(`should apply \`${writes}\` in order (level ${level})`, async () => {
+          const source = `name PackedOverlap;
+define { struct T { a: int8; b: int16; }; }
+storage { [0] s: T; [1] n: int256; [2] u: uint256; }
+create { n = -56 as int256; u = 3; }
+code {
+  let a = n as int8;
+  let b = n as int16;
+  let ua = u as int8;
+  let ub = u as int16;
+  ${writes}
+}`;
+
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        });
+      }
+    }
+  });
+
+  describe("narrow storage variables", () => {
+    const source = `name Narrow;
+storage { [0] x: int8; [1] y: int16; [2] n: int256; }
+create { x = -56 as int8; n = -2 as int256; }
+code { let v = n as int16; y = v; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should write only their own bytes (level ${level})`, async () => {
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(0xc8n);
+        expect(await result.getStorage(1n)).toBe(0xfffen);
+      });
+    }
+  });
+
+  describe("signed storage reads", () => {
+    const neg = (n: bigint) => 2n ** 256n - n;
+
+    const source = `name SignedReads;
+define {
+  struct R { a: int8; b: int16; c: int64; d: int128; };
+}
+storage {
+  [0] s: R;
+  [1] x: int8;
+  [2] y: int16;
+  [3] m: mapping<uint256, int16>;
+  [4] t: R;
+  [5] n: int256;
+  [10] o0: int256;
+  [11] o1: int256;
+  [12] o2: int256;
+  [13] o3: int256;
+  [14] o4: int256;
+  [15] o5: int256;
+  [16] o6: int256;
+  [17] o7: int256;
+  [18] o8: int256;
+}
+create {
+  s.a = -56 as int8;
+  s.b = -2 as int16;
+  s.c = -3 as int64;
+  s.d = -4 as int128;
+  x = -56 as int8;
+  y = -300 as int16;
+  m[5] = -7 as int16;
+  n = -9 as int256;
+}
+code {
+  let a = n as int8;
+  let b = n as int16;
+  t.a = a;
+  t.b = b;
+  o0 = s.a;
+  o1 = s.b;
+  o2 = s.c;
+  o3 = s.d;
+  o4 = x;
+  o5 = y;
+  o6 = m[5];
+  o7 = t.a;
+  o8 = t.b;
+}`;
+
+    const expected = [56n, 2n, 3n, 4n, 56n, 300n, 7n, 9n, 9n].map(neg);
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should sign-extend narrow signed values (level ${level})`, async () => {
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        for (const [i, value] of expected.entries()) {
+          expect(await result.getStorage(10n + BigInt(i))).toBe(value);
+        }
+      });
+    }
+  });
 });

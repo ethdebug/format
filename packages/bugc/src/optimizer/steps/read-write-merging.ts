@@ -239,7 +239,7 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     // Sort by offset
     writeInfos.sort((a, b) => Number(a.offset - b.offset));
 
-    // Check if writes are adjacent or overlapping (for simple merging)
+    // Check that the writes tile one range of the slot
     const canSimpleMerge = this.areWritesAdjacent(writeInfos);
 
     if (!canSimpleMerge) {
@@ -253,79 +253,52 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     let combinedValue: Ir.Value | null = null;
     let combinedDebug: Ir.Instruction.Debug = {};
 
-    for (let i = 0; i < writeInfos.length; i++) {
-      const info = writeInfos[i];
-      const shiftBits = info.offset * 8n;
+    // Emit `dest = left op right` and return dest as a value
+    const emit = (
+      op: "and" | "shl" | "or",
+      left: Ir.Value,
+      right: Ir.Value,
+    ): Ir.Value => {
+      const dest = `t${tempCounter++}`;
+      instructions.push({
+        kind: "binary",
+        op,
+        left,
+        right,
+        dest,
+        operationDebug: combinedDebug,
+      });
+      return { kind: "temp", id: dest, type: Ir.Type.Scalar.uint256 };
+    };
+    const constant = (value: bigint): Ir.Value => ({
+      kind: "const",
+      value,
+      type: Ir.Type.Scalar.uint256,
+    });
 
+    for (const info of writeInfos) {
       // Track debug contexts as we process writes
       combinedDebug = Ir.Utils.combineDebugContexts(
         combinedDebug,
         info.write.operationDebug,
       );
 
-      if (shiftBits > 0n) {
-        // Need to shift the value
-        const shiftTemp = `t${tempCounter++}`;
-        instructions.push({
-          kind: "binary",
-          op: "shl",
-          left: info.write.value,
-          right: {
-            kind: "const",
-            value: shiftBits,
-            type: Ir.Type.Scalar.uint256,
-          },
-          dest: shiftTemp,
-          operationDebug: combinedDebug,
-        });
-
-        const shiftedValue: Ir.Value = {
-          kind: "temp",
-          id: shiftTemp,
-          type: Ir.Type.Scalar.uint256,
-        };
-
-        if (combinedValue === null) {
-          combinedValue = shiftedValue;
-        } else {
-          // OR with previous combined value
-          const orTemp = `t${tempCounter++}`;
-          instructions.push({
-            kind: "binary",
-            op: "or",
-            left: combinedValue,
-            right: shiftedValue,
-            dest: orTemp,
-            operationDebug: combinedDebug,
-          });
-          combinedValue = {
-            kind: "temp",
-            id: orTemp,
-            type: Ir.Type.Scalar.uint256,
-          };
-        }
-      } else {
-        // No shift needed
-        if (combinedValue === null) {
-          combinedValue = info.write.value;
-        } else {
-          // OR with previous combined value
-          const orTemp = `t${tempCounter++}`;
-          instructions.push({
-            kind: "binary",
-            op: "or",
-            left: combinedValue,
-            right: info.write.value,
-            dest: orTemp,
-            operationDebug: combinedDebug,
-          });
-          combinedValue = {
-            kind: "temp",
-            id: orTemp,
-            type: Ir.Type.Scalar.uint256,
-          };
-        }
+      // Mask the value to its length, so that a sign-extended
+      // negative value cannot clobber the other parts. Code generation
+      // masks the merged value to its length, which covers the last part
+      let part = info.write.value;
+      if (info !== writeInfos[writeInfos.length - 1]) {
+        part = emit("and", part, constant((1n << (info.length * 8n)) - 1n));
       }
+
+      // Place the part relative to the merged write's offset
+      const shift = (info.offset - writeInfos[0].offset) * 8n;
+      if (shift > 0n) {
+        part = emit("shl", part, constant(shift));
+      }
+
+      combinedValue =
+        combinedValue === null ? part : emit("or", combinedValue, part);
     }
 
     // Calculate the merged write parameters
@@ -384,16 +357,17 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
   }
 
   /**
-   * Check if writes are adjacent or can be easily combined
+   * Check that each write starts where the previous one ends
    */
   private areWritesAdjacent(writeInfos: WriteInfo[]): boolean {
     for (let i = 1; i < writeInfos.length; i++) {
       const prev = writeInfos[i - 1];
       const curr = writeInfos[i];
 
-      // Check if current write starts at or before previous write ends
-      if (curr.offset > prev.offset + prev.length) {
-        // Gap between writes - not adjacent
+      // Each write must start where the previous one ends. A gap would
+      // clobber the bytes between them, and with an overlap the later
+      // write must replace the earlier one's bytes, not combine with them
+      if (curr.offset !== prev.offset + prev.length) {
         return false;
       }
     }

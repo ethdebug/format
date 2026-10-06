@@ -87,6 +87,27 @@ support. Changes to the specification itself are tracked in the root
   significant byte. Before, it gave the offset from the low-order end, so
   a debugger read the wrong bytes: for example, an `address` at the start
   of a slot read as the slot's high-order 20 bytes ([#336]).
+- Reading a signed integer narrower than a word from storage now
+  sign-extends it, so a struct field, variable or mapping value of type
+  `int8` that holds `-56` reads as `-56`. Before, at every optimization
+  level, a packed field read back as its unsigned bytes, such as `200`
+  ([#337]).
+- A write to a storage value narrower than a slot, whether a struct
+  field or a variable such as `x: int8`, now writes only that value's
+  bytes. Before, at every optimization level, a negative signed value
+  such as `-2 as int16` filled every higher byte of the slot with `ff`,
+  so the fields packed above it read back wrong, and `x = -56` stored a
+  full word where Solidity stores one byte ([#337]).
+- At optimization level 3, merging adjacent writes to one slot now masks
+  each value to its width. Before, a negative signed value written next
+  to other fields of a packed struct overwrote them ([#337]).
+- At optimization level 3, merged writes to one slot that do not start
+  at the slot's first byte now land at their fields' offsets. Before,
+  each value was shifted by its field's offset twice, so writing `s.b`
+  and `s.c` but not `s.a` put them in the wrong bytes ([#337]).
+- At optimization level 3, two writes in a row to the same field of a
+  packed struct now leave the second value. Before, read/write merging
+  combined the two values with `or` ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -134,3 +155,4 @@ First publication.
 [#334]: https://github.com/ethdebug/format/pull/334
 [#335]: https://github.com/ethdebug/format/pull/335
 [#336]: https://github.com/ethdebug/format/pull/336
+[#337]: https://github.com/ethdebug/format/pull/337
