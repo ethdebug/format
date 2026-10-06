@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
 
+import { dereference } from "@ethdebug/pointers";
+import { createMachineState } from "@ethdebug/evm";
+
 import { executeProgram } from "#test/evm/behavioral";
 
 const word = (n: bigint) => n.toString(16).padStart(64, "0");
@@ -99,6 +102,42 @@ describe("packed storage struct fields", () => {
       expect(await result.getStorage(3n)).toBe(
         0x1234567890123456789012345678901234567890n,
       );
+    });
+  }
+});
+
+describe("packed storage struct field pointers", () => {
+  for (const level of [0, 1, 2, 3] as const) {
+    it(`resolve to the bytes of each field at O${level}`, async () => {
+      const { executor, getStorage } = await executeProgram(packedSource, {
+        calldata: "",
+        optimizationLevel: level,
+      });
+      expect(await getStorage(0n)).not.toBe(0n);
+
+      const { compile } = await import("#compiler");
+      const compiled = await compile({
+        to: "bytecode",
+        source: packedSource,
+        optimizer: { level },
+      });
+      if (!compiled.success) throw new Error("compilation failed");
+      const context = compiled.value.bytecode.runtimeProgram.context;
+      const variable =
+        context && "variables" in context
+          ? context.variables.find(({ identifier }) => identifier === "p")
+          : undefined;
+      expect(variable?.pointer).toBeDefined();
+
+      const state = createMachineState(executor);
+      const cursor = await dereference(variable!.pointer!, { state });
+      const view = await cursor.view(state);
+      const read = async (name: string) =>
+        (await view.read(view.regions.lookup[name])).asUint();
+
+      expect(await read("a")).toBe(7n);
+      expect(await read("b")).toBe(1988n);
+      expect(await read("c")).toBe(0x1234567890123456789012345678901234567890n);
     });
   }
 });

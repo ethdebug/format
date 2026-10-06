@@ -57,6 +57,11 @@ support. Changes to the specification itself are tracked in the root
 - Programs compiled at optimization levels 1 to 3 now carry their storage
   variables in the program-level context, as at level 0. Before, the
   optimizer dropped that context ([#336]).
+- The pointer for a storage value narrower than a slot now has the
+  `offset` that **ethdebug/format/pointer** defines, counted from the most
+  significant byte. Before, it gave the offset from the low-order end, so
+  a debugger read the wrong bytes: for example, an `address` at the start
+  of a slot read as the slot's high-order 20 bytes ([#336]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

@@ -36,4 +36,13 @@ code {
   company.founded = 1988;
   let ceo_addr = company.ceo.addr;
   let x = ceo_addr;
+
+  /**@test nested-struct-values
+   * variables:
+   *   company:
+   *     values:
+   *       founded: 1988
+   *       ceo-addr: 0
+   *       ceo-salary: 1000000
+   */
 }

@@ -64,7 +64,7 @@ create {
   /*@test permission-pointer
   variables:
     permission:
-      pointer: { location: storage, slot: 5, length: 1 }
+      pointer: { location: storage, slot: 5, offset: 31, length: 1 }
   */
   return;
 }
