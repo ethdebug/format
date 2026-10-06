@@ -239,7 +239,7 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     // Sort by offset
     writeInfos.sort((a, b) => Number(a.offset - b.offset));
 
-    // Check if writes are adjacent or overlapping (for simple merging)
+    // Check that the writes tile one range of the slot
     const canSimpleMerge = this.areWritesAdjacent(writeInfos);
 
     if (!canSimpleMerge) {
@@ -357,16 +357,17 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
   }
 
   /**
-   * Check if writes are adjacent or can be easily combined
+   * Check that each write starts where the previous one ends
    */
   private areWritesAdjacent(writeInfos: WriteInfo[]): boolean {
     for (let i = 1; i < writeInfos.length; i++) {
       const prev = writeInfos[i - 1];
       const curr = writeInfos[i];
 
-      // Check if current write starts at or before previous write ends
-      if (curr.offset > prev.offset + prev.length) {
-        // Gap between writes - not adjacent
+      // Each write must start where the previous one ends. A gap would
+      // clobber the bytes between them, and with an overlap the later
+      // write must replace the earlier one's bytes, not combine with them
+      if (curr.offset !== prev.offset + prev.length) {
         return false;
       }
     }

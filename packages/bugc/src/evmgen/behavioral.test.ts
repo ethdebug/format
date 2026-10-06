@@ -1435,6 +1435,33 @@ code {
         expect(result.callSuccess).toBe(true);
         expect(await result.getStorage(0n)).toBe(word);
       });
+
+      // Writes to one field: the later write replaces the earlier
+      for (const [writes, expected] of [
+        ["s.a = a; s.a = ua;", 0x03n],
+        ["s.b = b; s.a = a; s.b = ub;", 0x0003c8n],
+      ] as const) {
+        it(`should apply \`${writes}\` in order (level ${level})`, async () => {
+          const source = `name PackedOverlap;
+define { struct T { a: int8; b: int16; }; }
+storage { [0] s: T; [1] n: int256; [2] u: uint256; }
+create { n = -56 as int256; u = 3; }
+code {
+  let a = n as int8;
+  let b = n as int16;
+  let ua = u as int8;
+  let ub = u as int16;
+  ${writes}
+}`;
+
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        });
+      }
     }
   });
 

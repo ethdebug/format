@@ -105,6 +105,9 @@ support. Changes to the specification itself are tracked in the root
   at the slot's first byte now land at their fields' offsets. Before,
   each value was shifted by its field's offset twice, so writing `s.b`
   and `s.c` but not `s.a` put them in the wrong bytes ([#337]).
+- At optimization level 3, two writes in a row to the same field of a
+  packed struct now leave the second value. Before, read/write merging
+  combined the two values with `or` ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
