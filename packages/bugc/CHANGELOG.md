@@ -50,6 +50,18 @@ support. Changes to the specification itself are tracked in the root
 - A cast from dynamic `bytes` to an integer or `address` is now a type
   error, as in Solidity: cast to `bytesN` first, as in
   `msg.data[4:36] as bytes32 as uint256` ([#334]).
+- An index out of bounds now reverts with Solidity's `Panic(0x32)`, as
+  in Solidity: `a[i]` on an array or `bytes` in memory, or on a
+  fixed-size array in storage, reverts unless `i` is less than the
+  length, for reads and writes, at each level of a nested array. A slice
+  `b[s:e]` reverts unless `s <= e <= b.length`, so `msg.data[0:4]`
+  reverts on shorter calldata. The `REVERT` has a `revert` context with
+  the panic code. Before, an index past the end read or wrote the memory
+  that follows, such as the next inner array's length word. A dynamic
+  array in storage is not checked ([#344]).
+- An array or bytes index and a slice bound must now be an unsigned
+  integer, as in Solidity; cast a signed one, as in `a[i as uint256]`.
+  Before, a signed index compiled ([#344]).
 
 ### Fixed
 
@@ -187,6 +199,9 @@ support. Changes to the specification itself are tracked in the root
   skipped no length word and read a whole word, so it gave the length's
   bytes; a write failed with error EVM999, as an array element write did
   ([#343]).
+- `.length` of an array literal, as in `[1, 2, 3].length`, is now the
+  number of elements. Before, at every optimization level, it was 32
+  ([#344]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -240,3 +255,4 @@ First publication.
 [#340]: https://github.com/ethdebug/format/pull/340
 [#341]: https://github.com/ethdebug/format/pull/341
 [#343]: https://github.com/ethdebug/format/pull/343
+[#344]: https://github.com/ethdebug/format/pull/344
