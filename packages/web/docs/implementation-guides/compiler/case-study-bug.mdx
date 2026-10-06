@@ -49,6 +49,26 @@ code {
 }
 ```
 
+### Casts
+
+`x as T` converts `x` to type `T` as Solidity does. A cast to a narrower
+integer type or to `address` keeps the low bits; a cast to a signed type
+then sign-extends from the new width. A cast to a narrower `bytesN` keeps
+the leading bytes, and a cast to a wider one pads with zero bytes at the
+end. A cast from dynamic `bytes` to `bytesN` uses its first 32 bytes
+(zero past its length) as a `bytes32`. As in Solidity, dynamic `bytes`
+casts to an integer or `address` only through `bytesN`.
+
+```bug
+300 as uint8;                    // 44
+200 as int8;                     // -56
+(-1 as int256) as uint8;         // 255
+0x11223344 as bytes8;            // 0x1122334400000000
+0x1122334455667788 as bytes4;    // 0x11223344
+msg.data[0:4] as bytes4;         // the function selector
+msg.data[4:36] as bytes32 as address;  // an ABI-encoded address
+```
+
 ## Compilation pipeline
 
 BUG uses a multi-stage compilation pipeline:

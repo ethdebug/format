@@ -452,4 +452,30 @@ describe("checkProgram", () => {
       expect(ids).not.toContain("0_0");
     });
   });
+
+  describe("Casts from dynamic bytes", () => {
+    const program = (expression: string) => `
+      name Test;
+      storage { [0] a: uint256; }
+      code { let x = ${expression}; }
+    `;
+
+    for (const target of ["uint32", "int8", "uint256", "address"]) {
+      it(`should reject bytes to ${target}`, () => {
+        const result = check(program(`msg.data[0:4] as ${target}`));
+
+        expect(result.success).toBe(false);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message: `Cannot cast from bytes to ${target}: cast to a fixed-size bytes type first`,
+        });
+      });
+    }
+
+    it("should allow bytes to an integer via bytesN", () => {
+      const result = check(program("msg.data[0:4] as bytes4 as uint32"));
+
+      expect(result.success).toBe(true);
+    });
+  });
 });

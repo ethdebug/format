@@ -245,38 +245,51 @@ const makeBuildSliceAccess = (
         operationDebug: yield* Process.Debug.forAstNode(expr),
       } as Ir.Instruction.Write);
 
-      // Compute source offset (skip length prefix + start offset)
-      const sourceOffsetTemp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit({
-        kind: "binary",
-        op: "add",
-        left: object,
-        right: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-        dest: sourceOffsetTemp,
-        operationDebug: yield* Process.Debug.forAstNode(expr),
-      } as Ir.Instruction);
-
-      const adjustedSourceTemp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit({
-        kind: "binary",
-        op: "add",
-        left: Ir.Value.temp(sourceOffsetTemp, Ir.Type.Scalar.uint256),
-        right: start,
-        dest: adjustedSourceTemp,
-        operationDebug: yield* Process.Debug.forAstNode(expr),
-      } as Ir.Instruction);
-
-      // Read the slice data from source
+      // Read the slice data from the source: `msg.data` is calldata
+      // from offset 0; other bytes are in memory after a length word.
+      // Either read copies one word.
       const dataTemp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit({
-        kind: "read",
-        location: "memory",
-        offset: Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256),
-        length,
-        type: resultType,
-        dest: dataTemp,
-        operationDebug: yield* Process.Debug.forAstNode(expr),
-      } as Ir.Instruction.Read);
+      if (Ast.Expression.Special.isMsgData(expr.object)) {
+        yield* Process.Instructions.emit({
+          kind: "read",
+          location: "calldata",
+          offset: start,
+          length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+          type: resultType,
+          dest: dataTemp,
+          operationDebug: yield* Process.Debug.forAstNode(expr),
+        } as Ir.Instruction.Read);
+      } else {
+        const sourceOffsetTemp = yield* Process.Variables.newTemp();
+        yield* Process.Instructions.emit({
+          kind: "binary",
+          op: "add",
+          left: object,
+          right: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+          dest: sourceOffsetTemp,
+          operationDebug: yield* Process.Debug.forAstNode(expr),
+        } as Ir.Instruction);
+
+        const adjustedSourceTemp = yield* Process.Variables.newTemp();
+        yield* Process.Instructions.emit({
+          kind: "binary",
+          op: "add",
+          left: Ir.Value.temp(sourceOffsetTemp, Ir.Type.Scalar.uint256),
+          right: start,
+          dest: adjustedSourceTemp,
+          operationDebug: yield* Process.Debug.forAstNode(expr),
+        } as Ir.Instruction);
+
+        yield* Process.Instructions.emit({
+          kind: "read",
+          location: "memory",
+          offset: Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256),
+          length,
+          type: resultType,
+          dest: dataTemp,
+          operationDebug: yield* Process.Debug.forAstNode(expr),
+        } as Ir.Instruction.Read);
+      }
 
       // Calculate destination offset (skip length prefix)
       const destDataOffsetTemp = yield* Process.Variables.newTemp();
