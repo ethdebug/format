@@ -30,6 +30,10 @@ support. Changes to the specification itself are tracked in the root
 - The phis on a jump now copy their values in parallel. Before, at any
   optimization level, a loop that swaps two locals gave both the same
   value, since one phi's copy overwrote the value another phi read ([#330]).
+- A cast, hash or length result now compiles when it is a call argument
+  or is live across a block boundary. Before, at any optimization level,
+  such a value got no home in memory, and code generation failed with
+  "Cannot load value" ([#332]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -72,3 +76,4 @@ First publication.
 [#321]: https://github.com/ethdebug/format/pull/321
 [#327]: https://github.com/ethdebug/format/pull/327
 [#330]: https://github.com/ethdebug/format/pull/330
+[#332]: https://github.com/ethdebug/format/pull/332

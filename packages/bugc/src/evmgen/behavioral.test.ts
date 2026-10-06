@@ -330,6 +330,101 @@ code {
       expect(result.callSuccess).toBe(true);
       expect(await result.getStorage(0n)).toBe(3n);
     });
+
+    // An argument's value must have a home in memory, since the call
+    // reloads each argument after it clears the stack. `out` holds the
+    // result; the call sends 3 bytes of calldata.
+    const argumentKinds = {
+      "a cast": [
+        `function g(x: uint8) -> uint256 { return x as uint256; };`,
+        `out = g((n + 5) as uint8);`,
+        12n,
+      ],
+      "a signed narrowing cast": [
+        `function g(x: int8) -> uint256 { return x as uint256 + 1; };`,
+        `out = g(n as int8);`,
+        8n,
+      ],
+      "a hash": [
+        `function g(h: bytes32) -> uint256 { return h as uint256; };`,
+        `out = g(keccak256(0x01)) - (keccak256(0x01) as uint256) + n;`,
+        7n,
+      ],
+      "a length": [
+        `function g(x: uint256) -> uint256 { return x * 10; };`,
+        `let s = msg.data[0:2];
+  out = g(s.length) + n;`,
+        27n,
+      ],
+    } as const;
+
+    for (const [name, [define, body, expected]] of Object.entries(
+      argumentKinds,
+    )) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should pass ${name} as an argument (level ${level})`, async () => {
+          const source = `name ArgumentKinds;
+define {
+  ${define}
+}
+storage { [0] n: uint256; [1] out: uint256; }
+create { n = 7; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "0x010203",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+
+    // A value live across a block boundary must have a home in memory
+    const crossingValues = {
+      "a cast across an if": [
+        `let y = (n + 1) as uint8;
+  if (n > 0) { n = 1; }
+  out = y as uint256;`,
+        8n,
+      ],
+      "a cast across a call": [
+        `let y = (n + 1) as uint8;
+  out = g(1) + (y as uint256);`,
+        9n,
+      ],
+      "a hash across a call": [
+        `let h = keccak256(0x01);
+  out = g(n) + (h as uint256) - (keccak256(0x01) as uint256);`,
+        7n,
+      ],
+    } as const;
+
+    for (const [name, [body, expected]] of Object.entries(crossingValues)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should keep ${name} (level ${level})`, async () => {
+          const source = `name CrossingValues;
+define {
+  function g(x: uint256) -> uint256 { return x; };
+}
+storage { [0] n: uint256; [1] out: uint256; }
+create { n = 7; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
   });
 
   describe("recursion", () => {
