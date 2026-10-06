@@ -337,6 +337,38 @@ describe("checkProgram", () => {
         message: "Array index must be numeric",
       });
     });
+
+    it("should reject a signed index", () => {
+      const programs: Record<string, [string, string]> = {
+        "an array read": ["let x = a[i];", "Array index"],
+        "an array write": ["a[i] = 1;", "Array index"],
+        "a bytes read": ["let x = b[i];", "Bytes index"],
+        "a bytes write": ["b[i] = 1 as uint8;", "Bytes index"],
+        "a slice start": ["let x = b[i:2];", "Slice start index"],
+        "a slice end": ["let x = b[0:i];", "Slice end index"],
+      };
+
+      for (const [name, [statement, what]] of Object.entries(programs)) {
+        const result = check(`
+          name Test;
+          code {
+            let a: array<uint256> = [1, 2, 3];
+            let b = msg.data[0:3];
+            let i: int256 = 1 as int256;
+            ${statement}
+          }
+        `);
+
+        expect(result.success, name).toBe(false);
+        expect(Result.countErrors(result), name).toBe(1);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message:
+            `${what} must be an unsigned integer, not int256; ` +
+            "cast it, as in `i as uint256`",
+        });
+      }
+    });
   });
 
   describe("Control Flow", () => {

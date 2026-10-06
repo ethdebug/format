@@ -428,12 +428,13 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           Type.isElementary(objectType) &&
           Type.Elementary.isBytes(objectType)
         ) {
-          if (
-            !Type.isElementary(startResult.type) ||
-            !Type.Elementary.isNumeric(startResult.type)
-          ) {
+          const startError = indexTypeError(
+            "Slice start index",
+            startResult.type,
+          );
+          if (startError) {
             const error = new TypeError(
-              "Slice start index must be numeric",
+              startError,
               startExpr.loc || undefined,
               undefined,
               undefined,
@@ -441,12 +442,10 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
             );
             errors.push(error);
           }
-          if (
-            !Type.isElementary(endResult.type) ||
-            !Type.Elementary.isNumeric(endResult.type)
-          ) {
+          const endError = indexTypeError("Slice end index", endResult.type);
+          if (endError) {
             const error = new TypeError(
-              "Slice end index must be numeric",
+              endError,
               endExpr.loc || undefined,
               undefined,
               undefined,
@@ -490,12 +489,10 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         const indexType = indexResult.type;
 
         if (Type.isArray(objectType)) {
-          if (
-            !Type.isElementary(indexType) ||
-            !Type.Elementary.isNumeric(indexType)
-          ) {
+          const indexError = indexTypeError("Array index", indexType);
+          if (indexError) {
             const error = new TypeError(
-              "Array index must be numeric",
+              indexError,
               indexExpr.loc || undefined,
               undefined,
               undefined,
@@ -521,13 +518,14 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           Type.Elementary.isBytes(objectType)
         ) {
           // Allow indexing into bytes types - returns uint8
-          if (!isAssignable(Type.Elementary.uint(8), indexType)) {
+          const indexError = indexTypeError("Bytes index", indexType);
+          if (indexError) {
             const error = new TypeError(
-              `Bytes index must be a numeric type, got ${Type.format(indexType)}`,
+              indexError,
               indexExpr.loc || undefined,
               undefined,
               undefined,
-              ErrorCode.TYPE_MISMATCH,
+              ErrorCode.INVALID_INDEX_TYPE,
             );
             errors.push(error);
           }
@@ -1203,4 +1201,21 @@ function checkSignedness(
       ErrorCode.INVALID_OPERAND,
     ),
   ];
+}
+
+/**
+ * Why `type` cannot index an array or bytes, if it cannot: as in
+ * Solidity, an index must be an unsigned integer
+ */
+function indexTypeError(what: string, type: Type): string | undefined {
+  if (!Type.isElementary(type) || !Type.Elementary.isNumeric(type)) {
+    return `${what} must be numeric`;
+  }
+  if (Type.Elementary.isInt(type)) {
+    return (
+      `${what} must be an unsigned integer, not ${Type.format(type)}; ` +
+      `cast it, as in \`i as uint256\``
+    );
+  }
+  return undefined;
 }
