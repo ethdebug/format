@@ -54,15 +54,21 @@ function getTypeSize(bugType: Type): number {
 
 /**
  * Generate a sophisticated pointer for a storage variable based on its type
+ *
+ * Only regions may carry a `name`, so a struct member whose pointer is a
+ * collection (a nested struct or an array) cannot be named as a whole.
+ * Instead, every region name inside it is qualified by the member's path:
+ * `prefix` is that path (e.g. "ceo-" for the members of field `ceo`).
  */
 function generateStoragePointer(
   baseSlot: number,
   bugType: Type,
   byteOffset: number = 0,
+  prefix: string = "",
 ): Format.Pointer | undefined {
   // For structs, generate a group pointer with each field
   if (Type.isStruct(bugType)) {
-    const group: Array<Format.Pointer & { name?: string }> = [];
+    const group: Format.Pointer[] = [];
 
     for (const [fieldName, fieldType] of bugType.fields) {
       const layout = bugType.layout.get(fieldName);
@@ -76,10 +82,15 @@ function generateStoragePointer(
         fieldSlot,
         fieldType,
         fieldOffset,
+        `${prefix}${fieldName}-`,
       );
       if (!fieldPointer) continue;
 
-      group.push({ ...fieldPointer, name: fieldName });
+      group.push(
+        Format.Pointer.isRegion(fieldPointer)
+          ? { ...fieldPointer, name: `${prefix}${fieldName}` }
+          : fieldPointer,
+      );
     }
 
     if (group.length === 0) {
@@ -116,7 +127,7 @@ function generateStoragePointer(
             };
 
       const elementPointer: Format.Pointer = {
-        name: "element",
+        name: `${prefix}element`,
         location: "storage",
         slot: elementSlotExpression,
       };
@@ -132,7 +143,7 @@ function generateStoragePointer(
       // Recursively handle complex element types
       const refinedPointer =
         Type.isStruct(elementType) || Type.isArray(elementType)
-          ? generateStoragePointer(0, elementType, 0)
+          ? generateStoragePointer(0, elementType, 0, prefix)
           : elementPointer;
 
       return {
@@ -166,7 +177,7 @@ function generateStoragePointer(
             };
 
       const elementPointer: Format.Pointer = {
-        name: "element",
+        name: `${prefix}element`,
         location: "storage",
         slot: elementSlotExpression,
       };
@@ -182,14 +193,14 @@ function generateStoragePointer(
       // Recursively handle complex element types
       const refinedPointer =
         Type.isStruct(elementType) || Type.isArray(elementType)
-          ? generateStoragePointer(0, elementType, 0)
+          ? generateStoragePointer(0, elementType, 0, prefix)
           : elementPointer;
 
       // For dynamic arrays, we use a group to declare both the length region
       // and the list of elements
       // Note: "array-length" avoids conflict with Array.prototype.length
       const lengthRegion: Format.Pointer = {
-        name: "array-length",
+        name: `${prefix}array-length`,
         location: "storage",
         slot: baseSlot,
       };
@@ -202,7 +213,7 @@ function generateStoragePointer(
           lengthRegion,
           {
             list: {
-              count: { $read: "array-length" },
+              count: { $read: `${prefix}array-length` },
               each: "i",
               is: refinedPointer || elementPointer,
             },
