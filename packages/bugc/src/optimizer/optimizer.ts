@@ -207,6 +207,9 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
       create: clonedCreate,
       main: clonedMain,
       loc: module.loc,
+      // Keep the program-level context (storage variables); dropping it
+      // here erased those variables from optimization level 1 upward.
+      ...(module.debugContext ? { debugContext: module.debugContext } : {}),
     };
   }
 

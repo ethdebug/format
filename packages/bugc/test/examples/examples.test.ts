@@ -217,6 +217,9 @@ describe("Example Files", async () => {
           }
 
           const { runtimeProgram, createProgram } = result.value.bytecode;
+          const storageNames = (result.value.ast.storage ?? []).map(
+            ({ name }) => name,
+          );
           for (const program of [runtimeProgram, createProgram]) {
             if (!program) continue;
             // validate the program as it is written out, as JSON
@@ -229,6 +232,14 @@ describe("Example Files", async () => {
               ? []
               : (output.errors ?? []).map((e) => e.instanceLocation);
             expect(invalid).toEqual([]);
+
+            // every storage variable is in the program-level context
+            const { context } = program;
+            const identifiers =
+              context && Format.Program.Context.isVariables(context)
+                ? context.variables.map(({ identifier }) => identifier)
+                : [];
+            expect(identifiers).toEqual(storageNames);
           }
         });
       }

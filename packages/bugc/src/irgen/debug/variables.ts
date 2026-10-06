@@ -243,8 +243,11 @@ function generateStoragePointer(
     slot: baseSlot,
   };
 
-  if (byteOffset > 0) {
-    pointer.offset = byteOffset;
+  // bugc packs a field `byteOffset` bytes from the low-order end of its
+  // slot, but a pointer's `offset` counts from the high-order end
+  const offset = 32 - byteOffset - Math.min(size, 32);
+  if (offset > 0) {
+    pointer.offset = offset;
   }
 
   if (size < 32) {

@@ -9,7 +9,7 @@ create {
   /*@test owner-pointer
   variables:
     owner:
-      pointer: { location: storage, slot: 0, length: 20 }
+      pointer: { location: storage, slot: 0, offset: 12, length: 20 }
   */
 }
 
