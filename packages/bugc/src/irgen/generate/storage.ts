@@ -415,6 +415,10 @@ export function* emitStorageChainStore(
     if (lastAccess.fieldType) {
       fieldSize = getFieldSize(lastAccess.fieldType);
     }
+  } else if (currentOrigin && Type.isElementary(currentOrigin)) {
+    // A mapping value or array element narrower than a slot writes
+    // only its own bytes, at the low-order end of its slot
+    fieldSize = getFieldSize(fromBugType(currentOrigin));
   }
 
   // Determine the actual field size to write

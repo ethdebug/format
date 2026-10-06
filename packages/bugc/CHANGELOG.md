@@ -137,6 +137,12 @@ support. Changes to the specification itself are tracked in the root
   the same goes for a narrow `+`, `-` or `*` that overflows; a follow-up
   change makes them wrap. The optimizer folds constants by the same rules
   ([#339]).
+- A write to a mapping value or array element narrower than a slot now
+  writes only that value's bytes. Before, at every optimization level,
+  `m[5] = -2 as int16` with `m: mapping<uint256, int16>` stored a full
+  word of `ff` bytes ending in `fffe`, where Solidity stores `fffe`.
+  bugc gives each array element its own slot, without Solidity's
+  packing, so only a mapping value's layout matches Solidity's ([#339]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

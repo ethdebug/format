@@ -1705,4 +1705,84 @@ code {
       }
     });
   });
+
+  describe("narrow mapping values and array elements", () => {
+    const neg = (n: bigint) => 2n ** 256n - n;
+    const pad = (n: bigint) => n.toString(16).padStart(64, "0");
+    const hash = (hex: string) =>
+      BigInt("0x" + bytesToHex(keccak256(Buffer.from(hex, "hex"))));
+
+    const mappings = `name NarrowMappings;
+storage {
+  [0] m8: mapping<uint256, int8>;
+  [1] m16: mapping<uint256, int16>;
+  [2] m128: mapping<uint256, int128>;
+  [3] n: int256;
+  [10] o0: int256;
+  [11] o1: int256;
+  [12] o2: int256;
+  [13] o3: int256;
+  [14] o4: int256;
+  [15] o5: int256;
+}
+create { n = -2 as int256; }
+code {
+  m8[5] = n as int8;
+  m16[5] = n as int16;
+  m128[5] = n as int128;
+  m8[6] = -3 as int8;
+  m16[6] = -3 as int16;
+  m128[6] = -3 as int128;
+  o0 = m8[5];
+  o1 = m16[5];
+  o2 = m128[5];
+  o3 = m8[6];
+  o4 = m16[6];
+  o5 = m128[6];
+}`;
+
+    // bugc gives each array element its own slot
+    const arrays = `name NarrowArrays;
+storage { [0] a: array<int16, 3>; [1] n: int256; [10] o0: int256; }
+create { n = -2 as int256; }
+code { a[1] = n as int16; o0 = a[1]; }`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should write only a mapping value's bytes (level ${level})`, async () => {
+        const result = await executeProgram(mappings, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        for (const [key, value] of [
+          [5n, 2n],
+          [6n, 3n],
+        ] as const) {
+          for (const [slot, bytes] of [
+            [0n, 1n],
+            [1n, 2n],
+            [2n, 16n],
+          ] as const) {
+            expect(await result.getStorage(hash(pad(key) + pad(slot)))).toBe(
+              2n ** (8n * bytes) - value,
+            );
+          }
+        }
+        const expected = [2n, 2n, 2n, 3n, 3n, 3n].map(neg);
+        for (const [j, value] of expected.entries()) {
+          expect(await result.getStorage(10n + BigInt(j))).toBe(value);
+        }
+      });
+
+      it(`should write only an array element's bytes (level ${level})`, async () => {
+        const result = await executeProgram(arrays, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(hash(pad(0n)) + 1n)).toBe(0xfffen);
+        expect(await result.getStorage(10n)).toBe(neg(2n));
+      });
+    }
+  });
 });
