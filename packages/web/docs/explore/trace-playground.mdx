@@ -8,6 +8,7 @@ import { TracePlayground, TraceExample } from "@theme/ProgramExample";
 import {
   counterIncrement,
   simpleFunctions,
+  addressIdentity,
   tailRecursiveFactorial,
   inlineDemo,
 } from "../core-schemas/programs/tracing-examples";
@@ -54,6 +55,20 @@ JUMP back pops it (a **return** context).
 For the exact shape of invoke, return, and revert contexts, see the
 [function call spec](/spec/program/context/function) and the
 [tracing reference](/docs/core-schemas/programs/tracing).
+
+## Values, decoded by type
+
+The drawer reads each in-scope variable from memory and decodes it by its
+static type — a `uint256` reads as a decimal, an `address` as its
+EIP-55 checksummed `0x…` form, not raw bytes. `Identity` passes an
+address through a function; step into `idn` and watch `owner` render as a
+checksummed address in the variables panel.
+
+<TraceExample
+  title="Address round-trip"
+  description="Passes an address through idn(owner); owner decodes to its checksummed form"
+  source={addressIdentity}
+/>
 
 ## Watching the optimizer
 

@@ -33,3 +33,5 @@ export {
   effectiveContextForStep,
   type EffectiveContextInput,
 } from "./effectiveContext.js";
+
+export { decodeValue } from "./decodeValue.js";
