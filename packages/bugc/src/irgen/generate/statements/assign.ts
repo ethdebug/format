@@ -12,6 +12,7 @@ import {
   emitStorageChainStore,
   emitStorageVariableStore,
 } from "../storage.js";
+import { emitMemoryElementOffset } from "../memory.js";
 
 /**
  * Build an assignment statement
@@ -251,23 +252,13 @@ function* assignToTarget(node: Ast.Expression, value: Ir.Value): Process<void> {
       });
 
       if (objectType && Type.isArray(objectType)) {
-        // Compute offset for array element
-        const offsetTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "compute_offset",
-          location: "memory",
-          base: object,
-          index,
-          stride: 32, // array elements are 32 bytes each
-          dest: offsetTemp,
-          operationDebug: yield* Process.Debug.forAstNode(node),
-        } as Ir.Instruction.ComputeOffset);
+        const offset = yield* emitMemoryElementOffset(object, index, node);
 
         // Write the element at that offset
         yield* Process.Instructions.emit({
           kind: "write",
           location: "memory",
-          offset: Ir.Value.temp(offsetTemp, Ir.Type.Scalar.uint256),
+          offset,
           length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
           value,
           operationDebug: yield* Process.Debug.forAstNode(node),

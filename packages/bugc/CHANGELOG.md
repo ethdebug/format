@@ -175,6 +175,13 @@ support. Changes to the specification itself are tracked in the root
   `m[i][j]`, now skips the inner array's length word. Before, at every
   optimization level, it read the element before, so `m[i][0]` read the
   length of `m[i]` ([#343]).
+- A write to an element of a memory array now compiles: `a[i] = x` for a
+  local or a parameter, `m[i][j] = x` for a nested array, and
+  `names[i] = "x"` for an array of strings. Before, at every optimization
+  level, code generation failed with error EVM999 ("Internal code
+  generation error"), because the compiler emitted the element's address
+  computation without its kind. That computation also left out the
+  length word, so the write would have gone to the element before ([#343]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
