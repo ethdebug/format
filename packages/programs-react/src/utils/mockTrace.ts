@@ -61,31 +61,47 @@ export function findInstructionAtPc(
 }
 
 /**
+ * A variable entry, as a `variables` context lists it.
+ */
+type VariableEntry = { identifier?: string; type?: unknown; pointer?: unknown };
+
+/**
  * Extract variables that are in scope at a given instruction.
  *
- * This walks the context and extracts variables from Variables contexts.
+ * All of a context's keys apply, and so do all of a `gather`'s
+ * contexts, so this reads every `variables` list: the context's own
+ * and each gathered context's. Entries for one variable (the same
+ * identifier and declaration) compose into one.
  */
 export function extractVariablesFromInstruction(
   instruction: Program.Instruction,
-): Array<{ identifier?: string; type?: unknown; pointer?: unknown }> {
+): VariableEntry[] {
   if (!instruction.context) {
     return [];
   }
 
-  return extractVariablesFromContext(instruction.context);
+  const byKey = new Map<string, VariableEntry>();
+  for (const entry of extractVariablesFromContext(instruction.context)) {
+    const { identifier, declaration } = entry as {
+      declaration?: unknown;
+    } & VariableEntry;
+    const key = JSON.stringify([identifier, declaration]);
+    byKey.set(key, { ...byKey.get(key), ...entry });
+  }
+  return [...byKey.values()];
 }
 
 function extractVariablesFromContext(
   context: Program.Context,
-): Array<{ identifier?: string; type?: unknown; pointer?: unknown }> {
-  // Variables context
-  if ("variables" in context && Array.isArray(context.variables)) {
-    return context.variables;
-  }
+): VariableEntry[] {
+  const own =
+    "variables" in context && Array.isArray(context.variables)
+      ? (context.variables as VariableEntry[])
+      : [];
 
-  // Gather context (combines multiple contexts)
+  // Gather context (all of its contexts apply)
   if ("gather" in context && Array.isArray(context.gather)) {
-    return context.gather.flatMap(extractVariablesFromContext);
+    return [...own, ...context.gather.flatMap(extractVariablesFromContext)];
   }
 
   // Pick context (picks from multiple contexts - take first with variables)
@@ -93,12 +109,12 @@ function extractVariablesFromContext(
     for (const subContext of context.pick) {
       const vars = extractVariablesFromContext(subContext);
       if (vars.length > 0) {
-        return vars;
+        return [...own, ...vars];
       }
     }
   }
 
-  return [];
+  return own;
 }
 
 /**

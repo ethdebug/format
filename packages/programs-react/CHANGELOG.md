@@ -7,6 +7,15 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Fixed
+
+- `extractVariablesFromInstruction` now reads every `variables` list in a
+  context: its own and those of each context in its `gather`. Before, a
+  context with its own `variables` hid those in its `gather`, so at
+  bugc's inlined code the storage variables disappeared. Entries for one
+  variable (the same identifier and declaration) compose into one
+  ([#342]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 Updated `@ethdebug/format` to `0.1.0-draft.1` and `@ethdebug/pointers` to
@@ -38,3 +47,4 @@ First publication.
 [#298]: https://github.com/ethdebug/format/pull/298
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
+[#342]: https://github.com/ethdebug/format/pull/342

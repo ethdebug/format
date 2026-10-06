@@ -17,6 +17,7 @@ import {
   extractTransformFromInstruction,
   extractCallInfoFromInstruction,
   extractCallEvents,
+  extractVariablesFromInstruction,
   buildCallStack,
   buildPcToInstructionMap,
   type TraceStep,
@@ -31,6 +32,52 @@ function instr(offset: number, context: unknown): Program.Instruction {
     context,
   } as unknown as Program.Instruction;
 }
+
+describe("extractVariablesFromInstruction", () => {
+  const total = { identifier: "total", pointer: { location: "storage" } };
+  const x = { identifier: "x", pointer: { location: "memory" } };
+  const names = (context: unknown) =>
+    extractVariablesFromInstruction(instr(0, context)).map((v) => v.identifier);
+
+  it("reads a flat variables list", () => {
+    expect(names({ variables: [total, x] })).toEqual(["total", "x"]);
+  });
+
+  it("reads variables from every gathered context", () => {
+    expect(
+      names({
+        gather: [
+          { code: {}, variables: [total] },
+          { code: {}, variables: [x] },
+        ],
+      }),
+    ).toEqual(["total", "x"]);
+  });
+
+  it("reads variables beside a gather and within it", () => {
+    // Inlined code: the callee's local beside a gather of the call
+    // site's and the callee's source ranges; all of them apply
+    expect(
+      names({
+        variables: [x],
+        gather: [{ code: {} }, { code: {}, variables: [total] }],
+      }),
+    ).toEqual(["x", "total"]);
+  });
+
+  it("composes two entries for one variable", () => {
+    const declaration = { source: { id: 0 }, range: { offset: 1 } };
+    const typed = { identifier: "x", declaration, type: { kind: "uint" } };
+    const located = { identifier: "x", declaration, pointer: x.pointer };
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, {
+          gather: [{ variables: [typed] }, { variables: [located] }],
+        }),
+      ),
+    ).toEqual([{ ...typed, ...located }]);
+  });
+});
 
 describe("extractTransformFromInstruction", () => {
   it("returns identifiers from a direct transform context", () => {
