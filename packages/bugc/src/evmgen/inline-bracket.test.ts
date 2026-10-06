@@ -129,6 +129,22 @@ describe("inlined invoke/return are bracketed on emitted bytecode", () => {
     expect(t.both).toBe(0);
   });
 
+  it("marks only the body inline, from its invoke to its return", async () => {
+    for (const source of [dblTwoSites, multiInstrBody]) {
+      const instrs = await runtimeInstructions(source, 2);
+      // Ops past a return (the jump back to the caller's continuation)
+      // are the caller's code, not part of the inlined body.
+      let open = 0;
+      const outside: number[] = [];
+      instrs.map(flags).forEach((f, i) => {
+        if (f.invoke) open += 1;
+        if (f.inline && open === 0) outside.push(i);
+        if (f.return) open -= 1;
+      });
+      expect(outside).toEqual([]);
+    }
+  });
+
   it("preserves runtime behavior at every level", async () => {
     for (const level of [0, 1, 2, 3] as const) {
       const res = await executeProgram(dblTwoSites, {

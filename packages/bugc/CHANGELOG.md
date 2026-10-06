@@ -69,6 +69,12 @@ support. Changes to the specification itself are tracked in the root
   inlined call, or returns one's result, now has its own `invoke` and
   `return` contexts, around the inner call's. Before, its `invoke` (or its
   `return`) was lost, so the call stack did not balance ([#341]).
+- At optimization levels 2 and 3, the jump that leaves an inlined body
+  for the caller's code no longer has a `transform: ["inline"]` context.
+  It runs after the inlined function's `return`, so it is not part of the
+  inlined body. Before, a debugger that reads the transform put that jump
+  in an inlined body that had already returned, with no function or call
+  site to name ([#347]).
 - A cast from dynamic `bytes` to a fixed-size type now reads the bytes.
   `msg.data[0:4] as bytes4` is the first four bytes of calldata; bytes
   past the slice's length are zero. Before, the cast gave the slice's
@@ -262,3 +268,4 @@ First publication.
 [#343]: https://github.com/ethdebug/format/pull/343
 [#344]: https://github.com/ethdebug/format/pull/344
 [#345]: https://github.com/ethdebug/format/pull/345
+[#347]: https://github.com/ethdebug/format/pull/347
