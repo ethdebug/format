@@ -425,6 +425,56 @@ code {
         });
       }
     }
+
+    // Each parameter gets a distinct weight, so a misordered argument
+    // changes the result. `n` (7) keeps the arguments from folding.
+    for (const count of [6, 7, 8] as const) {
+      const indices = Array.from({ length: count }, (_, i) => i + 1);
+      const params = indices.map((i) => `p${i}: uint256`).join(", ");
+      const weighted = indices.map((i) => `p${i} * ${10 ** (i - 1)}`);
+      const args = indices.map((i) => `n + ${i}`).join(", ");
+      const forward = indices.map((i) => `p${i}`).join(", ");
+      const value = () =>
+        indices.reduce(
+          (sum, i) => sum + BigInt(7 + i) * 10n ** BigInt(i - 1),
+          0n,
+        );
+
+      const calls = {
+        "a call": [`out = f(${args});`, value()],
+        "a forwarding call": [`out = h(${args});`, value()],
+        // The inner call's result, less a constant, is the first argument
+        "a nested call": [
+          `out = f(f(${args}) - ${value() - 8n}, ` +
+            `${indices.slice(1).map((i) => `n + ${i}`)});`,
+          value(),
+        ],
+      } as const;
+
+      for (const [name, [body, expected]] of Object.entries(calls)) {
+        for (const level of [0, 1, 2, 3] as const) {
+          it(`should make ${name} with ${count} parameters (level ${level})`, async () => {
+            const source = `name ManyParams;
+define {
+  function f(${params}) -> uint256 { return ${weighted.join(" + ")}; };
+  function h(${params}) -> uint256 { return f(${forward}); };
+}
+storage { [0] n: uint256; [1] out: uint256; }
+create { n = 7; }
+code {
+  ${body}
+}`;
+            const result = await executeProgram(source, {
+              calldata: "",
+              optimizationLevel: level,
+            });
+
+            expect(result.callSuccess).toBe(true);
+            expect(await result.getStorage(1n)).toBe(expected);
+          });
+        }
+      }
+    }
   });
 
   describe("recursion", () => {
