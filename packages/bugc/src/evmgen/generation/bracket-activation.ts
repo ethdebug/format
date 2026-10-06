@@ -26,6 +26,7 @@
  */
 import type * as Format from "@ethdebug/format";
 import type * as Evm from "#evm";
+import * as Ir from "#ir";
 
 type Ctx = Format.Program.Context;
 type Activation = "invoke" | "return";
@@ -58,27 +59,6 @@ export function carriesActivation(
   if (isPick(ctx)) return ctx.pick.some((c) => carriesActivation(c, key));
   if (isGather(ctx)) return ctx.gather.some((c) => carriesActivation(c, key));
   return key in ctx;
-}
-
-/** The first activation value found for the given key, reaching into
- * pick/gather composites. */
-function findActivation(ctx: Ctx | undefined, key: Activation): unknown {
-  if (!ctx || typeof ctx !== "object") return undefined;
-  if (isPick(ctx)) {
-    for (const c of ctx.pick) {
-      const v = findActivation(c, key);
-      if (v !== undefined) return v;
-    }
-    return undefined;
-  }
-  if (isGather(ctx)) {
-    for (const c of ctx.gather) {
-      const v = findActivation(c, key);
-      if (v !== undefined) return v;
-    }
-    return undefined;
-  }
-  return (ctx as Record<string, unknown>)[key];
 }
 
 /** Remove invoke and return discriminators anywhere in ctx, reaching
@@ -119,57 +99,34 @@ export function stripActivation(ctx: Ctx | undefined): Ctx | undefined {
   return Object.keys(rest).length > 0 ? (rest as Ctx) : undefined;
 }
 
-/** Attach an activation discriminator, composing it as a flat sibling
- * key on a leaf context (per the flat-composition convention), or
- * appending it to a pick/gather composite. */
-function attachActivation(
-  ctx: Ctx | undefined,
-  key: Activation,
-  value: unknown,
-): Ctx {
-  const marker = { [key]: value } as Ctx;
-  if (!ctx || typeof ctx !== "object") return marker;
-  if (isPick(ctx)) return { pick: [...ctx.pick, marker] } as Ctx;
-  if (isGather(ctx)) return { ...ctx, gather: [...ctx.gather, marker] } as Ctx;
-  return { ...(ctx as Record<string, unknown>), [key]: value } as Ctx;
-}
-
 /**
- * Rewrite the ops emitted by one IR instruction (the tail slice
- * `instructions[start..]`) so invoke rides only the first op and
- * return only the last op, using the discriminators found on the
- * instruction's `operationDebug` context. No-op unless that context
- * carries invoke and/or return, so it never touches ordinary code.
+ * Rewrite the ops emitted by one IR instruction (the slice
+ * `instructions[start..end]`, by default to the end) so invokes ride
+ * only the first op and returns only the last op, using the
+ * discriminators found on the instruction's `operationDebug` context.
+ * Several of one kind (an inlined function that starts or ends with
+ * an inlined call) keep their order: outermost invoke first, innermost
+ * return first. No-op unless that context carries invoke and/or
+ * return, so it never touches ordinary code.
  */
 export function bracketActivation(
   instructions: Evm.Instruction[],
   start: number,
   operationCtx: Ctx | undefined,
+  end: number = instructions.length,
 ): Evm.Instruction[] {
-  const end = instructions.length; // exclusive
   if (end <= start) return instructions;
 
-  const hasInvoke = carriesActivation(operationCtx, "invoke");
-  const hasReturn = carriesActivation(operationCtx, "return");
-  if (!hasInvoke && !hasReturn) return instructions;
-
-  const invokeValue = hasInvoke
-    ? findActivation(operationCtx, "invoke")
-    : undefined;
-  const returnValue = hasReturn
-    ? findActivation(operationCtx, "return")
-    : undefined;
+  const invokes = Ir.Utils.activationsOf(operationCtx, "invoke");
+  const returns = Ir.Utils.activationsOf(operationCtx, "return");
+  if (invokes.length === 0 && returns.length === 0) return instructions;
 
   const out = instructions.slice();
   for (let i = start; i < end; i++) {
     const op = out[i];
-    let ctx = stripActivation(op.debug?.context);
-    if (hasInvoke && i === start) {
-      ctx = attachActivation(ctx, "invoke", invokeValue);
-    }
-    if (hasReturn && i === end - 1) {
-      ctx = attachActivation(ctx, "return", returnValue);
-    }
+    let ctx = Ir.Utils.withoutActivations(op.debug?.context);
+    if (i === start) ctx = Ir.Utils.withActivations(ctx, { invokes });
+    if (i === end - 1) ctx = Ir.Utils.withActivations(ctx, { returns });
     out[i] = { ...op, debug: { ...op.debug, context: ctx } };
   }
   return out;

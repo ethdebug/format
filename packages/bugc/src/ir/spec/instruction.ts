@@ -47,6 +47,13 @@ export namespace Instruction {
      */
     stored?: Debug;
     /**
+     * For an instruction that returns from an inlined function: the
+     * debug once it has returned. The inliner gives it the caller's
+     * source range and placement; code generation gives it the
+     * caller's variables, for the op that carries the `return`.
+     */
+    returned?: Debug;
+    /**
      * Inline sites this instruction was inlined through, outermost
      * first. Only the innermost site's locals are listed here.
      */

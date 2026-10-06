@@ -238,28 +238,107 @@ code {
   };
 
   it.each([2, 3] as const)(
-    "(h) never lists an inlined function's locals after it returns at O%i",
+    "(h) lists an inlined function's locals only within its body at O%i",
     async (level) => {
       const run = await traceLocals(inlinedSource, level);
-      let returned = false;
+      // Contexts are postconditions: the callee's locals are in scope
+      // from the step that invokes it up to, not including, the step
+      // that returns from it
+      let inside = false;
       let seen = 0;
       for (const step of run.steps) {
         const context = run.instructionAt(step)?.context;
-        if (activations(context, "invoke").includes("dbl")) returned = false;
+        if (activations(context, "invoke").includes("dbl")) inside = true;
+        if (activations(context, "return").includes("dbl")) inside = false;
         const names = localsOf(context).map((v) => v.identifier);
-        if (returned) {
-          expect(
-            names,
-            `x listed after dbl returns, pc ${step.pc}`,
-          ).not.toContain("x");
+        if (!inside) {
+          expect(names, `x listed outside dbl, pc ${step.pc}`).not.toContain(
+            "x",
+          );
         } else if (names.includes("x")) {
           seen++;
         }
-        // Contexts are postconditions: once past the step that
-        // returns, the callee's locals are out of scope
-        if (activations(context, "return").includes("dbl")) returned = true;
       }
       expect(seen).toBeGreaterThan(0);
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(j) lists the caller's locals where an inlined function returns at O%i",
+    async (level) => {
+      // The callee's locals have the caller's names
+      const source = `name Collide;
+define {
+  function f(x: uint256) -> uint256 {
+    let y = x + 1;
+    let total = y * 2;
+    return total + y;
+  };
+}
+storage { [0] total: uint256; [1] s: uint256; }
+create { s = 4; }
+code { let y = s + 3; let x = s + 10; total = f(x); total = total + y; }`;
+      const main = source.indexOf("code {");
+      const run = await traceLocals(source, level);
+      let returns = 0;
+      for (const step of run.steps) {
+        const context = run.instructionAt(step)?.context;
+        if (!activations(context, "return").includes("f")) continue;
+        returns++;
+        const locals = localsOf(context).filter((v) => {
+          const pointer = JSON.stringify(v.pointer ?? {});
+          return !pointer.includes('"storage"');
+        });
+        expect(locals.map((v) => v.identifier).sort()).toEqual(["x", "y"]);
+        for (const local of locals) {
+          const { range } = local.declaration as { range: { offset: number } };
+          expect(range.offset, `${local.identifier}`).toBeGreaterThan(main);
+        }
+      }
+      expect(returns).toBe(1);
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(k) brackets each inlined function that starts or ends with an " +
+      "inlined call at O%i",
+    async (level) => {
+      const bodies = {
+        "starts with": "let s = inner(r); return s + 1;",
+        "ends with": "return inner(r);",
+      };
+      for (const [what, body] of Object.entries(bodies)) {
+        const source = `name Nested;
+define {
+  function inner(p: uint256) -> uint256 { let q = p * 3; return q; };
+  function outer(r: uint256) -> uint256 { ${body} };
+}
+storage { [0] total: uint256; [1] calls: uint256; }
+create { calls = 2; }
+code { let v = calls + 5; total = outer(v); total = total + v; }`;
+        const run = await traceLocals(source, level);
+        const events: string[] = [];
+        for (const step of run.steps) {
+          const context = run.instructionAt(step)?.context;
+          const names = localsOf(context).map((v) => v.identifier);
+          const invokes = activations(context, "invoke");
+          const returns = activations(context, "return");
+          events.push(
+            ...invokes.map((f) => `invoke ${f}`),
+            ...returns.map((f) => `return ${f}`),
+          );
+          // Back in main once outer returns
+          if (returns.includes("outer")) {
+            expect(names, `${what}, pc ${step.pc}`).toContain("v");
+          }
+        }
+        expect(events, what).toEqual([
+          "invoke outer",
+          "invoke inner",
+          "return inner",
+          "return outer",
+        ]);
+      }
     },
   );
 

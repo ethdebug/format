@@ -184,9 +184,46 @@ export class InliningStep extends BaseOptimizationStep {
     // maps to no instruction. Preserve it by gathering it onto the
     // entry instruction alongside the callee-body range it collides
     // with (two source ranges that both apply → gather).
-    const callSiteCode = (
-      call.operationDebug?.context as { code?: unknown } | undefined
-    )?.code;
+    //
+    // An inlined function whose entry block is empty (it starts with
+    // a call) leaves its invoke pending on that call: inlining the
+    // call puts it on the callee's first instruction, before the
+    // callee's own. Likewise, an inlined function whose return block
+    // is empty (it returns a call's result) leaves its return pending
+    // on the jump from that block, which is this call's continuation:
+    // inlining the call puts it after the callee's own return.
+    const pendingInvokes = Ir.Utils.activationsOf(
+      call.operationDebug?.context,
+      "invoke",
+    );
+    const callDebug = withoutActivationsDebug(call.operationDebug);
+    const callSiteCode = (callDebug.context as { code?: unknown } | undefined)
+      ?.code;
+
+    const continuation = caller.blocks.get(call.continuation);
+    const pendingReturns =
+      continuation &&
+      continuation.instructions.length === 0 &&
+      continuation.terminator.kind === "jump" &&
+      !continuation.terminator.tailCall
+        ? Ir.Utils.activationsOf(
+            continuation.terminator.operationDebug?.context,
+            "return",
+          )
+        : [];
+    // The placement once the callee (and any pending returns) has
+    // returned: the caller's, at the call or past those returns
+    let after = callDebug;
+    if (pendingReturns.length > 0) {
+      after = withoutActivationsDebug(continuation!.terminator.operationDebug);
+      continuation!.terminator.operationDebug = after;
+    }
+    const invokes = [...pendingInvokes, inlineInvoke];
+    const returns = [inlineReturn, ...pendingReturns];
+    const returnedJump: Ir.Instruction.Debug = {
+      ...Ir.Utils.addTransform(after, "inline"),
+      ...placement(after),
+    };
 
     const entryBlockId = blockRename.get(callee.entry)!;
     const returnBlockIds: string[] = [];
@@ -194,10 +231,9 @@ export class InliningStep extends BaseOptimizationStep {
     // --- clone + remap callee blocks ---
     for (const [origId, origBlock] of callee.blocks) {
       const newId = blockRename.get(origId)!;
-      const isEntry = origId === callee.entry;
 
       const instructions: Ir.Instruction[] = origBlock.instructions.map(
-        (inst, idx) => {
+        (inst) => {
           const cloned = remapInstruction(inst, remapValue, idRename);
           const sites = inlineSites(inst.operationDebug);
           // Mark every inlined instruction for membership.
@@ -205,23 +241,14 @@ export class InliningStep extends BaseOptimizationStep {
             cloned.operationDebug,
             "inline",
           );
-          // Virtual invoke on the first instruction of the entry,
-          // plus the call site's source range (gathered with the
-          // callee-body range it collides with).
-          if (isEntry && idx === 0) {
-            cloned.operationDebug = mergeDiscriminator(
-              cloned.operationDebug,
-              "invoke",
-              inlineInvoke,
-            );
-            if (callSiteCode !== undefined) {
-              cloned.operationDebug = gatherCallSite(
-                cloned.operationDebug,
-                callSiteCode,
-              );
-            }
-          }
           cloned.operationDebug.inlineSites = sites;
+          const returned = cloned.operationDebug.returned;
+          if (returned) {
+            cloned.operationDebug.returned = {
+              ...returned,
+              inlineSites: inlineSites(returned),
+            };
+          }
           return cloned;
         },
       );
@@ -234,39 +261,14 @@ export class InliningStep extends BaseOptimizationStep {
       const t = origBlock.terminator;
       if (t.kind === "return") {
         returnBlockIds.push(newId);
-        // Virtual return marker on the last body instruction of
-        // this block (or a synthetic carrier if the block is empty
-        // is not needed — return blocks always have ≥1 emitted
-        // instruction in practice; if empty, the marker rides the
-        // jump's debug below).
-        if (instructions.length > 0) {
-          const last = instructions[instructions.length - 1];
-          last.operationDebug = mergeDiscriminator(
-            last.operationDebug,
-            "return",
-            inlineReturn,
-          );
-        }
         // return -> jump to the caller's continuation. Once the
         // callee has returned, this jump is the caller's code: it
-        // keeps the call's source range, inline sites and origin, so
-        // it lists the caller's variables, not the callee's locals.
-        const { context: callContext, ...callPlacement } =
-          call.operationDebug ?? {};
+        // keeps the caller's source range, inline sites and origin,
+        // so it lists the caller's variables, not the callee's locals.
         terminator = {
           kind: "jump",
           target: call.continuation,
-          operationDebug: {
-            ...Ir.Utils.addTransform(
-              mergeDiscriminator(
-                callContext ? { context: callContext } : {},
-                "return",
-                inlineReturn,
-              ),
-              "inline",
-            ),
-            ...callPlacement,
-          },
+          operationDebug: { ...returnedJump },
         };
       } else {
         terminator = remapTerminator(t, remapValue, blockRename);
@@ -278,7 +280,6 @@ export class InliningStep extends BaseOptimizationStep {
             : {}),
         };
       }
-
       caller.blocks.set(newId, {
         id: newId,
         phis,
@@ -287,6 +288,79 @@ export class InliningStep extends BaseOptimizationStep {
         predecessors: new Set(),
         debug: origBlock.debug,
       });
+    }
+
+    // --- the virtual invoke and return ---
+    // The invoke rides the body's first instruction, plus the call
+    // site's source range (gathered with the callee-body range it
+    // collides with); the return rides its last instruction, which
+    // lists the caller's variables once returned (`returned`). Empty
+    // blocks that only jump on (as when the body starts or ends with
+    // an inlined call) are passed over; the jumps past the return are
+    // the caller's code. With no instruction to carry it, a marker
+    // rides a terminator.
+    const inlinedIds = new Set(blockRename.values());
+    const jumpsInto = new Map<string, string[]>();
+    for (const id of inlinedIds) {
+      for (const target of successors(caller.blocks.get(id)!.terminator)) {
+        if (inlinedIds.has(target)) {
+          jumpsInto.set(target, [...(jumpsInto.get(target) ?? []), id]);
+        }
+      }
+    }
+    const isPlainJump = (t: Ir.Block.Terminator) =>
+      t.kind === "jump" && !t.tailCall;
+
+    let entryId = entryBlockId;
+    for (;;) {
+      const block = caller.blocks.get(entryId)!;
+      const first = block.instructions[0];
+      const t = block.terminator;
+      if (first) {
+        first.operationDebug = withActivationsDebug(
+          callSiteCode === undefined
+            ? first.operationDebug
+            : gatherCallSite(first.operationDebug, callSiteCode),
+          { invokes },
+        );
+        break;
+      }
+      if (
+        t.kind === "jump" &&
+        isPlainJump(t) &&
+        jumpsInto.get(t.target)?.length === 1
+      ) {
+        entryId = t.target;
+        continue;
+      }
+      t.operationDebug = withActivationsDebug(t.operationDebug, { invokes });
+      break;
+    }
+
+    for (let returnId of returnBlockIds) {
+      for (;;) {
+        const block = caller.blocks.get(returnId)!;
+        const last = block.instructions.at(-1);
+        if (last) {
+          last.operationDebug = {
+            ...withActivationsDebug(last.operationDebug, { returns }),
+            returned: after,
+          };
+          break;
+        }
+        const from = jumpsInto.get(returnId) ?? [];
+        const pred = from.length === 1 ? caller.blocks.get(from[0]) : undefined;
+        if (pred && isPlainJump(pred.terminator)) {
+          pred.terminator.operationDebug = { ...returnedJump };
+          returnId = from[0];
+          continue;
+        }
+        block.terminator.operationDebug = withActivationsDebug(
+          block.terminator.operationDebug,
+          { returns },
+        );
+        break;
+      }
     }
 
     // --- carry the callee's locals into the caller ---
@@ -340,7 +414,7 @@ export class InliningStep extends BaseOptimizationStep {
     callBlock.terminator = {
       kind: "jump",
       target: entryBlockId,
-      operationDebug: call.operationDebug,
+      operationDebug: callDebug,
     };
 
     void callBlockId;
@@ -602,19 +676,21 @@ function substituteTemp(fn: Ir.Function, id: string, value: Ir.Value): void {
   }
 }
 
+/** The blocks a terminator goes on to */
+function successors(t: Ir.Block.Terminator): string[] {
+  return t.kind === "jump"
+    ? [t.target]
+    : t.kind === "branch"
+      ? [t.trueTarget, t.falseTarget]
+      : t.kind === "call"
+        ? [t.continuation]
+        : [];
+}
+
 function recomputePredecessors(fn: Ir.Function): void {
   for (const b of fn.blocks.values()) b.predecessors = new Set();
   for (const [id, b] of fn.blocks) {
-    const t = b.terminator;
-    const targets: string[] =
-      t.kind === "jump"
-        ? [t.target]
-        : t.kind === "branch"
-          ? [t.trueTarget, t.falseTarget]
-          : t.kind === "call"
-            ? [t.continuation]
-            : [];
-    for (const tgt of targets) {
+    for (const tgt of successors(b.terminator)) {
       fn.blocks.get(tgt)?.predecessors.add(id);
     }
   }
@@ -622,33 +698,30 @@ function recomputePredecessors(fn: Ir.Function): void {
 
 // ---- debug-context composition ----
 
-/**
- * Attach a discriminator (invoke/return) as a flat sibling key on
- * a debug context, threading into a gather leaf if present so the
- * marker never sits as a sibling of `gather`.
- */
-function mergeDiscriminator(
+/** A debug with activation discriminators added (see
+ * `Ir.Utils.withActivations`) */
+function withActivationsDebug(
   debug: Ir.Instruction.Debug,
-  key: "invoke" | "return",
-  value: unknown,
+  activations: { invokes?: unknown[]; returns?: unknown[] },
 ): Ir.Instruction.Debug {
-  const existing = debug.context as Record<string, unknown> | undefined;
-  if (existing && "gather" in existing && Array.isArray(existing.gather)) {
-    // Add as a new gather child rather than a sibling of gather.
-    return {
-      ...debug,
-      context: {
-        ...existing,
-        gather: [...(existing.gather as unknown[]), { [key]: value }],
-      } as Format.Program.Context,
-    };
-  }
+  const context = Ir.Utils.withActivations(debug.context, activations);
+  return { ...debug, ...(context ? { context } : {}) };
+}
+
+/** A debug without activation discriminators */
+function withoutActivationsDebug(
+  debug: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  const { context: _, ...rest } = debug ?? {};
+  const context = Ir.Utils.withoutActivations(debug?.context);
+  return { ...rest, ...(context ? { context } : {}) };
+}
+
+/** A debug's inline sites and origin, which say where it is */
+function placement(debug: Ir.Instruction.Debug): Ir.Instruction.Debug {
   return {
-    ...debug,
-    context: {
-      ...(existing ?? {}),
-      [key]: value,
-    } as Format.Program.Context,
+    ...(debug.inlineSites ? { inlineSites: debug.inlineSites } : {}),
+    ...(debug.origin ? { origin: debug.origin } : {}),
   };
 }
 
@@ -672,6 +745,7 @@ function gatherCallSite(
     return {
       ...debug,
       context: {
+        ...existing,
         gather: [callSite, ...(existing.gather as unknown[])],
       } as Format.Program.Context,
     };
