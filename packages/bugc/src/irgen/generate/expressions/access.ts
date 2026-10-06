@@ -13,7 +13,12 @@ import {
   findStorageAccessChain,
   emitStorageChainLoad,
 } from "../storage.js";
-import { emitMemoryElementOffset, emitMemoryByteOffset } from "../memory.js";
+import {
+  emitBoundsCheck,
+  emitLength,
+  emitMemoryElementOffset,
+  emitMemoryByteOffset,
+} from "../memory.js";
 
 /**
  * Build an access expression (array/member access)
@@ -200,6 +205,11 @@ const makeBuildSliceAccess = (
       const object = yield* buildExpression(expr.object, { kind: "rvalue" });
       const start = yield* buildExpression(expr.start, { kind: "rvalue" });
       const end = yield* buildExpression(expr.end, { kind: "rvalue" });
+
+      // Revert unless start <= end <= length
+      const objectLength = yield* emitLength(object, expr);
+      yield* emitBoundsCheck("le", start, end, expr);
+      yield* emitBoundsCheck("le", end, objectLength, expr);
 
       // Slicing bytes returns dynamic bytes (memory reference)
       const resultType: Ir.Type = Ir.Type.Ref.memory();
