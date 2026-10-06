@@ -27,6 +27,7 @@ import {
  */
 export function generate<S extends Stack>(
   inst: Ir.Instruction,
+  msgDataIds: ReadonlySet<string> = new Set(),
 ): Transition<S, Stack> {
   switch (inst.kind) {
     case "const":
@@ -44,7 +45,7 @@ export function generate<S extends Stack>(
     case "hash":
       return generateHashOp(inst);
     case "length":
-      return generateLength(inst);
+      return generateLength(inst, msgDataIds);
     case "compute_slot":
       return generateComputeSlot(inst);
     case "cast":

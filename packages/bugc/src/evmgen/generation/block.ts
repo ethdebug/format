@@ -179,8 +179,11 @@ export function generate<S extends Stack>(
       // discriminators must be bracketed to the first/last emitted op
       // of the instruction (see bracket-activation.ts); everything else
       // (source mapping, variables, transform markers) rides all ops.
+      const msgDataIds = findMsgDataIds(
+        func ?? { blocks: new Map([[block.id, block]]) },
+      );
       for (const inst of block.instructions) {
-        const gen = Instruction.generate(inst);
+        const gen = Instruction.generate(inst, msgDataIds);
         const operationCtx = inst.operationDebug?.context;
         if (
           !carriesActivation(operationCtx, "invoke") &&
@@ -415,4 +418,22 @@ function pushImm(
       debug,
     },
   ];
+}
+
+/**
+ * Find the temps that hold msg.data: the dests of `msg_data` env
+ * instructions anywhere in the function.
+ */
+function findMsgDataIds(func: {
+  blocks: ReadonlyMap<string, Ir.Block>;
+}): Set<string> {
+  const ids = new Set<string>();
+  for (const block of func.blocks.values()) {
+    for (const inst of block.instructions) {
+      if (inst.kind === "env" && inst.op === "msg_data") {
+        ids.add(inst.dest);
+      }
+    }
+  }
+  return ids;
 }
