@@ -55,6 +55,15 @@ code {
 }`,
       [4n],
     ],
+    "take the length of an array literal": [
+      `storage { [0] r: uint256; [1] s: uint256; }
+create { s = 2; }
+code {
+  r = [1, 2, 3].length;
+  s = [1, 2, 3][s];
+}`,
+      [3n, 3n],
+    ],
     "read nested elements": [
       `storage { [0] r: uint256; [1] s: uint256; [2] n: uint256; }
 code {

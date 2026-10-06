@@ -25,7 +25,9 @@ export type Instruction =
   | Instruction.Hash
   | Instruction.Cast
   // Length operations
-  | Instruction.Length;
+  | Instruction.Length
+  // Runtime checks
+  | Instruction.Assert;
 
 export namespace Instruction {
   export interface Base {
@@ -408,5 +410,21 @@ export namespace Instruction {
     object: Value;
     objectDebug?: Instruction.Debug;
     dest: string;
+  }
+
+  /**
+   * Revert with Solidity's `Panic(uint256)` error, with code `panic`,
+   * unless `condition` is nonzero
+   */
+  export interface Assert extends Instruction.Base {
+    kind: "assert";
+    condition: Value;
+    conditionDebug?: Instruction.Debug;
+    panic: number;
+  }
+
+  export namespace Assert {
+    /** Panic code for an index or slice out of bounds */
+    export const outOfBounds = 0x32;
   }
 }

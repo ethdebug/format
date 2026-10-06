@@ -20,6 +20,7 @@ import {
   generateWrite,
   generateAllocate,
   generateComputeOffset,
+  generateAssert,
 } from "./instructions/index.js";
 
 /**
@@ -54,6 +55,8 @@ export function generate<S extends Stack>(
       return generateAllocate(inst);
     case "compute_offset":
       return generateComputeOffset(inst);
+    case "assert":
+      return generateAssert(inst);
     // Call instruction removed - calls are now block terminators
     default: {
       // This should be unreachable if all instruction types are handled

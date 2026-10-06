@@ -265,6 +265,7 @@ function simulateInstruction(stack: string[], inst: Ir.Instruction): string[] {
     case "unary":
     case "cast":
     case "length":
+    case "assert":
       newStack.pop(); // One operand
       break;
     // NEW: unified read - pops slot/offset/length as needed
@@ -356,6 +357,9 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
     case "hash":
       addValue(inst.value);
       break;
+    case "assert":
+      addValue(inst.condition);
+      break;
     // Call instruction removed - calls are now block terminators
   }
 
@@ -412,6 +416,7 @@ function definedType(inst: Ir.Instruction): Ir.Type | undefined {
     case "compute_offset":
       return Ir.Type.Scalar.word;
     case "write":
+    case "assert":
       return undefined;
   }
 }

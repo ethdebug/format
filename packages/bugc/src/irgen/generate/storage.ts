@@ -6,6 +6,7 @@ import { Type } from "#types";
 import { Error as IrgenError } from "#irgen/errors";
 import { fromBugType } from "#irgen/type";
 import { Process } from "./process.js";
+import { emitBoundsCheck } from "./memory.js";
 import { buildExpression } from "./expressions/index.js";
 import type { Context } from "./expressions/context.js";
 
@@ -192,6 +193,20 @@ export function* emitStorageChainLoad(
         // Update to the value type
         currentOrigin = currentOrigin.value;
       } else if (currentOrigin && Type.isArray(currentOrigin)) {
+        // A fixed-size array reverts on an index out of bounds. (A
+        // dynamic array in storage grows when written past its end.)
+        if (currentOrigin.size !== undefined) {
+          yield* emitBoundsCheck(
+            "lt",
+            access.key,
+            Ir.Value.constant(
+              BigInt(currentOrigin.size),
+              Ir.Type.Scalar.uint256,
+            ),
+            node,
+          );
+        }
+
         // Array access - first compute the array's first slot (hash of base)
         const firstSlotTempId = yield* Process.Variables.newTemp();
         yield* Process.Instructions.emit({
@@ -334,6 +349,20 @@ export function* emitStorageChainStore(
         currentSlot = Ir.Value.temp(slotTemp, Ir.Type.Scalar.uint256);
         currentOrigin = currentOrigin.value;
       } else if (currentOrigin && Type.isArray(currentOrigin)) {
+        // A fixed-size array reverts on an index out of bounds. (A
+        // dynamic array in storage grows when written past its end.)
+        if (currentOrigin.size !== undefined) {
+          yield* emitBoundsCheck(
+            "lt",
+            access.key,
+            Ir.Value.constant(
+              BigInt(currentOrigin.size),
+              Ir.Type.Scalar.uint256,
+            ),
+            node,
+          );
+        }
+
         // Array access - first compute the array's first slot (hash of base)
         const firstSlotTemp = yield* Process.Variables.newTemp();
         yield* Process.Instructions.emit({

@@ -196,6 +196,9 @@ export class Formatter {
       case "length":
         return `${destWithType(inst.dest)} = length ${this.formatValue(inst.object)}`;
 
+      case "assert":
+        return `assert ${this.formatValue(inst.condition)}, panic 0x${inst.panic.toString(16)}`;
+
       // NEW: unified read instruction
       case "read": {
         const location = inst.location;

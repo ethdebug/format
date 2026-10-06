@@ -242,6 +242,9 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
       case "length":
         result.object = replaceValue(result.object);
         break;
+      case "assert":
+        result.condition = replaceValue(result.condition);
+        break;
     }
 
     return result;

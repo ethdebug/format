@@ -284,6 +284,9 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
     case "length":
       addValue(inst.object);
       break;
+    case "assert":
+      addValue(inst.condition);
+      break;
     case "allocate":
       addValue(inst.size);
       break;
@@ -338,6 +341,7 @@ function getDefinedValue(inst: Ir.Instruction): string | undefined {
       return inst.dest;
     // These instructions don't define values
     case "write": // NEW: unified write
+    case "assert":
       return undefined;
   }
 }

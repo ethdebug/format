@@ -966,11 +966,12 @@ code {
 storage { [0] r: uint256; [1] s: uint256; }
 create { s = 1; }
 code {
-  let b = msg.data[0:4];
+  let b = msg.data[0:0];
   if (s > 0) { r = b.length; }
   r = r + b.length;
 }`,
-    locals: { b: { shape: { kind: "bytes" }, values: ["0x00000000"] } },
+    // Called with no calldata, so a longer slice would revert
+    locals: { b: { shape: { kind: "bytes" }, values: ["0x"] } },
   },
   {
     name: "a uint8 cast",

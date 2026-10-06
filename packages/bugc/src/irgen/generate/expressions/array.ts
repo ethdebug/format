@@ -152,7 +152,7 @@ export function* buildArray(
           } as Ir.Instruction.Write);
         }
 
-        return Ir.Value.temp(basePtr, Ir.Type.Scalar.uint256);
+        return Ir.Value.temp(basePtr, Ir.Type.Ref.memory());
       }
 
       // Same implementation as above but with proper type
@@ -217,7 +217,7 @@ export function* buildArray(
         } as Ir.Instruction.Write);
       }
 
-      return Ir.Value.temp(basePtr, Ir.Type.Scalar.uint256);
+      return Ir.Value.temp(basePtr, Ir.Type.Ref.memory());
     }
   }
 }

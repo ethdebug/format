@@ -149,6 +149,9 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
       case "length":
         result.object = propagateValue(result.object);
         break;
+      case "assert":
+        result.condition = propagateValue(result.condition);
+        break;
     }
 
     // Check if we actually changed anything
