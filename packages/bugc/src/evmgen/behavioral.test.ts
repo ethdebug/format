@@ -1322,4 +1322,59 @@ code { size = msg.data.length; }`;
       }
     }
   });
+
+  describe("signed storage reads", () => {
+    const neg = (n: bigint) => 2n ** 256n - n;
+
+    const source = `name SignedReads;
+define {
+  struct R { a: int8; b: int16; c: int64; d: int128; };
+}
+storage {
+  [0] s: R;
+  [1] x: int8;
+  [2] y: int16;
+  [3] m: mapping<uint256, int16>;
+  [10] o0: int256;
+  [11] o1: int256;
+  [12] o2: int256;
+  [13] o3: int256;
+  [14] o4: int256;
+  [15] o5: int256;
+  [16] o6: int256;
+}
+create {
+  s.a = -56 as int8;
+  s.b = -2 as int16;
+  s.c = -3 as int64;
+  s.d = -4 as int128;
+  x = -56 as int8;
+  y = -300 as int16;
+  m[5] = -7 as int16;
+}
+code {
+  o0 = s.a;
+  o1 = s.b;
+  o2 = s.c;
+  o3 = s.d;
+  o4 = x;
+  o5 = y;
+  o6 = m[5];
+}`;
+
+    const expected = [56n, 2n, 3n, 4n, 56n, 300n, 7n].map(neg);
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should sign-extend narrow signed values (level ${level})`, async () => {
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        for (const [i, value] of expected.entries()) {
+          expect(await result.getStorage(10n + BigInt(i))).toBe(value);
+        }
+      });
+    }
+  });
 });

@@ -19,18 +19,26 @@ export function generateCast<S extends Stack>(
   const debug = inst.operationDebug;
   const steps = Ir.Utils.castSteps(inst.value.type, inst.targetType);
 
-  const cast = steps
+  return pipe<S>()
+    .then(loadValue(inst.value, { debug }), { as: "value" })
+    .then(generateCastSteps<S>(steps, debug))
+    .then(storeValueIfNeeded(inst.dest, { debug }))
+    .done();
+}
+
+/**
+ * Apply cast steps to the value on top of the stack
+ */
+export function generateCastSteps<S extends Stack>(
+  steps: readonly Ir.Utils.CastStep[],
+  debug: Ir.Instruction.Debug | undefined,
+): Transition<readonly ["value", ...S], readonly ["value", ...S]> {
+  return steps
     .map((step) => generateStep<S>(step, debug))
     .reduce<Transition<readonly ["value", ...S], readonly ["value", ...S]>>(
       (previous, next) => (state) => next(previous(state)),
       (state) => state,
     );
-
-  return pipe<S>()
-    .then(loadValue(inst.value, { debug }), { as: "value" })
-    .then(cast)
-    .then(storeValueIfNeeded(inst.dest, { debug }))
-    .done();
 }
 
 function generateStep<S extends Stack>(

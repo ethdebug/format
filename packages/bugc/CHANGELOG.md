@@ -87,6 +87,11 @@ support. Changes to the specification itself are tracked in the root
   significant byte. Before, it gave the offset from the low-order end, so
   a debugger read the wrong bytes: for example, an `address` at the start
   of a slot read as the slot's high-order 20 bytes ([#336]).
+- Reading a signed integer narrower than a word from storage now
+  sign-extends it, so a struct field, variable or mapping value of type
+  `int8` that holds `-56` reads as `-56`. Before, at every optimization
+  level, a packed field read back as its unsigned bytes, such as `200`
+  ([#337]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -134,3 +139,4 @@ First publication.
 [#334]: https://github.com/ethdebug/format/pull/334
 [#335]: https://github.com/ethdebug/format/pull/335
 [#336]: https://github.com/ethdebug/format/pull/336
+[#337]: https://github.com/ethdebug/format/pull/337

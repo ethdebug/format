@@ -1,9 +1,10 @@
-import type * as Ir from "#ir";
+import * as Ir from "#ir";
 import type { Stack } from "#evm";
 
 import { type Transition, rebrand, pipe, operations } from "#evmgen/operations";
 
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
+import { generateCastSteps } from "./cast.js";
 
 const {
   SWAP1,
@@ -79,6 +80,21 @@ export function generateRead<S extends Stack>(
 }
 
 /**
+ * Sign-extend a value read from (transient) storage to a full word,
+ * when its type is a signed integer narrower than a word. Storage
+ * keeps such a value in its own bytes only.
+ */
+function signExtend<S extends Stack>(
+  inst: Ir.Instruction.Read,
+  debug: Ir.Instruction.Debug,
+): Transition<readonly ["value", ...S], readonly ["value", ...S]> {
+  return generateCastSteps<S>(
+    Ir.Utils.castSteps(inst.type, Ir.Type.Scalar.uint256),
+    debug,
+  );
+}
+
+/**
  * Storage read: SLOAD with optional partial-slot extraction
  */
 function generateStorageRead<S extends Stack>(
@@ -93,6 +109,7 @@ function generateStorageRead<S extends Stack>(
     return pipe<S>()
       .then(loadValue(inst.slot!, { debug }), { as: "key" })
       .then(SLOAD({ debug }), { as: "value" })
+      .then(signExtend(inst, debug))
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done();
   }
@@ -123,6 +140,7 @@ function generateStorageRead<S extends Stack>(
 
       // shiftedValue & mask
       .then(AND({ debug }), { as: "value" })
+      .then(signExtend(inst, debug))
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done()
   );
@@ -143,6 +161,7 @@ function generateTransientRead<S extends Stack>(
     return pipe<S>()
       .then(loadValue(inst.slot!, { debug }), { as: "key" })
       .then(TLOAD({ debug }), { as: "value" })
+      .then(signExtend(inst, debug))
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done();
   }
@@ -174,6 +193,7 @@ function generateTransientRead<S extends Stack>(
       )
 
       .then(AND({ debug }), { as: "value" })
+      .then(signExtend(inst, debug))
       .then(storeValueIfNeeded(inst.dest, { debug }))
       .done()
   );
