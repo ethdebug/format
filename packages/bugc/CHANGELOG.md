@@ -37,6 +37,13 @@ support. Changes to the specification itself are tracked in the root
 - `msg.data.length` now reads the calldata size. Before, it was 0 at
   every optimization level, because the code looked for "msg_data" in the
   name of a temp such as `t1` ([#333]).
+- The pointer for a storage struct with a struct or array member is now a
+  valid **ethdebug/format/pointer**. Before, at optimization level 0, it
+  gave that member's `group` or `list` a `name`, which only regions may
+  have, so the program failed validation against
+  **ethdebug/format/program**. Now each region inside such a member has a
+  name qualified by the member's name, such as `ceo-salary` for
+  `company.ceo.salary` ([#335]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -81,3 +88,4 @@ First publication.
 [#330]: https://github.com/ethdebug/format/pull/330
 [#332]: https://github.com/ethdebug/format/pull/332
 [#333]: https://github.com/ethdebug/format/pull/333
+[#335]: https://github.com/ethdebug/format/pull/335
