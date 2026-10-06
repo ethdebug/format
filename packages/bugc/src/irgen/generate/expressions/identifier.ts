@@ -16,15 +16,6 @@ export function* buildIdentifier(
   const ssaVar = yield* Process.Variables.lookup(expr.name);
 
   if (ssaVar) {
-    // Check if we need a phi node for this variable
-    const phiTemp = yield* Process.Variables.checkAndInsertPhi(
-      expr.name,
-      ssaVar,
-    );
-    if (phiTemp) {
-      return Ir.Value.temp(phiTemp, ssaVar.type);
-    }
-
     // Return the current SSA temp for this variable
     return Ir.Value.temp(ssaVar.currentTempId, ssaVar.type);
   }
