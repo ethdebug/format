@@ -27,6 +27,9 @@ support. Changes to the specification itself are tracked in the root
 - A `for` or `while` loop inside the scope of a local that shadows another
   now carries the inner local. Before, at any optimization level, the loop
   started each iteration from the outer local's value ([#330]).
+- The phis on a jump now copy their values in parallel. Before, at any
+  optimization level, a loop that swaps two locals gave both the same
+  value, since one phi's copy overwrote the value another phi read ([#330]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

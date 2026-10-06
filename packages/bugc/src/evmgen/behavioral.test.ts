@@ -562,6 +562,18 @@ code {
   }`,
         [2n, 3n, 4n, 5n],
       ],
+      // The header's phis for `a` and `b` read each other's old values
+      "a swap": [
+        `let a: uint256 = 1;
+  let b: uint256 = 2;
+  for (let i: uint256 = 0; i < flag + 1; i = i + 1) {
+    let t: uint256 = a;
+    a = b;
+    b = t;
+  }
+  other = a * 10 + b;`,
+        [21n, 12n, 21n, 12n],
+      ],
     } as const;
 
     for (const [name, [body, expected]] of Object.entries(loopLocals)) {
