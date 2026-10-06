@@ -10,6 +10,8 @@ import { buildProgram } from "#evmgen/program-builder";
 
 import { Layout, Liveness, Memory } from "#evmgen/analysis";
 
+import { splitPhiBranchEdges } from "./split-edges.js";
+
 /**
  * Output produced by the EVM generation pass
  */
@@ -40,8 +42,10 @@ const pass: Pass<{
   };
   error: EvmgenError;
 }> = {
-  async run({ ir }) {
+  async run({ ir: input }) {
     try {
+      const ir = splitPhiBranchEdges(input);
+
       // Analyze liveness
       const liveness = Liveness.Module.analyze(ir);
 

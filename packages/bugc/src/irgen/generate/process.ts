@@ -53,6 +53,23 @@ export namespace Process {
       const state: State = yield { type: "peek" };
       const currentBlockId = state.block.id;
 
+      // Record the variables' values on leaving this block, so that
+      // each successor can start from them (see Variables.enterBlock)
+      const exit = state.scopes.stack.map((scope) => scope.ssaVars);
+      yield {
+        type: "modify",
+        fn: (s: State) => ({
+          ...s,
+          function: {
+            ...s.function,
+            exits: new Map([
+              ...(s.function.exits ?? []),
+              [currentBlockId, exit],
+            ]),
+          },
+        }),
+      };
+
       switch (terminator.kind) {
         case "jump":
           yield* addPredecessorToBlock(terminator.target, currentBlockId);
@@ -194,6 +211,8 @@ export namespace Process {
           }),
         };
       }
+
+      yield* Variables.enterBlock();
     }
 
     /**
@@ -402,125 +421,81 @@ export namespace Process {
     export const lookup = lift(State.Scopes.lookupVariable);
 
     /**
-     * Check if we need a phi node for this variable and insert if needed
+     * On entering a block, give each variable the value it has on
+     * leaving the block's predecessors. Where those values differ,
+     * insert a phi node and use its result.
      */
-    export function* checkAndInsertPhi(
-      varName: string,
-      ssaVar: State.SsaVariable,
-    ): Process<string | null> {
+    export function* enterBlock(): Process<void> {
       const state: State = yield { type: "peek" };
-      const currentBlock = state.block;
-
-      // Only consider phi nodes if we have multiple predecessors
-      if (currentBlock.predecessors.size <= 1) {
-        return null;
+      const { block } = state;
+      // A block with no predecessors (the entry block, or the merge
+      // block of an if whose arms all return) has nothing to inherit
+      if (block.predecessors.size === 0) {
+        return;
       }
 
-      // Check if we already have a phi node for this variable
-      const existingPhi = currentBlock.phis.find((phi) => {
-        // Check if this phi is for the same logical variable
-        const metadata = state.function.ssaMetadata?.get(phi.dest);
-        return metadata && metadata.name === varName;
+      // Blocks.terminate records a block's exit when it makes the block
+      // a predecessor, so every predecessor has one
+      const exits = [...block.predecessors].map((pred) => {
+        const exit = state.function.exits?.get(pred);
+        if (!exit) {
+          throw new Error(`Block ${pred} has no recorded exit`);
+        }
+        return { pred, exit };
       });
 
-      if (existingPhi) {
-        return existingPhi.dest;
-      }
+      const stack = state.scopes.stack;
+      for (let scopeIndex = 0; scopeIndex < stack.length; scopeIndex++) {
+        for (const [name, ssaVar] of stack[scopeIndex].ssaVars) {
+          const temps = exits.map(
+            ({ exit }) => exit[scopeIndex]?.get(name)?.currentTempId,
+          );
+          if (temps.some((temp) => temp === undefined)) {
+            continue;
+          }
 
-      // Check if different predecessors have different temps for this variable
-      const predTemps = new Map<string, string>();
-      let needsPhi = false;
-      let firstTemp: string | null = null;
+          let tempId = temps[0]!;
+          if (temps.some((temp) => temp !== tempId)) {
+            tempId = yield* newTemp();
+            yield* lift(State.Block.addPhi)({
+              kind: "phi",
+              dest: tempId,
+              sources: new Map(
+                exits.map(({ pred }, index) => [
+                  pred,
+                  Ir.Value.temp(temps[index]!, ssaVar.type),
+                ]),
+              ),
+              type: ssaVar.type,
+              // No debug context - compiler-generated phi node (SSA merge point)
+              operationDebug: {},
+            });
+            yield* addSsaMetadata(
+              tempId,
+              name,
+              `scope_${scopeIndex}_${name}`,
+              ssaVar.type,
+              ssaVar.version + 1,
+            );
+          }
 
-      // We need to look at the SSA metadata to find which temps each predecessor uses
-      for (const predId of currentBlock.predecessors) {
-        // Look up what temp this predecessor uses for this variable
-        const predBlock = state.function.blocks.get(predId);
-        if (!predBlock) continue;
-
-        // Find the last assignment to this variable in the predecessor
-        let lastTemp: string | null = null;
-
-        // Check all temps in our metadata to find ones that match this variable
-        // and were defined in this predecessor block
-        if (state.function.ssaMetadata) {
-          for (const [tempId, metadata] of state.function.ssaMetadata) {
-            if (metadata.name === varName) {
-              // Check if this temp is defined in the predecessor block
-              for (const inst of predBlock.instructions) {
-                if ("dest" in inst && inst.dest === tempId) {
-                  lastTemp = tempId;
-                  // Keep looking for later assignments
-                }
-              }
-            }
+          if (tempId !== ssaVar.currentTempId) {
+            yield* lift(State.Scopes.update)(({ stack }) => ({
+              stack: stack.map((scope, index) =>
+                index !== scopeIndex
+                  ? scope
+                  : {
+                      ...scope,
+                      ssaVars: new Map([
+                        ...scope.ssaVars,
+                        [name, { ...ssaVar, currentTempId: tempId }],
+                      ]),
+                    },
+              ),
+            }));
           }
         }
-
-        // If no assignment in block, use the value from the predecessor's entry
-        // (this would be the value that flows through the block)
-        if (!lastTemp && varName === ssaVar.name) {
-          // Use the current SSA temp as it flows through
-          lastTemp = ssaVar.currentTempId;
-        }
-
-        if (lastTemp) {
-          predTemps.set(predId, lastTemp);
-          if (firstTemp === null) {
-            firstTemp = lastTemp;
-          } else if (firstTemp !== lastTemp) {
-            needsPhi = true;
-          }
-        }
       }
-
-      // If all predecessors use the same temp (or variable isn't defined), no phi needed
-      if (!needsPhi || predTemps.size === 0) {
-        return null;
-      }
-
-      // Create a new temp for the phi destination
-      const phiDest = yield* newTemp();
-
-      // Build phi sources map
-      const sources = new Map<string, Ir.Value>();
-      for (const [predId, tempId] of predTemps) {
-        const metadata = state.function.ssaMetadata?.get(tempId);
-        sources.set(
-          predId,
-          Ir.Value.temp(tempId, metadata?.type || ssaVar.type),
-        );
-      }
-
-      // Add phi node to the block
-      const phi: Ir.Block.Phi = {
-        kind: "phi",
-        dest: phiDest,
-        sources,
-        type: ssaVar.type,
-        // No debug context - compiler-generated phi node (SSA merge point)
-        operationDebug: {},
-      };
-
-      yield* lift(State.Block.addPhi)(phi);
-
-      // Track SSA metadata for the new phi temp
-      const scopeIndex = yield* lift(State.Scopes.extract)(
-        (s) => s.stack.length - 1,
-      );
-      const scopeId = `scope_${scopeIndex}_${varName}`;
-      yield* addSsaMetadata(
-        phiDest,
-        varName,
-        scopeId,
-        ssaVar.type,
-        ssaVar.version + 1,
-      );
-
-      // Update the SSA variable to use the phi result
-      yield* updateSsaTemp(varName, phiDest);
-
-      return phiDest;
     }
 
     /**

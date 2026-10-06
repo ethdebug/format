@@ -18,6 +18,12 @@ support. Changes to the specification itself are tracked in the root
   every phi that named a merged block. Before, a `for` loop that carries a
   local across iterations (and so any loop that calls an internal function
   to update one) compiled to bytecode that reverted ([#320]).
+- A local now keeps its value on a path that does not assign it. Before,
+  at any optimization level, a local assigned in one branch of an `if` (or
+  before a `break`) could read as 0 after a path that skipped that branch.
+  At levels 2 and 3, a local assigned in an `if` arm that holds another
+  `if` or calls an internal function could read as 0 even on the path that
+  assigned it ([#327]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -58,3 +64,4 @@ First publication.
 [#305]: https://github.com/ethdebug/format/pull/305
 [#320]: https://github.com/ethdebug/format/pull/320
 [#321]: https://github.com/ethdebug/format/pull/321
+[#327]: https://github.com/ethdebug/format/pull/327

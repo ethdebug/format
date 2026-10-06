@@ -78,6 +78,8 @@ export namespace State {
     readonly parameters: Ir.Function.Parameter[]; // Function parameters
     readonly blocks: Map<string, Ir.Block>; // All blocks in function
     readonly ssaMetadata?: Map<string, Ir.Function.SsaVariable>; // SSA variable metadata for phi insertion
+    /** Each terminated block's variables at its exit, by scope */
+    readonly exits?: Map<string, Map<string, SsaVariable>[]>;
   }
 
   export namespace Function {

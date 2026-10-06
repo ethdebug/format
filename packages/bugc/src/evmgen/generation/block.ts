@@ -205,15 +205,24 @@ export function generate<S extends Stack>(
       // Emit phi copies for successor blocks before the
       // terminator. For jump terminators, check if the
       // target has phis and store the source values for
-      // this block.
+      // this block. A branch cannot store them for one
+      // target only, so a branch into a block with phis
+      // must go through an edge block (see split-edges.ts).
       if (func && block.terminator.kind === "jump") {
         const target = func.blocks.get(block.terminator.target);
         if (target && target.phis.length > 0) {
-          const relevant = target.phis.filter((phi) =>
-            phi.sources.has(block.id),
-          );
-          if (relevant.length > 0) {
-            result = result.then(generatePhis(relevant, block.id));
+          result = result.then(generatePhis(target.phis, block.id));
+        }
+      } else if (func && block.terminator.kind === "branch") {
+        for (const targetId of [
+          block.terminator.trueTarget,
+          block.terminator.falseTarget,
+        ]) {
+          if ((func.blocks.get(targetId)?.phis.length ?? 0) > 0) {
+            throw new Error(
+              ErrorCode.PHI_NODE_UNRESOLVED,
+              `Branch from ${block.id} into ${targetId}, which has phis`,
+            );
           }
         }
       }

@@ -579,6 +579,106 @@ code {
       expect(result.callSuccess).toBe(true);
       expect(await result.getStorage(0n)).toBe(100n);
     });
+
+    // A path that leaves a variable alone must keep the value the
+    // variable had before the branch. `flag` picks the path.
+    const keptValues = {
+      "a one-armed if": [
+        "",
+        `let w: uint256 = 7;
+  if (flag == 1) { w = 2; }
+  out = w;`,
+        [7n, 2n],
+      ],
+      "an else that does not assign": [
+        "",
+        `let w: uint256 = 7;
+  if (flag == 1) { w = 2; } else { other = 1; }
+  out = w;`,
+        [7n, 2n],
+      ],
+      "an else that reads": [
+        "",
+        `let w: uint256 = 7;
+  if (flag == 1) { w = 2; } else { other = w; }
+  out = w + other;`,
+        [14n, 2n],
+      ],
+      "a later if": [
+        "",
+        `let w: uint256 = 7;
+  if (flag == 1) { w = 2; }
+  if (flag == 0) { other = w; }
+  out = w;`,
+        [7n, 2n],
+      ],
+      "an arm that only copies": [
+        "",
+        `let v: uint256 = flag + 3;
+  let w: uint256 = 7;
+  if (flag == 1) { w = v; }
+  out = w;`,
+        [7n, 4n],
+      ],
+      "a nested if": [
+        "",
+        `let w: uint256 = 7;
+  if (flag == 1) { w = 2; if (flag == 5) { other = 1; } }
+  out = w;`,
+        [7n, 2n],
+      ],
+      "an internal call": [
+        `define {
+  function id(x: uint256) -> uint256 { return x; };
+}`,
+        `let w: uint256 = 7;
+  if (flag == 1) { w = id(2); }
+  out = w;`,
+        [7n, 2n],
+      ],
+      "a for loop that may break": [
+        "",
+        `let w: uint256 = 7;
+  for (let i: uint256 = 0; i < 3; i = i + 1) {
+    if (i == flag + 2) { w = 2; break; }
+  }
+  out = w;`,
+        [2n, 7n],
+      ],
+      "a for loop that assigns, then may break": [
+        "",
+        `let w: uint256 = 7;
+  for (let i: uint256 = 0; i < 3; i = i + 1) {
+    w = i;
+    if (i == flag * 5 + 1) { break; }
+  }
+  out = w;`,
+        [1n, 2n],
+      ],
+    } as const;
+
+    for (const [name, [define, body, expected]] of Object.entries(keptValues)) {
+      for (const flag of [0, 1] as const) {
+        for (const level of [0, 1, 2, 3] as const) {
+          it(`should keep a value past ${name} (flag ${flag}, level ${level})`, async () => {
+            const source = `name KeptValue;
+${define}
+storage { [0] flag: uint256; [1] out: uint256; [2] other: uint256; }
+create { flag = ${flag}; }
+code {
+  ${body}
+}`;
+            const result = await executeProgram(source, {
+              calldata: "",
+              optimizationLevel: level,
+            });
+
+            expect(result.callSuccess).toBe(true);
+            expect(await result.getStorage(1n)).toBe(expected[flag]);
+          });
+        }
+      }
+    }
   });
 
   describe("error paths", () => {

@@ -53,10 +53,21 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
             block.terminator.target = finalTarget;
           }
         } else if (block.terminator.kind === "branch") {
+          // A branch must not skip ahead into a block that has phis:
+          // if both its edges reached that block, the block's phis
+          // would need two values from this one predecessor.
           const originalTrue = block.terminator.trueTarget;
-          const trueFinal = this.resolveJumpChain(originalTrue, jumpTargets);
+          const trueFinal = this.resolveBranchTarget(
+            func,
+            originalTrue,
+            jumpTargets,
+          );
           const originalFalse = block.terminator.falseTarget;
-          const falseFinal = this.resolveJumpChain(originalFalse, jumpTargets);
+          const falseFinal = this.resolveBranchTarget(
+            func,
+            originalFalse,
+            jumpTargets,
+          );
 
           if (trueFinal !== originalTrue) {
             // Track this redirection
@@ -93,11 +104,17 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
         }
       }
 
-      // Update phi nodes for redirected jumps
-      this.updatePhisForRedirections(func, redirections, jumpTargets);
+      // Update phi nodes for redirected jumps. A skipped block goes
+      // away only if nothing reaches it any more.
+      const reachable = this.findReachableBlocks(func);
+      this.updatePhisForRedirections(
+        func,
+        redirections,
+        jumpTargets,
+        reachable,
+      );
 
       // Remove unreachable blocks
-      const reachable = this.findReachableBlocks(func);
       const blocksToRemove: string[] = [];
 
       for (const blockId of func.blocks.keys()) {
@@ -137,71 +154,84 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
     return current;
   }
 
+  private resolveBranchTarget(
+    func: Ir.Function,
+    target: string,
+    jumpTargets: Map<string, string>,
+  ): string {
+    const final = this.resolveJumpChain(target, jumpTargets);
+    const finalBlock = func.blocks.get(final);
+    return finalBlock && finalBlock.phis.length > 0 ? target : final;
+  }
+
   private updatePhisForRedirections(
     func: Ir.Function,
     redirections: Map<string, Map<string, string>>,
     jumpTargets: Map<string, string>,
+    reachable: Set<string>,
   ): void {
-    // For each block that has redirected jumps coming into it
+    // A redirected block takes over the phi source of the last block
+    // it skipped, the one that jumped to the target
     for (const [targetBlock, sourceMap] of redirections) {
       const block = func.blocks.get(targetBlock);
       if (!block) continue;
 
-      // Update phi nodes in this block
       for (const phi of block.phis) {
         const newSources = new Map(phi.sources);
-
-        // For each redirection (newSource was going to oldSource, now goes here)
         for (const [newSource, oldSource] of sourceMap) {
-          // If the phi had a value from oldSource, we need to update it
-          if (phi.sources.has(oldSource)) {
-            // Get the value that was coming from oldSource
-            const value = phi.sources.get(oldSource)!;
-
-            // Check if oldSource was a jump-only block that might have phi nodes
-            const oldBlock = func.blocks.get(oldSource);
-            if (oldBlock && oldBlock.phis.length > 0) {
-              // We need to thread through the phi values from the intermediate block
-              // This is complex - for now, we'll just copy the value
-              // A more sophisticated approach would thread through phi values
-              newSources.set(newSource, value);
-            } else {
-              // Simple case: just redirect the source
-              newSources.set(newSource, value);
-            }
-
-            // If oldSource is being removed (it's a jump-only block), remove it from phi
-            if (jumpTargets.has(oldSource)) {
-              newSources.delete(oldSource);
-            }
+          const lastSkipped = this.lastJumpBefore(
+            oldSource,
+            targetBlock,
+            jumpTargets,
+          );
+          const value = phi.sources.get(lastSkipped);
+          if (value) {
+            newSources.set(newSource, value);
           }
         }
-
         phi.sources = newSources;
       }
 
-      // Update predecessors list as well
-      const newPredecessors = new Set<string>();
-      for (const pred of block.predecessors) {
-        // If this predecessor was redirected, use the original source
-        let found = false;
-        for (const [newSource, oldSource] of sourceMap) {
-          if (oldSource === pred) {
-            newPredecessors.add(newSource);
-            found = true;
-          }
-        }
-        if (!found && !jumpTargets.has(pred)) {
-          // Keep predecessors that weren't redirected and aren't being removed
-          newPredecessors.add(pred);
-        }
-      }
-      // Add any new predecessors from redirections
-      for (const newSource of sourceMap.keys()) {
-        newPredecessors.add(newSource);
-      }
-      block.predecessors = newPredecessors;
+      block.predecessors = new Set([
+        ...block.predecessors,
+        ...sourceMap.keys(),
+      ]);
     }
+
+    // Forget the skipped blocks that nothing reaches any more
+    for (const block of func.blocks.values()) {
+      const removed = (id: string) => jumpTargets.has(id) && !reachable.has(id);
+      for (const phi of block.phis) {
+        phi.sources = new Map([...phi.sources].filter(([id]) => !removed(id)));
+      }
+      block.predecessors = new Set(
+        [...block.predecessors].filter((id) => !removed(id)),
+      );
+    }
+  }
+
+  /**
+   * In the jump chain from `start` to `target`, find the block that
+   * jumps to `target` itself
+   */
+  private lastJumpBefore(
+    start: string,
+    target: string,
+    jumpTargets: Map<string, string>,
+  ): string {
+    const visited = new Set<string>();
+    let current = start;
+
+    while (
+      jumpTargets.has(current) &&
+      jumpTargets.get(current) !== target &&
+      !visited.has(current)
+    ) {
+      visited.add(current);
+      current = jumpTargets.get(current)!;
+    }
+
+    return current;
   }
 
   private findReachableBlocks(func: Ir.Function): Set<string> {
