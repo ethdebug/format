@@ -387,6 +387,36 @@ function getTypeSize(type: Ir.Type): number {
 }
 
 /**
+ * The type of the value an instruction defines. Every kind that
+ * defines a value must have a case here: a value with no type gets
+ * no memory home, and codegen then cannot load it.
+ */
+function definedType(inst: Ir.Instruction): Ir.Type | undefined {
+  switch (inst.kind) {
+    case "const":
+    case "read":
+      return inst.type;
+    case "cast":
+      return inst.targetType;
+    case "env":
+      return inst.op === "msg_sender"
+        ? Ir.Type.Scalar.address
+        : Ir.Type.Scalar.uint256;
+    case "binary":
+    case "unary":
+    case "length":
+      return Ir.Type.Scalar.uint256;
+    case "hash":
+    case "allocate":
+    case "compute_slot":
+    case "compute_offset":
+      return Ir.Type.Scalar.word;
+    case "write":
+      return undefined;
+  }
+}
+
+/**
  * Get type information for a value ID
  */
 function getValueType(valueId: string, func: Ir.Function): Ir.Type | undefined {
@@ -409,21 +439,7 @@ function getValueType(valueId: string, func: Ir.Function): Ir.Type | undefined {
     // Check instructions
     for (const inst of block.instructions) {
       if ("dest" in inst && inst.dest === valueId) {
-        // Get type based on instruction kind
-        if ("type" in inst && inst.type) {
-          return inst.type as Ir.Type;
-        }
-        // For instructions without explicit type, infer from operation
-        if (inst.kind === "binary" || inst.kind === "unary") {
-          // Binary/unary ops typically produce uint256
-          return Ir.Type.Scalar.uint256;
-        }
-        if (inst.kind === "env") {
-          // Environment ops produce address or uint256
-          return inst.op === "msg_sender"
-            ? Ir.Type.Scalar.address
-            : Ir.Type.Scalar.uint256;
-        }
+        return definedType(inst);
       }
     }
 
