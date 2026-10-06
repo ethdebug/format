@@ -21,7 +21,10 @@ support. Changes to the specification itself are tracked in the root
   elements or data it refers to. At optimization levels 1 to 3, a local
   whose current value the optimizer folded to a constant or removed is
   listed without a pointer, and an inlined function's locals are listed
-  in its inlined code ([#328]).
+  in its inlined code, with the storage variables, in one flat
+  `variables` list: from the instruction that invokes it up to the one
+  that returns from it, which lists the caller's variables ([#328],
+  [#341]).
 
 ### Changed
 
@@ -50,6 +53,10 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- At optimization levels 2 and 3, an inlined function that starts with an
+  inlined call, or returns one's result, now has its own `invoke` and
+  `return` contexts, around the inner call's. Before, its `invoke` (or its
+  `return`) was lost, so the call stack did not balance ([#341]).
 - A cast from dynamic `bytes` to a fixed-size type now reads the bytes.
   `msg.data[0:4] as bytes4` is the first four bytes of calldata; bytes
   past the slice's length are zero. Before, the cast gave the slice's
@@ -209,3 +216,4 @@ First publication.
 [#337]: https://github.com/ethdebug/format/pull/337
 [#339]: https://github.com/ethdebug/format/pull/339
 [#340]: https://github.com/ethdebug/format/pull/340
+[#341]: https://github.com/ethdebug/format/pull/341

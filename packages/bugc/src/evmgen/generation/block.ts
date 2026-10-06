@@ -21,7 +21,7 @@ import {
   generateCallTerminator,
 } from "./control-flow/index.js";
 import { annotateTop } from "./values/identify.js";
-import { withStackLocals } from "../debug/local-variables.js";
+import { withReturned, withStackLocals } from "../debug/local-variables.js";
 
 /**
  * Generate code for a basic block
@@ -201,16 +201,24 @@ export function generate<S extends Stack>(
           result = result.then(gen);
           continue;
         }
+        const returned = inst.operationDebug?.returned;
         result = result.peek((state, builder) => {
           const start = state.instructions.length;
-          return builder.then(gen).then((s) => ({
-            ...s,
-            instructions: bracketActivation(
-              s.instructions,
-              start,
-              operationCtx,
-            ),
-          }));
+          return builder.then(gen).then((s) => {
+            const instructions = [
+              ...bracketActivation(s.instructions, start, operationCtx),
+            ];
+            // The op that returns from an inlined function lists the
+            // caller's variables
+            if (returned && instructions.length > start) {
+              instructions[instructions.length - 1] = withReturned(
+                instructions[instructions.length - 1],
+                returned,
+                s.stack,
+              );
+            }
+            return { ...s, instructions };
+          });
         });
       }
 
@@ -248,14 +256,36 @@ export function generate<S extends Stack>(
       // Process terminator
       // Handle call terminators specially
       // (they cross function boundaries)
-      if (block.terminator.kind === "call") {
-        result = result.then(
-          generateCallTerminator(block.terminator, functions),
-        );
+      const term = block.terminator;
+      const terminate =
+        term.kind === "call"
+          ? generateCallTerminator(term, functions)
+          : generateTerminator(term, isLastBlock, isUserFunction);
+      // A terminator carries an inlined function's invoke or return
+      // only when its block has no instruction to carry it (an
+      // inlined function that starts with a call, or returns a call's
+      // result): bracket it as for an instruction. A call's own JUMP
+      // carries the call's invoke, so it is left out.
+      const termCtx = term.operationDebug?.context;
+      if (
+        (term.kind === "call" || (term.kind === "jump" && !term.tailCall)) &&
+        (carriesActivation(termCtx, "invoke") ||
+          carriesActivation(termCtx, "return"))
+      ) {
+        result = result.peek((state, builder) => {
+          const start = state.instructions.length;
+          return builder.then(terminate).then((s) => ({
+            ...s,
+            instructions: bracketActivation(
+              s.instructions,
+              start,
+              termCtx,
+              s.instructions.length - (term.kind === "call" ? 1 : 0),
+            ),
+          }));
+        });
       } else {
-        result = result.then(
-          generateTerminator(block.terminator, isLastBlock, isUserFunction),
-        );
+        result = result.then(terminate);
       }
 
       return result;

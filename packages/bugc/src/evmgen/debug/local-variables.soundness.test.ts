@@ -198,6 +198,174 @@ code { r = add(s, 2); }`;
       }
     },
   );
+
+  // `dbl` is inlined into `weight` (and `weight` into the loop at O3)
+  const inlinedSource = `name InlineScope;
+define {
+  function dbl(x: uint256) -> uint256 {
+    return x + x;
+  };
+  function weight(i: uint256, n: uint256) -> uint256 {
+    let w = dbl(i) + n;
+    return w;
+  };
+}
+storage { [0] total: uint256; [1] calls: uint256; }
+create {}
+code {
+  let sum = 0;
+  for (let i = 0; i < 2; i = i + 1) {
+    sum = sum + weight(i, 4);
+  }
+  total = sum;
+  calls = calls + 1;
+}`;
+
+  /** The activation markers (`invoke`/`return`) of a context */
+  const activations = (
+    context: unknown,
+    key: "invoke" | "return",
+  ): string[] => {
+    if (!context || typeof context !== "object") return [];
+    const { gather } = context as { gather?: unknown[] };
+    const own = (context as Record<string, { identifier?: string }>)[key];
+    return [
+      ...(own ? [own.identifier as string] : []),
+      ...(Array.isArray(gather)
+        ? gather.flatMap((c) => activations(c, key))
+        : []),
+    ];
+  };
+
+  it.each([2, 3] as const)(
+    "(h) lists an inlined function's locals only within its body at O%i",
+    async (level) => {
+      const run = await traceLocals(inlinedSource, level);
+      // Contexts are postconditions: the callee's locals are in scope
+      // from the step that invokes it up to, not including, the step
+      // that returns from it
+      let inside = false;
+      let seen = 0;
+      for (const step of run.steps) {
+        const context = run.instructionAt(step)?.context;
+        if (activations(context, "invoke").includes("dbl")) inside = true;
+        if (activations(context, "return").includes("dbl")) inside = false;
+        const names = localsOf(context).map((v) => v.identifier);
+        if (!inside) {
+          expect(names, `x listed outside dbl, pc ${step.pc}`).not.toContain(
+            "x",
+          );
+        } else if (names.includes("x")) {
+          seen++;
+        }
+      }
+      expect(seen).toBeGreaterThan(0);
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(j) lists the caller's locals where an inlined function returns at O%i",
+    async (level) => {
+      // The callee's locals have the caller's names
+      const source = `name Collide;
+define {
+  function f(x: uint256) -> uint256 {
+    let y = x + 1;
+    let total = y * 2;
+    return total + y;
+  };
+}
+storage { [0] total: uint256; [1] s: uint256; }
+create { s = 4; }
+code { let y = s + 3; let x = s + 10; total = f(x); total = total + y; }`;
+      const main = source.indexOf("code {");
+      const run = await traceLocals(source, level);
+      let returns = 0;
+      for (const step of run.steps) {
+        const context = run.instructionAt(step)?.context;
+        if (!activations(context, "return").includes("f")) continue;
+        returns++;
+        const locals = localsOf(context).filter((v) => {
+          const pointer = JSON.stringify(v.pointer ?? {});
+          return !pointer.includes('"storage"');
+        });
+        expect(locals.map((v) => v.identifier).sort()).toEqual(["x", "y"]);
+        for (const local of locals) {
+          const { range } = local.declaration as { range: { offset: number } };
+          expect(range.offset, `${local.identifier}`).toBeGreaterThan(main);
+        }
+      }
+      expect(returns).toBe(1);
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(k) brackets each inlined function that starts or ends with an " +
+      "inlined call at O%i",
+    async (level) => {
+      const bodies = {
+        "starts with": "let s = inner(r); return s + 1;",
+        "ends with": "return inner(r);",
+      };
+      for (const [what, body] of Object.entries(bodies)) {
+        const source = `name Nested;
+define {
+  function inner(p: uint256) -> uint256 { let q = p * 3; return q; };
+  function outer(r: uint256) -> uint256 { ${body} };
+}
+storage { [0] total: uint256; [1] calls: uint256; }
+create { calls = 2; }
+code { let v = calls + 5; total = outer(v); total = total + v; }`;
+        const run = await traceLocals(source, level);
+        const events: string[] = [];
+        for (const step of run.steps) {
+          const context = run.instructionAt(step)?.context;
+          const names = localsOf(context).map((v) => v.identifier);
+          const invokes = activations(context, "invoke");
+          const returns = activations(context, "return");
+          events.push(
+            ...invokes.map((f) => `invoke ${f}`),
+            ...returns.map((f) => `return ${f}`),
+          );
+          // Back in main once outer returns
+          if (returns.includes("outer")) {
+            expect(names, `${what}, pc ${step.pc}`).toContain("v");
+          }
+        }
+        expect(events, what).toEqual([
+          "invoke outer",
+          "invoke inner",
+          "return inner",
+          "return outer",
+        ]);
+      }
+    },
+  );
+
+  it.each([2, 3] as const)(
+    "(i) lists storage variables in inlined code at O%i",
+    async (level) => {
+      const { program } = await traceLocals(inlinedSource, level);
+      const rows = await listed(inlinedSource, level);
+      const inlined = rows.filter(({ names }) => names.includes("x"));
+      expect(inlined.length).toBeGreaterThan(0);
+      for (const { instruction, names } of inlined) {
+        const where = `${instruction.operation?.mnemonic} at ${instruction.offset}`;
+        expect(names, where).toContain("total");
+        expect(names, where).toContain("calls");
+      }
+      // ... and nowhere apart from the flat list
+      const nested = (context: unknown): boolean => {
+        const { gather } = (context ?? {}) as { gather?: unknown[] };
+        return (gather ?? []).some((c) => localsOf(c).length > 0 || nested(c));
+      };
+      for (const instruction of program.instructions) {
+        expect(nested(instruction.context), `${instruction.offset}`).toBe(
+          false,
+        );
+      }
+    },
+  );
 });
 
 const words: Shape = { kind: "array", element: { kind: "scalar", size: 32 } };

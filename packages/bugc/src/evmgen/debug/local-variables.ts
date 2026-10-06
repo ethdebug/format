@@ -280,10 +280,14 @@ function buildEntry(
 }
 
 /**
- * Merge variable entries into an instruction's debug context as a
- * flat `variables` sibling, alongside any existing `variables` (the
- * storage variables from irgen) and preserving all other keys. A local
- * in scope hides a storage variable of the same name.
+ * Merge variable entries into an instruction's debug context as one
+ * flat `variables` list, with the existing `variables` (the storage
+ * variables from irgen), and preserving all other keys. Storage
+ * variables in a `gather` (as when inlined code gathers the call
+ * site's `code` with the callee's) move to the flat list too: all of a
+ * gather's contexts apply, so this does not change what it says, and
+ * one list keeps each name once. A local in scope hides a storage
+ * variable of the same name.
  */
 function withVariables(
   debug: Ir.Instruction.Debug | undefined,
@@ -291,23 +295,66 @@ function withVariables(
   stackLocals: StackLocal[],
 ): Ir.Instruction.Debug {
   const { stored: _, stackLocals: __, ...rest } = debug ?? {};
-  if (entries.length === 0) return rest;
+  if (!rest.context) {
+    if (entries.length === 0) return rest;
+    rest.context = {} as Format.Program.Context;
+  }
 
-  const context = (rest.context ?? {}) as Record<string, unknown>;
-  const locals = new Set(entries.map((e) => e.identifier));
-  const storage = (
-    Array.isArray(context.variables)
-      ? (context.variables as VariableEntry[])
-      : []
-  ).filter((v) => !locals.has(v.identifier));
+  const { variables: existing, context } = liftVariables(
+    rest.context as Record<string, unknown>,
+  );
+  const names = new Set(entries.map((e) => e.identifier));
+  const storage = existing.filter((v) => {
+    if (names.has(v.identifier)) return false;
+    names.add(v.identifier);
+    return true;
+  });
+  const variables = [...storage, ...entries];
 
   return {
     ...rest,
-    context: {
-      ...context,
-      variables: [...storage, ...entries],
-    } as Format.Program.Context,
+    context: (variables.length > 0
+      ? { ...context, variables }
+      : context) as Format.Program.Context,
     ...(stackLocals.length > 0 ? { stackLocals } : {}),
+  };
+}
+
+/**
+ * A context's `variables`, its own and those of its `gather`'s
+ * contexts, and the context without them. A gathered context with a
+ * `frame` keeps its `variables`, which hold only in that frame. A
+ * gathered context left empty is dropped; a gather left with one
+ * context composes flat (or, if a key of that context collides, keeps
+ * its contexts' `variables`).
+ */
+export function liftVariables(context: Record<string, unknown>): {
+  variables: VariableEntry[];
+  context: Record<string, unknown>;
+} {
+  const { variables, gather, ...rest } = context;
+  const own = Array.isArray(variables) ? (variables as VariableEntry[]) : [];
+  if (!Array.isArray(gather)) return { variables: own, context: rest };
+
+  const lifted = (gather as Record<string, unknown>[]).map((member) =>
+    "frame" in member
+      ? { variables: [], context: member }
+      : liftVariables(member),
+  );
+  const kept = lifted
+    .map((l) => l.context)
+    .filter((c) => Object.keys(c).length > 0);
+  if (kept.length === 1 && Object.keys(kept[0]).some((key) => key in rest)) {
+    return { variables: own, context: { ...rest, gather } };
+  }
+  return {
+    variables: [...own, ...lifted.flatMap((l) => l.variables)],
+    context:
+      kept.length === 1
+        ? { ...rest, ...kept[0] }
+        : kept.length > 0
+          ? { ...rest, gather: kept }
+          : rest,
   };
 }
 
@@ -347,6 +394,35 @@ export function withStackLocals<I extends { debug?: Ir.Instruction.Debug }>(
       context: { ...context, variables } as Format.Program.Context,
     },
   };
+}
+
+/**
+ * The op that returns from an inlined function, listing the variables
+ * once returned: the caller's (`returned`, as `enrich` stamps it), for
+ * the stack as it is after the op. Contexts are postconditions.
+ */
+export function withReturned<I extends { debug?: Ir.Instruction.Debug }>(
+  instruction: I,
+  returned: Ir.Instruction.Debug,
+  stack: ReadonlyArray<{ irValue?: string }>,
+): I {
+  const { variables } = (returned.context ?? {}) as { variables?: unknown };
+  const { variables: _, ...context } = (instruction.debug?.context ??
+    {}) as Record<string, unknown>;
+  const { stackLocals: __, returned: ___, ...debug } = instruction.debug ?? {};
+  return withStackLocals(
+    {
+      ...instruction,
+      debug: {
+        ...debug,
+        context: (variables
+          ? { ...context, variables }
+          : context) as Format.Program.Context,
+        ...(returned.stackLocals ? { stackLocals: returned.stackLocals } : {}),
+      },
+    },
+    stack,
+  );
 }
 
 /**
@@ -635,11 +711,22 @@ function enrichFunction(
 
   for (const [blockId, block] of func.blocks) {
     // The block's entry: just before its first instruction (or its
-    // terminator), with that instruction's scope and inline site.
+    // terminator), with that instruction's scope and inline site. Just
+    // before an inlined function's invoke, that is the caller's.
     const first = block.instructions[0] ?? block.terminator;
     const result = spilled.get(blockId);
+    const sites = first.operationDebug?.inlineSites ?? [];
+    const invokes = Ir.Utils.activationsOf(
+      first.operationDebug?.context,
+      "invoke",
+    ).length;
     const entry = stamp(
-      first.operationDebug,
+      invokes > 0 && sites.length > 0
+        ? {
+            ...first.operationDebug,
+            inlineSites: sites.slice(0, -Math.min(invokes, sites.length)),
+          }
+        : first.operationDebug,
       blockId,
       0,
       -1,
@@ -662,10 +749,17 @@ function enrichFunction(
       // that locates the new value.
       if (!("dest" in inst) || !homed.has(inst.dest as string)) {
         inst.operationDebug = stamp(debug, blockId, i);
-        return;
+      } else {
+        const stored = stamp(debug, blockId, i);
+        inst.operationDebug = { ...stamp(debug, blockId, i, -1), stored };
       }
-      const stored = stamp(debug, blockId, i);
-      inst.operationDebug = { ...stamp(debug, blockId, i, -1), stored };
+      // An instruction that returns from an inlined function: its last
+      // op lists the caller's variables
+      if (debug?.returned) {
+        const offsets = lastOffsets;
+        inst.operationDebug.returned = stamp(debug.returned, blockId, i);
+        lastOffsets = offsets;
+      }
     });
     // The terminator's position is after all instructions in the block.
     const term = block.terminator;

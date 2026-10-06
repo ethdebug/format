@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
 import type * as Format from "@ethdebug/format";
+import { liftVariables } from "./local-variables.js";
 
 async function compileProgram(
   source: string,
@@ -183,5 +184,58 @@ code { r = r + 1; }`;
       });
       expect(res.callSuccess).toBe(true);
     });
+  });
+});
+
+describe("liftVariables", () => {
+  const total = { identifier: "total", pointer: { location: "storage" } };
+  const x = { identifier: "x" };
+  const code = (offset: number) => ({ code: { range: { offset } } });
+  /** Every `variables` entry in a context, nested or not */
+  const all = (context: unknown): unknown[] => {
+    const { variables, gather } = (context ?? {}) as {
+      variables?: unknown[];
+      gather?: unknown[];
+    };
+    return [...(variables ?? []), ...(gather ?? []).flatMap(all)];
+  };
+
+  it("lifts variables out of a gather, once each", () => {
+    const { variables, context } = liftVariables({
+      variables: [x],
+      gather: [code(1), { ...code(2), variables: [total] }],
+    });
+    expect(variables).toEqual([x, total]);
+    expect(context).toEqual({ gather: [code(1), code(2)] });
+    expect(all(context)).toEqual([]);
+  });
+
+  it("drops a gathered context left empty, and composes one flat", () => {
+    const { variables, context } = liftVariables({
+      gather: [code(1), { variables: [total] }],
+    });
+    expect(variables).toEqual([total]);
+    expect(context).toEqual(code(1));
+  });
+
+  it("keeps the variables of a gathered context with a frame", () => {
+    const framed = { frame: "ir", ...code(2), variables: [total] };
+    const { variables, context } = liftVariables({
+      gather: [{ frame: "source", ...code(1) }, framed],
+    });
+    expect(variables).toEqual([]);
+    expect(context).toEqual({
+      gather: [{ frame: "source", ...code(1) }, framed],
+    });
+  });
+
+  it("keeps variables where one context is left that collides", () => {
+    const input = {
+      ...code(1),
+      gather: [{ variables: [total] }, { ...code(2), variables: [x] }],
+    };
+    const { variables, context } = liftVariables(input);
+    expect([...variables, ...all(context)]).toEqual([total, x]);
+    expect(variables).toEqual([]);
   });
 });

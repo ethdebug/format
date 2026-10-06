@@ -16,7 +16,8 @@ export function combineDebugContexts(
   return withPlacement(combineContexts(debugs), debugs[0]);
 }
 
-/** Keep an instruction's inline sites and origin on a new debug. */
+/** Keep an instruction's inline sites, origin and (if it returns from
+ * an inlined function) its debug once returned on a new debug. */
 function withPlacement(
   debug: Ir.Instruction.Debug,
   from: Ir.Instruction.Debug | undefined,
@@ -25,6 +26,7 @@ function withPlacement(
     ...debug,
     ...(from?.inlineSites ? { inlineSites: from.inlineSites } : {}),
     ...(from?.origin ? { origin: from.origin } : {}),
+    ...(from?.returned ? { returned: from.returned } : {}),
   };
 }
 
@@ -421,4 +423,105 @@ export function addTransform(
     { context: { ...(existing ?? {}), transform } as Format.Program.Context },
     debug,
   );
+}
+
+/** An activation discriminator: a call's `invoke` or its `return` */
+export type Activation = "invoke" | "return";
+
+/**
+ * The values of a context's `invoke` (or `return`) discriminators, its
+ * own and its `gather`'s, in document order.
+ */
+export function activationsOf(
+  context: Format.Program.Context | undefined,
+  key: Activation,
+): unknown[] {
+  if (!context || typeof context !== "object") return [];
+  const { gather } = context as { gather?: unknown };
+  const own = (context as Record<string, unknown>)[key];
+  return [
+    ...(own === undefined ? [] : [own]),
+    ...(Array.isArray(gather)
+      ? (gather as Format.Program.Context[]).flatMap((c) =>
+          activationsOf(c, key),
+        )
+      : []),
+  ];
+}
+
+/**
+ * A context without its `invoke` and `return` discriminators.
+ * Undefined if nothing else remains. A `gather` left with one context
+ * composes flat, if its keys do not collide.
+ */
+export function withoutActivations(
+  context: Format.Program.Context | undefined,
+): Format.Program.Context | undefined {
+  if (!context || typeof context !== "object") return context;
+  const {
+    invoke: _,
+    return: __,
+    gather,
+    ...rest
+  } = context as Record<string, unknown>;
+  if (!Array.isArray(gather)) {
+    return Object.keys(rest).length > 0
+      ? (rest as Format.Program.Context)
+      : undefined;
+  }
+  const kept = (gather as Format.Program.Context[])
+    .map(withoutActivations)
+    .filter((c): c is Format.Program.Context => c !== undefined);
+  if (kept.length === 0) {
+    return Object.keys(rest).length > 0
+      ? (rest as Format.Program.Context)
+      : undefined;
+  }
+  if (
+    kept.length === 1 &&
+    Object.keys(kept[0]).every((key) => !(key in rest))
+  ) {
+    return { ...rest, ...kept[0] } as Format.Program.Context;
+  }
+  return { ...rest, gather: kept } as Format.Program.Context;
+}
+
+/**
+ * A context with activation discriminators added: `invokes` before
+ * the ones it has, `returns` after them, so that nested activations
+ * on one instruction open outermost first and close innermost first.
+ */
+export function withActivations(
+  context: Format.Program.Context | undefined,
+  { invokes = [], returns = [] }: { invokes?: unknown[]; returns?: unknown[] },
+): Format.Program.Context | undefined {
+  if (invokes.length === 0 && returns.length === 0) return context;
+  const markers = [
+    ...[...invokes, ...activationsOf(context, "invoke")].map((invoke) => ({
+      invoke,
+    })),
+    ...[...activationsOf(context, "return"), ...returns].map((value) => ({
+      return: value,
+    })),
+  ] as Format.Program.Context[];
+  const rest = withoutActivations(context) as
+    | Record<string, unknown>
+    | undefined;
+  if (!rest) {
+    return (
+      markers.length === 1 ? markers[0] : { gather: markers }
+    ) as Format.Program.Context;
+  }
+  if (Array.isArray(rest.gather)) {
+    return {
+      ...rest,
+      gather: [...rest.gather, ...markers],
+    } as Format.Program.Context;
+  }
+  // Without its activations, `rest` has no `invoke` or `return` key
+  return (
+    markers.length === 1
+      ? { ...rest, ...markers[0] }
+      : { ...rest, gather: markers }
+  ) as Format.Program.Context;
 }
