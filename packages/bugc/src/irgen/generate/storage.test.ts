@@ -55,3 +55,50 @@ describe("storage struct fields", () => {
     });
   }
 });
+
+const packedSource = `name PackedSlots;
+
+define {
+  struct Packed { a: uint8; b: uint64; c: address; };
+}
+
+storage {
+  [0] p: Packed;
+  [1] a: uint256;
+  [2] b: uint256;
+  [3] c: address;
+}
+
+code {
+  p.a = 7;
+  p.b = 1988;
+  p.c = 0x1234567890123456789012345678901234567890;
+  a = p.a;
+  b = p.b;
+  c = p.c;
+}
+`;
+
+describe("packed storage struct fields", () => {
+  for (const level of [0, 1, 2, 3] as const) {
+    it(`reads back each field where it was written at O${level}`, async () => {
+      const result = await executeProgram(packedSource, {
+        calldata: "",
+        optimizationLevel: level,
+      });
+      expect(result.callSuccess).toBe(true);
+
+      // packed from the low-order end: a at byte 0, b at 1-8, c at 9-28
+      expect(await result.getStorage(0n)).toBe(
+        (0x1234567890123456789012345678901234567890n << 72n) |
+          (1988n << 8n) |
+          7n,
+      );
+      expect(await result.getStorage(1n)).toBe(7n);
+      expect(await result.getStorage(2n)).toBe(1988n);
+      expect(await result.getStorage(3n)).toBe(
+        0x1234567890123456789012345678901234567890n,
+      );
+    });
+  }
+});

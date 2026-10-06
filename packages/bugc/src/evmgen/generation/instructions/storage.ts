@@ -103,10 +103,9 @@ function generateStorageRead<S extends Stack>(
       .then(loadValue(inst.slot!, { debug }), { as: "key" })
       .then(SLOAD({ debug }), { as: "value" })
 
-      // Shift right by (32 - offset - length) * 8 bits
-      .then(PUSHn((32n - BigInt(offset) - BigInt(length)) * 8n, { debug }), {
-        as: "shift",
-      })
+      // Shift right by offset * 8 bits: storage writes count `offset`
+      // from the low-order end of the slot
+      .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
       .then(SHR({ debug }), { as: "shiftedValue" })
       .then(PUSHn(1n, { debug }), { as: "b" })
 

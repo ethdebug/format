@@ -49,6 +49,11 @@ support. Changes to the specification itself are tracked in the root
   compiler counted the field's slot offset twice over (once in slots,
   then again as if in bytes), so every such field used the struct's
   first slot ([#336]).
+- Reading a storage struct field that shares its slot now reads the
+  bytes the field was written to. Before, at every optimization level,
+  writes counted a field's offset from the low-order end of the slot and
+  reads counted it from the high-order end, so such a field read back
+  as some other bytes of the slot, often 0 ([#336]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
