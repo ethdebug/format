@@ -87,9 +87,9 @@ export function observeSourceBreakpoint(
     // `, PC 558`), so match the stable fragments rather than an exact prefix.
     set: result.stdout.includes(`set at ${target}`),
     hit: /Breakpoint #\d+ hit at step/.test(result.stdout),
-    stoppedAtTarget: new RegExp(`hit at step \\d+, ${escapeRegExp(target)}\\b`).test(
-        result.stdout,
-      ),
+    stoppedAtTarget: new RegExp(
+      `hit at step \\d+, ${escapeRegExp(target)}\\b`,
+    ).test(result.stdout),
   };
 }
 
