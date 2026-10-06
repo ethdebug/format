@@ -772,6 +772,27 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         return { symbols, nodeTypes, bindings, errors };
       }
 
+      // Dynamic bytes cast to an integer or address only via bytesN,
+      // as in Solidity
+      if (
+        isDynamicBytes(exprResult.type) &&
+        Type.isElementary(targetTypeResult.type) &&
+        (Type.Elementary.isNumeric(targetTypeResult.type) ||
+          Type.Elementary.isAddress(targetTypeResult.type))
+      ) {
+        const target = Type.format(targetTypeResult.type);
+        const error = new TypeError(
+          `Cannot cast from bytes to ${target}: cast to a fixed-size ` +
+            `bytes type first (for example, \`x as bytes32 as ${target}\`)`,
+          node.loc || undefined,
+          target,
+          Type.format(exprResult.type),
+          ErrorCode.INVALID_TYPE_CAST,
+        );
+        errors.push(error);
+        return { symbols, nodeTypes, bindings, errors };
+      }
+
       // Check if the cast is valid
       if (!isValidCast(exprResult.type, targetTypeResult.type)) {
         const error = new TypeError(
@@ -1029,6 +1050,11 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
     throw new Error("Unknown expression kind");
   },
 };
+
+const isDynamicBytes = (type: Type): boolean =>
+  Type.isElementary(type) &&
+  Type.Elementary.isBytes(type) &&
+  type.size === undefined;
 
 /**
  * Helper function to check if a cast is valid between two types

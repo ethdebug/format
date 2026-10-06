@@ -74,6 +74,22 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
             } else {
               newInstructions.push(inst);
             }
+          } else if (inst.kind === "cast") {
+            const folded = this.foldCast(inst, constants);
+            if (folded) {
+              newInstructions.push(folded);
+              constants.set(folded.dest, folded.value);
+
+              context.trackTransformation({
+                type: "replace",
+                pass: this.name,
+                original: Ir.Utils.extractContexts(inst),
+                result: Ir.Utils.extractContexts(folded),
+                reason: `Evaluated cast of constant`,
+              });
+            } else {
+              newInstructions.push(inst);
+            }
           } else if (inst.kind === "length" && this.canFoldLength(inst)) {
             // Try to fold length operation
             const folded = this.foldLength(inst);
@@ -133,6 +149,33 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
       kind: "const",
       value: result,
       type: this.getResultType(inst.op, typeof result),
+      dest: inst.dest,
+      operationDebug: Ir.Utils.addTransform(
+        Ir.Utils.preserveDebug(inst),
+        "fold",
+      ),
+    };
+  }
+
+  /**
+   * Fold a cast of an integer constant, by the same steps code
+   * generation emits
+   */
+  private foldCast(
+    inst: Ir.Instruction.Cast,
+    constants: Map<string, bigint | boolean | string>,
+  ): Ir.Instruction.Const | undefined {
+    const value = this.getConstantValue(inst.value, constants);
+    if (typeof value !== "bigint") return undefined;
+
+    const steps = Ir.Utils.castSteps(inst.value.type, inst.targetType);
+    const result = Ir.Utils.foldCast(value, steps);
+    if (result === undefined) return undefined;
+
+    return {
+      kind: "const",
+      value: result,
+      type: inst.targetType,
       dest: inst.dest,
       operationDebug: Ir.Utils.addTransform(
         Ir.Utils.preserveDebug(inst),

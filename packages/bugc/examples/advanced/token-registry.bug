@@ -78,12 +78,12 @@ define {
 
   // Decode address from calldata (bytes 4-35)
   function decodeAddress(offset: uint256) -> address {
-    return msg.data[offset:offset+32] as address;
+    return msg.data[offset:offset+32] as bytes32 as address;
   };
 
   // Decode uint256 from calldata (32 bytes)
   function decodeUint256(offset: uint256) -> uint256 {
-    return msg.data[offset:offset+32] as uint256;
+    return msg.data[offset:offset+32] as bytes32 as uint256;
   };
 
 }

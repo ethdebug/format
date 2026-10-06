@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { parse } from "#parser";
 import { Result, Severity } from "#result";
-import type { Types } from "#types";
+import { Type, type Types } from "#types";
 
 import { checkProgram } from "./checker.js";
 import type { Error as BugTypeError } from "./errors.js";
@@ -420,6 +420,62 @@ describe("checkProgram", () => {
 
       expect(result.success).toBe(true);
       expect(Result.hasMessages(result)).toBe(false);
+    });
+  });
+
+  describe("Postfix chains", () => {
+    it("should give each node of a chain its own type", () => {
+      const result = check(`
+        name Test;
+        define {
+          function f() -> uint256 { return 300; };
+        }
+        storage { [0] v: uint256; [1] a: uint256; [2] b: uint256; }
+        code {
+          a = v as int8 as int256 as uint256;
+          b = f() as uint8 as uint256;
+        }
+      `);
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      const formatted = new Set(
+        [...result.value.values()].map((type) => Type.format(type)),
+      );
+      for (const name of ["int8", "int256", "uint8", "uint256"]) {
+        expect(formatted).toContain(name);
+      }
+
+      // No two chain nodes share an id, so no type is overwritten
+      const ids = [...result.value.keys()];
+      expect(ids).not.toContain("0_0");
+    });
+  });
+
+  describe("Casts from dynamic bytes", () => {
+    const program = (expression: string) => `
+      name Test;
+      storage { [0] a: uint256; }
+      code { let x = ${expression}; }
+    `;
+
+    for (const target of ["uint32", "int8", "uint256", "address"]) {
+      it(`should reject bytes to ${target}`, () => {
+        const result = check(program(`msg.data[0:4] as ${target}`));
+
+        expect(result.success).toBe(false);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message: `Cannot cast from bytes to ${target}: cast to a fixed-size bytes type first`,
+        });
+      });
+    }
+
+    it("should allow bytes to an integer via bytesN", () => {
+      const result = check(program("msg.data[0:4] as bytes4 as uint32"));
+
+      expect(result.success).toBe(true);
     });
   });
 });

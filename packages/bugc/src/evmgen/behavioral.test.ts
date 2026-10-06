@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 
+import { keccak256 } from "ethereum-cryptography/keccak";
+import { bytesToHex } from "ethereum-cryptography/utils";
+
 import { executeProgram } from "#test/evm/behavioral";
 
 describe("behavioral tests", () => {
@@ -908,6 +911,329 @@ code {
       expect(await result.getStorage(0n)).toBe(1n);
       expect(result.returnValue.length).toBe(0);
     });
+  });
+
+  describe("casts", () => {
+    const word = 2n ** 256n;
+
+    // Each case casts a value of type `from` and stores the result in a
+    // `uint256`. The value comes once as a constant, which the optimizer
+    // may fold, and once from storage, which it cannot.
+    const casts: Record<
+      string,
+      [string, string, (x: string) => string, bigint]
+    > = {
+      "uint256 300 to uint8": ["uint256", "300", (x) => `${x} as uint8`, 44n],
+      "uint256 255 to uint8": ["uint256", "255", (x) => `${x} as uint8`, 255n],
+      "uint256 256 to uint8": ["uint256", "256", (x) => `${x} as uint8`, 0n],
+      "uint256 0 to uint8": ["uint256", "0", (x) => `${x} as uint8`, 0n],
+      "uint256 max to uint8": ["uint256", "-1", (x) => `${x} as uint8`, 255n],
+      "uint16 to uint8": [
+        "uint16",
+        "0x1234 as uint16",
+        (x) => `${x} as uint8`,
+        0x34n,
+      ],
+      "uint8 to uint16": [
+        "uint8",
+        "200 as uint8",
+        (x) => `${x} as uint16`,
+        200n,
+      ],
+      "uint256 200 to int8": [
+        "uint256",
+        "200",
+        (x) => `(${x} as int8) as int256`,
+        word - 56n,
+      ],
+      "uint256 127 to int8": [
+        "uint256",
+        "127",
+        (x) => `(${x} as int8) as int256`,
+        127n,
+      ],
+      "uint256 128 to int8": [
+        "uint256",
+        "128",
+        (x) => `(${x} as int8) as int256`,
+        word - 128n,
+      ],
+      "int256 -1 to uint8": [
+        "int256",
+        "-1 as int256",
+        (x) => `${x} as uint8`,
+        255n,
+      ],
+      "int256 -200 to int8": [
+        "int256",
+        "-200 as int256",
+        (x) => `(${x} as int8) as int256`,
+        56n,
+      ],
+      "int16 min to int8": [
+        "int16",
+        "-32768 as int16",
+        (x) => `(${x} as int8) as int256`,
+        0n,
+      ],
+      "int8 -56 to int16": [
+        "int8",
+        "-56 as int8",
+        (x) => `(${x} as int16) as int256`,
+        word - 56n,
+      ],
+      "int8 -56 to int256": [
+        "int8",
+        "-56 as int8",
+        (x) => `${x} as int256`,
+        word - 56n,
+      ],
+      "int8 -1 to uint8": ["int8", "-1 as int8", (x) => `${x} as uint8`, 255n],
+      "uint8 255 to int8": [
+        "uint8",
+        "255 as uint8",
+        (x) => `(${x} as int8) as int256`,
+        word - 1n,
+      ],
+      "int8 -56 to uint16": [
+        "int8",
+        "-56 as int8",
+        (x) => `${x} as uint16`,
+        0xffc8n,
+      ],
+      "int8 -56 to uint256": [
+        "int8",
+        "-56 as int8",
+        (x) => `${x} as uint256`,
+        word - 56n,
+      ],
+      "int256 -56 to uint256": [
+        "int256",
+        "-56 as int256",
+        (x) => `${x} as uint256`,
+        word - 56n,
+      ],
+      "uint256 max to int256": [
+        "uint256",
+        "-1",
+        (x) => `${x} as int256`,
+        word - 1n,
+      ],
+      "uint256 max to address": [
+        "uint256",
+        "-1",
+        (x) => `${x} as address`,
+        2n ** 160n - 1n,
+      ],
+      "address to uint8": [
+        "address",
+        "0x1234 as address",
+        (x) => `${x} as uint8`,
+        0x34n,
+      ],
+      "bytes32 to address": [
+        "bytes32",
+        "0xffffffffffffffffffffffff00112233445566778899aabbccddeeff00112233",
+        (x) => `${x} as address`,
+        0x00112233445566778899aabbccddeeff00112233n,
+      ],
+      "bytes32 to bytes4": [
+        "bytes32",
+        "0x1122334400000000000000000000000000000000000000000000000000000055",
+        (x) => `${x} as bytes4`,
+        0x11223344n,
+      ],
+      "bytes8 to bytes4": [
+        "bytes8",
+        "0x1122334455667788",
+        (x) => `${x} as bytes4`,
+        0x11223344n,
+      ],
+      "bytes4 to bytes8": [
+        "bytes4",
+        "0x11223344",
+        (x) => `${x} as bytes8`,
+        0x1122334400000000n,
+      ],
+      "bytes4 to bytes4": [
+        "bytes4",
+        "0x11223344",
+        (x) => `${x} as bytes4`,
+        0x11223344n,
+      ],
+      "bytes4 to int16": [
+        "bytes4",
+        "0x1234ff38",
+        (x) => `(${x} as int16) as int256`,
+        word - 200n,
+      ],
+    };
+
+    for (const [name, [from, input, cast, expected]] of Object.entries(casts)) {
+      const sources = {
+        constant: `name Cast;
+storage { [0] v: ${from}; [1] out: uint256; }
+code { out = (${cast(`(${input})`)}) as uint256; }`,
+        "storage value": `name Cast;
+storage { [0] v: ${from}; [1] out: uint256; }
+create { v = ${input}; }
+code { out = (${cast("v")}) as uint256; }`,
+      };
+
+      for (const [kind, source] of Object.entries(sources)) {
+        for (const level of [0, 1, 2, 3] as const) {
+          it(`should cast a ${kind}: ${name} (level ${level})`, async () => {
+            const result = await executeProgram(source, {
+              calldata: "",
+              optimizationLevel: level,
+            });
+
+            expect(result.callSuccess).toBe(true);
+            expect(await result.getStorage(1n)).toBe(expected);
+          });
+        }
+      }
+    }
+
+    // The leading four bytes of the hash of the word 0x00..01
+    const hashPrefix = BigInt(
+      "0x" + bytesToHex(keccak256(new Uint8Array(32).fill(1, 31))).slice(0, 8),
+    );
+
+    const calldata = "0xaabbccdd" + "00".repeat(12) + "11".repeat(20);
+
+    // Casts of values that are not stored: comparisons, hashes and
+    // slices of calldata and memory. The call sends `calldata`.
+    const others: Record<string, [string, bigint]> = {
+      "a narrowed bytes32 compared with a literal": [
+        `let h: bytes32 =
+    0x1122334400000000000000000000000000000000000000000000000000000000;
+  let b = h as bytes4;
+  if (b == 0x11223344) { out = 1; }`,
+        1n,
+      ],
+      "a hash narrowed to bytes4": [
+        `out = (keccak256(0x01) as bytes4) as uint256;`,
+        hashPrefix,
+      ],
+      "a calldata slice to bytes4": [
+        `out = (msg.data[0:4] as bytes4) as uint256;`,
+        0xaabbccddn,
+      ],
+      "a calldata slice compared as bytes4": [
+        `let sel = msg.data[0:4] as bytes4;
+  if (sel == 0xaabbccdd) { out = 1; }`,
+        1n,
+      ],
+      "a short calldata slice to bytes4": [
+        `out = (msg.data[0:2] as bytes4) as uint256;`,
+        0xaabb0000n,
+      ],
+      "a calldata slice to uint256": [
+        `out = msg.data[4:36] as bytes32 as uint256;`,
+        0x1111111111111111111111111111111111111111n,
+      ],
+      "a calldata slice to address": [
+        `out = msg.data[4:36] as bytes32 as address as uint256;`,
+        0x1111111111111111111111111111111111111111n,
+      ],
+      "a memory slice to bytes4": [
+        `let d = msg.data[0:8];
+  out = (d[1:5] as bytes4) as uint256;`,
+        0xbbccdd00n,
+      ],
+      "a short memory slice to bytes4": [
+        `let d = msg.data[0:8];
+  out = (d[1:3] as bytes4) as uint256;`,
+        0xbbcc0000n,
+      ],
+      "msg.data to bytes4": [
+        `out = (msg.data as bytes4) as uint256;`,
+        0xaabbccddn,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(others)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should cast ${name} (level ${level})`, async () => {
+          const source = `name Cast;
+storage { [0] n: uint256; [1] out: uint256; }
+create { n = 7; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+
+    // Chains of casts, calls and slices, mostly without parentheses.
+    // Each node of a chain has its own type, so each cast must use it.
+    const functions = `define {
+  function f() -> uint256 { return 300; };
+  function g() -> int8 { return 200 as int8; };
+  function h() -> bytes4 { return 0x11223344; };
+  function sel(o: uint256) -> bytes4 { return msg.data[o:o+4] as bytes4; };
+}`;
+    const chains: Record<string, [string, bigint[]]> = {
+      "casts of a storage value": [
+        `b = v as int8 as int256 as uint256;`,
+        [0n, word - 56n],
+      ],
+      "casts of a slice and a call": [
+        `a = (msg.data[0:4] as bytes4) as uint256;
+  b = f() as uint8;`,
+        [0xaabbccddn, 44n],
+      ],
+      "casts of calls": [
+        `a = g() as int256 as uint256;
+  b = (h() as bytes8) as uint256;`,
+        [word - 56n, 0x1122334400000000n],
+      ],
+      "three calls that cast a slice": [
+        `a = sel(0) as uint256;
+  b = sel(4) as uint256;
+  c = sel(32) as uint256;`,
+        [0xaabbccddn, 0n, 0x11111111n],
+      ],
+      "many chains": [
+        `a = msg.data[0:4] as bytes4 as uint256;
+  b = f() as uint8 as uint256 + (g() as int256 as uint256);
+  c = h() as bytes8 as uint256 + (v as int8 as int16 as uint16 as uint256);`,
+        [0xaabbccddn, 44n - 56n + word, 0x1122334400000000n + 0xffc8n],
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(chains)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should cast in chains: ${name} (level ${level})`, async () => {
+          const source = `name Chains;
+${functions}
+storage {
+  [0] v: uint256; [1] a: uint256; [2] b: uint256; [3] c: uint256;
+}
+create { v = 200; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          for (const [index, value] of expected.entries()) {
+            expect(await result.getStorage(BigInt(index + 1))).toBe(value);
+          }
+        });
+      }
+    }
   });
 
   describe("modulo", () => {

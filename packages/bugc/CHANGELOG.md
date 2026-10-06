@@ -12,8 +12,33 @@ support. Changes to the specification itself are tracked in the root
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's unsigned `MOD`, so `x % 0` is `0`, as `x / 0` is ([#321]).
 
+### Changed
+
+- A cast now converts its value as Solidity does. A cast to a narrower
+  integer type or to `address` keeps the low bits, and a cast to a signed
+  type then sign-extends: `300 as uint8` is 44, `200 as int8` is -56, and
+  `(-1 as int256) as uint8` is 255. A cast from a signed type to a wider
+  type sign-extends. A cast to a narrower `bytesN` keeps the leading
+  bytes, and a cast to a wider one pads with zero bytes at the end:
+  `0x11223344 as bytes8` is `0x1122334400000000`. Before, a cast emitted
+  no code, so the value kept all its bits. The optimizer folds a cast of
+  a constant by the same rules ([#334]).
+- A cast from dynamic `bytes` to an integer or `address` is now a type
+  error, as in Solidity: cast to `bytesN` first, as in
+  `msg.data[4:36] as bytes32 as uint256` ([#334]).
+
 ### Fixed
 
+- A cast from dynamic `bytes` to a fixed-size type now reads the bytes.
+  `msg.data[0:4] as bytes4` is the first four bytes of calldata; bytes
+  past the slice's length are zero. Before, the cast gave the slice's
+  memory address ([#334]).
+- A slice of `msg.data` now copies from calldata. Before, it copied from
+  memory ([#334]).
+- Each expression in a chain of postfix operations (casts, calls, slices,
+  members and indexes, as in `v as int8 as int256`) now has its own source
+  location. Before, every one but the last had location 0:0, so their
+  types overwrote each other ([#334]).
 - At optimization level 3, block merging now renames the incoming block of
   every phi that named a merged block. Before, a `for` loop that carries a
   local across iterations (and so any loop that calls an internal function
@@ -106,5 +131,6 @@ First publication.
 [#330]: https://github.com/ethdebug/format/pull/330
 [#332]: https://github.com/ethdebug/format/pull/332
 [#333]: https://github.com/ethdebug/format/pull/333
+[#334]: https://github.com/ethdebug/format/pull/334
 [#335]: https://github.com/ethdebug/format/pull/335
 [#336]: https://github.com/ethdebug/format/pull/336
