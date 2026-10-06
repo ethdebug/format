@@ -18,7 +18,9 @@ import { describe, it, expect } from "vitest";
 import { promises as fs } from "fs";
 import path from "path";
 import { glob } from "glob";
-import type * as Format from "@ethdebug/format";
+import * as Format from "@ethdebug/format";
+import { addSchema, validate } from "@hyperjump/json-schema/draft-2020-12";
+import { BASIC } from "@hyperjump/json-schema/experimental";
 
 import { bytecodeSequence, buildSequence } from "#compiler";
 import { Result } from "#result";
@@ -33,6 +35,11 @@ import { buildSourceMapping } from "./source-map.js";
 import { runVariablesTest } from "./runners.js";
 
 const EXAMPLES_DIR = path.resolve(__dirname, "../../examples");
+
+for (const schema of Object.values(Format.schemas)) {
+  // @ts-expect-error describeSchema's JSONSchema type is not hyperjump's
+  addSchema(schema);
+}
 
 interface ExampleAnnotations {
   wip: boolean;
@@ -183,6 +190,48 @@ describe("Example Files", async () => {
           });
         }
       });
+    }
+  });
+
+  // === Program Validity ===
+  describe("Program validity", () => {
+    for (const example of examples) {
+      const { relativePath, source, annotations } = example;
+      const expectAnyError =
+        annotations.expectParseError ||
+        annotations.expectTypecheckError ||
+        annotations.expectIrError ||
+        annotations.expectBytecodeError;
+      const skip = shouldSkip(annotations) || expectAnyError;
+      const itFn = skip ? it.skip : it;
+
+      for (const level of [0, 1, 2, 3] as const) {
+        itFn(`${relativePath} at O${level}`, async () => {
+          const compiler = buildSequence(bytecodeSequence);
+          const result = await compiler.run({
+            source,
+            optimizer: { level },
+          });
+          if (!result.success) {
+            expect.fail(`Compilation failed at O${level}`);
+          }
+
+          const { runtimeProgram, createProgram } = result.value.bytecode;
+          for (const program of [runtimeProgram, createProgram]) {
+            if (!program) continue;
+            // validate the program as it is written out, as JSON
+            const output = await validate(
+              "schema:ethdebug/format/program",
+              JSON.parse(JSON.stringify(program)),
+              BASIC,
+            );
+            const invalid = output.valid
+              ? []
+              : (output.errors ?? []).map((e) => e.instanceLocation);
+            expect(invalid).toEqual([]);
+          }
+        });
+      }
     }
   });
 
