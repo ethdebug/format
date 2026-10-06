@@ -17,7 +17,8 @@ export function isSigned(type: Type): boolean {
 
 /**
  * Whether a binary operation acts on signed integers, so that it
- * compares two's complement values. A signed value is sign-extended across its word, so the
+ * compares, divides, and takes the remainder of two's complement
+ * values. A signed value is sign-extended across its word, so the
  * signed opcodes apply at any width.
  */
 export function isSignedBinary(inst: Instruction.BinaryOp): boolean {
@@ -28,8 +29,9 @@ const word = 2n ** 256n;
 
 /**
  * Evaluate a binary operation on two signed constants as the EVM's
- * signed opcodes do. Returns undefined for an operation that does not
- * depend on sign.
+ * signed opcodes do: a comparison gives a boolean, and division or
+ * remainder a word. Returns undefined for an operation that does not
+ * depend on sign, and for division by zero.
  */
 export function foldSigned(
   op: Instruction.BinaryOp["op"],
@@ -48,6 +50,10 @@ export function foldSigned(
       return a > b;
     case "ge":
       return a >= b;
+    case "div":
+      return b !== 0n ? toWord(a / b) : undefined;
+    case "mod":
+      return b !== 0n ? toWord(a % b) : undefined;
     default:
       return undefined;
   }

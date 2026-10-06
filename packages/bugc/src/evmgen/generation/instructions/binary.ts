@@ -11,7 +11,9 @@ const {
   SUB,
   MUL,
   DIV,
+  SDIV,
   MOD,
+  SMOD,
   EQ,
   LT,
   GT,
@@ -33,9 +35,10 @@ export function generateBinary<S extends Stack>(
 ): Transition<S, readonly ["value", ...S]> {
   const debug = inst.operationDebug;
 
-  // Signed operands compare with the signed opcodes
+  // Signed operands compare and divide with the signed opcodes
   const signed = Ir.Utils.isSignedBinary(inst);
   const [lt, gt] = signed ? [SLT, SGT] : [LT, GT];
+  const [div, mod] = signed ? [SDIV, SMOD] : [DIV, MOD];
 
   const map: {
     [O in Ir.Instruction.BinaryOp["op"]]: (
@@ -55,12 +58,12 @@ export function generateBinary<S extends Stack>(
     div: pipe<readonly ["a", "b", ...S]>()
       .then(SWAP1({ debug }))
       .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
-      .then(DIV({ debug }))
+      .then(div({ debug }))
       .done(),
     mod: pipe<readonly ["a", "b", ...S]>()
       .then(SWAP1({ debug }))
       .then(rebrand<"b", "a", "a", "b">({ 1: "a", 2: "b" }))
-      .then(MOD({ debug }))
+      .then(mod({ debug }))
       .done(),
     shl: pipe<readonly ["a", "b", ...S]>()
       .then(rebrand<"a", "shift", "b", "value">({ 1: "shift", 2: "value" }))

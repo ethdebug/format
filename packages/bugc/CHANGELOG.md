@@ -10,7 +10,8 @@ support. Changes to the specification itself are tracked in the root
 ### Added
 
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
-  the EVM's unsigned `MOD`, so `x % 0` is `0`, as `x / 0` is ([#321]).
+  the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
+  `x / 0` is ([#321]).
 - Each instruction has a `variables` context that lists the local
   variables in scope (the innermost declaration of each name, which hides
   a storage variable of that name), with a type, and a pointer to the
@@ -126,6 +127,16 @@ support. Changes to the specification itself are tracked in the root
   unsigned `LT` and `GT`, so a negative value compared greater than any
   positive one: `(-56 as int8) < (0 as int8)` was false. The optimizer
   folds constant comparisons by the same rule ([#339]).
+- `/` and `%` on signed integers now compile to the EVM's `SDIV` and
+  `SMOD`, so division truncates toward zero and a remainder has the sign
+  of the dividend, as in Solidity. Before, at every optimization level,
+  they were unsigned, so `(-7 as int8) / (2 as int8)` was a large
+  positive number. Arithmetic does not check for overflow, so the least
+  `int256` divided by `-1` is itself. A result narrower than a word does
+  not wrap to its type yet: `(-128 as int8) / (-1 as int8)` is 128, and
+  the same goes for a narrow `+`, `-` or `*` that overflows; a follow-up
+  change makes them wrap. The optimizer folds constants by the same rules
+  ([#339]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

@@ -1663,5 +1663,46 @@ code {
         }
       }
     });
+
+    describe("division and remainder", () => {
+      // Division truncates toward zero, and the remainder has the sign
+      // of the dividend, as in Solidity (and as bigint does). BUG
+      // arithmetic does not check for overflow, so the minimum int256
+      // divided by -1 wraps to itself.
+      const statements = [
+        (a: string, b: string, out: string) => `${out} = ${a} / ${b};`,
+        (a: string, b: string, out: string) => `${out} = ${a} % ${b};`,
+      ];
+
+      const signed = [
+        [7n, 2n],
+        [-7n, 2n],
+        [7n, -2n],
+        [-7n, -2n],
+        [-6n, 3n],
+        [5n, -7n],
+      ] as const;
+
+      const cases = [
+        ...["int8", "int16", "int128", "int256"].flatMap((type) =>
+          signed.map((operands) => [type, operands, null] as const),
+        ),
+        ["int256", [min, -1n], [min, 0n]],
+        ["uint256", [word - 2n, 2n], null],
+        ["uint256", [word - 7n, 2n ** 255n], null],
+      ] as const;
+
+      for (const [type, [a, b], wrapped] of cases) {
+        const expected = wrapped ?? [a / b, a % b];
+        for (const folded of [false, true]) {
+          const source = program(type, [a, b], statements, folded);
+          for (const level of [0, 1, 2, 3] as const) {
+            it(`should divide ${type} ${a} by ${b}${folded ? " as literals" : ""} (level ${level})`, async () => {
+              await check(source, level, expected);
+            });
+          }
+        }
+      }
+    });
   });
 });
