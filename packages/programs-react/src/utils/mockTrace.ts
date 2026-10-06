@@ -84,7 +84,7 @@ interface Listed {
  * and each gathered context's. Only one of a `pick`'s contexts holds,
  * so of a pick it reads only the variables that every one of its
  * contexts lists alike (the same identifier, declaration and
- * pointer). Entries for one variable (the same identifier and
+ * pointer), without a type they differ on. Entries for one variable (the same identifier and
  * declaration, in the same frame) compose into one; an entry without
  * a declaration stays apart, as does an entry from another frame.
  */
@@ -124,20 +124,25 @@ function listedIn(context: Program.Context, frame?: string): Listed[] {
     : [];
 
   // Pick context (one of its contexts applies): only what all agree on
-  let picked: Listed[] = [];
+  const picked: Listed[] = [];
   if (Array.isArray(ctx.pick) && ctx.pick.length > 0) {
     const [first, ...others] = (ctx.pick as Program.Context[]).map((c) =>
       listedIn(c, here),
     );
-    picked = first.filter((listed) =>
-      others.every((branch) =>
-        branch.some(
+    for (const listed of first) {
+      const matches = others.map((branch) =>
+        branch.find(
           (other) =>
             sameVariable(listed, other) &&
             same(listed.entry.pointer, other.entry.pointer),
         ),
-      ),
-    );
+      );
+      if (matches.some((match) => match === undefined)) continue;
+      // A type the contexts differ on holds in only some of them
+      const { type, ...rest } = listed.entry;
+      const typed = matches.every((match) => same(type, match!.entry.type));
+      picked.push({ ...listed, entry: typed ? listed.entry : rest });
+    }
   }
 
   return [...own, ...gathered, ...picked];

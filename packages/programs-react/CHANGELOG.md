@@ -15,7 +15,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
   bugc's inlined code the storage variables disappeared. Of a `pick`,
   only one of whose contexts holds, it now lists only the variables that
   all of its contexts list alike (the same identifier, declaration and
-  pointer); before, it took the first context with variables. Entries
+  pointer), without a type they differ on; before, it took the first
+  context with variables. Entries
   for one variable (the same identifier and declaration, in the same
   `frame`) compose into one; an entry without a declaration stays apart
   ([#342]).

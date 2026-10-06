@@ -106,6 +106,21 @@ describe("extractVariablesFromInstruction", () => {
     ).toEqual([]);
   });
 
+  it("drops a type the contexts of a pick differ on", () => {
+    const pointer = { location: "stack", slot: 0 };
+    const x = (type: unknown) => ({ ...declared("x", 1, pointer), type });
+    expect(
+      extractVariablesFromInstruction(
+        instr(0, {
+          pick: [
+            { variables: [x({ kind: "uint", bits: 8 })] },
+            { variables: [x({ kind: "int", bits: 8 })] },
+          ],
+        }),
+      ),
+    ).toEqual([declared("x", 1, pointer)]);
+  });
+
   it("reads a pick within a gather, and gathers within a pick", () => {
     const a = declared("a", 1, memory(0));
     const b = declared("b", 2, memory(32));
