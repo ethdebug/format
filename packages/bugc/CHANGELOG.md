@@ -142,17 +142,22 @@ support. Changes to the specification itself are tracked in the root
   of the dividend, as in Solidity. Before, at every optimization level,
   they were unsigned, so `(-7 as int8) / (2 as int8)` was a large
   positive number. Arithmetic does not check for overflow, so the least
-  `int256` divided by `-1` is itself. A result narrower than a word does
-  not wrap to its type yet: `(-128 as int8) / (-1 as int8)` is 128, and
-  the same goes for a narrow `+`, `-` or `*` that overflows; a follow-up
-  change makes them wrap. The optimizer folds constants by the same rules
-  ([#339]).
+  `int256` divided by `-1` is itself. The optimizer folds constants by
+  the same rules ([#339]).
 - A write to a mapping value or array element narrower than a slot now
   writes only that value's bytes. Before, at every optimization level,
   `m[5] = -2 as int16` with `m: mapping<uint256, int16>` stored a full
   word of `ff` bytes ending in `fffe`, where Solidity stores `fffe`.
   bugc gives each array element its own slot, without Solidity's
   packing, so only a mapping value's layout matches Solidity's ([#339]).
+- Arithmetic (`+`, `-`, `*`, `/`, and unary `-`) on an integer type
+  narrower than 256 bits now wraps to the type's width, as in a Solidity
+  `unchecked { }` block: an unsigned result keeps its low bits, and a
+  signed result sign-extends. Before, at every optimization level, a
+  result could be out of its type's range: `(255 as uint8) + (1 as uint8)`
+  was 256, and `(127 as int8) + (1 as int8)` was 128. The optimizer folds
+  constants by the same rule, and now wraps 256-bit results at the word,
+  where it failed to compile a constant result outside it ([#340]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -203,3 +208,4 @@ First publication.
 [#336]: https://github.com/ethdebug/format/pull/336
 [#337]: https://github.com/ethdebug/format/pull/337
 [#339]: https://github.com/ethdebug/format/pull/339
+[#340]: https://github.com/ethdebug/format/pull/340

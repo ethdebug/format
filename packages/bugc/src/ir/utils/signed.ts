@@ -60,7 +60,10 @@ export function foldSigned(
   }
 }
 
-const toWord = (value: bigint): bigint => ((value % word) + word) % word;
+/**
+ * A value as the EVM holds it: modulo 2^256, so that arithmetic wraps
+ */
+export const toWord = (value: bigint): bigint => ((value % word) + word) % word;
 
 const toSigned = (value: bigint): bigint => {
   const unsigned = toWord(value);
