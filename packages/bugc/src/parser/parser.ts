@@ -641,49 +641,36 @@ const postfixExpression = P.lazy(() => {
 
   const suffix = P.alt(memberSuffix, indexSuffix, callSuffix, castSuffix);
 
-  // Split into two parsers: inner for creating located intermediate expressions,
-  // outer for the main parsing logic
-  const innerPostfix = P.seq(primaryExpression, suffix.many()).map(
-    ([base, suffixes]) => {
-      return suffixes.reduce((obj, suffix) => {
-        // Use located for each intermediate expression
-        if (suffix.type === "member") {
-          return located(
-            P.succeed(
-              Ast.Expression.Access.member(PENDING_ID, obj, suffix.property),
-            ),
-          ).tryParse("");
-        } else if (suffix.type === "slice") {
-          return located(
-            P.succeed(
-              Ast.Expression.Access.slice(
-                PENDING_ID,
-                obj,
-                suffix.property,
-                suffix.end,
-              ),
-            ),
-          ).tryParse("");
-        } else if (suffix.type === "call") {
-          return located(
-            P.succeed(Ast.Expression.call(PENDING_ID, obj, suffix.arguments)),
-          ).tryParse("");
-        } else if (suffix.type === "cast") {
-          return located(
-            P.succeed(Ast.Expression.cast(PENDING_ID, obj, suffix.targetType)),
-          ).tryParse("");
-        } else {
-          return located(
-            P.succeed(
-              Ast.Expression.Access.index(PENDING_ID, obj, suffix.property),
-            ),
-          ).tryParse("");
-        }
-      }, base);
-    },
+  // Each postfix expression spans from the start of its base to the end
+  // of its last suffix, so each gets its own location and id
+  const chain = P.seq(
+    P.index,
+    primaryExpression,
+    P.seq(suffix, P.index).many(),
+  ).map(([start, base, suffixes]) =>
+    suffixes.reduce<Ast.Expression>((obj, [suffix, end]) => {
+      const loc = {
+        offset: start.offset,
+        length: end.offset - start.offset,
+      };
+      const id = `${loc.offset}_${loc.length}` as Ast.Id;
+
+      const node =
+        suffix.type === "member"
+          ? Ast.Expression.Access.member(id, obj, suffix.property)
+          : suffix.type === "slice"
+            ? Ast.Expression.Access.slice(id, obj, suffix.property, suffix.end)
+            : suffix.type === "call"
+              ? Ast.Expression.call(id, obj, suffix.arguments)
+              : suffix.type === "cast"
+                ? Ast.Expression.cast(id, obj, suffix.targetType)
+                : Ast.Expression.Access.index(id, obj, suffix.property);
+
+      return { ...node, id, loc };
+    }, base),
   );
 
-  return located(innerPostfix);
+  return located(chain);
 });
 
 // Unary expressions

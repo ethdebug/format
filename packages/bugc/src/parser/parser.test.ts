@@ -685,4 +685,66 @@ code {}`;
       }
     });
   });
+
+  describe("Postfix chains", () => {
+    // The nodes of a postfix chain, outermost first
+    const chain = (expression: Ast.Expression): Ast.Expression[] => {
+      const inner =
+        "object" in expression
+          ? expression.object
+          : "expression" in expression
+            ? expression.expression
+            : "callee" in expression
+              ? expression.callee
+              : undefined;
+      return [expression, ...(inner ? chain(inner as Ast.Expression) : [])];
+    };
+
+    const valueOf = (source: string): Ast.Expression => {
+      const result = parse(source);
+      if (!result.success) throw new Error("Parse failed");
+      const statement = result.value.body!.items[0] as Ast.Statement.Assign;
+      return statement.value;
+    };
+
+    const programs = {
+      casts: ["v as int8 as int256 as uint256", 4],
+      "a slice, cast": ["msg.data[0:4] as bytes4 as uint256", 4],
+      "a call, cast": ["f() as uint8", 3],
+      "members and indexes": ["s.a[1].b[0:2] as bytes2", 6],
+    } as const;
+
+    for (const [name, [expression, length]] of Object.entries(programs)) {
+      it(`should locate each node of ${name}`, () => {
+        const prefix = "name Test;\ncode { x = ";
+        const source = `${prefix}${expression}; }`;
+        const nodes = chain(valueOf(source));
+
+        expect(nodes).toHaveLength(length);
+        expect(new Set(nodes.map(({ id }) => id)).size).toBe(length);
+
+        // Each node spans from the base's start; outer nodes span more
+        const spans = nodes.map(({ loc }) => ({
+          offset: Number(loc!.offset),
+          length: Number(loc!.length),
+        }));
+        for (const [index, { offset, length }] of spans.entries()) {
+          expect(offset).toBe(prefix.length);
+          if (index > 0) {
+            expect(length).toBeLessThan(spans[index - 1].length);
+          }
+        }
+        const { offset, length: outer } = spans[0];
+        expect(source.slice(offset, offset + outer).trim()).toBe(expression);
+      });
+    }
+
+    it("should locate an intermediate cast at its own text", () => {
+      const source = "name Test;\ncode { x = v as int8 as int256; }";
+      const [, inner] = chain(valueOf(source));
+      const offset = Number(inner.loc!.offset);
+      const length = Number(inner.loc!.length);
+      expect(source.slice(offset, offset + length).trim()).toBe("v as int8");
+    });
+  });
 });
