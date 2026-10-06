@@ -10,6 +10,18 @@ on:
       - "schemas/**"
       - "packages/format/**"
       - "packages/conformance/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ethdebug.yml"
+      - "package.json"
+      - "yarn.lock"
+      - "tsconfig*.json"
+      - "schemas/**"
+      - "packages/format/**"
+      - "packages/conformance/**"
+  schedule:
+    - cron: "0 6 * * 1"
   workflow_dispatch:
     inputs:
       solidity_ref:
@@ -18,17 +30,17 @@ on:
         required: true
       soldb_ref:
         description: SolDB ref to build
-        default: v0.3.0
+        default: v0.4.0
         required: true
 
 concurrency:
-  group: ethdebug-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ethdebug-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FOUNDRY_VERSION: v1.0.0
   SOLIDITY_REF: ${{ github.event.inputs.solidity_ref || 'develop' }}
-  SOLDB_REF: ${{ github.event.inputs.soldb_ref || 'v0.3.0' }}
+  SOLDB_REF: ${{ github.event.inputs.soldb_ref || 'v0.4.0' }}
 
 jobs:
   conformance:
