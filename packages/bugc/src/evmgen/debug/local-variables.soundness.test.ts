@@ -961,6 +961,25 @@ code {
     },
   },
   {
+    name: "bytes literal",
+    source: `name BytesLit;
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 1; }
+code {
+  let data: bytes = 0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223;
+  if (s > 0) { r = data.length; }
+  r = r + 1;
+}`,
+    locals: {
+      data: {
+        shape: { kind: "bytes" },
+        values: [
+          "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+        ],
+      },
+    },
+  },
+  {
     name: "bytes slice",
     source: `name Slice;
 storage { [0] r: uint256; [1] s: uint256; }

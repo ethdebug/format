@@ -202,6 +202,11 @@ support. Changes to the specification itself are tracked in the root
 - `.length` of an array literal, as in `[1, 2, 3].length`, is now the
   number of elements. Before, at every optimization level, it was 32
   ([#344]).
+- A local initialized with a `bytes` literal
+  (`let data: bytes = 0x0001…;`) now holds the literal's bytes. Before, at
+  every optimization level, its data was the memory address of a copy of
+  the literal, so its debug pointer read zeros and then that address
+  ([#345]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -256,3 +261,4 @@ First publication.
 [#341]: https://github.com/ethdebug/format/pull/341
 [#343]: https://github.com/ethdebug/format/pull/343
 [#344]: https://github.com/ethdebug/format/pull/344
+[#345]: https://github.com/ethdebug/format/pull/345
