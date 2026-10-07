@@ -1,4 +1,4 @@
-import type * as Ast from "#ast";
+import * as Ast from "#ast";
 import * as Ir from "#ir";
 import { Severity } from "#result";
 import { Type } from "#types";
@@ -7,6 +7,12 @@ import { Error as IrgenError } from "#irgen/errors";
 import { Process } from "../process.js";
 import type { Context } from "./context.js";
 import { fromBugType } from "#irgen/type";
+import {
+  type StorageAccessChain,
+  findStorageAccessChain,
+  emitStorageChainLoad,
+  emitStorageChainStore,
+} from "../storage.js";
 
 /**
  * Build a call expression
@@ -21,6 +27,15 @@ export const makeBuildCall = (
     expr: Ast.Expression.Call,
     _context: Context,
   ): Process<Ir.Value> {
+    // `a.push(v)` or `a.push()` on a dynamic array in storage
+    if (
+      Ast.Expression.isAccess(expr.callee) &&
+      Ast.Expression.Access.isMember(expr.callee) &&
+      expr.callee.property === "push"
+    ) {
+      return yield* buildPush(expr, expr.callee, buildExpression);
+    }
+
     // Check if this is a built-in function call
     if (
       expr.callee.kind === "expression:identifier" &&
@@ -124,3 +139,73 @@ export const makeBuildCall = (
     );
     return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
   };
+
+/**
+ * Push onto a dynamic array in storage, as Solidity does: write the
+ * value (if any) at index `length`, then store `length + 1`. With no
+ * value, the new element is zero: nothing can have written past the
+ * length.
+ */
+function* buildPush(
+  expr: Ast.Expression.Call,
+  callee: Ast.Expression.Access.Member,
+  buildExpression: (
+    node: Ast.Expression,
+    context: Context,
+  ) => Process<Ir.Value>,
+): Process<Ir.Value> {
+  const marker = Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
+  const value =
+    expr.arguments.length > 0
+      ? yield* buildExpression(expr.arguments[0], { kind: "rvalue" })
+      : undefined;
+
+  const chain = yield* findStorageAccessChain(callee.object);
+  if (!chain) {
+    yield* Process.Errors.report(
+      new IrgenError(
+        "push needs a dynamic array in storage",
+        expr.loc ?? undefined,
+        Severity.Error,
+      ),
+    );
+    return marker;
+  }
+  // Each use of the chain gets its own copy of its accesses
+  const copy = (
+    extra: StorageAccessChain["accesses"] = [],
+  ): StorageAccessChain => ({
+    slot: chain.slot,
+    accesses: [...chain.accesses.map((access) => ({ ...access })), ...extra],
+  });
+
+  const length = yield* emitStorageChainLoad(
+    copy(),
+    Ir.Type.Scalar.uint256,
+    expr,
+  );
+  if (value) {
+    yield* emitStorageChainStore(
+      copy([{ kind: "index", key: length, unchecked: true }]),
+      value,
+      expr,
+    );
+  }
+
+  const next = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "binary",
+    op: "add",
+    left: length,
+    right: Ir.Value.constant(1n, Ir.Type.Scalar.uint256),
+    dest: next,
+    operationDebug: yield* Process.Debug.forAstNode(expr),
+  } as Ir.Instruction.BinaryOp);
+  yield* emitStorageChainStore(
+    copy(),
+    Ir.Value.temp(next, Ir.Type.Scalar.uint256),
+    expr,
+  );
+
+  return marker;
+}

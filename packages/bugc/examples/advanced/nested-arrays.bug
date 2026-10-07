@@ -3,7 +3,7 @@ name NestedArrays;
 // Example 7: Nested Arrays
 //
 // Expected IR:
-//   // First dimension: matrix[i]
+//   // First dimension: matrix[i], checked against matrix's length
 //   %outer_base = compute_slot kind="array", base=15
 //   %inner_array_slot = add %outer_base, %i
 //
@@ -23,8 +23,15 @@ storage {
 }
 
 code {
-  let i = 2;
-  let j = 5;
+  // An index must be below the length, so push the rows and elements
+  // first: matrix[1] gets two elements
+  matrix.push();
+  matrix.push();
+  matrix[1].push(0);
+  matrix[1].push(0);
+
+  let i = 1;
+  let j = 1;
   let value = 999;
   matrix[i][j] = value;
   let elem = matrix[i][j];

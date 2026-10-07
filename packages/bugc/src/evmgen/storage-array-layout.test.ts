@@ -125,8 +125,9 @@ code { ps[1].a = 6; ps[1].b = 7; ps[0].b = 8; r = ps[1].b; }`,
   [0] d: array<uint16>;
   [1] r: uint256;
 }
-code { d[0] = 3; d[1] = 5; r = d[1] as uint256; }`,
+code { d.push(3); d.push(5); r = d[1] as uint256; }`,
     slots: [
+      [0n, 2n],
       [hashed(0n), 0x00050003n],
       [1n, 5n],
     ],
