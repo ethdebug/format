@@ -37,9 +37,98 @@ describe("Slice type checking", () => {
         if (!sliceType) {
           throw new Error("Unexpected missing slice type");
         }
-        expect(Type.format(sliceType)).toBe("bytes");
+        expect(Type.format(sliceType)).toBe("bytes calldata");
       }
     }
+  });
+
+  /** The type of each `let` in a program's `code` block, by name */
+  function letTypes(source: string): Record<string, string> {
+    const result = parse(source);
+    if (!result.success) throw new Error("Parse failed");
+    const typeResult = checkProgram(result.value);
+    if (!typeResult.success) throw new Error("Type check failed");
+    const { types } = typeResult.value;
+    const lets: Record<string, string> = {};
+    for (const item of result.value.body?.items ?? []) {
+      if (Ast.isStatement(item) && Ast.Statement.isDeclare(item)) {
+        const decl = item.declaration;
+        lets[decl.name] = Type.format(types.get(decl.id)!);
+      }
+    }
+    return lets;
+  }
+
+  test("keeps a slice of calldata in calldata, unless typed bytes", () => {
+    expect(
+      letTypes(`
+      name Test;
+      code {
+        let a = msg.data[4:36];
+        let b: bytes = msg.data[4:36];
+        let c = b[1:3];
+        let m: bytes = 0x${"12".repeat(33)};
+        let d = m[0:1];
+        let e = b as bytes;
+        let f: bytes calldata = msg.data[4:36];
+        let g: bytes calldata = f[1:3];
+        let h = a as bytes calldata;
+        let i = a as bytes;
+      }
+    `),
+    ).toEqual({
+      a: "bytes calldata",
+      b: "bytes",
+      c: "bytes",
+      m: "bytes",
+      d: "bytes",
+      e: "bytes",
+      f: "bytes calldata",
+      g: "bytes calldata",
+      h: "bytes calldata",
+      i: "bytes",
+    });
+  });
+
+  test("allows bytes calldata only as the type of a let or a cast", () => {
+    const placement =
+      "`bytes calldata` can only be the type of a `let` or a cast";
+    const errors = (source: string) => {
+      const result = parse(source);
+      if (!result.success) throw new Error("Parse failed");
+      const typeResult = checkProgram(result.value);
+      expect(typeResult.success).toBe(false);
+      return (typeResult.messages[Severity.Error] ?? []).map((m) => m.message);
+    };
+
+    expect(
+      errors(`
+      name Test;
+      define {
+        function f(b: bytes calldata) -> uint256 { return b.length; };
+        struct S { b: bytes calldata; };
+      }
+      code {}
+    `),
+    ).toEqual([placement, placement]);
+
+    expect(
+      errors(`
+      name Test;
+      storage { [0] s: bytes calldata; }
+      code {
+        let a: array<bytes calldata> = [msg.data];
+        let m: bytes = 0x${"12".repeat(33)};
+        let c: bytes calldata = m;
+        let d = m as bytes calldata;
+      }
+    `),
+    ).toEqual([
+      placement,
+      placement,
+      "Type mismatch: expected bytes calldata, got bytes",
+      "Cannot cast from bytes to bytes calldata",
+    ]);
   });
 
   test("rejects slice of non-bytes type", () => {

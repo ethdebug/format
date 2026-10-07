@@ -5,8 +5,19 @@ import { type Transition, operations, pipe, rebrand } from "#evmgen/operations";
 
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
 
-const { ADD, AND, DUP1, MLOAD, NOT, PUSHn, SHL, SHR, SIGNEXTEND, SWAP1 } =
-  operations;
+const {
+  ADD,
+  AND,
+  CALLDATALOAD,
+  DUP1,
+  MLOAD,
+  NOT,
+  PUSHn,
+  SHL,
+  SHR,
+  SIGNEXTEND,
+  SWAP1,
+} = operations;
 
 /**
  * Generate code for cast instructions: truncate, sign-extend or shift
@@ -71,7 +82,9 @@ function generateStep<S extends Stack>(
         .then(SHL({ debug }), { as: "value" })
         .done();
     case "load":
-      return generateLoad<S>(debug);
+      return step.from === "calldata"
+        ? generateCalldataLoad<S>(debug)
+        : generateLoad<S>(debug);
   }
 }
 
@@ -96,6 +109,44 @@ function generateLoad<S extends Stack>(
       .then(SWAP1({ debug }))
       .then(rebrand<"b", "offset">({ 1: "offset" }))
       .then(MLOAD({ debug }), { as: "value" })
+      .then(PUSHn(3n, { debug }), { as: "shift" })
+      .then(SHL({ debug }), { as: "shift" })
+
+      // The mask that keeps `length` leading bytes
+      .then(PUSHn(0n, { debug }), { as: "a" })
+      .then(NOT({ debug }), { as: "value" })
+      .then(SWAP1({ debug }))
+      .then(SHR({ debug }), { as: "a" })
+      .then(NOT({ debug }), { as: "a" })
+
+      .then(rebrand<"a", "a", "data", "b">({ 1: "a", 2: "b" }))
+      .then(AND({ debug }), { as: "value" })
+      .done()
+  );
+}
+
+/**
+ * Replace a reference to bytes in calldata (offset in the high 128
+ * bits, length in the low 128) with their first 32 bytes, zeroing the
+ * bytes past their length:
+ * `calldataload(word >> 128) & ~(~0 >> (8 * (word & (2^128 - 1))))`
+ */
+function generateCalldataLoad<S extends Stack>(
+  debug: Ir.Instruction.Debug | undefined,
+): Transition<readonly ["value", ...S], readonly ["value", ...S]> {
+  return (
+    pipe<readonly ["value", ...S]>()
+      // The first 32 bytes
+      .then(DUP1({ debug }))
+      .then(PUSHn(128n, { debug }), { as: "shift" })
+      .then(SHR({ debug }), { as: "i" })
+      .then(CALLDATALOAD({ debug }), { as: "data" })
+
+      // The length, in bits
+      .then(SWAP1({ debug }))
+      .then(rebrand<"value", "b">({ 1: "b" }))
+      .then(PUSHn((1n << 128n) - 1n, { debug }), { as: "a" })
+      .then(AND({ debug }), { as: "value" })
       .then(PUSHn(3n, { debug }), { as: "shift" })
       .then(SHL({ debug }), { as: "shift" })
 

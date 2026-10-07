@@ -257,7 +257,7 @@ describe("memory bytes bounds", () => {
     "read and write the first and last bytes": [
       `storage { [0] r0: uint256; [1] r2: uint256; }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   b[0] = b[0] + 1 as uint8;
   b[2] = b[2] + 1 as uint8;
   r0 = b[0];
@@ -272,7 +272,7 @@ code {
     "read at the length": [
       `storage { [0] r: uint256; }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   r = b[3];
 }`,
       "0x0a0b0c",
@@ -280,7 +280,7 @@ code {
     "write at the length": [
       `storage { [0] r: uint256; }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   r = 1;
   b[3] = 1 as uint8;
 }`,

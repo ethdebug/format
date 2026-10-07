@@ -7,7 +7,7 @@
 import { expect } from "vitest";
 import { compile } from "#compiler";
 import { Executor, createMachineState, type TraceStep } from "@ethdebug/evm";
-import { dereference } from "@ethdebug/pointers";
+import { Data, dereference, type Machine } from "@ethdebug/pointers";
 import { bytesToHex } from "ethereum-cryptography/utils";
 import type * as Format from "@ethdebug/format";
 
@@ -17,14 +17,18 @@ export interface LocalsTrace {
   program: Format.Program;
   executor: Executor;
   steps: TraceStep[];
+  /** The transaction's calldata */
+  calldata: Uint8Array;
   /** The program's instruction at a step's pc */
   instructionAt(step: TraceStep): Format.Program.Instruction | undefined;
 }
 
-/** Compile (at O0 by default) and run once, keeping every step. */
+/** Compile (at O0 by default) and run once, with `calldata` (hex, no
+ * 0x), keeping every step. */
 export async function traceLocals(
   source: string,
   level: Level = 0,
+  calldata: string = "",
 ): Promise<LocalsTrace> {
   const result = await compile({
     to: "bytecode",
@@ -42,7 +46,7 @@ export async function traceLocals(
     ),
   );
   const steps: TraceStep[] = [];
-  await executor.execute({ data: "" }, (step) => steps.push(step));
+  await executor.execute({ data: calldata }, (step) => steps.push(step));
 
   const program = bytecode.runtimeProgram;
   const byOffset = new Map(
@@ -52,6 +56,7 @@ export async function traceLocals(
     program,
     executor,
     steps,
+    calldata: Buffer.from(calldata, "hex"),
     instructionAt: (step) => byOffset.get(step.pc),
   };
 }
@@ -68,6 +73,7 @@ export function localsOf(context: unknown): Array<Record<string, unknown>> {
 /** The layout of a reference-typed local, for reading its pointer */
 export type Shape =
   | { kind: "bytes" }
+  | { kind: "calldata" }
   | { kind: "array"; element: Shape | { kind: "scalar"; size: number } };
 
 /** A reference's value as its regions read it: hex for bytes and
@@ -101,6 +107,8 @@ export interface LocalsProgram {
   locals: Record<string, Local>;
   /** The levels to check at, if not all */
   levels?: Level[];
+  /** The calldata to run with (hex, no 0x), if any */
+  calldata?: string;
 }
 
 /**
@@ -114,11 +122,11 @@ export interface LocalsProgram {
  * some step.
  */
 export async function check(
-  { source, locals }: LocalsProgram,
+  { source, locals, calldata }: LocalsProgram,
   level: Level,
 ): Promise<void> {
-  const run = await traceLocals(source, level);
-  const { steps, executor } = run;
+  const run = await traceLocals(source, level, calldata);
+  const { steps } = run;
 
   // The declaration each key names: an offset in the source
   const keys = Object.keys(locals).map((key) => {
@@ -206,14 +214,8 @@ export async function check(
       const local = locals[key!];
 
       const read = local.shape
-        ? await readReference(
-            pointer,
-            name,
-            local.shape,
-            executor,
-            steps[k + 1],
-          )
-        : await readScalar(pointer, name, executor, steps[k + 1]);
+        ? await readReference(pointer, name, local.shape, run, steps[k + 1])
+        : await readScalar(pointer, name, run, steps[k + 1]);
 
       // Never an earlier value than the last one read, nor than the
       // latest one whose statement has finished (that would be stale);
@@ -289,14 +291,24 @@ function stringify(value: unknown): string {
 
 /**
  * Dereference a pointer at a step and read its regions in order,
- * checking each against the step's memory.
+ * checking each against the step's memory or the calldata.
  */
 async function regionsAt(
   pointer: unknown,
-  executor: Executor,
+  { executor, calldata }: LocalsTrace,
   step: TraceStep,
 ) {
-  const state = createMachineState(executor, { traceStep: step });
+  const state: Machine.State = {
+    ...createMachineState(executor, { traceStep: step }),
+    calldata: {
+      length: Promise.resolve(BigInt(calldata.length)),
+      read: async ({ slice: { offset, length } }) => {
+        const data = new Uint8Array(Number(length));
+        data.set(calldata.slice(Number(offset), Number(offset + length)));
+        return Data.fromBytes(data);
+      },
+    },
+  };
   const cursor = await dereference(pointer as Format.Pointer, { state });
   const view = await cursor.view(state);
   const memory = step.memory ?? new Uint8Array();
@@ -309,14 +321,16 @@ async function regionsAt(
       if (next < 0) throw new Error(`no region ${name}`);
     },
     /** Read the next region, which must be named `name` (and, in
-     * memory, at `offset` and `size` bytes long, if given) */
+     * memory or calldata, at `offset` and `size` bytes long, if
+     * given) */
     async read(name: string, offset?: bigint, size?: bigint) {
       const region = regions[next++];
       if (!region || region.name !== name) {
         throw new Error(`expected region ${name}, got ${region?.name}`);
       }
       const data = await view.read(region);
-      if (region.location === "memory") {
+      if (region.location === "memory" || region.location === "calldata") {
+        const bytes = region.location === "memory" ? memory : calldata;
         const start = region.offset!.asUint();
         const length = region.length!.asUint();
         if (offset !== undefined && start !== offset) {
@@ -326,9 +340,11 @@ async function regionsAt(
           throw new Error(`${name} is ${length} bytes, expected ${size}`);
         }
         const actual = new Uint8Array(Number(length));
-        actual.set(memory.slice(Number(start), Number(start + length)));
+        actual.set(bytes.slice(Number(start), Number(start + length)));
         if (data.toHex() !== "0x" + Buffer.from(actual).toString("hex")) {
-          throw new Error(`${name} does not read memory at ${start}`);
+          throw new Error(
+            `${name} does not read ${region.location} at ${start}`,
+          );
         }
       }
       return data;
@@ -340,10 +356,10 @@ async function regionsAt(
 async function readScalar(
   pointer: unknown,
   name: string,
-  executor: Executor,
+  run: LocalsTrace,
   step: TraceStep,
 ): Promise<string> {
-  const regions = await regionsAt(pointer, executor, step);
+  const regions = await regionsAt(pointer, run, step);
   regions.seek(name);
   return (await regions.read(name)).toHex();
 }
@@ -352,17 +368,26 @@ async function readScalar(
  * A reference-typed local's value at a step, by its layout: the
  * local's word holds the base address, the length word is at the base,
  * each element is in its word (a scalar right-aligned), and the data
- * follows the length word, as long as the length says.
+ * follows the length word, as long as the length says. Bytes in
+ * calldata are the calldata from the offset in the word's high 16
+ * bytes, as long as its low 16 bytes say.
  */
 async function readReference(
   pointer: unknown,
   name: string,
   shape: Shape,
-  executor: Executor,
+  run: LocalsTrace,
   step: TraceStep,
 ): Promise<RefValue> {
-  const regions = await regionsAt(pointer, executor, step);
+  const regions = await regionsAt(pointer, run, step);
   regions.seek(name);
+
+  if (shape.kind === "calldata") {
+    const word = (await regions.read(name)).asUint();
+    const offset = word >> 128n;
+    const length = word & ((1n << 128n) - 1n);
+    return (await regions.read(`${name}-data`, offset, length)).toHex();
+  }
 
   const decode = async (
     shape: Shape,
@@ -370,7 +395,7 @@ async function readReference(
     base: bigint,
   ): Promise<RefValue> => {
     const length = (await regions.read(`${prefix}-length`, base, 32n)).asUint();
-    if (shape.kind === "bytes") {
+    if (shape.kind !== "array") {
       return (await regions.read(`${prefix}-data`, base + 32n, length)).toHex();
     }
     const element = shape.element;

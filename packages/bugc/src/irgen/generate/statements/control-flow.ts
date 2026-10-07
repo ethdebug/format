@@ -7,6 +7,7 @@ import { buildExpression } from "../expressions/index.js";
 import { makeBuildBlock } from "./block.js";
 
 import { Process } from "../process.js";
+import { emitInMemory } from "../calldata.js";
 import type { State } from "../state.js";
 
 /**
@@ -295,8 +296,12 @@ export const makeBuildForStatement = (
 function* buildReturnStatement(
   stmt: Ast.Statement.ControlFlow.Return,
 ): Process<void> {
+  // A returned value's bytes are in memory
   const value = stmt.value
-    ? yield* buildExpression(stmt.value, { kind: "rvalue" })
+    ? yield* emitInMemory(
+        yield* buildExpression(stmt.value, { kind: "rvalue" }),
+        stmt.value,
+      )
     : undefined;
 
   yield* Process.Blocks.terminate({

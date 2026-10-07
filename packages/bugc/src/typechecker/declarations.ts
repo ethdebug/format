@@ -82,6 +82,7 @@ function buildStructType(
 
   for (const field of decl.fields) {
     if (Ast.Declaration.isField(field) && field.type) {
+      checkNoCalldata(field.type);
       const fieldType = resolveType(field.type, existingStructs);
       fields.set(field.name, fieldType);
     }
@@ -103,17 +104,64 @@ function buildFunctionSignature(
   // Resolve parameter types
   const parameterTypes: Type[] = [];
   for (const param of decl.parameters) {
+    checkNoCalldata(param.type);
     const paramType = resolveType(param.type, structTypes);
     parameterTypes.push(paramType);
   }
 
   // Resolve return type (null for void functions)
+  if (decl.returnType) checkNoCalldata(decl.returnType);
   const returnType = decl.returnType
     ? resolveType(decl.returnType, structTypes)
     : null;
 
   return Type.function_(parameterTypes, returnType, decl.name);
 }
+
+/** The `bytes calldata` in a type node, if any */
+export function calldataTypeNode(typeNode: Ast.Type): Ast.Type | undefined {
+  if (Ast.Type.isElementary(typeNode)) {
+    return Ast.Type.Elementary.isBytes(typeNode) &&
+      typeNode.location === "calldata"
+      ? typeNode
+      : undefined;
+  }
+  if (Ast.Type.isComplex(typeNode)) {
+    if (Ast.Type.Complex.isArray(typeNode)) {
+      return calldataTypeNode(typeNode.element);
+    }
+    if (Ast.Type.Complex.isMapping(typeNode)) {
+      return calldataTypeNode(typeNode.key) ?? calldataTypeNode(typeNode.value);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The error for `bytes calldata` where it cannot be: it is only the
+ * whole type of a `let` or of a cast
+ */
+export function calldataTypeError(typeNode: Ast.Type): TypeError {
+  return new TypeError(
+    "`bytes calldata` can only be the type of a `let` or a cast",
+    typeNode.loc || undefined,
+    undefined,
+    undefined,
+    ErrorCode.CALLDATA_TYPE,
+  );
+}
+
+/** Throw unless a type node has no `bytes calldata` */
+function checkNoCalldata(typeNode: Ast.Type): void {
+  const found = calldataTypeNode(typeNode);
+  if (found) throw calldataTypeError(found);
+}
+
+/** Dynamic `bytes`, or `bytes calldata` */
+export const dynamicBytes = (typeNode: Ast.Type.Elementary.Bytes): Type =>
+  typeNode.location === "calldata"
+    ? Type.Elementary.calldataBytes()
+    : Type.Elementary.bytes();
 
 /**
  * Resolves an AST type node to a Type object and records bindings
@@ -161,7 +209,7 @@ export function resolveTypeWithBindings(
 
     if (Ast.Type.Elementary.isBytes(typeNode)) {
       if (!typeNode.size) {
-        return { type: Type.Elementary.bytes(), bindings }; // Dynamic bytes
+        return { type: dynamicBytes(typeNode), bindings };
       }
       // typeNode.bits now contains the byte size directly (e.g., 32 for bytes32)
       const validSizes = [4, 8, 16, 32];
@@ -287,7 +335,7 @@ export function resolveType(
 
     if (Ast.Type.Elementary.isBytes(typeNode)) {
       if (!typeNode.size) {
-        return Type.Elementary.bytes(); // Dynamic bytes
+        return dynamicBytes(typeNode);
       }
       // typeNode.bits now contains the byte size directly (e.g., 32 for bytes32)
       const validSizes = [4, 8, 16, 32];

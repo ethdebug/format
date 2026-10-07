@@ -7,14 +7,15 @@ import { Type } from "../spec/type.js";
  * word, `bytesN` included: a value of `n` bytes is the word's low
  * `n` bytes, and the first byte of a `bytesN` is the highest of them.
  *
- * - `load`: replace a reference to dynamic `bytes` in memory with its
- *   first 32 bytes, as a `bytes32` (bytes past the length are zero)
+ * - `load`: replace a reference to dynamic `bytes` in memory or
+ *   calldata (`from`) with its first 32 bytes, as a `bytes32` (bytes
+ *   past the length are zero)
  * - `and`: keep the low `bytes` bytes
  * - `signextend`: sign-extend from the low `bytes` bytes
  * - `shr` / `shl`: shift by `bytes` bytes
  */
 export type CastStep =
-  | { op: "load" }
+  | { op: "load"; from: "memory" | "calldata" }
   | { op: "and" | "signextend" | "shr" | "shl"; bytes: number };
 
 type Kind = "unsigned" | "signed" | "bytes";
@@ -57,8 +58,9 @@ export function castSteps(from: Type, to: Type): CastStep[] {
 
   if (!Type.isScalar(from)) {
     const loaded = Type.scalar(32, BugType.Elementary.bytes(32));
-    return Type.isRef(from) && from.location === "memory"
-      ? [{ op: "load" }, ...castSteps(loaded, to)]
+    return Type.isRef(from) &&
+      (from.location === "memory" || from.location === "calldata")
+      ? [{ op: "load", from: from.location }, ...castSteps(loaded, to)]
       : [];
   }
 
@@ -98,7 +100,7 @@ const word = 2n ** 256n;
 
 /**
  * Apply a cast's steps to a constant. Returns undefined for a cast
- * that loads from memory.
+ * that loads from memory or calldata.
  */
 export function foldCast(
   value: bigint,

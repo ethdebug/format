@@ -9,6 +9,7 @@ import {
   assertExhausted,
 } from "./errors.js";
 import { isAssignable, commonType } from "./assignable.js";
+import { calldataTypeError, calldataTypeNode } from "./declarations.js";
 import { fits, integerLiteral, isInteger } from "./literals.js";
 
 /**
@@ -453,8 +454,11 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
             );
             errors.push(error);
           }
-          // Slicing bytes returns dynamic bytes
-          resultType = Type.Elementary.bytes();
+          // Slicing bytes returns dynamic bytes, in calldata for a
+          // slice of calldata
+          resultType = Type.Elementary.Bytes.isCalldata(objectType)
+            ? Type.Elementary.calldataBytes()
+            : Type.Elementary.bytes();
         } else {
           const error = new TypeError(
             `Cannot slice ${Type.format(objectType)} - only bytes types can be sliced`,
@@ -802,6 +806,29 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         return { symbols, nodeTypes, bindings, errors };
       }
 
+      // `bytes calldata` is only the whole target type, and only bytes
+      // in calldata cast to it
+      const calldata = calldataTypeNode(node.targetType);
+      if (calldata && calldata !== node.targetType) {
+        errors.push(calldataTypeError(calldata));
+        return { symbols, nodeTypes, bindings, errors };
+      }
+      if (
+        Type.Elementary.Bytes.isCalldata(targetTypeResult.type) &&
+        !Type.Elementary.Bytes.isCalldata(exprResult.type)
+      ) {
+        errors.push(
+          new TypeError(
+            `Cannot cast from ${Type.format(exprResult.type)} to bytes calldata`,
+            node.loc || undefined,
+            "bytes calldata",
+            Type.format(exprResult.type),
+            ErrorCode.INVALID_TYPE_CAST,
+          ),
+        );
+        return { symbols, nodeTypes, bindings, errors };
+      }
+
       // Dynamic bytes cast to an integer or address only via bytesN,
       // as in Solidity
       if (
@@ -1053,7 +1080,7 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           type = Type.Elementary.uint(256);
           break;
         case "expression:special:msg.data":
-          type = Type.Elementary.bytes();
+          type = Type.Elementary.calldataBytes();
           break;
         case "expression:special:block.timestamp":
           type = Type.Elementary.uint(256);

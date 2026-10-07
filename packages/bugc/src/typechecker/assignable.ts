@@ -12,6 +12,16 @@ export function isAssignable(target: Type, value: Type): boolean {
     return true;
   }
 
+  // Bytes in calldata copy to dynamic bytes in memory or storage
+  if (
+    Type.Elementary.Bytes.isCalldata(value) &&
+    Type.isElementary(target) &&
+    Type.Elementary.isBytes(target) &&
+    target.size === undefined
+  ) {
+    return true;
+  }
+
   // Numeric types can be implicitly converted (with range checks)
   if (
     Type.isElementary(target) &&

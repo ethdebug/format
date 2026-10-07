@@ -5,7 +5,11 @@ import type { Symbol as BugSymbol } from "./symbols.js";
 import type { Context, Report } from "./context.js";
 import { enterFunctionScope } from "./symbols.js";
 import { Error as TypeError, ErrorCode, ErrorMessages } from "./errors.js";
-import { resolveTypeWithBindings } from "./declarations.js";
+import {
+  calldataTypeError,
+  calldataTypeNode,
+  resolveTypeWithBindings,
+} from "./declarations.js";
 import { isAssignable } from "./assignable.js";
 import { alwaysReturns } from "./returns.js";
 
@@ -320,6 +324,8 @@ export const blockChecker: Pick<
 
         // Also process the type node to record bindings for type references
         if (node.type) {
+          const calldata = calldataTypeNode(node.type);
+          if (calldata) errors.push(calldataTypeError(calldata));
           const typeResult = resolveTypeWithBindings(
             node.type,
             context.structs,
@@ -374,6 +380,12 @@ export const blockChecker: Pick<
         // Determine the variable's type
         let type: Type;
         if (node.type) {
+          // `bytes calldata` is only the whole type
+          const calldata = calldataTypeNode(node.type);
+          if (calldata && calldata !== node.type) {
+            errors.push(calldataTypeError(calldata));
+          }
+
           // If a type is explicitly declared, use it and record bindings
           const typeResult = resolveTypeWithBindings(
             node.type,

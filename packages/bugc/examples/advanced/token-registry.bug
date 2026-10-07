@@ -128,7 +128,7 @@ code {
   }
 
   // Extract 4-byte function selector from calldata
-  let selector = msg.data[0:4];
+  let selector: bytes = msg.data[0:4];
 
   // Compute function selectors from signatures (optimizer should evaluate these as constants)
   // These keccak256 computations should be optimized out to constants

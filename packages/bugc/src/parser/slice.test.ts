@@ -92,4 +92,32 @@ describe("Slice expressions", () => {
       expect(sliced.kind).toBe("expression:access:slice");
     }
   });
+
+  test("parses `bytes calldata` as a type", () => {
+    const result = parse(`
+      name Test;
+      code {
+        let t: bytes calldata = msg.data[0:4];
+        let u = t as bytes calldata;
+        let m: bytes = t;
+        let calldata = 1;
+      }
+    `);
+    if (!result.success) throw new Error("Parse failed");
+
+    const types = (result.value.body?.items ?? []).map((item) => {
+      const decl = (item as Ast.Statement.Declare).declaration;
+      const { initializer, type } = decl as Ast.Declaration.Variable;
+      return Ast.Expression.isCast(initializer!)
+        ? initializer.targetType
+        : type;
+    });
+    expect(types).toMatchObject([
+      { kind: "type:elementary:bytes", location: "calldata" },
+      { kind: "type:elementary:bytes", location: "calldata" },
+      { kind: "type:elementary:bytes" },
+      undefined,
+    ]);
+    expect(types[2]).not.toHaveProperty("location");
+  });
 });

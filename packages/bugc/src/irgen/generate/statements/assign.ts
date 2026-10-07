@@ -13,6 +13,7 @@ import {
   emitStorageVariableStore,
 } from "../storage.js";
 import { emitMemoryElementOffset, emitMemoryByteOffset } from "../memory.js";
+import { emitInMemory } from "../calldata.js";
 
 /**
  * Build an assignment statement
@@ -61,8 +62,13 @@ function* buildLValue(
     }
   }
 
-  // Evaluate the value expression with the appropriate context
-  const value = yield* buildExpression(valueExpr, context);
+  // Evaluate the value expression with the appropriate context. Bytes
+  // in calldata copy to memory, unless the target is in calldata too.
+  let value = yield* buildExpression(valueExpr, context);
+  const targetType = yield* Process.Types.nodeType(target);
+  if (!targetType || !Type.Elementary.Bytes.isCalldata(targetType)) {
+    value = yield* emitInMemory(value, valueExpr);
+  }
 
   // For storage array assignments, the array expression will have already
   // expanded to storage writes, so we don't need to do anything else

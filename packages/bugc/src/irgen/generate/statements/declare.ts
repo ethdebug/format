@@ -7,6 +7,7 @@ import { fromBugType } from "#irgen/type";
 
 import { buildExpression } from "../expressions/index.js";
 import { Process } from "../process.js";
+import { emitInMemory } from "../calldata.js";
 
 /**
  * Build a declaration statement
@@ -53,7 +54,9 @@ function* buildVariableDeclaration(
   const irType = type ? fromBugType(type) : Ir.Type.Scalar.uint256;
 
   // Check if this is a reference type that needs memory allocation
-  const needsMemoryAllocation = irType.kind === "ref";
+  // (bytes in calldata need none: the local holds their word)
+  const needsMemoryAllocation =
+    irType.kind === "ref" && irType.location !== "calldata";
 
   if (needsMemoryAllocation) {
     // For types that need memory allocation
@@ -84,11 +87,13 @@ function* buildVariableDeclaration(
       { placeholder: builtLater },
     );
 
-    // If there's an initializer, store the value in memory
+    // If there's an initializer, store the value in memory (bytes in
+    // calldata copy there)
     if (decl.initializer) {
-      const value = yield* buildExpression(decl.initializer, {
-        kind: "rvalue",
-      });
+      const value = yield* emitInMemory(
+        yield* buildExpression(decl.initializer, { kind: "rvalue" }),
+        decl.initializer,
+      );
 
       // The value is already a reference to memory (a literal, an
       // array or a slice): the local refers to it

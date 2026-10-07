@@ -53,8 +53,8 @@ export function fromBugType(type: BugType): Ir.Type {
           // Fixed-size bytes are scalars
           return Ir.Type.scalar(type.size as Ir.Type.Scalar.Size, type);
         } else {
-          // Dynamic bytes are memory references
-          return Ir.Type.ref("memory", type);
+          // Dynamic bytes are memory references, or calldata ones
+          return Ir.Type.ref(type.location ?? "memory", type);
         }
       case "string":
         // Strings are always memory references

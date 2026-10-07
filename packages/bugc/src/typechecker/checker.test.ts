@@ -353,7 +353,7 @@ describe("checkProgram", () => {
           name Test;
           code {
             let a: array<uint256> = [1, 2, 3];
-            let b = msg.data[0:3];
+            let b: bytes = msg.data[0:3];
             let i: int256 = 1 as int256;
             ${statement}
           }

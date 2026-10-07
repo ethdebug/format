@@ -84,7 +84,7 @@ describe("IR Builder - Length Instructions", () => {
       if (lengthInst && lengthInst.kind === "length") {
         expect(lengthInst.object.type?.kind).toBe("ref");
         if (lengthInst.object.type?.kind === "ref") {
-          expect(lengthInst.object.type.location).toBe("memory");
+          expect(lengthInst.object.type.location).toBe("calldata");
         }
       }
     }

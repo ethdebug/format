@@ -3,6 +3,7 @@ import { Type } from "#types";
 import type { Visitor } from "#ast";
 import type { Context, Report } from "./context.js";
 import { Error as TypeError, ErrorCode, ErrorMessages } from "./errors.js";
+import { dynamicBytes } from "./declarations.js";
 
 /**
  * Type checker for type AST nodes.
@@ -43,7 +44,7 @@ export const typeNodeChecker: Pick<Visitor<Report, Context>, "type"> = {
           Type.failure(`Unknown int size: ${node.bits}`);
       } else if (Ast.Type.Elementary.isBytes(node)) {
         if (!node.size) {
-          type = Type.Elementary.bytes(); // Dynamic bytes
+          type = dynamicBytes(node);
         } else {
           type = Type.Elementary.bytes(node.size);
         }

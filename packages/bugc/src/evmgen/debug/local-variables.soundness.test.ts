@@ -408,6 +408,56 @@ code { r = g(${arg}, 0); }`,
  * Programs and the values their locals take, in execution order. A
  * value with `after` may be read only once that statement has run.
  */
+const motd = "hello world, this is longer than thirty-two bytes";
+
+/** Calldata for `setMotd(string)`, ABI-encoded (hex, no 0x) */
+function setMotd(text: string): string {
+  const word = (n: number) => n.toString(16).padStart(64, "0");
+  const data = Buffer.from(text).toString("hex");
+  return (
+    "deadbeef" +
+    word(32) +
+    word(text.length) +
+    data.padEnd(Math.ceil(data.length / 64) * 64, "0")
+  );
+}
+
+// `text` refers to the calldata, untyped or typed so, or is a copy in
+// memory
+const annotations = ["", ": bytes calldata", ": bytes"];
+
+/**
+ * A slice of calldata refers to the calldata. Its bounds here are
+ * computed from the ABI offset and length words of a string argument,
+ * and its pointer reads exactly its bytes (or, typed `bytes`, the
+ * copy's).
+ */
+function setMotdProgram(annotation: string): LocalsProgram {
+  return {
+    name: `a calldata slice with computed bounds, \`let text${annotation}\``,
+    source: `name SetMotd;
+storage { [0] motd: string; [1] r: uint256; }
+create { r = 1; }
+code {
+  let offset = msg.data[4:36] as bytes32 as uint256;
+  let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
+  let text${annotation} = msg.data[36 + offset:36 + offset + n];
+  motd = text as string;
+  if (r > 0) { r = text.length + text[1]; }
+}`,
+    calldata: setMotd(motd),
+    locals: {
+      offset: { values: [32n] },
+      n: { values: [BigInt(motd.length)] },
+      text: {
+        shape: { kind: annotation === ": bytes" ? "bytes" : "calldata" },
+        values: [textBytes(motd)],
+        everyLevel: true,
+      },
+    },
+  };
+}
+
 const programs: LocalsProgram[] = [
   {
     name: "straight line",
@@ -1038,8 +1088,9 @@ code {
   r = r + b.length;
 }`,
     // Called with no calldata, so a longer slice would revert
-    locals: { b: { shape: { kind: "bytes" }, values: ["0x"] } },
+    locals: { b: { shape: { kind: "calldata" }, values: ["0x"] } },
   },
+  ...annotations.map(setMotdProgram),
   {
     // A slice longer than a word: its pointer reads every byte
     name: "a long bytes slice",
