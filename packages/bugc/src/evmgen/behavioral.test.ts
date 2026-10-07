@@ -1843,7 +1843,8 @@ code {
   o5 = m128[6];
 }`;
 
-    // bugc gives each array element its own slot
+    // A fixed-size array is inline, and its narrow elements share a
+    // slot, from the low-order end (a[1] is its bytes 2 and 3)
     const arrays = `name NarrowArrays;
 storage { [0] a: array<int16, 3>; [1] n: int256; [10] o0: int256; }
 create { n = -2 as int256; }
@@ -1882,7 +1883,7 @@ code { a[1] = n as int16; o0 = a[1]; }`;
           optimizationLevel: level,
         });
         expect(result.callSuccess).toBe(true);
-        expect(await result.getStorage(hash(pad(0n)) + 1n)).toBe(0xfffen);
+        expect(await result.getStorage(0n)).toBe(0xfffe0000n);
         expect(await result.getStorage(10n)).toBe(neg(2n));
       });
     }

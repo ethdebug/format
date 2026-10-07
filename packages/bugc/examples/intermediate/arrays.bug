@@ -2,11 +2,11 @@ name ArraysAndLoops;
 
 storage {
   [0] numbers: array<uint256, 10>;
-  [1] sum: uint256;
-  [2] max: uint256;
-  [3] count: uint256;
-  [4] found: bool;
-  [5] searchValue: uint256;
+  [10] sum: uint256;
+  [11] max: uint256;
+  [12] count: uint256;
+  [13] found: bool;
+  [14] searchValue: uint256;
 }
 
 code {
@@ -21,7 +21,7 @@ code {
   after: deploy
   variables:
     sum:
-      pointer: { location: storage, slot: 1 }
+      pointer: { location: storage, slot: 10 }
       value: 0
   */
   for (let i = 0; i < 10; i = i + 1) {
@@ -78,21 +78,21 @@ code {
   fails: stack overflow during call - needs investigation
   variables:
     sum:
-      pointer: { location: storage, slot: 1 }
+      pointer: { location: storage, slot: 10 }
       value: 285
   */
   /*@test final-max
   fails: stack overflow during call - needs investigation
   variables:
     max:
-      pointer: { location: storage, slot: 2 }
+      pointer: { location: storage, slot: 11 }
       value: 81
   */
   /*@test final-count
   fails: stack overflow during call - needs investigation
   variables:
     count:
-      pointer: { location: storage, slot: 3 }
+      pointer: { location: storage, slot: 12 }
       value: 8
   */
 

@@ -51,11 +51,11 @@ code {}
     const createFunc = module.create!;
     const entry = createFunc.blocks.get("entry")!;
 
-    // Check that we have compute_slot instructions for array access
+    // A fixed-size array is inline: no keccak256 of its slot
     const computeSlotInstructions = entry.instructions.filter(
       (i) => i.kind === "compute_slot" && i.slotKind === "array",
     );
-    expect(computeSlotInstructions.length).toBe(3);
+    expect(computeSlotInstructions.length).toBe(0);
 
     // Instructions are verified by checking write instructions below
 

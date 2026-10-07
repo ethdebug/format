@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { compile } from "#compiler";
+import { executeProgram } from "#test/evm/behavioral";
 
-describe.skip("Storage verification (requires local Ethereum node)", () => {
+describe("Storage verification", () => {
   it("should store array values correctly in constructor", async () => {
     const source = `
       name ConstructorArray;
@@ -19,73 +19,15 @@ describe.skip("Storage verification (requires local Ethereum node)", () => {
       code {}
     `;
 
-    const result = await compile({ to: "bytecode", source });
-    expect(result.success).toBe(true);
+    const result = await executeProgram(source);
 
-    if (!result.success) return;
-
-    const { create: creationBytecode } = result.value.bytecode;
-    expect(creationBytecode).toBeDefined();
-
-    // Deploy and check storage
-    const deployResponse = await fetch("http://localhost:8545", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: "0xa0e20c11276b8ab803a7034d0945797afb4d060b",
-            data: "0x" + Buffer.from(creationBytecode!).toString("hex"),
-            gas: "0x100000",
-          },
-        ],
-        id: 1,
-      }),
-    });
-
-    const deployResult = await deployResponse.json();
-    const txHash = deployResult.result;
-
-    // Get receipt to find contract address
-    const receiptResponse = await fetch("http://localhost:8545", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_getTransactionReceipt",
-        params: [txHash],
-        id: 2,
-      }),
-    });
-
-    const receipt = await receiptResponse.json();
-    const contractAddress = receipt.result.contractAddress;
-
-    // Check storage slots
-    const expectedValues = [
-      { slot: "0x0", value: 1005 },
-      { slot: "0x1", value: 1006 },
-      { slot: "0x2", value: 1007 },
-    ];
-
-    for (const { slot, value } of expectedValues) {
-      const storageResponse = await fetch("http://localhost:8545", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "eth_getStorageAt",
-          params: [contractAddress, slot, "latest"],
-          id: 3,
-        }),
-      });
-
-      const storageResult = await storageResponse.json();
-      const storedValue = BigInt(storageResult.result);
-
-      expect(storedValue).toBe(BigInt(value));
+    // A fixed-size array is inline: its elements start at its slot
+    for (const [slot, value] of [
+      [0n, 1005n],
+      [1n, 1006n],
+      [2n, 1007n],
+    ]) {
+      expect(await result.getStorage(slot)).toBe(value);
     }
   });
 
@@ -108,72 +50,14 @@ describe.skip("Storage verification (requires local Ethereum node)", () => {
       code {}
     `;
 
-    const result = await compile({ to: "bytecode", source });
-    expect(result.success).toBe(true);
+    const result = await executeProgram(source);
 
-    if (!result.success) return;
-
-    const { create: creationBytecode } = result.value.bytecode;
-
-    // Deploy
-    const deployResponse = await fetch("http://localhost:8545", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: "0xa0e20c11276b8ab803a7034d0945797afb4d060b",
-            data: "0x" + Buffer.from(creationBytecode!).toString("hex"),
-            gas: "0x100000",
-          },
-        ],
-        id: 1,
-      }),
-    });
-
-    const deployResult = await deployResponse.json();
-    const txHash = deployResult.result;
-
-    // Get receipt
-    const receiptResponse = await fetch("http://localhost:8545", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_getTransactionReceipt",
-        params: [txHash],
-        id: 2,
-      }),
-    });
-
-    const receipt = await receiptResponse.json();
-    const contractAddress = receipt.result.contractAddress;
-
-    // Check storage slots
-    const expectedValues = [
-      { slot: "0x0", value: 100 },
-      { slot: "0x1", value: 200 },
-      { slot: "0x2", value: 300 },
-    ];
-
-    for (const { slot, value } of expectedValues) {
-      const storageResponse = await fetch("http://localhost:8545", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "eth_getStorageAt",
-          params: [contractAddress, slot, "latest"],
-          id: 3,
-        }),
-      });
-
-      const storageResult = await storageResponse.json();
-      const storedValue = BigInt(storageResult.result);
-
-      expect(storedValue).toBe(BigInt(value));
+    for (const [slot, value] of [
+      [0n, 100n],
+      [1n, 200n],
+      [2n, 300n],
+    ]) {
+      expect(await result.getStorage(slot)).toBe(value);
     }
   });
 });

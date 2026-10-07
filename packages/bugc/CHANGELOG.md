@@ -28,6 +28,17 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- Storage arrays now have Solidity's layout. A fixed-size array is
+  inline: its elements start at its own slot, so `[0] a: array<uint256,
+3>` takes slots 0 to 2, and a struct member that is a fixed-size array
+  takes all its slots. A dynamic array still keeps its length in its
+  slot and its elements from `keccak256(slot)`. In either, elements
+  narrower than 16 bytes now share a slot, as many as fit, from its
+  low-order end: an `array<uint8, 40>` takes two slots. Each storage
+  variable's pointer describes the same layout. Before, every array's
+  elements started at `keccak256(slot)`, one element to a slot, while
+  the pointer of a fixed-size array described it inline, and the pointer
+  of an array of narrow elements described them packed ([#364]).
 - An integer literal operand of an arithmetic or comparison operator now
   takes the type of the other operand when its value fits, so with
   `x: int8`, `x < 0`, `x == 1` and `-1 < x` compare as `int8`. A literal
@@ -301,3 +312,4 @@ First publication.
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
 [#356]: https://github.com/ethdebug/format/pull/356
+[#364]: https://github.com/ethdebug/format/pull/364
