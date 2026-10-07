@@ -111,6 +111,32 @@ function signExtend<S extends Stack>(
   );
 }
 
+/** Whether a storage offset is the constant 0 (or absent) */
+function isZero(offset: Ir.Value | undefined): boolean {
+  return !offset || (offset.kind === "const" && BigInt(offset.value) === 0n);
+}
+
+/**
+ * Push a storage offset in bits: `offset * 8`. A storage array's
+ * element that shares its slot has an offset known only at run time.
+ */
+function bitOffset<S extends Stack>(
+  offset: Ir.Value | undefined,
+  debug: Ir.Instruction.Debug,
+): Transition<S, readonly ["shift", ...S]> {
+  if (!offset || offset.kind === "const") {
+    const bytes = offset ? BigInt(offset.value as bigint) : 0n;
+    return pipe<S>()
+      .then(PUSHn(bytes * 8n, { debug }), { as: "shift" })
+      .done();
+  }
+  return pipe<S>()
+    .then(loadValue(offset, { debug }), { as: "value" })
+    .then(PUSHn(3n, { debug }), { as: "shift" })
+    .then(SHL({ debug }), { as: "shift" })
+    .done();
+}
+
 /**
  * Storage read: SLOAD with optional partial-slot extraction
  */
@@ -118,10 +144,9 @@ function generateStorageRead<S extends Stack>(
   inst: Ir.Instruction.Read,
   debug: Ir.Instruction.Debug,
 ): Transition<S, readonly ["value", ...S]> {
-  const offset = inst.offset?.kind === "const" ? inst.offset.value : 0n;
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
 
-  if (offset === 0n && length === 32n) {
+  if (isZero(inst.offset) && length === 32n) {
     // Full slot read - simple SLOAD
     return pipe<S>()
       .then(loadValue(inst.slot!, { debug }), { as: "key" })
@@ -139,7 +164,7 @@ function generateStorageRead<S extends Stack>(
 
       // Shift right by offset * 8 bits: storage writes count `offset`
       // from the low-order end of the slot
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
+      .then(bitOffset(inst.offset, debug), { as: "shift" })
       .then(SHR({ debug }), { as: "shiftedValue" })
       .then(PUSHn(1n, { debug }), { as: "b" })
 
@@ -405,14 +430,13 @@ function generateStorageWrite<S extends Stack>(
   inst: Ir.Instruction.Write,
   debug: Ir.Instruction.Debug,
 ): Transition<S, S> {
-  const offset = inst.offset?.kind === "const" ? inst.offset.value : 0n;
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
 
   if (isMemoryBytes(inst.value!.type)) {
     return generateBytesStorageWrite(inst, debug);
   }
 
-  if (offset === 0n && length === 32n) {
+  if (isZero(inst.offset) && length === 32n) {
     // Full slot write - simple SSTORE
     return pipe<S>()
       .then(loadValue(inst.value!, { debug }), { as: "value" })
@@ -437,9 +461,7 @@ function generateStorageWrite<S extends Stack>(
       .then(SUB({ debug }), { as: "lengthMask" })
 
       // Shift mask to offset position
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), {
-        as: "bitOffset",
-      })
+      .then(bitOffset(inst.offset, debug), { as: "bitOffset" })
       .then(
         rebrand<"bitOffset", "shift", "lengthMask", "value">({
           1: "shift",
@@ -467,7 +489,7 @@ function generateStorageWrite<S extends Stack>(
         as: "a",
       })
       .then(AND({ debug }), { as: "value" })
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
+      .then(bitOffset(inst.offset, debug), { as: "shift" })
       .then(SHL({ debug }), { as: "shiftedValue" })
 
       .then(

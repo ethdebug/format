@@ -7,7 +7,7 @@
 import * as Format from "@ethdebug/format";
 import type { State } from "../generate/state.js";
 import { generatePointer, type VariableLocation } from "./pointers.js";
-import { Type } from "#types";
+import { Storage, Type } from "#types";
 import { convertBugType } from "./types.js";
 
 /**
@@ -52,6 +52,15 @@ function getTypeSize(bugType: Type): number {
   return 32;
 }
 
+/** A slot plus a number of slots */
+function plus(
+  slot: Format.Pointer.Expression,
+  slots: number,
+): Format.Pointer.Expression {
+  if (slots === 0) return slot;
+  return typeof slot === "number" ? slot + slots : { $sum: [slot, slots] };
+}
+
 /**
  * Generate a sophisticated pointer for a storage variable based on its type
  *
@@ -61,10 +70,11 @@ function getTypeSize(bugType: Type): number {
  * `prefix` is that path (e.g. "ceo-" for the members of field `ceo`).
  */
 function generateStoragePointer(
-  baseSlot: number,
+  baseSlot: Format.Pointer.Expression,
   bugType: Type,
   byteOffset: number = 0,
   prefix: string = "",
+  depth: number = 0,
 ): Format.Pointer | undefined {
   // For structs, generate a group pointer with each field
   if (Type.isStruct(bugType)) {
@@ -75,7 +85,7 @@ function generateStoragePointer(
       if (!layout) continue;
 
       const absoluteOffset = byteOffset + layout.byteOffset;
-      const fieldSlot = baseSlot + Math.floor(absoluteOffset / 32);
+      const fieldSlot = plus(baseSlot, Math.floor(absoluteOffset / 32));
       const fieldOffset = absoluteOffset % 32;
 
       const fieldPointer = generateStoragePointer(
@@ -83,6 +93,7 @@ function generateStoragePointer(
         fieldType,
         fieldOffset,
         `${prefix}${fieldName}-`,
+        depth,
       );
       if (!fieldPointer) continue;
 
@@ -100,127 +111,76 @@ function generateStoragePointer(
     return { group };
   }
 
-  // For arrays, generate a list pointer
+  // For arrays, generate a list pointer, by Solidity's layout (see
+  // `Storage`): a fixed-size array's elements start at its slot, a
+  // dynamic array's at keccak256 of its slot, where its length is
   if (Type.isArray(bugType)) {
-    const elementType = bugType.element;
-    const elementSize = getTypeSize(elementType);
+    const element = bugType.element;
+    // Each nested list needs its own index variable
+    const index = depth === 0 ? "i" : `i${depth}`;
+    const first: Format.Pointer.Expression =
+      bugType.size === undefined
+        ? { $keccak256: [{ $wordsized: baseSlot }] }
+        : baseSlot;
 
-    // Check if this is a fixed-size or dynamic array
-    if (bugType.size !== undefined) {
-      // Fixed-size array: elements stored sequentially from base slot
-      // For fixed arrays, elements are at baseSlot + floor((i * elementSize) / 32)
-      // with offset (i * elementSize) % 32
-      const elementSlotExpression: Format.Pointer.Expression =
-        elementSize >= 32
-          ? // Full slots: baseSlot + i * (elementSize / 32)
-            {
-              $sum: [baseSlot, { $product: ["i", elementSize / 32] }],
-            }
-          : // Packed elements: baseSlot + floor((i * elementSize) / 32)
-            {
-              $sum: [
-                baseSlot,
-                {
-                  $quotient: [{ $product: ["i", elementSize] }, 32],
-                },
-              ],
-            };
-
-      const elementPointer: Format.Pointer = {
+    let elementPointer: Format.Pointer | undefined;
+    const perSlot = Storage.elementsPerSlot(element);
+    if (perSlot > 1) {
+      // Elements that share a slot, from its low-order end; a pointer's
+      // `offset` counts from the high-order end
+      const size = Storage.size(element)!;
+      elementPointer = {
         name: `${prefix}element`,
         location: "storage",
-        slot: elementSlotExpression,
-      };
-
-      // Add offset for packed elements
-      if (elementSize < 32) {
-        elementPointer.offset = {
-          $remainder: [{ $product: ["i", elementSize] }, 32],
-        };
-        elementPointer.length = elementSize;
-      }
-
-      // Recursively handle complex element types
-      const refinedPointer =
-        Type.isStruct(elementType) || Type.isArray(elementType)
-          ? generateStoragePointer(0, elementType, 0, prefix)
-          : elementPointer;
-
-      return {
-        list: {
-          count: bugType.size,
-          each: "i",
-          is: refinedPointer || elementPointer,
+        slot: { $sum: [first, { $quotient: [index, perSlot] }] },
+        offset: {
+          $difference: [
+            32 - size,
+            { $product: [{ $remainder: [index, perSlot] }, size] },
+          ],
         },
+        length: size,
       };
     } else {
-      // Dynamic array: length at base slot, elements at keccak256(slot) + index
-      // Elements start at keccak256(baseSlot)
-      // Note: baseSlot must be wordsized for proper 32-byte keccak256 input
-      const elementSlotExpression: Format.Pointer.Expression =
-        elementSize >= 32
-          ? // Full slots: keccak256(baseSlot) + i * (elementSize / 32)
-            {
-              $sum: [
-                { $keccak256: [{ $wordsized: baseSlot }] },
-                { $product: ["i", elementSize / 32] },
-              ],
-            }
-          : // Packed elements: keccak256(baseSlot) + floor((i * elementSize) / 32)
-            {
-              $sum: [
-                { $keccak256: [{ $wordsized: baseSlot }] },
-                {
-                  $quotient: [{ $product: ["i", elementSize] }, 32],
-                },
-              ],
-            };
-
-      const elementPointer: Format.Pointer = {
-        name: `${prefix}element`,
-        location: "storage",
-        slot: elementSlotExpression,
-      };
-
-      // Add offset for packed elements
-      if (elementSize < 32) {
-        elementPointer.offset = {
-          $remainder: [{ $product: ["i", elementSize] }, 32],
-        };
-        elementPointer.length = elementSize;
+      const stride = Storage.slots(element);
+      elementPointer = generateStoragePointer(
+        {
+          $sum: [first, stride === 1 ? index : { $product: [index, stride] }],
+        },
+        element,
+        0,
+        prefix,
+        depth + 1,
+      );
+      if (elementPointer && Format.Pointer.isRegion(elementPointer)) {
+        elementPointer = { ...elementPointer, name: `${prefix}element` };
       }
-
-      // Recursively handle complex element types
-      const refinedPointer =
-        Type.isStruct(elementType) || Type.isArray(elementType)
-          ? generateStoragePointer(0, elementType, 0, prefix)
-          : elementPointer;
-
-      // For dynamic arrays, we use a group to declare both the length region
-      // and the list of elements
-      // Note: "array-length" avoids conflict with Array.prototype.length
-      const lengthRegion: Format.Pointer = {
-        name: `${prefix}array-length`,
-        location: "storage",
-        slot: baseSlot,
-      };
-      if (byteOffset > 0) {
-        lengthRegion.offset = byteOffset;
-      }
-
-      return {
-        group: [
-          lengthRegion,
-          {
-            list: {
-              count: { $read: `${prefix}array-length` },
-              each: "i",
-              is: refinedPointer || elementPointer,
-            },
-          },
-        ],
-      };
     }
+    if (!elementPointer) return undefined;
+
+    const list: Format.Pointer = {
+      list: {
+        count:
+          bugType.size === undefined
+            ? { $read: `${prefix}array-length` }
+            : bugType.size,
+        each: index,
+        is: elementPointer,
+      },
+    };
+    if (bugType.size !== undefined) return list;
+
+    // Note: "array-length" avoids conflict with Array.prototype.length
+    return {
+      group: [
+        {
+          name: `${prefix}array-length`,
+          location: "storage",
+          slot: baseSlot,
+        },
+        list,
+      ],
+    };
   }
 
   // For mappings, we can't represent them without keys

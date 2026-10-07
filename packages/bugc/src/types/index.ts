@@ -16,5 +16,8 @@ export {
   mergeBindings,
 } from "./spec.js";
 
+// Storage layout
+export * as Storage from "./storage.js";
+
 // Export analysis tools
 export * as Analysis from "./analysis/index.js";

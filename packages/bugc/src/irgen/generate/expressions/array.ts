@@ -1,9 +1,10 @@
 import type * as Ast from "#ast";
 import * as Ir from "#ir";
-import { Type } from "#types";
+import { Storage, Type } from "#types";
 import { Process } from "../process.js";
 import type { Context } from "./context.js";
 import { buildExpression } from "./expression.js";
+import { emitArrayElement } from "../storage.js";
 
 /**
  * Build IR for an array expression.
@@ -18,60 +19,52 @@ export function* buildArray(
 ): Process<Ir.Value> {
   switch (context.kind) {
     case "lvalue-storage": {
-      // Storage array assignment - expand to individual storage writes
-      // First, store the array length at the base slot
-      const lengthValue = Ir.Value.constant(
-        BigInt(expr.elements.length),
+      // Storage array assignment - expand to individual storage writes.
+      // A dynamic array keeps its length in its slot; a fixed-size
+      // array's elements start there
+      const slot = Ir.Value.constant(
+        BigInt(context.slot),
         Ir.Type.Scalar.uint256,
       );
-      yield* Process.Instructions.emit({
-        kind: "write",
-        location: "storage",
-        slot: Ir.Value.constant(BigInt(context.slot), Ir.Type.Scalar.uint256),
-        offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
-        length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-        value: lengthValue,
-        operationDebug: yield* Process.Debug.forAstNode(expr),
-      } as Ir.Instruction.Write);
-
-      // Then write each element
-      for (let i = 0; i < expr.elements.length; i++) {
-        // Generate the value for this element
-        const elementValue = yield* buildExpression(expr.elements[i], {
-          kind: "rvalue",
-        });
-
-        // Generate the index value
-        const indexValue = Ir.Value.constant(BigInt(i), Ir.Type.Scalar.uint256);
-
-        // Compute the first slot for the array
-        const firstSlotTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit(
-          Ir.Instruction.ComputeSlot.array(
-            Ir.Value.constant(BigInt(context.slot), Ir.Type.Scalar.uint256),
-            firstSlotTemp,
-            yield* Process.Debug.forAstNode(expr),
-          ),
-        );
-
-        // Add the index to get the actual element slot
-        const slotTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "binary",
-          op: "add",
-          left: Ir.Value.temp(firstSlotTemp, Ir.Type.Scalar.uint256),
-          right: indexValue,
-          dest: slotTemp,
-          operationDebug: yield* Process.Debug.forAstNode(expr),
-        } as Ir.Instruction.BinaryOp);
-
-        // Write to storage
+      if (!Type.isArray(context.type) || context.type.size === undefined) {
         yield* Process.Instructions.emit({
           kind: "write",
           location: "storage",
-          slot: Ir.Value.temp(slotTemp, Ir.Type.Scalar.uint256),
+          slot,
           offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
           length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+          value: Ir.Value.constant(
+            BigInt(expr.elements.length),
+            Ir.Type.Scalar.uint256,
+          ),
+          operationDebug: yield* Process.Debug.forAstNode(expr),
+        } as Ir.Instruction.Write);
+      }
+      const arrayType: Type.Array = Type.isArray(context.type)
+        ? context.type
+        : Type.array(Type.Elementary.uint(256));
+
+      // Then write each element
+      for (let i = 0; i < expr.elements.length; i++) {
+        const elementValue = yield* buildExpression(expr.elements[i], {
+          kind: "rvalue",
+        });
+        const element = yield* emitArrayElement(
+          arrayType,
+          slot,
+          Ir.Value.constant(BigInt(i), Ir.Type.Scalar.uint256),
+          expr,
+        );
+        yield* Process.Instructions.emit({
+          kind: "write",
+          location: "storage",
+          slot: element.slot,
+          offset:
+            element.offset ?? Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
+          length: Ir.Value.constant(
+            BigInt(Storage.size(arrayType.element) ?? 32),
+            Ir.Type.Scalar.uint256,
+          ),
           value: elementValue,
           operationDebug: yield* Process.Debug.forAstNode(expr.elements[i]),
         } as Ir.Instruction.Write);
