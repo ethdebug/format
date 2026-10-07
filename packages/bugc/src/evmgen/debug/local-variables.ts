@@ -30,7 +30,9 @@
  *
  * A reference-typed local (memory array, string, dynamic bytes) is
  * held as an address word; its pointer names that word, then the data
- * it refers to (`dataPointers`).
+ * it refers to (`dataPointers`). A local of bytes in calldata is held
+ * as a word with their offset and length; its pointer names that
+ * word, then those bytes (`calldataPointer`).
  *
  * The memory pointer encodes bugc's frame convention: the frame base
  * lives in memory at `FRAME_POINTER` (0x80); a frame-homed local is at
@@ -197,6 +199,21 @@ function dataPointers(
     length,
     { list: { count: { $read: `${name}-length` }, each: index, is } },
   ];
+}
+
+/**
+ * A pointer to the bytes in calldata a local's word refers to: the
+ * word holds their offset in its high 128 bits and their length in its
+ * low 128 bits. The region is named `x-data`.
+ */
+function calldataPointer(name: string): Format.Pointer {
+  const half = `0x1${"0".repeat(32)}`; // 2^128
+  return {
+    name: `${name}-data`,
+    location: "calldata",
+    offset: { $quotient: [{ $read: name }, half] },
+    length: { $remainder: [{ $read: name }, half] },
+  };
 }
 
 /** A pointer to a local's word plus, for a reference, its data. */
@@ -640,6 +657,8 @@ function snapshotAt(
     let data: Format.Pointer[] | undefined;
     if (Ir.Type.isScalar(type)) {
       size = type.size;
+    } else if (type.kind === "ref" && type.location === "calldata") {
+      data = [calldataPointer(name)];
     } else {
       if (type.kind !== "ref" || type.location !== "memory") continue;
       data = dataPointers({ $read: name }, type.origin, name);

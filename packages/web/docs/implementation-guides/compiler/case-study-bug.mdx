@@ -130,6 +130,66 @@ history.push(7);                 // history: array<uint256> in storage
 history[history.length] = 8;     // reverts with Panic(0x32)
 ```
 
+### Bytes in calldata
+
+`msg.data` is `bytes` in calldata, and so is a slice of it. A slice of
+calldata refers to the calldata; nothing is copied. A `let` without a
+type takes the initializer's type, so it refers to the calldata too:
+
+```bug
+// setMotd(string): the text's ABI offset word, then its length word
+let offset = msg.data[4:36] as bytes32 as uint256;
+let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
+let text = msg.data[36 + offset:36 + offset + n];   // no copy
+text.length;                     // n
+text[0];                         // CALLDATALOAD, then the first byte
+text[1:3];                       // a slice of the calldata, too
+text as bytes4;                  // its first 4 bytes
+```
+
+Calldata is read only: `text[0] = 1` is a type error. Bytes in calldata
+are copied to memory (with `CALLDATACOPY`) wherever a value must be in
+memory: in a `let` typed `bytes` (`let m: bytes = text;`), an assignment
+to a `bytes` local in memory, a cast to `bytes` or `string`, a function
+argument or return value, and the argument of `keccak256`. Assigning to
+a `bytes` or `string` storage variable stores the bytes as Solidity does,
+through such a copy. Bytes in memory cannot be assigned to a local in
+calldata.
+
+A value of bytes in calldata is one word: the offset of the first byte
+in the high 128 bits, and the length in the low 128 bits. A local's
+pointer names that word and then the bytes in calldata. The region
+`text-data` reads exactly the bytes, even when, as above, the offset
+and length are computed while the program runs:
+
+<SchemaExample
+  schema="pointer/collection/group"
+  href="/spec/pointer/collection/group"
+  title="A local of bytes in calldata"
+>
+  {`{
+  "group": [
+    { "name": "text", "location": "stack", "slot": 2 },
+    {
+      "name": "text-data",
+      "location": "calldata",
+      "offset": {
+        "$quotient": [
+          { "$read": "text" },
+          "0x100000000000000000000000000000000"
+        ]
+      },
+      "length": {
+        "$remainder": [
+          { "$read": "text" },
+          "0x100000000000000000000000000000000"
+        ]
+      }
+    }
+  ]
+}`}
+</SchemaExample>
+
 ## Compilation pipeline
 
 BUG uses a multi-stage compilation pipeline:

@@ -13,6 +13,7 @@ import {
   emitStorageChainLoad,
   emitStorageChainStore,
 } from "../storage.js";
+import { emitInMemory } from "../calldata.js";
 
 /**
  * Build a call expression
@@ -53,10 +54,16 @@ export const makeBuildCall = (
         return Ir.Value.constant(0n, Ir.Type.Scalar.bytes32);
       }
 
-      // Evaluate the arguments, in order
+      // Evaluate the arguments, in order (in memory: the hash reads
+      // memory)
       const values: Ir.Value[] = [];
       for (const argument of expr.arguments) {
-        values.push(yield* buildExpression(argument, { kind: "rvalue" }));
+        values.push(
+          yield* emitInMemory(
+            yield* buildExpression(argument, { kind: "rvalue" }),
+            argument,
+          ),
+        );
       }
 
       // Generate hash instruction
@@ -91,10 +98,15 @@ export const makeBuildCall = (
         return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
       }
 
-      // Evaluate arguments
+      // Evaluate arguments; a parameter's bytes are in memory
       const argValues: Ir.Value[] = [];
       for (const arg of expr.arguments) {
-        argValues.push(yield* buildExpression(arg, { kind: "rvalue" }));
+        argValues.push(
+          yield* emitInMemory(
+            yield* buildExpression(arg, { kind: "rvalue" }),
+            arg,
+          ),
+        );
       }
 
       // A void function's call has the type checker's "void

@@ -19,6 +19,8 @@ import {
   emitMemoryElementOffset,
   emitMemoryByteOffset,
 } from "../memory.js";
+import * as Calldata from "../calldata.js";
+import { buildMsgDataEnv } from "./special.js";
 
 /**
  * Build an access expression (array/member access)
@@ -94,6 +96,17 @@ const makeBuildMemberAccess = (
             (Type.Elementary.isBytes(objectType) ||
               Type.Elementary.isString(objectType))))
       ) {
+        // Bytes in calldata: the length is in their word
+        if (
+          Type.Elementary.Bytes.isCalldata(objectType) &&
+          !Ast.Expression.Special.isMsgData(expr.object)
+        ) {
+          const word = yield* buildExpression(expr.object, {
+            kind: "rvalue",
+          });
+          return (yield* Calldata.emitBounds(word, expr)).length;
+        }
+
         const resultType: Ir.Type = Ir.Type.Scalar.uint256;
         const tempId = yield* Process.Variables.newTemp();
 
@@ -119,7 +132,9 @@ const makeBuildMemberAccess = (
         }
 
         // For dynamic arrays/bytes/strings, emit length instruction
-        const object = yield* buildExpression(expr.object, { kind: "rvalue" });
+        const object = Ast.Expression.Special.isMsgData(expr.object)
+          ? yield* buildMsgDataEnv(expr.object)
+          : yield* buildExpression(expr.object, { kind: "rvalue" });
         yield* Process.Instructions.emit({
           kind: "length",
           object,
@@ -193,6 +208,37 @@ const makeBuildMemberAccess = (
     );
   };
 
+/**
+ * Bytes in calldata: msg.data's env value, or another value's word
+ */
+type CalldataObject = { msgData: Ir.Value } | { word: Ir.Value };
+
+function* buildCalldataObject(
+  buildExpression: (
+    node: Ast.Expression,
+    context: Context,
+  ) => Process<Ir.Value>,
+  object: Ast.Expression,
+): Process<CalldataObject> {
+  return Ast.Expression.Special.isMsgData(object)
+    ? { msgData: yield* buildMsgDataEnv(object) }
+    : { word: yield* buildExpression(object, { kind: "rvalue" }) };
+}
+
+/** The bounds of bytes in calldata; msg.data is at offset 0 */
+function* emitCalldataBounds(
+  object: CalldataObject,
+  node: Ast.Expression,
+): Process<Calldata.Bounds> {
+  if ("msgData" in object) {
+    return {
+      offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
+      length: yield* emitLength(object.msgData, node),
+    };
+  }
+  return yield* Calldata.emitBounds(object.word, node);
+}
+
 const makeBuildSliceAccess = (
   buildExpression: (
     node: Ast.Expression,
@@ -205,6 +251,37 @@ const makeBuildSliceAccess = (
   ): Process<Ir.Value> {
     // Slice access - start:end
     const objectType = yield* Process.Types.nodeType(expr.object);
+
+    // A slice of bytes in calldata refers to the calldata
+    if (objectType && Type.Elementary.Bytes.isCalldata(objectType)) {
+      const object = yield* buildCalldataObject(buildExpression, expr.object);
+      const start = yield* buildExpression(expr.start, { kind: "rvalue" });
+      const end = yield* buildExpression(expr.end, { kind: "rvalue" });
+      const { offset, length } = yield* emitCalldataBounds(object, expr);
+
+      // Revert unless start <= end <= length
+      yield* emitBoundsCheck("le", start, end, expr);
+      yield* emitBoundsCheck("le", end, length, expr);
+
+      const lengthTemp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "binary",
+        op: "sub",
+        left: end,
+        right: start,
+        dest: lengthTemp,
+        operationDebug: yield* Process.Debug.forAstNode(expr),
+      } as Ir.Instruction.BinaryOp);
+
+      return yield* Calldata.emitWord(
+        {
+          offset: yield* Calldata.emitOffsetSum(offset, start, expr),
+          length: Ir.Value.temp(lengthTemp, Ir.Type.Scalar.uint256),
+        },
+        expr,
+      );
+    }
+
     if (
       objectType &&
       Type.isElementary(objectType) &&
@@ -277,32 +354,28 @@ const makeBuildSliceAccess = (
         operationDebug: yield* Process.Debug.forAstNode(expr),
       } as Ir.Instruction.Write);
 
-      // Copy the slice's bytes from the source: `msg.data` is calldata
-      // from offset 0; other bytes are in memory after a length word
-      const isCalldata = Ast.Expression.Special.isMsgData(expr.object);
-      let source = start;
-      if (!isCalldata) {
-        const sourceOffsetTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "binary",
-          op: "add",
-          left: object,
-          right: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-          dest: sourceOffsetTemp,
-          operationDebug: yield* Process.Debug.forAstNode(expr),
-        } as Ir.Instruction);
+      // Copy the slice's bytes from the source, in memory after a
+      // length word
+      const sourceOffsetTemp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "binary",
+        op: "add",
+        left: object,
+        right: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+        dest: sourceOffsetTemp,
+        operationDebug: yield* Process.Debug.forAstNode(expr),
+      } as Ir.Instruction);
 
-        const adjustedSourceTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "binary",
-          op: "add",
-          left: Ir.Value.temp(sourceOffsetTemp, Ir.Type.Scalar.uint256),
-          right: start,
-          dest: adjustedSourceTemp,
-          operationDebug: yield* Process.Debug.forAstNode(expr),
-        } as Ir.Instruction);
-        source = Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256);
-      }
+      const adjustedSourceTemp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "binary",
+        op: "add",
+        left: Ir.Value.temp(sourceOffsetTemp, Ir.Type.Scalar.uint256),
+        right: start,
+        dest: adjustedSourceTemp,
+        operationDebug: yield* Process.Debug.forAstNode(expr),
+      } as Ir.Instruction);
+      const source = Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256);
 
       // Calculate destination offset (skip length prefix)
       const destDataOffsetTemp = yield* Process.Variables.newTemp();
@@ -317,7 +390,7 @@ const makeBuildSliceAccess = (
 
       yield* Process.Instructions.emit({
         kind: "copy",
-        location: isCalldata ? "calldata" : "memory",
+        location: "memory",
         source,
         offset: Ir.Value.temp(destDataOffsetTemp, Ir.Type.Scalar.uint256),
         length,
@@ -445,6 +518,29 @@ const makeBuildIndexAccess = (
     // First check if we're indexing into bytes (not part of storage chain)
     const nodeType = yield* Process.Types.nodeType(expr);
     const objectType = yield* Process.Types.nodeType(expr.object);
+
+    // A byte of bytes in calldata
+    if (objectType && Type.Elementary.Bytes.isCalldata(objectType)) {
+      const object = yield* buildCalldataObject(buildExpression, expr.object);
+      const index = yield* buildExpression(expr.index, { kind: "rvalue" });
+      const { offset, length } = yield* emitCalldataBounds(object, expr);
+      yield* emitBoundsCheck("lt", index, length, expr);
+
+      const elementType: Ir.Type = Ir.Type.scalar(1, "synthetic");
+      const tempId = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "read",
+        location: "calldata",
+        offset: yield* Calldata.emitOffsetSum(offset, index, expr),
+        length: Ir.Value.constant(1n, Ir.Type.Scalar.uint256),
+        type: elementType,
+        dest: tempId,
+        operationDebug: yield* Process.Debug.forAstNode(expr),
+      } as Ir.Instruction.Read);
+
+      return Ir.Value.temp(tempId, elementType);
+    }
+
     if (
       objectType &&
       Type.isElementary(objectType) &&

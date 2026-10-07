@@ -59,6 +59,24 @@ export const statementChecker: Pick<Visitor<Report, Context>, "statement"> = {
       bindings = targetResult.bindings;
       errors.push(...targetResult.errors);
 
+      // Calldata is read-only
+      const target = node.target as Ast.Expression.Access.Index;
+      const objectType =
+        target.kind === "expression:access:index" &&
+        nodeTypes.get(target.object.id);
+      if (objectType && Type.Elementary.Bytes.isCalldata(objectType)) {
+        errors.push(
+          new TypeError(
+            "Cannot assign to bytes in calldata",
+            node.target.loc || undefined,
+            undefined,
+            undefined,
+            ErrorCode.INVALID_ASSIGNMENT,
+          ),
+        );
+        return { symbols, nodeTypes, bindings, errors };
+      }
+
       // Type check value
       const valueContext: Context = {
         ...context,

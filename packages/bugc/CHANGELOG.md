@@ -109,6 +109,21 @@ support. Changes to the specification itself are tracked in the root
   function whose `return` is only inside a loop needs one after it.
   Before, such a function compiled, and the compiler ended it with a
   `return` that gave no value ([#352]).
+- `msg.data` and a slice of it are now `bytes` in calldata, and a slice
+  of calldata refers to the calldata instead of copying it, as in
+  `let text = msg.data[68:68 + n];`. Such a value is one word, with the
+  offset in its high 128 bits and the length in its low 128 bits. `.length`,
+  `text[i]` (a `CALLDATALOAD`), slicing and a cast to `bytesN` read the
+  calldata. A `let` without a type keeps the calldata's type; a `let`
+  typed `bytes`, an assignment to a `bytes` local in memory or to
+  storage, a cast to `bytes` or `string`, a function argument or return
+  value, and the argument of `keccak256` copy the bytes to memory. A
+  local's pointer names its word and then a `calldata` region whose
+  offset and length are `$quotient` and `$remainder` of that word by
+  2^128, so it reads exactly the local's bytes, even when its bounds are
+  computed. Writing to bytes in calldata, or assigning memory bytes to a
+  local in calldata, is a type error. Before, every slice was copied to
+  memory, and a local's pointer read the copy ([#PR]).
 
 ### Fixed
 

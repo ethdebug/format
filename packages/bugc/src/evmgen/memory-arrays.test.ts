@@ -179,12 +179,12 @@ code {
 });
 
 describe("memory bytes", () => {
-  // `msg.data` sliced into memory
+  // `msg.data` sliced and copied into memory
   run({
     "read bytes": [
       `storage { [0] r0: uint256; [1] r2: uint256; [2] n: uint256; }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   r0 = b[0];
   r2 = b[2];
   n = b.length;
@@ -197,7 +197,7 @@ code {
   [0] r0: uint256; [1] r1: uint256; [2] r2: uint256; [3] n: uint256;
 }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   b[1] = 200 as uint8;
   r0 = b[0];
   r1 = b[1];
@@ -212,7 +212,7 @@ code {
   [0] r0: uint256; [1] r1: uint256; [2] r2: uint256; [3] n: uint256;
 }
 code {
-  let b = msg.data[0:3];
+  let b: bytes = msg.data[0:3];
   for (let i = 0 as uint8; i < 3 as uint8; i = i + 1 as uint8) {
     b[i] = b[i] + 1 as uint8;
   }

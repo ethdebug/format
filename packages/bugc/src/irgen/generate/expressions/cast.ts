@@ -7,6 +7,7 @@ import { Error as IrgenError } from "#irgen/errors";
 import { fromBugType } from "#irgen/type";
 
 import { Process } from "../process.js";
+import { emitCopyToMemory, isCalldata } from "../calldata.js";
 import type { Context } from "./context.js";
 
 /**
@@ -71,7 +72,17 @@ export const makeBuildCast = (
     }
 
     const targetIrType = fromBugType(targetType);
-    const value = yield* buildOperand(expr.expression, targetIrType);
+    let value = yield* buildOperand(expr.expression, targetIrType);
+
+    // A cast of bytes in calldata to a type in memory (`string`) copies
+    // them there
+    if (
+      Ir.Type.isRef(targetIrType) &&
+      targetIrType.location === "memory" &&
+      isCalldata(value)
+    ) {
+      value = yield* emitCopyToMemory(value, expr, targetType);
+    }
     const resultTemp = yield* Process.Variables.newTemp();
 
     yield* Process.Instructions.emit({

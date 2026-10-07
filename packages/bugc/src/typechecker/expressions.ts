@@ -453,8 +453,11 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
             );
             errors.push(error);
           }
-          // Slicing bytes returns dynamic bytes
-          resultType = Type.Elementary.bytes();
+          // Slicing bytes returns dynamic bytes, in calldata for a
+          // slice of calldata
+          resultType = Type.Elementary.Bytes.isCalldata(objectType)
+            ? Type.Elementary.calldataBytes()
+            : Type.Elementary.bytes();
         } else {
           const error = new TypeError(
             `Cannot slice ${Type.format(objectType)} - only bytes types can be sliced`,
@@ -1053,7 +1056,7 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           type = Type.Elementary.uint(256);
           break;
         case "expression:special:msg.data":
-          type = Type.Elementary.bytes();
+          type = Type.Elementary.calldataBytes();
           break;
         case "expression:special:block.timestamp":
           type = Type.Elementary.uint(256);

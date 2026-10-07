@@ -202,14 +202,27 @@ export namespace Type {
       export const format = (_type: Type.Elementary.Bool): string => `bool`;
     }
 
+    /**
+     * `bytesN` (with a `size`), or dynamic `bytes`. Dynamic bytes are
+     * in memory, or, with `location: "calldata"`, are a slice of the
+     * calldata (`msg.data` and its slices, and a `let` they
+     * initialize)
+     */
     export interface Bytes {
       kind: "bytes";
       size?: number;
+      location?: "calldata";
     }
 
     export const bytes = (size?: number): Type.Elementary.Bytes => ({
       kind: "bytes",
       size,
+    });
+
+    /** Dynamic bytes in calldata */
+    export const calldataBytes = (): Type.Elementary.Bytes => ({
+      kind: "bytes",
+      location: "calldata",
     });
 
     export namespace Bytes {
@@ -218,17 +231,22 @@ export namespace Type {
       ): type is Type.Elementary.Bytes & { size?: undefined } =>
         !("size" in type) || type.size === undefined;
 
+      export const isCalldata = (type: Type): boolean =>
+        Type.isElementary(type) &&
+        Type.Elementary.isBytes(type) &&
+        type.location === "calldata";
+
       export const equals = (
         a: Type.Elementary.Bytes,
         b: Type.Elementary.Bytes,
-      ): boolean => a.size == b.size;
+      ): boolean => a.size == b.size && a.location === b.location;
 
       export const format = (type: Type.Elementary.Bytes) =>
         `bytes${
           "size" in type && typeof type.size === "number"
             ? type.size.toString()
             : ""
-        }`;
+        }${type.location === "calldata" ? " calldata" : ""}`;
     }
 
     export interface String {
