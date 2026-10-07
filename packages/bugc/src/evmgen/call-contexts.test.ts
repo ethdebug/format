@@ -106,18 +106,18 @@ code {
     },
   );
 
-  it("should emit return context on continuation JUMPDEST", async () => {
+  it("should emit return context on the callee's exit JUMP", async () => {
     const program = await compileProgram(source);
 
-    const returnJumpdests = findInstructionsWithContext(
+    const returnJumps = findInstructionsWithContext(
       program,
-      "JUMPDEST",
+      "JUMP",
       Context.isReturn,
     );
 
-    expect(returnJumpdests.length).toBeGreaterThanOrEqual(1);
+    expect(returnJumps.length).toBeGreaterThanOrEqual(1);
 
-    const { return: ret } = returnJumpdests[0].context;
+    const { return: ret } = returnJumps[0].context;
 
     expect(ret.identifier).toBe("add");
 
@@ -132,6 +132,14 @@ code {
       location: "stack",
       slot: 0,
     });
+  });
+
+  it("should emit no return context on the continuation JUMPDEST", async () => {
+    const program = await compileProgram(source);
+
+    expect(
+      findInstructionsWithContext(program, "JUMPDEST", Context.isReturn),
+    ).toHaveLength(0);
   });
 
   it(
@@ -185,28 +193,26 @@ code {
     const program = await compileProgram(source);
 
     // The caller JUMP should come before the
-    // continuation JUMPDEST
+    // callee's exit JUMP
     const invokeJump = findInstructionsWithContext(
       program,
       "JUMP",
       Context.isInvoke,
     )[0];
 
-    const returnJumpdest = findInstructionsWithContext(
+    const returnJump = findInstructionsWithContext(
       program,
-      "JUMPDEST",
+      "JUMP",
       Context.isReturn,
     )[0];
 
     expect(invokeJump).toBeDefined();
-    expect(returnJumpdest).toBeDefined();
+    expect(returnJump).toBeDefined();
 
     // Invoke JUMP offset should be less than
-    // return JUMPDEST offset (caller comes first
+    // return JUMP offset (caller comes first
     // in bytecode)
-    expect(Number(invokeJump.offset)).toBeLessThan(
-      Number(returnJumpdest.offset),
-    );
+    expect(Number(invokeJump.offset)).toBeLessThan(Number(returnJump.offset));
   });
 
   describe("void function calls", () => {
@@ -238,15 +244,15 @@ code {
       async () => {
         const program = await compileProgram(voidSource);
 
-        const returnJumpdests = findInstructionsWithContext(
+        const returnJumps = findInstructionsWithContext(
           program,
-          "JUMPDEST",
+          "JUMP",
           Context.isReturn,
         );
 
-        expect(returnJumpdests.length).toBeGreaterThanOrEqual(1);
+        expect(returnJumps.length).toBeGreaterThanOrEqual(1);
 
-        const { return: ret } = returnJumpdests[0].context;
+        const { return: ret } = returnJumps[0].context;
         expect(ret.identifier).toBe("setVal");
         // Since setVal returns a value, data should
         // be present
@@ -310,15 +316,19 @@ code {
       expect(invokeIds).toContain("addThree");
       expect(invokeIds).toContain("add");
 
-      // Should have return contexts for all
-      // continuation points
-      const returnJumpdests = findInstructionsWithContext(
+      // Should have return contexts on both
+      // functions' exit JUMPs
+      const returnJumps = findInstructionsWithContext(
         program,
-        "JUMPDEST",
+        "JUMP",
         Context.isReturn,
       );
 
-      expect(returnJumpdests.length).toBeGreaterThanOrEqual(3);
+      const returnIds = returnJumps.map(
+        (instr) => instr.context.return.identifier,
+      );
+      expect(returnIds).toContain("addThree");
+      expect(returnIds).toContain("add");
     });
   });
 
