@@ -83,7 +83,7 @@ support. Changes to the specification itself are tracked in the root
   `keccak256("transfer(address,uint256)")[0:4]`, now gives those bytes as
   dynamic `bytes`. Before, at every optimization level, the compiler read
   the value as the memory address of dynamic `bytes`, so the slice
-  reverted with `Panic(0x32)` or held other memory ([#PR]).
+  reverted with `Panic(0x32)` or held other memory ([#357]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -295,3 +295,4 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#357]: https://github.com/ethdebug/format/pull/357
