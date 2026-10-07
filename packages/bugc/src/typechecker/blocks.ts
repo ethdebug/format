@@ -7,6 +7,7 @@ import { enterFunctionScope } from "./symbols.js";
 import { Error as TypeError, ErrorCode, ErrorMessages } from "./errors.js";
 import { resolveTypeWithBindings } from "./declarations.js";
 import { isAssignable } from "./assignable.js";
+import { alwaysReturns } from "./returns.js";
 
 /**
  * Type checker for block-level constructs:
@@ -122,6 +123,22 @@ export const blockChecker: Pick<
             currentNodeTypes = bodyResult.nodeTypes;
             currentBindings = bodyResult.bindings;
             allErrors.push(...bodyResult.errors);
+
+            // A function that returns a value must not run off its end
+            if (funcType.return && !alwaysReturns(decl.body)) {
+              allErrors.push(
+                new TypeError(
+                  ErrorMessages.MISSING_RETURN(
+                    decl.name,
+                    Type.format(funcType.return),
+                  ),
+                  decl.loc || undefined,
+                  undefined,
+                  undefined,
+                  ErrorCode.MISSING_RETURN,
+                ),
+              );
+            }
           }
         }
       }
