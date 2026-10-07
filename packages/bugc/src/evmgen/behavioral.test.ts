@@ -429,6 +429,59 @@ code {
       }
     }
 
+    // A function with no return type, called as a statement. `n` (7)
+    // keeps the calls from folding; `out` records the effects.
+    const voidCalls = {
+      "a void call": [`function bump() { out = out + n; };`, `bump();`, 7n],
+      "a void call with arguments and an early return": [
+        `function put(x: uint256, y: uint256) {
+    if (x > y) { out = x; return; }
+    out = y;
+  };`,
+        `put(n, 3); out = out * 10; put(1, out);`,
+        70n,
+      ],
+      "void calls in a loop": [
+        `function bump() { out = out + n; };`,
+        `for (let i = 0; i < 3; i = i + 1) { bump(); }`,
+        21n,
+      ],
+      "a void call from a void function": [
+        `function bump() { out = out + n; };
+  function twice() { bump(); bump(); };`,
+        `twice();`,
+        14n,
+      ],
+      "a local across a void call": [
+        `function bump() { out = out + n; };`,
+        `let y = n + 1; bump(); out = out + y;`,
+        15n,
+      ],
+    } as const;
+
+    for (const [name, [define, body, expected]] of Object.entries(voidCalls)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should make ${name} (level ${level})`, async () => {
+          const source = `name VoidCalls;
+define {
+  ${define}
+}
+storage { [0] n: uint256; [1] out: uint256; }
+create { n = 7; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+
     // Each parameter gets a distinct weight, so a misordered argument
     // changes the result. `n` (7) keeps the arguments from folding.
     for (const count of [6, 7, 8] as const) {

@@ -259,6 +259,38 @@ code {
         expect(ret.data).toBeDefined();
       },
     );
+
+    it(
+      "should emit invoke and data-free return contexts " +
+        "for a void function called as a statement",
+      async () => {
+        const program = await compileProgram(`name VoidStatement;
+define {
+  function bump() { count = count + 1; };
+}
+storage { [0] count: uint256; }
+create { count = 0; }
+code { bump(); }`);
+
+        const invokeJumps = findInstructionsWithContext(
+          program,
+          "JUMP",
+          Context.isInvoke,
+        );
+        expect(invokeJumps).toHaveLength(1);
+        expect(invokeJumps[0].context.invoke.identifier).toBe("bump");
+
+        const returnJumps = findInstructionsWithContext(
+          program,
+          "JUMP",
+          Context.isReturn,
+        );
+        expect(returnJumps).toHaveLength(1);
+        const { return: ret } = returnJumps[0].context;
+        expect(ret.identifier).toBe("bump");
+        expect(ret.data).toBeUndefined();
+      },
+    );
   });
 
   describe("nested function calls", () => {
