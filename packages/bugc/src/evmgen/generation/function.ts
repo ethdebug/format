@@ -12,6 +12,7 @@ import { type Layout, Memory } from "#evmgen/analysis";
 import type { Error as EvmgenError } from "#evmgen/errors";
 
 import * as Block from "./block.js";
+import { invokeArguments } from "./control-flow/index.js";
 import { serialize } from "../serialize.js";
 import { type Transition } from "../operations.js";
 
@@ -31,11 +32,6 @@ function generatePrologue<S extends Stack>(
     // Add JUMPDEST with function entry annotation.
     // After this JUMPDEST executes, the callee's args are
     // on the stack (first arg deepest).
-    const argPointers = params.map((p, i) => ({
-      ...(p.name ? { name: p.name } : {}),
-      location: "stack" as const,
-      slot: params.length - 1 - i,
-    }));
 
     // Build declaration source range if available
     const declaration =
@@ -58,13 +54,7 @@ function generatePrologue<S extends Stack>(
             length: 1,
           },
         },
-        ...(argPointers.length > 0 && {
-          arguments: {
-            pointer: {
-              group: argPointers,
-            },
-          },
-        }),
+        ...invokeArguments(params),
       },
     };
     const entryDebug = {

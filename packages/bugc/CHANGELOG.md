@@ -89,6 +89,12 @@ support. Changes to the specification itself are tracked in the root
   has the branch's context: its source range, its variables (the storage
   variables too) and its transforms. Before, it had no context, so a
   debugger listed no variables while it ran ([#356]).
+- The `invoke` context on a caller's `JUMP` into a function now has the
+  call's `arguments`, as the callee's entry `JUMPDEST` does: the `JUMP`
+  leaves them on the stack, and the `JUMPDEST` does not change it.
+  Before, only the `JUMPDEST`'s `invoke` had them, so a debugger that
+  opens the frame on the step after the `JUMP` showed it for one step
+  without its arguments ([#354]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -300,4 +306,5 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#354]: https://github.com/ethdebug/format/pull/354
 [#356]: https://github.com/ethdebug/format/pull/356
