@@ -127,7 +127,9 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
         }
         break;
       case "hash":
-        this.collectValueUse(inst.value, used);
+        for (const value of inst.values) {
+          this.collectValueUse(value, used);
+        }
         break;
       case "cast":
         this.collectValueUse(inst.value, used);

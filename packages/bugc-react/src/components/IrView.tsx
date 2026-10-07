@@ -160,7 +160,10 @@ function InstructionRenderer({
 
     case "hash":
       add(`${formatDest(instruction.dest)} = hash `);
-      addOperand("value", formatValue(instruction.value));
+      instruction.values.forEach((value, index) => {
+        if (index > 0) add(", ");
+        addOperand("value", formatValue(value));
+      });
       break;
 
     case "cast":

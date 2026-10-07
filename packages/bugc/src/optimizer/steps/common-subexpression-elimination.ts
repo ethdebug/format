@@ -236,6 +236,8 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         result.size = replaceValue(result.size);
         break;
       case "hash":
+        result.values = result.values.map(replaceValue);
+        break;
       case "cast":
         result.value = replaceValue(result.value);
         break;

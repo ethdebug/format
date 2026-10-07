@@ -27,10 +27,10 @@ export const makeBuildCall = (
       (expr.callee as Ast.Expression.Identifier).name === "keccak256"
     ) {
       // keccak256 built-in function
-      if (expr.arguments.length !== 1) {
+      if (expr.arguments.length === 0) {
         yield* Process.Errors.report(
           new IrgenError(
-            "keccak256 expects exactly 1 argument",
+            "keccak256 expects at least 1 argument",
             expr.loc ?? undefined,
             Severity.Error,
           ),
@@ -38,10 +38,11 @@ export const makeBuildCall = (
         return Ir.Value.constant(0n, Ir.Type.Scalar.bytes32);
       }
 
-      // Evaluate the argument
-      const argValue = yield* buildExpression(expr.arguments[0], {
-        kind: "rvalue",
-      });
+      // Evaluate the arguments, in order
+      const values: Ir.Value[] = [];
+      for (const argument of expr.arguments) {
+        values.push(yield* buildExpression(argument, { kind: "rvalue" }));
+      }
 
       // Generate hash instruction
       const resultType: Ir.Type = Ir.Type.Scalar.bytes32;
@@ -49,7 +50,7 @@ export const makeBuildCall = (
 
       yield* Process.Instructions.emit({
         kind: "hash",
-        value: argValue,
+        values,
         dest: resultTemp,
         operationDebug: yield* Process.Debug.forAstNode(expr),
       } as Ir.Instruction);

@@ -294,7 +294,6 @@ export function extractSubInstructionContexts(
       }
       break;
 
-    case "hash":
     case "cast":
       if (instruction.valueDebug?.context) {
         contexts.push(instruction.valueDebug.context);
@@ -364,6 +363,8 @@ export function extractSubInstructionContexts(
       addValueDebug(instruction.size);
       break;
     case "hash":
+      instruction.values.forEach(addValueDebug);
+      break;
     case "cast":
       addValueDebug(instruction.value);
       break;

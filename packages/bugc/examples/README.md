@@ -143,3 +143,28 @@ account.isActive = true;
 accounts[user].balance = accounts[user].balance + 100;
 accounts[user].isActive = true;
 ```
+
+## Hashing
+
+`keccak256` has two forms. The compiler tells them apart by the type of
+the argument:
+
+- **One dynamic `bytes` or `string`** hashes its data:
+  `keccak256("transfer(address,uint256)")`.
+- **One or more value types** (integers, `address`, `bool`, `bytesN`)
+  hashes their 32-byte words, concatenated in order. This equals
+  Solidity's `keccak256(abi.encode(a, b, ...))` for integers, `address`
+  and `bool`:
+
+```bug
+// a toy roll: 2 in 3 is a hit
+let hit = (keccak256(block.number, msg.sender) as uint256) % 3 != 0;
+```
+
+A `bytes` or `string` argument must be the only one.
+
+A `bytesN` narrower than 32 bytes hashes its full word, with its bytes
+at the low-order (right) end, as BUG holds it. Solidity's `abi.encode`
+puts a `bytesN` value's bytes at the high-order (left) end, so for
+`bytes4` and the like the hashes differ from Solidity's. Cast to
+`bytes32` first (which puts the bytes at the left end) to match it.

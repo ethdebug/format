@@ -248,9 +248,13 @@ function simulateInstruction(stack: string[], inst: Ir.Instruction): string[] {
   // Pop consumed values based on instruction type
   switch (inst.kind) {
     case "binary":
-    case "hash":
       newStack.pop(); // Two operands
       newStack.pop();
+      break;
+    case "hash":
+      for (const _ of inst.values) {
+        newStack.pop();
+      }
       break;
     case "compute_slot":
       // Depends on kind
@@ -355,7 +359,7 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
       addValue(inst.object);
       break;
     case "hash":
-      addValue(inst.value);
+      inst.values.forEach(addValue);
       break;
     case "assert":
       addValue(inst.condition);

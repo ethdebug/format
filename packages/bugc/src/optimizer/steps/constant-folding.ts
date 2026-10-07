@@ -1,4 +1,5 @@
 import { keccak256 } from "ethereum-cryptography/keccak";
+import { concatBytes, hexToBytes } from "ethereum-cryptography/utils";
 
 import * as Ir from "#ir";
 
@@ -304,23 +305,44 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
     constants: Map<string, bigint | boolean | string>,
   ): boolean {
     if (inst.kind !== "hash") return false;
+    return this.hashInput(inst, constants) !== undefined;
+  }
 
-    const inputValue = this.getConstantValue(inst.value, constants);
-    // We can only fold if the input is a constant string
-    return typeof inputValue === "string";
+  /**
+   * The bytes a hash of constants hashes: a single string's bytes, or
+   * the 32-byte words of its values, as code generation hashes them
+   */
+  private hashInput(
+    inst: Ir.Instruction.Hash,
+    constants: Map<string, bigint | boolean | string>,
+  ): Uint8Array | undefined {
+    const values = inst.values.map((value) =>
+      this.getConstantValue(value, constants),
+    );
+
+    if (values.length === 1 && typeof values[0] === "string") {
+      return new TextEncoder().encode(values[0]);
+    }
+
+    const words: Uint8Array[] = [];
+    for (const value of values) {
+      if (typeof value !== "bigint" && typeof value !== "boolean") {
+        return undefined;
+      }
+      const word = Ir.Utils.toWord(
+        typeof value === "boolean" ? (value ? 1n : 0n) : value,
+      );
+      words.push(hexToBytes(word.toString(16).padStart(64, "0")));
+    }
+    return concatBytes(...words);
   }
 
   private foldHash(
     inst: Ir.Instruction & { kind: "hash" },
     constants: Map<string, bigint | boolean | string>,
   ): Ir.Instruction | null {
-    const inputValue = this.getConstantValue(inst.value, constants);
-
-    if (typeof inputValue !== "string") return null;
-
-    // Convert string to bytes
-    const encoder = new TextEncoder();
-    const inputBytes = encoder.encode(inputValue);
+    const inputBytes = this.hashInput(inst, constants);
+    if (!inputBytes) return null;
 
     // Compute keccak256 hash
     const hashBytes = keccak256(inputBytes);

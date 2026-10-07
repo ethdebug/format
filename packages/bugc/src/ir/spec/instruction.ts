@@ -389,10 +389,14 @@ export namespace Instruction {
     dest: string;
   }
 
+  /**
+   * keccak256 of the 32-byte words of `values`, in order. A single
+   * memory reference (dynamic `bytes` or a `string`) instead hashes
+   * the data it refers to.
+   */
   export interface Hash extends Instruction.Base {
     kind: "hash";
-    value: Value;
-    valueDebug?: Instruction.Debug;
+    values: Value[];
     dest: string;
   }
 

@@ -640,4 +640,49 @@ describe("checkProgram", () => {
       expect(Result.hasMessages(result)).toBe(false);
     });
   });
+  describe("keccak256", () => {
+    const program = (expression: string) => `
+      name Test;
+      storage { [0] h: bytes32; }
+      code {
+        let n: uint256 = 1;
+        let s = "x";
+        h = ${expression};
+      }
+    `;
+
+    const accepted = {
+      "one string": `keccak256("x")`,
+      "one dynamic bytes": `keccak256(msg.data)`,
+      "one value type": `keccak256(n)`,
+      "several value types": `keccak256(n, msg.sender, true, h, 0x01)`,
+    };
+    for (const [name, expression] of Object.entries(accepted)) {
+      it(`should accept ${name}`, () => {
+        const result = check(program(expression));
+        expect(result.success).toBe(true);
+      });
+    }
+
+    const rejected = {
+      "no arguments": [`keccak256()`, "keccak256 expects at least 1 argument"],
+      "a string among several arguments": [
+        `keccak256(n, s)`,
+        "keccak256 of several arguments takes only value types; " +
+          "bytes or string must be its only argument",
+      ],
+      "dynamic bytes among several arguments": [
+        `keccak256(msg.data, n)`,
+        "keccak256 of several arguments takes only value types; " +
+          "bytes or string must be its only argument",
+      ],
+    };
+    for (const [name, [expression, message]] of Object.entries(rejected)) {
+      it(`should reject ${name}`, () => {
+        const result = check(program(expression));
+        expect(result.success).toBe(false);
+        expect(result).toHaveMessage({ severity: Severity.Error, message });
+      });
+    }
+  });
 });

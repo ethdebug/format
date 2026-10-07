@@ -11,6 +11,14 @@ support. Changes to the specification itself are tracked in the root
 
 - `block.prevrandao`, the previous block's RANDAO value (EIP-4399), as a
   `uint256`. It compiles to the EVM's `PREVRANDAO` (`0x44`) ([#363]).
+- `keccak256` over value types: `keccak256(a, b, ...)` hashes the 32-byte
+  words of one or more integers, `address`, `bool` or `bytesN` values, in
+  order. For integers, `address` and `bool` this equals Solidity's
+  `keccak256(abi.encode(a, b, ...))`. A `bytesN` narrower than 32 bytes
+  hashes its word with its bytes at the right end, unlike `abi.encode`;
+  cast it to `bytes32` to match Solidity. A single dynamic `bytes` or
+  `string` argument still hashes its data, and must be the only argument.
+  The optimizer folds a hash of constant words at levels 1 to 3 ([#PR]).
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
   `x / 0` is ([#321]).
@@ -30,6 +38,8 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- The IR `hash` instruction now has `values`, a list, in place of
+  `value` and `valueDebug` ([#PR]).
 - An integer literal operand of an arithmetic or comparison operator now
   takes the type of the other operand when its value fits, so with
   `x: int8`, `x < 0`, `x == 1` and `-1 < x` compare as `int8`. A literal
