@@ -132,6 +132,16 @@ support. Changes to the specification itself are tracked in the root
 
 - `a.length` on a dynamic array in storage now reads the length in the
   array's slot. Before, it did not read that slot ([#366]).
+- The pointer for a storage `string` or `bytes` value, as a variable, a
+  struct member or an array element, now reads its data, in the shape of
+  solc's `t_string_storage` template. A one-byte `length-flag` region (the
+  slot's low byte) chooses the form: when it is even, a `data` region in
+  the slot, of length `length-flag / 2`; else a `long-length` region (the
+  slot) and a `data` region from keccak256(slot), of length
+  `(long-length - 1) / 2`. A member's regions have names qualified by its
+  name, such as `name-data`. Before, the pointer gave only the slot, so a
+  debugger had to know Solidity's encoding to read the value
+  ([#369]).
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that
@@ -423,3 +433,4 @@ First publication.
 [#365]: https://github.com/ethdebug/format/pull/365
 [#366]: https://github.com/ethdebug/format/pull/366
 [#367]: https://github.com/ethdebug/format/pull/367
+[#369]: https://github.com/ethdebug/format/pull/369
