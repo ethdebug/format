@@ -81,19 +81,13 @@ export const makeBuildCall = (
         argValues.push(yield* buildExpression(arg, { kind: "rvalue" }));
       }
 
-      // Generate call terminator and split block
-      const irType = fromBugType(callType);
-      let dest: string | undefined;
-
-      // Only create a destination if the function returns a value
-      // Check if it's a void function by checking if the type is a failure with "void function" message
+      // A void function's call has the type checker's "void
+      // function" failure as its type, which has no IR type: only a
+      // call with a result gets a destination
       const isVoidFunction =
-        Type.isFailure(callType) &&
-        (callType as Type.Failure).reason === "void function";
-
-      if (!isVoidFunction) {
-        dest = yield* Process.Variables.newTemp();
-      }
+        Type.isFailure(callType) && callType.reason === "void function";
+      const irType = isVoidFunction ? undefined : fromBugType(callType);
+      const dest = irType ? yield* Process.Variables.newTemp() : undefined;
 
       // Create a continuation block for after the call
       const continuationBlockId = yield* Process.Blocks.create("call_cont");
@@ -112,7 +106,7 @@ export const makeBuildCall = (
       yield* Process.Blocks.switchTo(continuationBlockId);
 
       // Return the result value or a dummy value for void functions
-      if (dest) {
+      if (dest && irType) {
         return Ir.Value.temp(dest, irType);
       }
       // Void function - return a dummy value

@@ -754,6 +754,28 @@ code {
     },
   },
   {
+    name: "a void call",
+    source: `name VoidCall;
+define {
+  function put(a: uint256) {
+    let b = a * 3;
+    r = b;
+  };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 5; }
+code {
+  let m = s + 1;
+  put(m);
+  s = m + r;
+}`,
+    locals: {
+      a: { values: [6n] },
+      b: { values: [18n] },
+      m: { values: [6n] },
+    },
+  },
+  {
     name: "one-armed if in a function",
     source: `name PickFn;
 define {

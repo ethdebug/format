@@ -76,6 +76,19 @@ code { r = count(0, 5); }`,
     // At O0: succ's five returns, then count's six, unwinding
     returns: [1n, 2n, 3n, 4n, 5n, 5n, 5n, 5n, 5n, 5n, 5n],
   },
+  {
+    name: "void calls",
+    source: `name Void;
+define {
+  function bump() { r = r + 1; };
+  function twice() { bump(); bump(); };
+}
+storage { [0] r: uint256; }
+create { r = 0; }
+code { twice(); }`,
+    // A void exit has no data to read
+    returns: [undefined, undefined, undefined],
+  },
 ];
 
 /** A context's invoke and return leaves, outside inlined bodies */
@@ -123,7 +136,7 @@ describe("call frame timing", () => {
         // JUMP and the callee's JUMPDEST both carry the invoke, on
         // consecutive steps: count it once.
         const frames: { name: string; step: number }[] = [];
-        const read: bigint[] = [];
+        const read: (bigint | undefined)[] = [];
         let calls = 0;
         for (let i = 0; i < steps.length; i++) {
           if (i > 0) {
@@ -143,6 +156,8 @@ describe("call frame timing", () => {
                 const cursor = await dereference(ret.data.pointer, { state });
                 const view = await cursor.view(state);
                 read.push((await view.read(view.regions[0])).asUint());
+              } else {
+                read.push(undefined);
               }
             } else if (invoke !== undefined) {
               const top = frames[frames.length - 1];
