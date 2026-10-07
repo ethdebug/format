@@ -114,6 +114,12 @@ support. Changes to the specification itself are tracked in the root
   dynamic `bytes`. Before, at every optimization level, the compiler read
   the value as the memory address of dynamic `bytes`, so the slice
   reverted with `Panic(0x32)` or held other memory ([#357]).
+- `keccak256` of dynamic `bytes` or a `string` now hashes its data, and
+  `keccak256(msg.data)` hashes the calldata. Before, code generation
+  hashed the word that refers to the data (its memory address, or 0 for
+  `msg.data`). So at optimization level 0, `keccak256("transfer()")` was
+  wrong, while levels 1 to 3 folded it to the right constant; at every
+  level, the hash of a slice or of `msg.data` was wrong ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert

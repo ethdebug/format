@@ -1579,6 +1579,126 @@ code {
     }
   });
 
+  describe("hashes of dynamic bytes", () => {
+    const hashOf = (data: string | Uint8Array) =>
+      BigInt(
+        "0x" +
+          bytesToHex(
+            keccak256(
+              typeof data === "string" ? new TextEncoder().encode(data) : data,
+            ),
+          ),
+      );
+
+    const long = "season 2 starts friday, see you on the leaderboard";
+    const calldata = "0xaabbccdd" + "11".repeat(32);
+
+    const hashes: Record<string, [string, bigint]> = {
+      "a string literal": [
+        `out = keccak256("setMotd(string)") as uint256;`,
+        hashOf("setMotd(string)"),
+      ],
+      "a selector": [
+        `out = keccak256("setMotd(string)") as bytes4 as uint256;`,
+        0x5fe59b9dn,
+      ],
+      "an empty string": [`out = keccak256("") as uint256;`, hashOf("")],
+      "a string longer than a word": [
+        `out = keccak256("${long}") as uint256;`,
+        hashOf(long),
+      ],
+      "a string local": [
+        `let s = "setMotd(string)";
+  out = keccak256(s) as uint256;`,
+        hashOf("setMotd(string)"),
+      ],
+      "a calldata slice": [
+        `out = keccak256(msg.data[0:4]) as uint256;`,
+        hashOf(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
+      ],
+      "msg.data": [
+        `out = keccak256(msg.data) as uint256;`,
+        hashOf(new Uint8Array(Buffer.from(calldata.slice(2), "hex"))),
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name Hash;
+storage { [0] n: uint256; [1] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+  });
+
+  describe("keccak256 of one data value or of words", () => {
+    // one word hashes its 32 bytes, one string or msg.data hashes its
+    // data, and several values hash their words in order
+    const hashOf = (bytes: Uint8Array) =>
+      BigInt("0x" + bytesToHex(keccak256(bytes)));
+    const words = (...values: bigint[]) =>
+      Uint8Array.from(
+        Buffer.from(
+          values.map((value) => value.toString(16).padStart(64, "0")).join(""),
+          "hex",
+        ),
+      );
+    const calldata = "0xaabbccdd" + "11".repeat(32);
+
+    const hashes: Record<string, [string, bigint]> = {
+      "a uint256 by its word": [
+        `let x: uint256 = 7;
+  out = keccak256(x) as uint256;`,
+        hashOf(words(7n)),
+      ],
+      "a string by its data": [
+        `let s = "abc";
+  out = keccak256(s) as uint256;`,
+        hashOf(new TextEncoder().encode("abc")),
+      ],
+      "msg.data by the calldata bytes": [
+        `out = keccak256(msg.data) as uint256;`,
+        hashOf(Uint8Array.from(Buffer.from(calldata.slice(2), "hex"))),
+      ],
+      "two uint256 values by their words": [
+        `let a: uint256 = 7;
+  let b: uint256 = 9;
+  out = keccak256(a, b) as uint256;`,
+        hashOf(words(7n, 9n)),
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name HashDispatch;
+storage { [0] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        });
+      }
+    }
+  });
+
   describe("modulo", () => {
     const program = (expr: string) => `name Modulo;
 
