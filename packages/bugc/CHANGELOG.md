@@ -120,6 +120,12 @@ support. Changes to the specification itself are tracked in the root
   `msg.data`). So at optimization level 0, `keccak256("transfer()")` was
   wrong, while levels 1 to 3 folded it to the right constant; at every
   level, the hash of a slice or of `msg.data` was wrong ([#360]).
+- The `invoke` context on a caller's `JUMP` into a function now has the
+  call's `arguments`, as the callee's entry `JUMPDEST` does: the `JUMP`
+  leaves them on the stack, and the `JUMPDEST` does not change it.
+  Before, only the `JUMPDEST`'s `invoke` had them, so a debugger that
+  opens the frame on the step after the `JUMP` showed it for one step
+  without its arguments ([#354]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -332,6 +338,7 @@ First publication.
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
 [#353]: https://github.com/ethdebug/format/pull/353
+[#354]: https://github.com/ethdebug/format/pull/354
 [#356]: https://github.com/ethdebug/format/pull/356
 [#357]: https://github.com/ethdebug/format/pull/357
 [#360]: https://github.com/ethdebug/format/pull/360

@@ -306,10 +306,10 @@ export function generateCallTerminator<S extends Stack>(
       currentState = loadValue(arg, { debug })(currentState);
     }
 
-    // Push function address and jump.
-    // The JUMP gets a simplified invoke context with
-    // identity and code target only; the full invoke
-    // with arg pointers lives on the callee JUMPDEST.
+    // Push function address and jump. The JUMP's invoke opens the
+    // callee's frame, so it carries the argument pointers, as the
+    // callee's entry JUMPDEST does: the JUMP leaves the arguments on
+    // the stack, and the JUMPDEST does not change it.
     const funcAddrPatchIndex = currentState.instructions.length;
 
     // Build declaration source range if available
@@ -333,6 +333,7 @@ export function generateCallTerminator<S extends Stack>(
             length: 1,
           },
         },
+        ...invokeArguments(targetFunc?.parameters ?? []),
       },
     };
     // Compose the call-site source range (from the call op's debug)
@@ -535,6 +536,27 @@ function withReturn(
   return {
     ...teardown,
     context: { ...teardown.context, ...ret } as Format.Program.Context,
+  };
+}
+
+/**
+ * The `arguments` of an internal call's `invoke`, as they are once the
+ * call's JUMP has run: on the stack, the first argument deepest.
+ */
+export function invokeArguments(
+  parameters: Ir.Function.Parameter[],
+): Pick<Format.Program.Context.Invoke.Invocation.InternalCall, "arguments"> {
+  if (parameters.length === 0) return {};
+  return {
+    arguments: {
+      pointer: {
+        group: parameters.map((parameter, i) => ({
+          ...(parameter.name ? { name: parameter.name } : {}),
+          location: "stack" as const,
+          slot: parameters.length - 1 - i,
+        })),
+      },
+    },
   };
 }
 
