@@ -983,6 +983,32 @@ code {
     },
   },
   {
+    // Storing a string copies its bytes in a loop, which holds
+    // words of its own on the stack
+    name: "strings stored to storage",
+    source: `name StringStore;
+storage { [0] r: uint256; [1] s: string; [2] t: string; }
+create { r = 1; }
+code {
+  let n = r;
+  let short = "hello";
+  let long = "hello world, this is longer than thirty-two bytes";
+  s = short;
+  t = long;
+  if (n > 0) { r = n + short.length + long.length; }
+}`,
+    locals: {
+      n: { values: [1n] },
+      short: { shape: { kind: "bytes" }, values: [textBytes("hello")] },
+      long: {
+        shape: { kind: "bytes" },
+        values: [
+          textBytes("hello world, this is longer than thirty-two bytes"),
+        ],
+      },
+    },
+  },
+  {
     name: "bytes literal",
     source: `name BytesLit;
 storage { [0] r: uint256; [1] s: uint256; }

@@ -89,6 +89,12 @@ support. Changes to the specification itself are tracked in the root
   has the branch's context: its source range, its variables (the storage
   variables too) and its transforms. Before, it had no context, so a
   debugger listed no variables while it ran ([#356]).
+- Assigning a memory `string` or `bytes` to storage, as in `s = m;`, now
+  stores its bytes as Solidity does: up to 31 bytes in the slot, with
+  twice the length in the low byte; else twice the length plus one in the
+  slot, and the data from `keccak256(slot)`. A slice's bytes past its
+  length are stored as zero. Before, the slot held the value's memory
+  address ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
