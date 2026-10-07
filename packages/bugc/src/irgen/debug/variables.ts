@@ -41,9 +41,7 @@ function getTypeSize(bugType: Type): number {
       case "bool":
         return 1;
       case "bytes":
-        return bugType.size || 32; // Dynamic bytes default to full slot
-      case "string":
-        return 32; // Dynamic string default to full slot
+        return bugType.size || 32;
       default:
         return 32;
     }
@@ -69,7 +67,7 @@ function plus(
  * Instead, every region name inside it is qualified by the member's path:
  * `prefix` is that path (e.g. "ceo-" for the members of field `ceo`).
  */
-function generateStoragePointer(
+export function generateStoragePointer(
   baseSlot: Format.Pointer.Expression,
   bugType: Type,
   byteOffset: number = 0,
@@ -196,6 +194,14 @@ function generateStoragePointer(
     return pointer;
   }
 
+  if (
+    Type.Elementary.isString(bugType) ||
+    (Type.Elementary.isBytes(bugType) &&
+      Type.Elementary.Bytes.isDynamic(bugType))
+  ) {
+    return generateStorageBytesPointer(baseSlot, prefix);
+  }
+
   // For elementary types, generate pointer with offset and length
   const size = getTypeSize(bugType);
   const pointer: Format.Pointer = {
@@ -215,6 +221,60 @@ function generateStoragePointer(
   }
 
   return pointer;
+}
+
+/**
+ * A pointer for a storage string or dynamic `bytes`, by Solidity's
+ * encoding, in the shape solc gives its `t_string_storage` template.
+ * The slot's low byte is even for a short value (up to 31 bytes): the
+ * slot holds the data, left-aligned, and length * 2 in that byte. Else
+ * the slot holds length * 2 + 1, and the data starts at
+ * keccak256(slot), in one region across as many slots as it needs.
+ */
+function generateStorageBytesPointer(
+  slot: Format.Pointer.Expression,
+  prefix: string,
+): Format.Pointer {
+  const flag = `${prefix}length-flag`;
+  const longLength = `${prefix}long-length`;
+  const data = `${prefix}data`;
+  return {
+    group: [
+      {
+        name: flag,
+        location: "storage",
+        slot,
+        offset: { $difference: ["$wordsize", 1] },
+        length: 1,
+      },
+      {
+        if: { $remainder: [{ $sum: [{ $read: flag }, 1] }, 2] },
+        then: {
+          define: { length: { $quotient: [{ $read: flag }, 2] } },
+          in: { name: data, location: "storage", slot, length: "length" },
+        },
+        else: {
+          group: [
+            { name: longLength, location: "storage", slot },
+            {
+              define: {
+                length: {
+                  $quotient: [{ $difference: [{ $read: longLength }, 1] }, 2],
+                },
+                start: { $keccak256: [{ $wordsized: slot }] },
+              },
+              in: {
+                name: data,
+                location: "storage",
+                slot: "start",
+                length: "length",
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
 }
 
 /**
