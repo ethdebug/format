@@ -65,9 +65,9 @@ export function generate<S extends Stack>(
 
       // Set JUMPDEST for non-first blocks
       if (!isFirstBlock) {
-        // Check if this is a call continuation
-        let isContinuation = false;
-        let calledFunction = "";
+        // A call's continuation resumes at the call expression, so its
+        // JUMPDEST carries the call site's source range. The callee's
+        // exit JUMP already carries the `return`.
         let callSiteCode: Format.Program.Context.Code["code"] | undefined;
         if (func && predecessor) {
           const predBlock = func.blocks.get(predecessor);
@@ -75,11 +75,6 @@ export function generate<S extends Stack>(
             predBlock?.terminator.kind === "call" &&
             predBlock.terminator.continuation === block.id
           ) {
-            isContinuation = true;
-            calledFunction = predBlock.terminator.function;
-            // The continuation resumes at the call expression, so
-            // carry the call site's source range onto the return
-            // context (disjoint keys — flat composition).
             const ctx = predBlock.terminator.operationDebug?.context as
               | Record<string, unknown>
               | undefined;
@@ -89,39 +84,13 @@ export function generate<S extends Stack>(
           }
         }
 
-        // Add JUMPDEST with continuation annotation if applicable
-        if (isContinuation) {
-          // Return context describes state after JUMPDEST
-          // executes: TOS is the return value (if any).
-          // data pointer is required by the schema; for
-          // void returns, slot 0 is still valid (empty).
-          const calledFunc = functions?.get(calledFunction);
-          const declaration =
-            calledFunc?.loc && calledFunc?.sourceId
-              ? {
-                  source: { id: calledFunc.sourceId },
-                  range: calledFunc.loc,
-                }
-              : undefined;
-          const returnCtx: Format.Program.Context.Return = {
-            return: {
-              identifier: calledFunction,
-              ...(declaration ? { declaration } : {}),
-              data: {
-                pointer: {
-                  location: "stack" as const,
-                  slot: 0,
-                },
-              },
-            },
-          };
+        if (callSiteCode) {
           const entry = block.entryDebug;
           const continuationDebug = {
             ...entry,
             context: {
               ...entry?.context,
-              ...returnCtx,
-              ...(callSiteCode ? { code: callSiteCode } : {}),
+              code: callSiteCode,
             } as Format.Program.Context,
           };
           result = result.then(JUMPDEST({ debug: continuationDebug }));
@@ -260,7 +229,7 @@ export function generate<S extends Stack>(
       const terminate =
         term.kind === "call"
           ? generateCallTerminator(term, functions)
-          : generateTerminator(term, isLastBlock, isUserFunction);
+          : generateTerminator(term, isLastBlock, isUserFunction, func);
       // A terminator carries an inlined function's invoke or return
       // only when its block has no instruction to carry it (an
       // inlined function that starts with a call, or returns a call's

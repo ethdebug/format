@@ -62,6 +62,13 @@ support. Changes to the specification itself are tracked in the root
 - An array or bytes index and a slice bound must now be an unsigned
   integer, as in Solidity; cast a signed one, as in `a[i as uint256]`.
   Before, a signed index compiled ([#344]).
+- A function's `return` context is now on its exit: the `JUMP` back to
+  the caller, as the format's documentation describes. Its `data`
+  pointer (stack slot 0) is there when the function returns a value. The
+  caller's continuation `JUMPDEST` keeps only the call site's `code`
+  range. Before, the `return` was on that `JUMPDEST`, one instruction
+  later, so a debugger showed the function's frame for two steps after
+  control was back in the caller ([#349]).
 
 ### Fixed
 
@@ -269,3 +276,4 @@ First publication.
 [#344]: https://github.com/ethdebug/format/pull/344
 [#345]: https://github.com/ethdebug/format/pull/345
 [#347]: https://github.com/ethdebug/format/pull/347
+[#349]: https://github.com/ethdebug/format/pull/349

@@ -58,6 +58,7 @@ export function generateTerminator<S extends Stack>(
   term: Ir.Block.Terminator,
   isLastBlock: boolean = false,
   isUserFunction: boolean = false,
+  func?: Ir.Function,
 ): Transition<S, Stack> {
   const { PUSHn, MSTORE, RETURN, STOP } = operations;
 
@@ -73,7 +74,7 @@ export function generateTerminator<S extends Stack>(
         // generateCallTerminator — returns
         // Transition<S, Stack> to erase output type.
         const debug = term.operationDebug;
-        return generateReturnEpilogue(term.value, debug);
+        return generateReturnEpilogue(term.value, debug, func);
       }
 
       // Contract return (main function or create)
@@ -395,11 +396,15 @@ export function generateCallTerminator<S extends Stack>(
  *
  * Loads the return value (if any), cleans stale stack
  * values from predecessor blocks, then loads the saved
- * return PC and jumps back to the caller.
+ * return PC and jumps back to the caller. That JUMP is the
+ * function's exit: it carries the `return` context, since
+ * after it runs the frame is gone and the return value (if
+ * any) is at stack slot 0.
  */
 function generateReturnEpilogue<S extends Stack>(
   value: Ir.Value | undefined,
   debug: Ir.Block.Debug,
+  func?: Ir.Function,
 ): Transition<S, Stack> {
   return ((state: State<S>): State<Stack> => {
     let s: State<Stack> = state as State<Stack>;
@@ -494,13 +499,43 @@ function generateReturnEpilogue<S extends Stack>(
         { mnemonic: "MSTORE", opcode: 0x52, debug: teardown },
         // Stack: [return_pc, ...]
 
-        // JUMP
-        { mnemonic: "JUMP", opcode: 0x56, debug: teardown },
+        // JUMP (the exit)
+        {
+          mnemonic: "JUMP",
+          opcode: 0x56,
+          debug: withReturn(teardown, value, func),
+        },
       ],
     };
 
     return s;
   }) as Transition<S, Stack>;
+}
+
+/** The exit JUMP's debug: the teardown's, plus the `return`. */
+function withReturn(
+  teardown: Ir.Block.Debug,
+  value: Ir.Value | undefined,
+  func: Ir.Function | undefined,
+): Ir.Block.Debug {
+  if (!func) return teardown;
+  const declaration =
+    func.loc && func.sourceId
+      ? { source: { id: func.sourceId }, range: func.loc }
+      : undefined;
+  const ret: Format.Program.Context.Return = {
+    return: {
+      identifier: func.name || "anonymous",
+      ...(declaration ? { declaration } : {}),
+      ...(value
+        ? { data: { pointer: { location: "stack" as const, slot: 0 } } }
+        : {}),
+    },
+  };
+  return {
+    ...teardown,
+    context: { ...teardown.context, ...ret } as Format.Program.Context,
+  };
 }
 
 /**
@@ -548,8 +583,8 @@ function buildTailCallJumpOptions(tailCall: Ir.Block.TailCall): {
   // The call site's own source range, composed flat alongside the
   // invoke/return (disjoint keys). This maps the back-edge JUMP back
   // to the recursive call expression, matching the `{invoke, code}` a
-  // real caller JUMP carries and the `{return, code}` on the
-  // continuation JUMPDEST for a non-TCO call.
+  // real caller JUMP carries and the `code` on the continuation
+  // JUMPDEST for a non-TCO call.
   const callSiteCode =
     tailCall.callSiteLoc && tailCall.callSiteSourceId
       ? {

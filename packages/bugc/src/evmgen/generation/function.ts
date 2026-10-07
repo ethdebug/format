@@ -346,7 +346,7 @@ export function generate(
       // instead of inheriting the previous block's exit. A call
       // continuation begins with the return value on top; any other
       // block begins empty. The `predecessor` we pass through is the
-      // calling block for a continuation (so its return context and
+      // calling block for a continuation (so its call-site range and
       // return-value spill resolve), and undefined otherwise.
       const callerBlockId = callerOfContinuation.get(blockId);
       let predecessor: string | undefined = undefined;

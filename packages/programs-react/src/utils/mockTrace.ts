@@ -470,7 +470,10 @@ export interface CallFrame {
  * on the step AFTER its invoke instruction — the same step on
  * which the call-info banner first names the invoke — and a
  * frame's `stepIndex` is the step whose observed state its
- * argument pointers describe.
+ * argument pointers describe. Likewise a frame closes on the
+ * step AFTER its return (or revert) instruction: when a callee's
+ * exit JUMP carries the return, the frame is shown through that
+ * JUMP and gone at the first step back in the caller.
  */
 export function buildCallStack(
   trace: TraceStep[],
@@ -538,10 +541,10 @@ export function buildCallStack(
 
     // A context may carry more than one event (invoke + return),
     // e.g. an inlined body that emits to a single instruction.
-    // Process them in order: an invoke opens a frame INCLUSIVE of
-    // its step; a return closes it AFTER its step (close-after) —
-    // so the frame is still shown on the step whose banner names
-    // the return and popped only on advance.
+    // Process them in order: an invoke opens a frame and a return
+    // closes it, both as of this step (the step after the
+    // instruction that carries them). An instruction that carries
+    // both, such as a single-op inlined body, so shows no frame.
     const events = context ? extractCallEventsFromContext(context) : [];
     for (const event of events) {
       if (event.kind === "invoke") {
@@ -579,9 +582,7 @@ export function buildCallStack(
           });
         }
       } else if (event.kind === "return" || event.kind === "revert") {
-        // close-after: defer the pop until we advance past this
-        // step, so the frame is visible AT its return instruction.
-        if (i < upToStep && stack.length > 0) {
+        if (stack.length > 0) {
           stack.pop();
         }
       }

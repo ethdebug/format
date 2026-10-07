@@ -7,6 +7,16 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- `buildCallStack` now pops a frame on the step that observes its
+  `return` (or `revert`) context's postcondition: the step after the
+  instruction that carries it. Before, it popped the frame one step
+  later. With a `return` on the callee's exit `JUMP`, the frame is gone
+  at the first step back in the caller. An instruction that carries
+  both an `invoke` and a `return`, such as a one-instruction inlined
+  body, now shows no frame at any step ([#349]).
+
 ### Fixed
 
 - `extractVariablesFromInstruction` now reads every `variables` list in a
@@ -53,3 +63,4 @@ First publication.
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
 [#342]: https://github.com/ethdebug/format/pull/342
+[#349]: https://github.com/ethdebug/format/pull/349

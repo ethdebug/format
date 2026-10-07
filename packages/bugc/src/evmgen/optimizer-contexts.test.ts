@@ -59,12 +59,15 @@ interface CallSiteCounts {
   invokeJump: Record<string, number>;
   /** Callee entry JUMPDEST with invoke context. */
   invokeJumpdest: Record<string, number>;
-  /** Continuation JUMPDEST with return context. */
+  /** JUMPDEST with return context (expected: none). */
   returnJumpdest: Record<string, number>;
+  /** Callee exit JUMP with return context (and no invoke). */
+  returnExit: Record<string, number>;
   /**
-   * JUMP carrying a return context (TCO back-edge, where
-   * the previous iteration's return is paired with the new
-   * iteration's invoke on a single flat context).
+   * JUMP carrying a return context together with an invoke
+   * (TCO back-edge, where the previous iteration's return is
+   * paired with the new iteration's invoke on a single flat
+   * context).
    */
   returnJump: Record<string, number>;
 }
@@ -95,6 +98,7 @@ function countCallSites(program: Format.Program): CallSiteCounts {
     invokeJump: {},
     invokeJumpdest: {},
     returnJumpdest: {},
+    returnExit: {},
     returnJump: {},
   };
 
@@ -117,14 +121,28 @@ function countCallSites(program: Format.Program): CallSiteCounts {
         const id = leaf.return.identifier ?? "?";
         if (mn === "JUMPDEST") {
           counts.returnJumpdest[id] = (counts.returnJumpdest[id] ?? 0) + 1;
-        } else if (mn === "JUMP") {
+        } else if (mn === "JUMP" && Context.isInvoke(leaf)) {
           counts.returnJump[id] = (counts.returnJump[id] ?? 0) + 1;
+        } else if (mn === "JUMP") {
+          counts.returnExit[id] = (counts.returnExit[id] ?? 0) + 1;
         }
       }
     }
   }
 
   return counts;
+}
+
+/**
+ * Every function listed has a `return` on its exit JUMP(s), no
+ * other function has one, and no JUMPDEST carries a `return` (the
+ * continuation carries only the call site's `code`). A function
+ * has one exit per return epilogue, so the count follows its
+ * return statements, not its call sites.
+ */
+function expectExits(counts: CallSiteCounts, functions: string[]): void {
+  expect(counts.returnJumpdest).toEqual({});
+  expect(Object.keys(counts.returnExit).sort()).toEqual([...functions].sort());
 }
 
 describe("optimizer preserves invoke/return contexts", () => {
@@ -155,10 +173,10 @@ code { r = add(10, 20); }`;
           expect(counts.invokeJump).toEqual({});
         } else {
           // One caller JUMP, one callee JUMPDEST, one
-          // continuation JUMPDEST — all naming "add".
+          // exit JUMP — all naming "add".
           expect(counts.invokeJump).toEqual({ add: 1 });
           expect(counts.invokeJumpdest).toEqual({ add: 1 });
-          expect(counts.returnJumpdest).toEqual({ add: 1 });
+          expectExits(counts, ["add"]);
         }
 
         // Behavior is still correct.
@@ -199,7 +217,7 @@ code { r = add(2 + 3, 4 * 5); }`;
         } else {
           expect(counts.invokeJump).toEqual({ add: 1 });
           expect(counts.invokeJumpdest).toEqual({ add: 1 });
-          expect(counts.returnJumpdest).toEqual({ add: 1 });
+          expectExits(counts, ["add"]);
         }
 
         const result = await executeProgram(source, {
@@ -244,7 +262,7 @@ code {
         } else {
           expect(counts.invokeJump).toEqual({ dbl: 2 });
           expect(counts.invokeJumpdest).toEqual({ dbl: 1 });
-          expect(counts.returnJumpdest).toEqual({ dbl: 2 });
+          expectExits(counts, ["dbl"]);
         }
 
         const result = await executeProgram(source, {
@@ -280,11 +298,11 @@ code { r = fact(5); }`;
         const program = await compileAt(source, level);
         const counts = countCallSites(program);
 
-        // Two caller JUMPs (main -> fact, fact -> fact)
-        // and two continuation JUMPDESTs for them.
+        // Two caller JUMPs (main -> fact, fact -> fact);
+        // fact's exit JUMPs carry its returns.
         expect(counts.invokeJump).toEqual({ fact: 2 });
         expect(counts.invokeJumpdest).toEqual({ fact: 1 });
-        expect(counts.returnJumpdest).toEqual({ fact: 2 });
+        expectExits(counts, ["fact"]);
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -330,10 +348,7 @@ code { r = isEven(4); }`;
           isEven: 1,
           isOdd: 1,
         });
-        expect(counts.returnJumpdest).toEqual({
-          isEven: 2,
-          isOdd: 1,
-        });
+        expectExits(counts, ["isEven", "isOdd"]);
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -384,10 +399,7 @@ code { r = addThree(1, 2, 3); }`;
             addThree: 1,
             add: 1,
           });
-          expect(counts.returnJumpdest).toEqual({
-            addThree: 1,
-            add: 2,
-          });
+          expectExits(counts, ["addThree", "add"]);
         }
 
         const result = await executeProgram(source, {
@@ -402,9 +414,9 @@ code { r = addThree(1, 2, 3); }`;
 
   describe("multiple returns of same constant (return merging)", () => {
     // Triggers return-merging at level 3: two `return 42`
-    // blocks collapse into one. Only one return context
-    // survives in bytecode, but it must still be present
-    // and identify the right function.
+    // blocks collapse into one. The return contexts on
+    // check's exits must still be present and identify the
+    // right function.
     const source = `name ReturnMerge;
 
 define {
@@ -426,7 +438,7 @@ code { r = check(3, 4); }`;
 
         expect(counts.invokeJump).toEqual({ check: 1 });
         expect(counts.invokeJumpdest).toEqual({ check: 1 });
-        expect(counts.returnJumpdest).toEqual({ check: 1 });
+        expectExits(counts, ["check"]);
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -473,7 +485,7 @@ code { r = count(0, 5); }`;
       // self-call. succ is still a separate function call.
       expect(counts.invokeJump).toEqual({ count: 2, succ: 1 });
       expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
-      expect(counts.returnJumpdest).toEqual({ count: 2, succ: 1 });
+      expectExits(counts, ["count", "succ"]);
       // At level 1 there are no TCO back-edge JUMPs.
       expect(counts.returnJump).toEqual({});
     });
@@ -498,10 +510,9 @@ code { r = count(0, 5); }`;
           // (from the TCO'd JUMP).
           expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
 
-          // The initial count call's continuation JUMPDEST
-          // and succ's continuation JUMPDEST both carry
-          // return contexts as usual.
-          expect(counts.returnJumpdest).toEqual({ count: 1, succ: 1 });
+          // count's and succ's exit JUMPs carry return
+          // contexts as usual.
+          expectExits(counts, ["count", "succ"]);
 
           // The TCO back-edge JUMP additionally carries a
           // return context for `count` (the previous

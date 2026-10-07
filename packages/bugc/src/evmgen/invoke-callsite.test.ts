@@ -1,8 +1,8 @@
 /**
- * The call-site source range is carried on the invoke/return
- * contexts of a function call, so a debugger stepping onto the
- * caller JUMP or the continuation JUMPDEST maps back to the call
- * expression (not just the callee's definition).
+ * The call-site source range is carried on the caller JUMP (with
+ * its invoke) and on the continuation JUMPDEST, so a debugger
+ * stepping onto either maps back to the call expression (not just
+ * the callee's definition).
  */
 import { describe, it, expect } from "vitest";
 
@@ -40,7 +40,7 @@ function hasCodeRange(ctx: Record<string, unknown>): boolean {
   );
 }
 
-describe("call-site source range on invoke/return contexts", () => {
+describe("call-site source range on a call's caller-side contexts", () => {
   it("the caller JUMP invoke context carries a call-site code range", async () => {
     const program = await runtimeProgram();
     const invokeJump = program.instructions.find(
@@ -55,18 +55,28 @@ describe("call-site source range on invoke/return contexts", () => {
     );
   });
 
-  it("the continuation JUMPDEST return context carries a call-site code range", async () => {
+  it("the continuation JUMPDEST carries the call-site code range", async () => {
     const program = await runtimeProgram();
-    const contJumpdest = program.instructions.find(
+    const invokeJump = program.instructions.find(
       (i) =>
-        i.operation?.mnemonic === "JUMPDEST" &&
+        i.operation?.mnemonic === "JUMP" &&
         i.context !== undefined &&
-        Context.isReturn(i.context),
+        Context.isInvoke(i.context),
     );
-    expect(contJumpdest, "continuation JUMPDEST").toBeDefined();
-    expect(hasCodeRange(contJumpdest!.context as Record<string, unknown>)).toBe(
-      true,
+    // The continuation directly follows the caller JUMP
+    const contJumpdest = program.instructions.find(
+      (i) => Number(i.offset) === Number(invokeJump!.offset) + 1,
     );
+    expect(contJumpdest?.operation?.mnemonic, "continuation JUMPDEST").toBe(
+      "JUMPDEST",
+    );
+    const ctx = contJumpdest!.context as Record<string, unknown>;
+    expect(hasCodeRange(ctx)).toBe(true);
+    expect(ctx.code).toEqual(
+      (invokeJump!.context as Record<string, unknown>).code,
+    );
+    // The callee's exit JUMP carries the return, not the continuation
+    expect(Context.isReturn(ctx)).toBe(false);
   });
 
   it("still identifies the invoke by name and keeps behavior", async () => {
