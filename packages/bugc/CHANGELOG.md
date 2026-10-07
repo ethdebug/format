@@ -123,7 +123,7 @@ support. Changes to the specification itself are tracked in the root
   2^128, so it reads exactly the local's bytes, even when its bounds are
   computed. Writing to bytes in calldata, or assigning memory bytes to a
   local in calldata, is a type error. Before, every slice was copied to
-  memory, and a local's pointer read the copy ([#PR]).
+  memory, and a local's pointer read the copy ([#367]).
 
 ### Fixed
 
@@ -419,3 +419,4 @@ First publication.
 [#364]: https://github.com/ethdebug/format/pull/364
 [#365]: https://github.com/ethdebug/format/pull/365
 [#366]: https://github.com/ethdebug/format/pull/366
+[#367]: https://github.com/ethdebug/format/pull/367
