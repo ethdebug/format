@@ -591,6 +591,9 @@ function generateBytesStorageWrite<S extends Stack>(
       return op("JUMPDEST")(marked);
     };
 
+  // [n, ...] to [(n + 31) >> 5, ...]: the words n bytes need
+  const words: Step[] = [push(31n), op("ADD"), push(5n), op("SHR")];
+
   const mask: Step[] = [
     op("DUP1"),
     push(3n),
@@ -615,6 +618,69 @@ function generateBytesStorageWrite<S extends Stack>(
     const long = `$bytes_long_${id}`;
     const loop = `$bytes_loop_${id}`;
     const end = `$bytes_end_${id}`;
+    const clearLoop = `$bytes_clear_${id}`;
+    const cleared = `$bytes_cleared_${id}`;
+
+    // [slot, ptr] to [slot, ptr], with the data words of the old value
+    // that the new one does not use set to zero, as Solidity does
+    const clear: Step[] = [
+      // The words the new value uses: (len > 31) * ((len + 31) >> 5)
+      op("DUP2"),
+      op("MLOAD"),
+      op("DUP1"),
+      push(31n),
+      op("LT"),
+      op("SWAP1"),
+      ...words,
+      op("MUL"),
+
+      // The words the old one uses: (old & 1) * (((old >> 1) + 31) >> 5)
+      op("DUP2"),
+      op("SLOAD"),
+      op("DUP1"),
+      push(1n),
+      op("AND"),
+      op("SWAP1"),
+      push(1n),
+      op("SHR"),
+      ...words,
+      op("MUL"),
+
+      // [end, next] = [base + old words, base + new words]
+      op("DUP3"),
+      push(0n),
+      op("MSTORE"),
+      push(32n),
+      push(0n),
+      op("KECCAK256"),
+      op("DUP1"),
+      op("SWAP2"),
+      op("ADD"),
+      op("SWAP2"),
+      op("ADD"),
+      op("SWAP1"),
+
+      mark(clearLoop),
+      op("DUP1"),
+      op("DUP3"),
+      op("LT"),
+      op("ISZERO"),
+      target(cleared),
+      op("JUMPI"),
+      push(0n),
+      op("DUP3"),
+      op("SSTORE"),
+      op("SWAP1"),
+      push(1n),
+      op("ADD"),
+      op("SWAP1"),
+      target(clearLoop),
+      op("JUMP"),
+
+      mark(cleared),
+      op("POP"),
+      op("POP"),
+    ];
 
     const loaded = pipe<Stack>()
       .then(loadValue(inst.value!, { debug }), { as: "value" })
@@ -622,6 +688,8 @@ function generateBytesStorageWrite<S extends Stack>(
       .done()({ ...state, nextId: id + 1 }) as State<Stack>;
 
     const steps: Step[] = [
+      ...clear,
+
       op("DUP2"),
       op("MLOAD"),
       push(31n),
