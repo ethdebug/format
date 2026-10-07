@@ -134,15 +134,21 @@ function countCallSites(program: Format.Program): CallSiteCounts {
 }
 
 /**
- * Every function listed has a `return` on its exit JUMP(s), no
- * other function has one, and no JUMPDEST carries a `return` (the
- * continuation carries only the call site's `code`). A function
- * has one exit per return epilogue, so the count follows its
- * return statements, not its call sites.
+ * Each function listed has exactly that many exit JUMPs carrying
+ * a `return`, no other function has one, and no JUMPDEST carries a
+ * `return` (the continuation carries only the call site's `code`).
+ * A function has one exit per `return` terminator in its IR, so the
+ * count follows its return statements, not its call sites. It can
+ * be one more than the source shows: an if/else whose branches
+ * both return leaves an empty merge block that gets an implicit
+ * return, until the optimizer drops it.
  */
-function expectExits(counts: CallSiteCounts, functions: string[]): void {
+function expectExits(
+  counts: CallSiteCounts,
+  exits: Record<string, number>,
+): void {
   expect(counts.returnJumpdest).toEqual({});
-  expect(Object.keys(counts.returnExit).sort()).toEqual([...functions].sort());
+  expect(counts.returnExit).toEqual(exits);
 }
 
 describe("optimizer preserves invoke/return contexts", () => {
@@ -176,7 +182,7 @@ code { r = add(10, 20); }`;
           // exit JUMP — all naming "add".
           expect(counts.invokeJump).toEqual({ add: 1 });
           expect(counts.invokeJumpdest).toEqual({ add: 1 });
-          expectExits(counts, ["add"]);
+          expectExits(counts, { add: 1 });
         }
 
         // Behavior is still correct.
@@ -217,7 +223,7 @@ code { r = add(2 + 3, 4 * 5); }`;
         } else {
           expect(counts.invokeJump).toEqual({ add: 1 });
           expect(counts.invokeJumpdest).toEqual({ add: 1 });
-          expectExits(counts, ["add"]);
+          expectExits(counts, { add: 1 });
         }
 
         const result = await executeProgram(source, {
@@ -262,7 +268,7 @@ code {
         } else {
           expect(counts.invokeJump).toEqual({ dbl: 2 });
           expect(counts.invokeJumpdest).toEqual({ dbl: 1 });
-          expectExits(counts, ["dbl"]);
+          expectExits(counts, { dbl: 1 });
         }
 
         const result = await executeProgram(source, {
@@ -302,7 +308,10 @@ code { r = fact(5); }`;
         // fact's exit JUMPs carry its returns.
         expect(counts.invokeJump).toEqual({ fact: 2 });
         expect(counts.invokeJumpdest).toEqual({ fact: 1 });
-        expectExits(counts, ["fact"]);
+        // Two return statements, plus the implicit return of the
+        // empty merge block after the if/else (no predecessors),
+        // which the optimizer drops from level 2.
+        expectExits(counts, { fact: level < 2 ? 3 : 2 });
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -348,7 +357,10 @@ code { r = isEven(4); }`;
           isEven: 1,
           isOdd: 1,
         });
-        expectExits(counts, ["isEven", "isOdd"]);
+        // As in `fact`: two returns each, plus an unreachable
+        // implicit return each until level 2.
+        const exits = level < 2 ? 3 : 2;
+        expectExits(counts, { isEven: exits, isOdd: exits });
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -399,7 +411,7 @@ code { r = addThree(1, 2, 3); }`;
             addThree: 1,
             add: 1,
           });
-          expectExits(counts, ["addThree", "add"]);
+          expectExits(counts, { addThree: 1, add: 1 });
         }
 
         const result = await executeProgram(source, {
@@ -438,7 +450,10 @@ code { r = check(3, 4); }`;
 
         expect(counts.invokeJump).toEqual({ check: 1 });
         expect(counts.invokeJumpdest).toEqual({ check: 1 });
-        expectExits(counts, ["check"]);
+        // Three return statements, in three blocks: the two
+        // `return 42` blocks stay apart, and no if/else leaves an
+        // implicit return.
+        expectExits(counts, { check: 3 });
 
         const result = await executeProgram(source, {
           calldata: "",
@@ -485,7 +500,9 @@ code { r = count(0, 5); }`;
       // self-call. succ is still a separate function call.
       expect(counts.invokeJump).toEqual({ count: 2, succ: 1 });
       expect(counts.invokeJumpdest).toEqual({ count: 1, succ: 1 });
-      expectExits(counts, ["count", "succ"]);
+      // count: two returns plus an unreachable implicit return
+      // after the if/else.
+      expectExits(counts, { count: 3, succ: 1 });
       // At level 1 there are no TCO back-edge JUMPs.
       expect(counts.returnJump).toEqual({});
     });
@@ -512,7 +529,7 @@ code { r = count(0, 5); }`;
 
           // count's and succ's exit JUMPs carry return
           // contexts as usual.
-          expectExits(counts, ["count", "succ"]);
+          expectExits(counts, { count: 1, succ: 1 });
 
           // The TCO back-edge JUMP additionally carries a
           // return context for `count` (the previous
