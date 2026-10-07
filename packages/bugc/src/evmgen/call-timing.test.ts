@@ -111,7 +111,8 @@ function events(context: Format.Program.Context | undefined): {
 describe("call frame timing", () => {
   for (const testCase of programs) {
     const { name, source, returns } = testCase;
-    const voids: string[] = "voids" in testCase ? testCase.voids : [];
+    const voids: string[] =
+      ("voids" in testCase ? testCase.voids : undefined) ?? [];
     for (const level of [0, 1, 2, 3] as Level[]) {
       it(`${name} at O${level}`, async () => {
         const { program, executor, steps, instructionAt } = await traceLocals(
