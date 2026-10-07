@@ -88,6 +88,8 @@ create { r = 0; }
 code { twice(); }`,
     // A void exit has no data to read
     returns: [undefined, undefined, undefined],
+    // Their real exits carry no `data`, by design
+    voids: ["bump", "twice"],
   },
 ];
 
@@ -107,7 +109,9 @@ function events(context: Format.Program.Context | undefined): {
 }
 
 describe("call frame timing", () => {
-  for (const { name, source, returns } of programs) {
+  for (const testCase of programs) {
+    const { name, source, returns } = testCase;
+    const voids: string[] = "voids" in testCase ? testCase.voids : [];
     for (const level of [0, 1, 2, 3] as Level[]) {
       it(`${name} at O${level}`, async () => {
         const { program, executor, steps, instructionAt } = await traceLocals(
@@ -184,13 +188,20 @@ describe("call frame timing", () => {
         // implicit void return that nothing jumps to (O0 and O1; the
         // optimizer drops it from O2). A value-returning function
         // that runs off its end would reach such an exit, but the
-        // functions here do not.
+        // functions here do not. A void function's real exits have
+        // no `data` either, so they are left out.
         const visited = new Set(steps.map(({ pc }) => pc));
         for (const instruction of program.instructions) {
           const { invoke, return: returned } = events(instruction.context);
           const ret = (instruction.context as Format.Program.Context.Return)
             ?.return;
-          if (returned !== undefined && invoke === undefined && !ret.data) {
+          const isVoid = voids.includes(returned ?? "");
+          if (
+            returned !== undefined &&
+            invoke === undefined &&
+            !ret.data &&
+            !isVoid
+          ) {
             expect(visited, `exit at ${instruction.offset}`).not.toContain(
               Number(instruction.offset),
             );
