@@ -75,7 +75,7 @@ support. Changes to the specification itself are tracked in the root
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
-  type with kind fail to IR type" ([#PR]).
+  type with kind fail to IR type" ([#351]).
 - At optimization levels 2 and 3, an inlined function that starts with an
   inlined call, or returns one's result, now has its own `invoke` and
   `return` contexts, around the inner call's. Before, its `invoke` (or its
@@ -281,4 +281,4 @@ First publication.
 [#345]: https://github.com/ethdebug/format/pull/345
 [#347]: https://github.com/ethdebug/format/pull/347
 [#349]: https://github.com/ethdebug/format/pull/349
-[#PR]: https://github.com/ethdebug/format/pull/PR
+[#351]: https://github.com/ethdebug/format/pull/351
