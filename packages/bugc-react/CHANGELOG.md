@@ -10,7 +10,7 @@ specification itself are tracked in the root
 ### Changed
 
 - The IR and CFG views show each operand of a `hash` instruction, which
-  now has a list of `values` ([#PR]).
+  now has a list of `values` ([#365]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -39,3 +39,4 @@ First publication.
 
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
+[#365]: https://github.com/ethdebug/format/pull/365

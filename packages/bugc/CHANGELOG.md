@@ -16,7 +16,7 @@ support. Changes to the specification itself are tracked in the root
   hashes its word with its bytes at the right end, unlike `abi.encode`;
   cast it to `bytes32` to match Solidity. A single dynamic `bytes` or
   `string` argument still hashes its data, and must be the only argument.
-  The optimizer folds a hash of constant words at levels 1 to 3 ([#PR]).
+  The optimizer folds a hash of constant words at levels 1 to 3 ([#365]).
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
   `x / 0` is ([#321]).
@@ -37,7 +37,7 @@ support. Changes to the specification itself are tracked in the root
 ### Changed
 
 - The IR `hash` instruction now has `values`, a list, in place of
-  `value` and `valueDebug` ([#PR]).
+  `value` and `valueDebug` ([#365]).
 - An integer literal operand of an arithmetic or comparison operator now
   takes the type of the other operand when its value fits, so with
   `x: int8`, `x < 0`, `x == 1` and `-1 < x` compare as `int8`. A literal
@@ -310,4 +310,5 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#365]: https://github.com/ethdebug/format/pull/365
 [#356]: https://github.com/ethdebug/format/pull/356
