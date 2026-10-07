@@ -110,6 +110,14 @@ const makeBuildMemberAccess = (
           return Ir.Value.temp(tempId, resultType);
         }
 
+        // A dynamic array in storage keeps its length in its slot
+        if (Type.isArray(objectType)) {
+          const chain = yield* findStorageAccessChain(expr.object);
+          if (chain) {
+            return yield* emitStorageChainLoad(chain, resultType, expr);
+          }
+        }
+
         // For dynamic arrays/bytes/strings, emit length instruction
         const object = yield* buildExpression(expr.object, { kind: "rvalue" });
         yield* Process.Instructions.emit({

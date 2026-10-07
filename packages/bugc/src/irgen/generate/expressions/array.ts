@@ -54,6 +54,8 @@ export function* buildArray(
           slot,
           Ir.Value.constant(BigInt(i), Ir.Type.Scalar.uint256),
           expr,
+          // Each index is below the literal's length
+          false,
         );
         yield* Process.Instructions.emit({
           kind: "write",

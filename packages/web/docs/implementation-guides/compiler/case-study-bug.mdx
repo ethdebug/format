@@ -108,21 +108,26 @@ so `x + 1` with `x: uint8` is a `uint8` and wraps at 8 bits.
 
 ### Bounds
 
-An index out of bounds reverts, as in Solidity. `a[i]` on an array or on
-dynamic `bytes` in memory, or on a fixed-size array in storage, reverts
-unless `i` is less than the length; this holds for reads and writes, and
-at each level of a nested array. A slice `b[s:e]` reverts unless
+An index out of bounds reverts, as in Solidity. `a[i]` on an array (in
+memory or in storage) or on dynamic `bytes` in memory reverts unless `i`
+is less than the length; this holds for reads and writes, and at each
+level of a nested array. A slice `b[s:e]` reverts unless
 `s <= e <= b.length`. An index or slice bound must be an unsigned
 integer; cast a signed one, as in `a[i as uint256]`. The revert data is Solidity's `Panic(0x32)`, and
 the `REVERT` carries a `revert` context with `panic: 50` and a pointer to
-that data. A dynamic array in storage is not checked: BUG has no `push`,
-so a write past the end is how such an array grows.
+that data.
+A dynamic array in storage grows by `push`, as in Solidity: `a.push(v)`
+writes `v` at index `a.length` and adds one to the length, and
+`a.push()` adds a zero element (as for an array of arrays, before
+pushing onto the new inner array). A push has no value.
 
 ```bug
 let a: array<uint256> = [1, 2, 3];
 a[2] = 30;                       // ok
 a[3] = 40;                       // reverts with Panic(0x32)
 msg.data[0:4];                   // reverts if the calldata is shorter
+history.push(7);                 // history: array<uint256> in storage
+history[history.length] = 8;     // reverts with Panic(0x32)
 ```
 
 ## Compilation pipeline

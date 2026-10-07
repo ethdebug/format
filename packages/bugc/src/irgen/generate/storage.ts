@@ -24,6 +24,8 @@ export interface StorageAccessChain {
   accesses: Array<{
     kind: "index" | "member";
     key?: Ir.Value;
+    /** An index that is not checked against the length (a push's) */
+    unchecked?: boolean;
     fieldName?: string;
     fieldOffset?: number;
     fieldType?: Ir.Type;
@@ -155,25 +157,40 @@ export function* emitStorageVariableStore(
 /**
  * Emit the slot of element `index` of the storage array at `slot` (see
  * `Storage`), and, for an element that shares its slot, its byte offset
- * from the slot's low-order end. A fixed-size array reverts on an index
- * out of bounds. (A dynamic array in storage is not checked.)
+ * from the slot's low-order end. An index at or past the array's length
+ * reverts, unless it is not `checked` (as a push's, which is the length).
  */
 export function* emitArrayElement(
   array: Type.Array,
   slot: Ir.Value,
   index: Ir.Value,
   node: Ast.Node | undefined,
+  checked: boolean = true,
 ): Process<{ slot: Ir.Value; offset?: Ir.Value }> {
-  if (array.size !== undefined) {
-    yield* emitBoundsCheck(
-      "lt",
-      index,
-      Ir.Value.constant(BigInt(array.size), Ir.Type.Scalar.uint256),
-      node,
-    );
-  }
-
   const debug = node ? yield* Process.Debug.forAstNode(node) : {};
+
+  if (checked) {
+    // A dynamic array's length is the word in its slot
+    let length = Ir.Value.constant(
+      BigInt(array.size ?? 0),
+      Ir.Type.Scalar.uint256,
+    );
+    if (array.size === undefined) {
+      const dest = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "read",
+        location: "storage",
+        slot,
+        offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
+        length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+        type: Ir.Type.Scalar.uint256,
+        dest,
+        operationDebug: debug,
+      } as Ir.Instruction.Read);
+      length = Ir.Value.temp(dest, Ir.Type.Scalar.uint256);
+    }
+    yield* emitBoundsCheck("lt", index, length, node);
+  }
   const binary = function* (
     op: "add" | "mul" | "div" | "mod",
     left: Ir.Value,
@@ -277,6 +294,7 @@ export function* emitStorageChainLoad(
           currentSlot,
           access.key,
           node,
+          !access.unchecked,
         );
         elementOffset = element.offset;
         currentSlot = element.slot;
@@ -417,6 +435,7 @@ export function* emitStorageChainStore(
           currentSlot,
           access.key,
           node,
+          !access.unchecked,
         );
         elementOffset = element.offset;
         currentSlot = element.slot;

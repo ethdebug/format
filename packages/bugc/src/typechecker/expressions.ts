@@ -563,6 +563,15 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
       let symbols = context.symbols;
       let bindings = context.bindings;
 
+      // `a.push(v)` or `a.push()` on a dynamic array in storage
+      if (
+        Ast.Expression.isAccess(node.callee) &&
+        Ast.Expression.Access.isMember(node.callee) &&
+        node.callee.property === "push"
+      ) {
+        return checkPush(node, node.callee, context);
+      }
+
       // Check if this is a built-in function call
       if (node.callee.kind === "expression:identifier") {
         const functionName = node.callee.name;
@@ -1218,4 +1227,86 @@ function indexTypeError(what: string, type: Type): string | undefined {
     );
   }
   return undefined;
+}
+
+/**
+ * Type check `a.push(v)` (or `a.push()`, which adds a zero element), as
+ * in Solidity: `a` must be a dynamic array in storage, and `v` must be
+ * assignable to its element type. A push has no value.
+ */
+function checkPush(
+  node: Ast.Expression.Call,
+  callee: Ast.Expression.Access.Member,
+  context: Context,
+): Report {
+  const errors: TypeError[] = [];
+  const objectResult = Ast.visit(context.visitor, callee.object, context);
+  let { nodeTypes, symbols, bindings } = objectResult;
+  errors.push(...objectResult.errors);
+  const report = () => ({ symbols, nodeTypes, bindings, errors });
+
+  const objectType = objectResult.type;
+  if (!objectType) return report();
+
+  const fail = (message: string, code: ErrorCode, at: Ast.Node = node) => {
+    errors.push(
+      new TypeError(message, at.loc || undefined, undefined, undefined, code),
+    );
+    return report();
+  };
+
+  // The array's root: the storage variable it is in, if any
+  let root: Ast.Expression = callee.object;
+  while (Ast.Expression.isAccess(root)) {
+    root = (root as Ast.Expression.Access.Member | Ast.Expression.Access.Index)
+      .object;
+  }
+  const inStorage =
+    Ast.Expression.isIdentifier(root) &&
+    symbols.lookup(root.name)?.location === "storage";
+
+  if (
+    !Type.isArray(objectType) ||
+    objectType.size !== undefined ||
+    !inStorage
+  ) {
+    return fail(
+      `push needs a dynamic array in storage, not ${Type.format(objectType)}`,
+      ErrorCode.INVALID_OPERATION,
+    );
+  }
+
+  if (node.arguments.length > 1) {
+    return fail(
+      `push takes at most 1 argument, but got ${node.arguments.length}`,
+      ErrorCode.INVALID_ARGUMENT_COUNT,
+    );
+  }
+
+  if (node.arguments.length === 1) {
+    const argument = node.arguments[0];
+    const argResult = Ast.visit(context.visitor, argument, {
+      ...context,
+      nodeTypes,
+      symbols,
+      bindings,
+    });
+    ({ nodeTypes, symbols, bindings } = argResult);
+    errors.push(...argResult.errors);
+    if (argResult.type && !isAssignable(objectType.element, argResult.type)) {
+      return fail(
+        ErrorMessages.TYPE_MISMATCH(
+          Type.format(objectType.element),
+          Type.format(argResult.type),
+        ),
+        ErrorCode.TYPE_MISMATCH,
+        argument,
+      );
+    }
+  }
+
+  const type = Type.failure("void function");
+  nodeTypes = new Map(nodeTypes);
+  nodeTypes.set(node.id, type);
+  return { type, symbols, nodeTypes, bindings, errors };
 }

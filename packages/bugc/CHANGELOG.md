@@ -9,6 +9,11 @@ support. Changes to the specification itself are tracked in the root
 
 ### Added
 
+- `push` on a dynamic array in storage, as in Solidity: `a.push(v)`
+  writes `v` at index `a.length` and adds one to the length, and
+  `a.push()` adds a zero element, as for an array of arrays. `a` may be
+  in a mapping or a struct. A push has no value. On an array in memory
+  or a fixed-size array, it is a type error ([#366]).
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
   `x / 0` is ([#321]).
@@ -28,6 +33,11 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- An index into a dynamic array in storage now reverts with Solidity's
+  `Panic(0x32)` unless it is less than the array's length, for reads and
+  writes, as an index into an array in memory does. Before, a write past
+  the end wrote there and left the length as it was, so the array's
+  pointer did not show the element ([#366]).
 - Storage arrays now have Solidity's layout. A fixed-size array is
   inline: its elements start at its own slot, so `[0] a: array<uint256,
 3>` takes slots 0 to 2, and a struct member that is a fixed-size array
@@ -90,6 +100,8 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- `a.length` on a dynamic array in storage now reads the length in the
+  array's slot. Before, it did not read that slot ([#366]).
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that
@@ -313,3 +325,4 @@ First publication.
 [#352]: https://github.com/ethdebug/format/pull/352
 [#356]: https://github.com/ethdebug/format/pull/356
 [#364]: https://github.com/ethdebug/format/pull/364
+[#366]: https://github.com/ethdebug/format/pull/366
