@@ -142,6 +142,16 @@ support. Changes to the specification itself are tracked in the root
   name, such as `name-data`. Before, the pointer gave only the slot, so a
   debugger had to know Solidity's encoding to read the value
   ([#369]).
+- The pointer for a storage mapping now gives a template for its entry,
+  in the shape of solc's `t_mapping` templates, around the region at the
+  mapping's slot. The template expects `slot` (the mapping's slot) and
+  `key`, and points at keccak256(key . slot), each a word: a value type
+  there is a region named `value`, and a struct's members are regions
+  named `value-<member>`, such as `value-score` or `value-name-data`. The
+  template is named `entry` for a mapping variable, `<name>-entry` for a
+  mapping member `name`, and `value-entry` for a mapping in an entry.
+  Before, the pointer gave only the mapping's slot, so a debugger could
+  not find an entry or its members from it.
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that

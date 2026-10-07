@@ -22,7 +22,16 @@ code {
   after: deploy
   variables:
     balances:
-      pointer: { location: storage, slot: 0 }
+      pointer:
+        templates:
+          entry:
+            expect: [slot, key]
+            for:
+              define:
+                slot:
+                  $keccak256: [{ $wordsized: key }, { $wordsized: slot }]
+              in: { location: storage, slot: slot, name: value }
+        in: { location: storage, slot: 0 }
   */
 
   // Read from mapping

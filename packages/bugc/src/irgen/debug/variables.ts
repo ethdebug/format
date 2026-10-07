@@ -66,6 +66,10 @@ function plus(
  * collection (a nested struct or an array) cannot be named as a whole.
  * Instead, every region name inside it is qualified by the member's path:
  * `prefix` is that path (e.g. "ceo-" for the members of field `ceo`).
+ *
+ * A mapping's entries depend on a key, so each mapping in the pointer
+ * gets a template for its entry (see `generateMappingPointer`). The
+ * templates go in one `templates` collection around the whole pointer.
  */
 export function generateStoragePointer(
   baseSlot: Format.Pointer.Expression,
@@ -73,7 +77,22 @@ export function generateStoragePointer(
   byteOffset: number = 0,
   prefix: string = "",
   depth: number = 0,
+  entries?: Entries,
 ): Format.Pointer | undefined {
+  if (!entries) {
+    const templates: Format.Pointer.Templates = {};
+    const pointer = generateStoragePointer(
+      baseSlot,
+      bugType,
+      byteOffset,
+      prefix,
+      depth,
+      { templates, scope: "" },
+    );
+    if (!pointer || Object.keys(templates).length === 0) return pointer;
+    return { templates, in: pointer };
+  }
+
   // For structs, generate a group pointer with each field
   if (Type.isStruct(bugType)) {
     const group: Format.Pointer[] = [];
@@ -92,6 +111,7 @@ export function generateStoragePointer(
         fieldOffset,
         `${prefix}${fieldName}-`,
         depth,
+        entries,
       );
       if (!fieldPointer) continue;
 
@@ -149,6 +169,7 @@ export function generateStoragePointer(
         0,
         prefix,
         depth + 1,
+        entries,
       );
       if (elementPointer && Format.Pointer.isRegion(elementPointer)) {
         elementPointer = { ...elementPointer, name: `${prefix}element` };
@@ -181,17 +202,8 @@ export function generateStoragePointer(
     };
   }
 
-  // For mappings, we can't represent them without keys
-  // Just return the base slot pointer with offset/length
   if (Type.isMapping(bugType)) {
-    const pointer: Format.Pointer = {
-      location: "storage",
-      slot: baseSlot,
-    };
-    if (byteOffset > 0) {
-      pointer.offset = byteOffset;
-    }
-    return pointer;
+    return generateMappingPointer(baseSlot, bugType, prefix, entries);
   }
 
   if (
@@ -221,6 +233,54 @@ export function generateStoragePointer(
   }
 
   return pointer;
+}
+
+/**
+ * The entry templates of a pointer, and the path of the template being
+ * built (empty outside any template), which keeps template names unique
+ */
+interface Entries {
+  templates: Format.Pointer.Templates;
+  scope: string;
+}
+
+/**
+ * A pointer for a storage mapping: a region at its slot, plus (in
+ * `entries`) a template for its entry, in the shape solc gives its
+ * `t_mapping` templates. The template expects `slot` (the mapping's
+ * slot) and `key`; the entry is at keccak256(key . slot), each a word.
+ * A value type there is a region named `value`; a struct's members are
+ * named `value-<member>`, and so on, as at a variable's own slot.
+ *
+ * The template is named `entry` for a mapping variable, else after the
+ * mapping's region: `<name>-entry` for the mapping member named `name`,
+ * or `value-entry` for a mapping in an entry (named inside the outer
+ * entry's template, so `value-value-entry` for a mapping two deep).
+ */
+function generateMappingPointer(
+  slot: Format.Pointer.Expression,
+  mapping: Type.Mapping,
+  prefix: string,
+  { templates, scope }: Entries,
+): Format.Pointer {
+  const value = generateStoragePointer("slot", mapping.value, 0, "value-", 0, {
+    templates,
+    scope: `${scope}${prefix}`,
+  });
+  if (value) {
+    templates[`${scope}${prefix}entry`] = {
+      expect: ["slot", "key"],
+      for: {
+        define: {
+          slot: { $keccak256: [{ $wordsized: "key" }, { $wordsized: "slot" }] },
+        },
+        in: Format.Pointer.isRegion(value)
+          ? { ...value, name: "value" }
+          : value,
+      },
+    };
+  }
+  return { location: "storage", slot };
 }
 
 /**

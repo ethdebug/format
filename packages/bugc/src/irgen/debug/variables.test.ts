@@ -7,17 +7,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
-import { createMachineState } from "@ethdebug/evm";
+import { Executor, createMachineState } from "@ethdebug/evm";
 import { dereference } from "@ethdebug/pointers";
-import type * as Format from "@ethdebug/format";
+import * as Format from "@ethdebug/format";
 
-import { parse } from "#parser";
-import { checkProgram } from "#typechecker";
-import { Type } from "#types";
+import { compile } from "#compiler";
 import { traceLocals } from "#test/evm/locals";
-
-import { mappingAccess } from "./pointers.js";
-import { generateStoragePointer } from "./variables.js";
 
 const lengths = [0, 5, 31, 32, 70];
 const levels = [0, 1, 2, 3] as const;
@@ -56,16 +51,22 @@ code {
   u[7].tag = c;
 }`;
 
-/** The value type of storage variable `name`'s mapping */
-function mappingValueType(source: string, name: string): Type {
-  const parsed = parse(source);
-  if (!parsed.success) throw new Error("parse failed");
-  const checked = checkProgram(parsed.value);
-  if (!checked.success) throw new Error("typecheck failed");
-  const declaration = parsed.value.storage!.find((d) => d.name === name)!;
-  const type = checked.value.types.get(declaration.id)!;
-  if (!Type.isMapping(type)) throw new Error(`${name} is not a mapping`);
-  return type.value;
+/**
+ * The pointer to an entry of a mapping, from the entry template that a
+ * pointer defines (with the mapping's slot and the key)
+ */
+function entryOf(
+  pointer: Format.Pointer,
+  template: string,
+  define: Record<string, Format.Pointer.Expression>,
+): Format.Pointer {
+  if (!Format.Pointer.Collection.isTemplates(pointer)) {
+    throw new Error("pointer defines no templates");
+  }
+  return {
+    templates: pointer.templates,
+    in: { define, in: { template } },
+  };
 }
 
 /** Read each region named `name`, in order, as hex */
@@ -120,18 +121,113 @@ describe("storage string and bytes pointers", () => {
           string,
         ]);
 
-        // A mapping's pointer names only its slot; its entry `u[7]`
-        // has the pointer of its value type at the entry's slot
-        const entry = generateStoragePointer(
-          mappingAccess(7, 7),
-          mappingValueType(program, "u"),
-        )!;
-        expect(await readRegions(entry, state, "id")).toEqual([
+        // A mapping's entry `u[7]` comes from its entry template
+        const entry = entryOf(pointerOf("u"), "entry", { slot: 7, key: 7 });
+        expect(await readRegions(entry, state, "value-id")).toEqual([
           "0".repeat(63) + "2",
         ]);
-        expect(await readRegions(entry, state, "name-data")).toEqual([string]);
-        expect(await readRegions(entry, state, "tag-data")).toEqual([bytes]);
+        expect(await readRegions(entry, state, "value-name-data")).toEqual([
+          string,
+        ]);
+        expect(await readRegions(entry, state, "value-tag-data")).toEqual([
+          bytes,
+        ]);
       });
     }
+  }
+});
+
+/**
+ * A mapping's entry is at keccak256(key . slot). Its pointer must give a
+ * template for the entry, so that a debugger finds `players[k]` and its
+ * members, for any key, from the pointer alone.
+ */
+describe("storage mapping pointers", () => {
+  const program = `name MappingPointers;
+define { struct Player { score: uint64; combo: uint32; name: string; }; }
+storage {
+  [0] other: uint256;
+  [4] players: mapping<address, Player>;
+  [5] plays: mapping<address, uint256>;
+  [6] grid: mapping<address, mapping<uint256, uint8>>;
+}
+code {
+  let who = msg.data[0:32] as bytes32 as address;
+  let len = msg.data[32:64] as bytes32 as uint256;
+  players[who].score = len as uint64;
+  players[who].combo = 3;
+  players[who].name = msg.data[64:64 + len] as string;
+  plays[who] = plays[who] + 1;
+  grid[who][len] = 7;
+}`;
+
+  const players = [
+    { key: "0x" + "a11ce".padStart(40, "0"), name: "alice" },
+    { key: "0x" + "b0b".padStart(40, "0"), name: "bob" },
+    {
+      key: "0x" + "ca201".padStart(40, "0"),
+      name: "carol, the unstoppable combo queen",
+    },
+  ];
+
+  const word = (value: bigint | number) =>
+    BigInt(value).toString(16).padStart(64, "0");
+
+  for (const level of levels) {
+    it(`reads alice's, bob's and carol's entries (level ${level})`, async () => {
+      const result = await compile({
+        to: "bytecode",
+        source: program,
+        optimizer: { level },
+      });
+      if (!result.success) throw new Error("compile failed");
+      const { bytecode } = result.value;
+      const executor = new Executor();
+      await executor.deploy(bytesToHex(bytecode.create ?? bytecode.runtime));
+      for (const { key, name } of players) {
+        const text = new TextEncoder().encode(name);
+        const data = word(BigInt(key)) + word(text.length) + bytesToHex(text);
+        const run = await executor.execute({ data });
+        expect(run.success).toBe(true);
+      }
+      const state = createMachineState(executor);
+      const pointerOf = (identifier: string) =>
+        (
+          bytecode.runtimeProgram.context as Format.Program.Context.Variables
+        ).variables.find((v) => v.identifier === identifier)!.pointer!;
+
+      for (const { key, name } of players) {
+        const text = new TextEncoder().encode(name);
+        const player = entryOf(pointerOf("players"), "entry", {
+          slot: 4,
+          key,
+        });
+        expect(await readRegions(player, state, "value-score")).toEqual([
+          word(text.length).slice(-16),
+        ]);
+        expect(await readRegions(player, state, "value-combo")).toEqual([
+          "00000003",
+        ]);
+        expect(await readRegions(player, state, "value-name-data")).toEqual([
+          bytesToHex(text),
+        ]);
+
+        const plays = entryOf(pointerOf("plays"), "entry", { slot: 5, key });
+        expect(await readRegions(plays, state, "value")).toEqual([word(1)]);
+
+        // `grid[key]` is a mapping: its slot is the inner mapping's,
+        // and the inner template gives `grid[key][len]`
+        const grid = entryOf(pointerOf("grid"), "entry", { slot: 6, key });
+        const cursor = await dereference(grid, { state });
+        const [inner] = (await cursor.view(state)).regions;
+        expect(inner.name).toEqual("value");
+        if (!("slot" in inner)) throw new Error("not a storage region");
+        const cell = entryOf(pointerOf("grid"), "value-entry", {
+          slot: inner.slot.toHex(),
+          key: text.length,
+        });
+        expect(await readRegions(cell, state, "value")).toEqual(["07"]);
+      }
+    });
   }
 });
