@@ -1289,6 +1289,57 @@ code {
     }
   });
 
+  describe("logical not", () => {
+    const program = `name Not;
+
+define {
+  function isSet(x: uint256) -> bool {
+    return x != 0;
+  };
+}
+
+storage {
+  [0] t: bool;
+  [1] notTrue: bool;
+  [2] notFalse: bool;
+  [3] notNot: bool;
+  [4] branch: uint256;
+  [5] notCall: bool;
+}
+
+create {
+  t = true;
+}
+
+code {
+  notTrue = !t;
+  notFalse = !notTrue;
+  notNot = !!t;
+  if (!t) {
+    branch = 1;
+  } else {
+    branch = 2;
+  }
+  notCall = !isSet(0);
+}`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should negate a bool (level ${level})`, async () => {
+        const result = await executeProgram(program, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(1n)).toBe(0n);
+        expect(await result.getStorage(2n)).toBe(1n);
+        expect(await result.getStorage(3n)).toBe(1n);
+        expect(await result.getStorage(4n)).toBe(2n);
+        expect(await result.getStorage(5n)).toBe(1n);
+      });
+    }
+  });
+
   describe("modulo", () => {
     const program = (expr: string) => `name Modulo;
 
