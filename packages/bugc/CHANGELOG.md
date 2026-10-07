@@ -449,5 +449,5 @@ First publication.
 [#366]: https://github.com/ethdebug/format/pull/366
 [#367]: https://github.com/ethdebug/format/pull/367
 [#369]: https://github.com/ethdebug/format/pull/369
-[#371]: https://github.com/ethdebug/format/pull/371
 [#370]: https://github.com/ethdebug/format/pull/370
+[#371]: https://github.com/ethdebug/format/pull/371
