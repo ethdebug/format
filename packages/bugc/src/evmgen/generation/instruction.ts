@@ -44,7 +44,7 @@ export function generate<S extends Stack>(
     case "env":
       return generateEnvOp(inst);
     case "hash":
-      return generateHashOp(inst);
+      return generateHashOp(inst, msgDataIds);
     case "length":
       return generateLength(inst, msgDataIds);
     case "compute_slot":
