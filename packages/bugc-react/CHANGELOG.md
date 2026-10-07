@@ -7,6 +7,11 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+### Added
+
+- The CFG view shows a `block.prevrandao` read as `block.prevrandao`
+  ([#PR]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 Updated `@ethdebug/bugc` to `0.1.0-preview.1`.

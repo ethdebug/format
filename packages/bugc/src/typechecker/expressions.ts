@@ -1037,6 +1037,9 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         case "expression:special:block.number":
           type = Type.Elementary.uint(256);
           break;
+        case "expression:special:block.prevrandao":
+          type = Type.Elementary.uint(256);
+          break;
       }
 
       const nodeTypes = new Map(context.nodeTypes);

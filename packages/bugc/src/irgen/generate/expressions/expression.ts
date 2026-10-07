@@ -50,6 +50,7 @@ export function* buildExpression(
     case "expression:special:msg.data":
     case "expression:special:block.timestamp":
     case "expression:special:block.number":
+    case "expression:special:block.prevrandao":
       return yield* buildSpecial(expr as Ast.Expression.Special);
     case "expression:array":
       return yield* buildArray(expr as Ast.Expression.Array, context);

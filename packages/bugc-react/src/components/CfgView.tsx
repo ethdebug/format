@@ -349,6 +349,8 @@ function CfgViewContent({ ir }: CfgViewProps): JSX.Element {
             return `${envInst.dest} = block.timestamp`;
           case "block_number":
             return `${envInst.dest} = block.number`;
+          case "block_prevrandao":
+            return `${envInst.dest} = block.prevrandao`;
           default:
             return `${envInst.dest} = ${envInst.op}`;
         }
