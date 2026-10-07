@@ -94,7 +94,7 @@ support. Changes to the specification itself are tracked in the root
   twice the length in the low byte; else twice the length plus one in the
   slot, and the data from `keccak256(slot)`. A slice's bytes past its
   length are stored as zero. Before, the slot held the value's memory
-  address ([#PR]).
+  address ([#355]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -306,4 +306,5 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#355]: https://github.com/ethdebug/format/pull/355
 [#356]: https://github.com/ethdebug/format/pull/356
