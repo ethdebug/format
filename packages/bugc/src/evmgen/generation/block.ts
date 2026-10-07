@@ -84,8 +84,11 @@ export function generate<S extends Stack>(
           }
         }
 
+        // A block of an inlined body is entered inside that body
+        const entryDebug = withEntryInline(block);
+
         if (callSiteCode) {
-          const entry = block.entryDebug;
+          const entry = entryDebug;
           const continuationDebug = {
             ...entry,
             context: {
@@ -95,7 +98,7 @@ export function generate<S extends Stack>(
           };
           result = result.then(JUMPDEST({ debug: continuationDebug }));
         } else {
-          result = result.then(JUMPDEST({ debug: block.entryDebug }));
+          result = result.then(JUMPDEST({ debug: entryDebug }));
         }
 
         // Annotate TOS with dest variable if this is a continuation with return value.
@@ -260,6 +263,46 @@ export function generate<S extends Stack>(
       return result;
     })
     .done();
+}
+
+/**
+ * A block's entry debug, with an `inline` transform for each inlined
+ * body the block's entry is in: each one its first operation is in,
+ * but for those whose invoke it carries (its entry is just before
+ * them).
+ */
+function withEntryInline(block: Ir.Block): Ir.Block.Debug | undefined {
+  const first = block.instructions[0] ?? block.terminator;
+  const context = first.operationDebug?.context;
+  const depth =
+    inlineCount(context) - Ir.Utils.activationsOf(context, "invoke").length;
+  if (depth <= 0) return block.entryDebug;
+  return {
+    ...block.entryDebug,
+    ...Ir.Utils.addTransform(
+      block.entryDebug,
+      ...Array<"inline">(depth).fill("inline"),
+    ),
+  };
+}
+
+/** How many `inline` transforms a context has, gathered ones too */
+function inlineCount(context: Format.Program.Context | undefined): number {
+  if (!context || typeof context !== "object") return 0;
+  const { transform, gather } = context as {
+    transform?: unknown;
+    gather?: unknown;
+  };
+  const own = Array.isArray(transform)
+    ? transform.filter((id) => id === "inline").length
+    : 0;
+  return Array.isArray(gather)
+    ? own +
+        (gather as Format.Program.Context[]).reduce(
+          (sum, c) => sum + inlineCount(c),
+          0,
+        )
+    : own;
 }
 
 /**

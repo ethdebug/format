@@ -79,6 +79,16 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- At optimization levels 2 and 3, an inlined body's control flow now has
+  a `transform: ["inline"]` context: the branch of an `if`, the jumps
+  between the body's blocks, each block's `JUMPDEST`, and the jump that
+  carries the body's `return`. Before, only the body's other instructions
+  had it, so a debugger that reads the transform closed the inlined frame
+  at the body's first branch ([#356]).
+- The block that bugc puts on a branch edge into a block with phis now
+  has the branch's context: its source range, its variables (the storage
+  variables too) and its transforms. Before, it had no context, so a
+  debugger listed no variables while it ran ([#356]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -290,3 +300,4 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#356]: https://github.com/ethdebug/format/pull/356

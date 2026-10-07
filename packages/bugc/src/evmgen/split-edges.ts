@@ -23,18 +23,30 @@ function splitFunction(func: Ir.Function): Ir.Function {
 
   // Route the edge from predId into targetId through a new empty
   // block if targetId has phis; return the block to branch to
-  const split = (predId: string, targetId: string): string => {
+  const split = (predId: string, pred: Ir.Block, targetId: string): string => {
     const target = blocks.get(targetId);
     if (!target || target.phis.length === 0) {
       return targetId;
     }
 
+    // The edge is the branch's: it has the branch's source range,
+    // variables and transforms (as `inline`, in an inlined body), but
+    // not its invoke or return
+    const { context, inlineSites, origin } = pred.terminator.operationDebug;
+    const edgeContext = Ir.Utils.withoutActivations(context);
     const edgeId = `${predId}_to_${targetId}`;
     blocks.set(edgeId, {
       id: edgeId,
       instructions: [],
-      // No debug context - compiler-generated edge block
-      terminator: { kind: "jump", target: targetId, operationDebug: {} },
+      terminator: {
+        kind: "jump",
+        target: targetId,
+        operationDebug: {
+          ...(edgeContext ? { context: edgeContext } : {}),
+          ...(inlineSites ? { inlineSites } : {}),
+          ...(origin ? { origin } : {}),
+        },
+      },
       predecessors: new Set([predId]),
       phis: [],
       debug: {},
@@ -60,9 +72,9 @@ function splitFunction(func: Ir.Function): Ir.Function {
     }
 
     const { trueTarget, falseTarget } = pred.terminator;
-    const newTrue = split(predId, trueTarget);
+    const newTrue = split(predId, pred, trueTarget);
     const newFalse =
-      falseTarget === trueTarget ? newTrue : split(predId, falseTarget);
+      falseTarget === trueTarget ? newTrue : split(predId, pred, falseTarget);
     blocks.set(predId, {
       ...blocks.get(predId)!,
       terminator: {
