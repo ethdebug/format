@@ -10,7 +10,7 @@ support. Changes to the specification itself are tracked in the root
 ### Added
 
 - `block.prevrandao`, the previous block's RANDAO value (EIP-4399), as a
-  `uint256`. It compiles to the EVM's `PREVRANDAO` (`0x44`) ([#PR]).
+  `uint256`. It compiles to the EVM's `PREVRANDAO` (`0x44`) ([#363]).
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
   `x / 0` is ([#321]).
@@ -313,3 +313,4 @@ First publication.
 [#353]: https://github.com/ethdebug/format/pull/353
 [#356]: https://github.com/ethdebug/format/pull/356
 [#362]: https://github.com/ethdebug/format/pull/362
+[#363]: https://github.com/ethdebug/format/pull/363
