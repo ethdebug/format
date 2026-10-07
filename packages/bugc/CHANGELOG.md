@@ -79,6 +79,19 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- A struct read from storage into a local, as in
+  `let p = players[who];` or `let s = stored;`, is now a copy in memory,
+  as the examples' README describes: reading `p.score` reads the copy,
+  and a write to `p.score` changes the copy, not storage. A field that is
+  a struct is copied too; a struct with an array, mapping, `string` or
+  dynamic `bytes` field is an error. Before, at every optimization level,
+  the local held the struct's first storage word as if it were a memory
+  address, and a write to one of its fields failed code generation
+  ([#PR]).
+- A value whose only later uses are as the address, slot or value of a
+  read or write, or as the base of an offset, now gets a home in memory
+  when code generation cannot keep it on the stack. Before, such a value
+  could fail code generation with "Cannot load value" ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert

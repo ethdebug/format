@@ -107,4 +107,35 @@ describe("generateModule error handling", () => {
     );
     expect(defaultingWarnings).toHaveLength(0);
   });
+  it("should reject a struct copy from storage with an array field", async () => {
+    const source = `
+      name Test;
+      define {
+        struct Bag {
+          count: uint256;
+          items: array<uint256>;
+        };
+      }
+      storage {
+        [0] bag: Bag;
+        [1] out: uint256;
+      }
+      code {
+        let b = bag;
+        out = b.count;
+      }
+    `;
+
+    const result = await compileTest(source);
+
+    expect(result.success).toBe(false);
+    const messages = Result.findMessages(result, {
+      severity: Severity.Error,
+    }).map((d) => d.message);
+    expect(messages).toContainEqual(
+      expect.stringContaining(
+        "Cannot copy struct Bag from storage: its field items",
+      ),
+    );
+  });
 });
