@@ -270,9 +270,11 @@ export class InliningStep extends BaseOptimizationStep {
           operationDebug: { ...returnedJump },
         };
       } else {
+        // The body's own control flow (an `if`'s branch, the jumps
+        // between its blocks) is part of the body, too
         terminator = remapTerminator(t, remapValue, blockRename);
         terminator.operationDebug = {
-          ...terminator.operationDebug,
+          ...Ir.Utils.addTransform(terminator.operationDebug, "inline"),
           inlineSites: inlineSites(t.operationDebug),
           ...(t.operationDebug?.origin
             ? { origin: t.operationDebug.origin }
@@ -354,8 +356,11 @@ export class InliningStep extends BaseOptimizationStep {
           returnId = from[0];
           continue;
         }
+        // The jump that carries the return is the body's exit, as a
+        // real call's exit JUMP is the callee's: the body runs up to
+        // it and through it
         block.terminator.operationDebug = withActivationsDebug(
-          block.terminator.operationDebug,
+          Ir.Utils.addTransform(block.terminator.operationDebug, "inline"),
           { returns },
         );
         break;

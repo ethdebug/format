@@ -15,6 +15,7 @@ import { describe, it, expect } from "vitest";
 
 import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
+import { traceLocals, localsOf } from "#test/evm/locals";
 import type * as Format from "@ethdebug/format";
 import { Program } from "@ethdebug/format";
 
@@ -205,4 +206,53 @@ describe("bracketing is a no-op for single-op invoke/return carriers", () => {
     expect(t.invoke).toBeGreaterThan(0);
     expect(t.ret).toBeGreaterThan(0);
   });
+});
+
+// An inlined body with an `if`: its branch, the blocks it jumps to, and
+// the empty block bugc puts on a branch edge into a block with phis (b
+// is a phi after the `if`) are all part of the body
+const branchingBody = (t: number) => `name Cap;
+define {
+  function cap(x: uint256) -> uint256 {
+    let b = x * 2;
+    if (b > 100) { b = 100; }
+    return b;
+  };
+}
+storage { [0] r: uint256; [1] t: uint256; }
+create { t = ${t}; }
+code { r = cap(t); }`;
+
+describe("an inlined body's control flow is part of the body", () => {
+  for (const level of [2, 3] as const) {
+    for (const t of [70, 10]) {
+      it(`marks every step of the body inline (t = ${t}, O${level})`, async () => {
+        const { steps, instructionAt } = await traceLocals(
+          branchingBody(t),
+          level,
+        );
+        let open = 0;
+        let invoked = 0;
+        const outside: number[] = [];
+        const unlisted: number[] = [];
+        steps.forEach((step, i) => {
+          const instruction = instructionAt(step);
+          const f = flags({ debug: instruction });
+          if (f.invoke) {
+            open += 1;
+            invoked += 1;
+          }
+          if (open > 0 && !f.inline) outside.push(i);
+          if (open > 0 && localsOf(instruction?.context).length === 0) {
+            unlisted.push(i);
+          }
+          if (f.return) open -= 1;
+        });
+        expect(invoked).toBe(1);
+        expect(open).toBe(0);
+        expect(outside).toEqual([]);
+        expect(unlisted).toEqual([]);
+      });
+    }
+  }
 });
