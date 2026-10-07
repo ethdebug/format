@@ -83,7 +83,7 @@ support. Changes to the specification itself are tracked in the root
   followed by whitespace or a comment included them, so most `code`
   ranges had trailing whitespace: `block.number ` in `block.number + 1`,
   the target `x ` in `x = 1`, a statement up to the next statement, and
-  the `create` and `code` blocks up to the next block ([#PR]).
+  the `create` and `code` blocks up to the next block ([#362]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -295,3 +295,4 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#362]: https://github.com/ethdebug/format/pull/362
