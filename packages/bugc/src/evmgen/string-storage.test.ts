@@ -86,9 +86,8 @@ code {
 });
 
 describe("assigning memory bytes to storage", () => {
-  // Slices of a 70-byte literal. A slice of up to 32 bytes holds
-  // the bytes after its end in the rest of its word; those must not
-  // reach storage.
+  // Slices of a 70-byte literal. Memory past the end of a slice's
+  // data may hold other bytes; those must not reach storage.
   for (const level of levels) {
     for (const length of lengths) {
       it(`stores ${length} bytes (level ${level})`, async () => {
