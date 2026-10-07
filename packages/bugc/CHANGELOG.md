@@ -133,6 +133,12 @@ support. Changes to the specification itself are tracked in the root
   pointer: a parameter is not yet in its home there, and the `invoke`'s
   `arguments` point at it on the stack. Before, they listed no variables,
   so a debugger showed none for those steps ([#358]).
+- Assigning a memory `string` or `bytes` to storage, as in `s = m;`, now
+  stores its bytes as Solidity does: up to 31 bytes in the slot, with
+  twice the length in the low byte; else twice the length plus one in the
+  slot, and the data from `keccak256(slot)`. A slice's bytes past its
+  length are stored as zero. Before, the slot held the value's memory
+  address ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert

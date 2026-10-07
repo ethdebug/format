@@ -222,7 +222,10 @@ const makeBuildSliceAccess = (
       yield* emitBoundsCheck("le", end, objectLength, expr);
 
       // Slicing bytes returns dynamic bytes (memory reference)
-      const resultType: Ir.Type = Ir.Type.Ref.memory();
+      const resultType: Ir.Type = Ir.Type.ref(
+        "memory",
+        Type.Elementary.bytes(),
+      );
 
       // Calculate the length of the slice
       const lengthTemp = yield* Process.Variables.newTemp();
