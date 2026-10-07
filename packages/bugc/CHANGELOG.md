@@ -87,11 +87,11 @@ support. Changes to the specification itself are tracked in the root
   dynamic `bytes` field is an error. Before, at every optimization level,
   the local held the struct's first storage word as if it were a memory
   address, and a write to one of its fields failed code generation
-  ([#PR]).
+  ([#361]).
 - A value whose only later uses are as the address, slot or value of a
   read or write, or as the base of an offset, now gets a home in memory
   when code generation cannot keep it on the stack. Before, such a value
-  could fail code generation with "Cannot load value" ([#PR]).
+  could fail code generation with "Cannot load value" ([#361]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -303,3 +303,4 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#361]: https://github.com/ethdebug/format/pull/361
