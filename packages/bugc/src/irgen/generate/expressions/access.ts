@@ -206,6 +206,16 @@ const makeBuildSliceAccess = (
       const start = yield* buildExpression(expr.start, { kind: "rvalue" });
       const end = yield* buildExpression(expr.end, { kind: "rvalue" });
 
+      if (objectType.size !== undefined) {
+        return yield* emitFixedBytesSlice(
+          object,
+          objectType.size,
+          start,
+          end,
+          expr,
+        );
+      }
+
       // Revert unless start <= end <= length
       const objectLength = yield* emitLength(object, expr);
       yield* emitBoundsCheck("le", start, end, expr);
@@ -332,6 +342,100 @@ const makeBuildSliceAccess = (
       Severity.Error,
     );
   };
+
+/**
+ * Slice a fixed-size `bytesN` value into new dynamic `bytes` in memory.
+ *
+ * A `bytesN` value is a word, not a memory address: its N bytes are the
+ * word's low bytes. Shift byte `start` up to the word's first byte and
+ * clear the bytes from `end - start` on, then store the length and that
+ * one data word.
+ */
+function* emitFixedBytesSlice(
+  object: Ir.Value,
+  size: number,
+  start: Ir.Value,
+  end: Ir.Value,
+  expr: Ast.Expression.Access.Slice,
+): Process<Ir.Value> {
+  const debug = yield* Process.Debug.forAstNode(expr);
+  const uint256 = Ir.Type.Scalar.uint256;
+  const constant = (value: bigint) => Ir.Value.constant(value, uint256);
+
+  function* binary(
+    op: Ir.Instruction.BinaryOp["op"],
+    left: Ir.Value,
+    right: Ir.Value,
+  ): Process<Ir.Value> {
+    const dest = yield* Process.Variables.newTemp();
+    yield* Process.Instructions.emit({
+      kind: "binary",
+      op,
+      left,
+      right,
+      dest,
+      operationDebug: debug,
+    } as Ir.Instruction.BinaryOp);
+    return Ir.Value.temp(dest, uint256);
+  }
+
+  // Revert unless start <= end <= N
+  yield* emitBoundsCheck("le", start, end, expr);
+  yield* emitBoundsCheck("le", end, constant(BigInt(size)), expr);
+
+  const length = yield* binary("sub", end, start);
+
+  // Move byte `start` of the N bytes to the word's first byte
+  const leading = yield* binary(
+    "add",
+    yield* binary("mul", start, constant(8n)),
+    constant(BigInt((32 - size) * 8)),
+  );
+  const aligned = yield* binary("shl", object, leading);
+
+  // Clear the bytes past the slice's length
+  const trailing = yield* binary(
+    "mul",
+    yield* binary("sub", constant(32n), length),
+    constant(8n),
+  );
+  const data = yield* binary(
+    "shl",
+    yield* binary("shr", aligned, trailing),
+    trailing,
+  );
+
+  // The length word and one data word
+  const dest = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "allocate",
+    location: "memory",
+    size: constant(64n),
+    dest,
+    operationDebug: debug,
+  } as Ir.Instruction);
+  const address = Ir.Value.temp(dest, uint256);
+
+  yield* Process.Instructions.emit({
+    kind: "write",
+    location: "memory",
+    offset: address,
+    length: constant(32n),
+    value: length,
+    operationDebug: debug,
+  } as Ir.Instruction.Write);
+
+  yield* Process.Instructions.emit({
+    kind: "write",
+    location: "memory",
+    offset: yield* binary("add", address, constant(32n)),
+    length: constant(32n),
+    value: data,
+    operationDebug: debug,
+  } as Ir.Instruction.Write);
+
+  return Ir.Value.temp(dest, Ir.Type.Ref.memory());
+}
 
 const makeBuildIndexAccess = (
   buildExpression: (
