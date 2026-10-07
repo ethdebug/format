@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
 
+import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
 
 describe("behavioral tests", () => {
@@ -1286,6 +1287,128 @@ code {
           }
         });
       }
+    }
+  });
+
+  describe("keccak256 over words", () => {
+    // Solidity's keccak256(abi.encode(...)) for value types: each value
+    // is one 32-byte word, in order
+    const word = (value: bigint) =>
+      BigInt.asUintN(256, value).toString(16).padStart(64, "0");
+    const hashOfWords = (...values: bigint[]) =>
+      BigInt(
+        "0x" +
+          bytesToHex(
+            keccak256(
+              Uint8Array.from(Buffer.from(values.map(word).join(""), "hex")),
+            ),
+          ),
+      );
+
+    const sender = 1n; // @ethdebug/evm calls from address 0x00..01
+
+    const hashes: Record<string, [string, bigint]> = {
+      "two uint256 constants": [
+        `out = keccak256(7, 9) as uint256;`,
+        hashOfWords(7n, 9n),
+      ],
+      "a uint256 and an address": [
+        `let n: uint256 = 42;
+  out = keccak256(n, msg.sender) as uint256;`,
+        hashOfWords(42n, sender),
+      ],
+      "storage values": [
+        `out = keccak256(a, b) as uint256;`,
+        hashOfWords(1071n, 462n),
+      ],
+      "narrow integers and a bool": [
+        `let x: uint8 = 200;
+  let t = true;
+  out = keccak256(x, t) as uint256;`,
+        hashOfWords(200n, 1n),
+      ],
+      "a negative int8": [
+        `let x = (0 as int8) - 3;
+  out = keccak256(x, a) as uint256;`,
+        hashOfWords(-3n, 1071n),
+      ],
+      "a bytes32 and three words": [
+        `let h: bytes32 =
+    0x1122334400000000000000000000000000000000000000000000000000000000;
+  out = keccak256(h, a, b) as uint256;`,
+        hashOfWords(
+          0x1122334400000000000000000000000000000000000000000000000000000000n,
+          1071n,
+          462n,
+        ),
+      ],
+      // Not as in Solidity, which left-aligns bytesN in abi.encode
+      "a bytes4, by its right-aligned word": [
+        `let s: bytes4 = 0xaabbccdd;
+  out = keccak256(s, a) as uint256;`,
+        hashOfWords(0xaabbccddn, 1071n),
+      ],
+      "a bytes4 cast to bytes32, as Solidity encodes it": [
+        `let s: bytes4 = 0xaabbccdd;
+  out = keccak256(s as bytes32, a) as uint256;`,
+        hashOfWords(0xaabbccddn << 224n, 1071n),
+      ],
+      "one uint256": [`out = keccak256(a) as uint256;`, hashOfWords(1071n)],
+      "a roll": [
+        `if ((keccak256(a, msg.sender) as uint256) % 3 != 0) { out = 1; }`,
+        hashOfWords(1071n, sender) % 3n !== 0n ? 1n : 0n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name HashWords;
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] out: uint256;
+}
+create { a = 1071; b = 462; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(2n)).toBe(expected);
+        });
+      }
+    }
+
+    for (const level of [1, 2, 3] as const) {
+      it(`should fold a hash of constant words (level ${level})`, async () => {
+        const result = await compile({
+          to: "ir",
+          source: `name Fold;
+storage { [0] out: uint256; }
+code { out = keccak256(7, 9) as uint256; }`,
+          optimizer: { level },
+        });
+        if (!result.success) throw new Error("compile failed");
+
+        const instructions = [...result.value.ir.main.blocks.values()].flatMap(
+          (block) => block.instructions,
+        );
+        expect(instructions.some(({ kind }) => kind === "hash")).toBe(false);
+        expect(instructions).toContainEqual(
+          expect.objectContaining({
+            kind: "write",
+            value: expect.objectContaining({
+              kind: "const",
+              value: hashOfWords(7n, 9n),
+            }),
+          }),
+        );
+      });
     }
   });
 

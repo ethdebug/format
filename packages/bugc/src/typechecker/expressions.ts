@@ -569,9 +569,12 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
 
         // Handle keccak256 built-in function
         if (functionName === "keccak256") {
-          if (node.arguments.length !== 1) {
+          // keccak256 takes one dynamic `bytes` or `string`, and hashes
+          // its data; or one or more value types, and hashes their
+          // words in order, as Solidity's keccak256(abi.encode(...))
+          if (node.arguments.length === 0) {
             const error = new TypeError(
-              "keccak256 expects exactly 1 argument",
+              "keccak256 expects at least 1 argument",
               node.loc || undefined,
               undefined,
               undefined,
@@ -581,39 +584,51 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
             return { symbols, nodeTypes, bindings, errors };
           }
 
-          const argContext: Context = {
-            ...context,
-            nodeTypes,
-            symbols,
-            bindings,
-          };
-          const argResult = Ast.visit(
-            context.visitor,
-            node.arguments[0],
-            argContext,
-          );
-          nodeTypes = argResult.nodeTypes;
-          symbols = argResult.symbols;
-          bindings = argResult.bindings;
-          errors.push(...argResult.errors);
+          const argTypes: (Type | undefined)[] = [];
+          for (const argument of node.arguments) {
+            const argContext: Context = {
+              ...context,
+              nodeTypes,
+              symbols,
+              bindings,
+            };
+            const argResult = Ast.visit(context.visitor, argument, argContext);
+            nodeTypes = argResult.nodeTypes;
+            symbols = argResult.symbols;
+            bindings = argResult.bindings;
+            errors.push(...argResult.errors);
+            argTypes.push(argResult.type);
+          }
 
-          if (!argResult.type) {
+          if (argTypes.some((type) => !type)) {
             return { symbols, nodeTypes, bindings, errors };
           }
 
-          // keccak256 accepts bytes types and strings
-          if (
-            !Type.Elementary.isBytes(argResult.type) &&
-            !Type.Elementary.isString(argResult.type)
-          ) {
-            const error = new TypeError(
-              "keccak256 argument must be bytes or string type",
-              node.arguments[0].loc || undefined,
-              undefined,
-              undefined,
-              ErrorCode.TYPE_MISMATCH,
-            );
-            errors.push(error);
+          const isData = (type: Type) =>
+            Type.isElementary(type) &&
+            ((Type.Elementary.isBytes(type) && type.size === undefined) ||
+              Type.Elementary.isString(type));
+          const isWord = (type: Type) =>
+            Type.isElementary(type) && !isData(type);
+
+          const single = argTypes.length === 1 && isData(argTypes[0]!);
+          const invalid = single
+            ? []
+            : node.arguments.filter((_, index) => !isWord(argTypes[index]!));
+          if (invalid.length > 0) {
+            for (const argument of invalid) {
+              const error = new TypeError(
+                argTypes.length === 1
+                  ? "keccak256 argument must be a value type, bytes or string"
+                  : "keccak256 of several arguments takes only value types; " +
+                      "bytes or string must be its only argument",
+                argument.loc || undefined,
+                undefined,
+                undefined,
+                ErrorCode.TYPE_MISMATCH,
+              );
+              errors.push(error);
+            }
             return { symbols, nodeTypes, bindings, errors };
           }
 

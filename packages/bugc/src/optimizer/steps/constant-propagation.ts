@@ -129,7 +129,7 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
         }
         break;
       case "hash":
-        result.value = propagateValue(result.value);
+        result.values = result.values.map(propagateValue);
         break;
       case "cast":
         result.value = propagateValue(result.value);

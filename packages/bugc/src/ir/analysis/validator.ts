@@ -268,10 +268,10 @@ export class Validator {
       this.tempDefs.add(inst.dest);
     }
 
-    if (!inst.value) {
+    if (!inst.values?.length) {
       this.error("Hash instruction must have a value");
     } else {
-      this.validateValue(inst.value);
+      inst.values.forEach((value) => this.validateValue(value));
     }
   }
 

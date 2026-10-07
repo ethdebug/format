@@ -7,6 +7,11 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+### Changed
+
+- The IR and CFG views show each operand of a `hash` instruction, which
+  now has a list of `values` ([#PR]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 Updated `@ethdebug/bugc` to `0.1.0-preview.1`.

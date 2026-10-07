@@ -275,7 +275,7 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
       }
       break;
     case "hash":
-      addValue(inst.value);
+      inst.values.forEach(addValue);
       break;
     case "cast":
       addValue(inst.value);
