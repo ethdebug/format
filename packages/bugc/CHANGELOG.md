@@ -141,7 +141,7 @@ support. Changes to the specification itself are tracked in the root
   `(long-length - 1) / 2`. A member's regions have names qualified by its
   name, such as `name-data`. Before, the pointer gave only the slot, so a
   debugger had to know Solidity's encoding to read the value
-  ([#PR]).
+  ([#369]).
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that
@@ -433,3 +433,4 @@ First publication.
 [#365]: https://github.com/ethdebug/format/pull/365
 [#366]: https://github.com/ethdebug/format/pull/366
 [#367]: https://github.com/ethdebug/format/pull/367
+[#369]: https://github.com/ethdebug/format/pull/369
