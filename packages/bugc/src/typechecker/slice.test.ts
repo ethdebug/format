@@ -59,7 +59,7 @@ describe("Slice type checking", () => {
     return lets;
   }
 
-  test("keeps a slice of calldata in calldata, unless typed", () => {
+  test("keeps a slice of calldata in calldata, unless typed bytes", () => {
     expect(
       letTypes(`
       name Test;
@@ -70,6 +70,10 @@ describe("Slice type checking", () => {
         let m: bytes = 0x${"12".repeat(33)};
         let d = m[0:1];
         let e = b as bytes;
+        let f: bytes calldata = msg.data[4:36];
+        let g: bytes calldata = f[1:3];
+        let h = a as bytes calldata;
+        let i = a as bytes;
       }
     `),
     ).toEqual({
@@ -79,33 +83,52 @@ describe("Slice type checking", () => {
       m: "bytes",
       d: "bytes",
       e: "bytes",
+      f: "bytes calldata",
+      g: "bytes calldata",
+      h: "bytes calldata",
+      i: "bytes",
     });
   });
 
-  test("copies calldata bytes to memory bytes, never writes calldata", () => {
-    const result = parse(`
-      name Test;
-      code {
-        let m: bytes = 0x${"12".repeat(33)};
-        let c = msg.data[4:36];
-        m = c;
-        c = m;
-        c[0] = 1;
-      }
-    `);
-    if (!result.success) throw new Error("Parse failed");
+  test("allows bytes calldata only as the type of a let or a cast", () => {
+    const placement =
+      "`bytes calldata` can only be the type of a `let` or a cast";
+    const errors = (source: string) => {
+      const result = parse(source);
+      if (!result.success) throw new Error("Parse failed");
+      const typeResult = checkProgram(result.value);
+      expect(typeResult.success).toBe(false);
+      return (typeResult.messages[Severity.Error] ?? []).map((m) => m.message);
+    };
 
-    const typeResult = checkProgram(result.value);
-    expect(typeResult.success).toBe(false);
-    expect(typeResult.messages[Severity.Error]).toHaveLength(2);
-    expect(typeResult).toHaveMessage({
-      severity: Severity.Error,
-      message: "Type mismatch: expected bytes calldata, got bytes",
-    });
-    expect(typeResult).toHaveMessage({
-      severity: Severity.Error,
-      message: "Cannot assign to bytes in calldata",
-    });
+    expect(
+      errors(`
+      name Test;
+      define {
+        function f(b: bytes calldata) -> uint256 { return b.length; };
+        struct S { b: bytes calldata; };
+      }
+      code {}
+    `),
+    ).toEqual([placement, placement]);
+
+    expect(
+      errors(`
+      name Test;
+      storage { [0] s: bytes calldata; }
+      code {
+        let a: array<bytes calldata> = [msg.data];
+        let m: bytes = 0x${"12".repeat(33)};
+        let c: bytes calldata = m;
+        let d = m as bytes calldata;
+      }
+    `),
+    ).toEqual([
+      placement,
+      placement,
+      "Type mismatch: expected bytes calldata, got bytes",
+      "Cannot cast from bytes to bytes calldata",
+    ]);
   });
 
   test("rejects slice of non-bytes type", () => {

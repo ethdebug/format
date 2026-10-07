@@ -464,16 +464,29 @@ export namespace Type {
       return { id, kind: "type:elementary:bool", loc: loc ?? null };
     }
 
+    /** `bytesN`, `bytes`, or `bytes calldata` (`location`) */
     export interface Bytes extends Elementary.Base {
       kind: "type:elementary:bytes";
       size?: number;
+      location?: "calldata";
     }
 
     export const isBytes = (type: Type.Base): type is Bytes =>
       type.kind === "type:elementary:bytes";
 
-    export function bytes(id: Id, size?: number, loc?: SourceLocation): Bytes {
-      return { id, kind: "type:elementary:bytes", size, loc: loc ?? null };
+    export function bytes(
+      id: Id,
+      size?: number,
+      loc?: SourceLocation,
+      location?: "calldata",
+    ): Bytes {
+      return {
+        id,
+        kind: "type:elementary:bytes",
+        size,
+        ...(location ? { location } : {}),
+        loc: loc ?? null,
+      };
     }
 
     export interface String extends Elementary.Base {

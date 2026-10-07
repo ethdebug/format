@@ -376,32 +376,46 @@ let statement: P.Parser<Ast.Statement>;
  * Type Parsers
  */
 
-// Elementary types with location
+// Elementary types with location. Dynamic bytes may be followed by
+// `calldata`: bytes in calldata
 const elementaryType = located(
-  Lang.elementaryType.map((name: string) => {
-    // Parse the type name to extract kind and bits
-    if (name.startsWith("uint")) {
-      const bits = parseInt(name.substring(4), 10);
-      return Ast.Type.Elementary.uint(PENDING_ID, bits);
-    } else if (name.startsWith("int")) {
-      const bits = parseInt(name.substring(3), 10);
-      return Ast.Type.Elementary.int(PENDING_ID, bits);
-    } else if (name.startsWith("bytes") && name !== "bytes") {
-      const size = parseInt(name.substring(5), 10);
-      return Ast.Type.Elementary.bytes(PENDING_ID, size);
-    } else if (name === "address") {
-      return Ast.Type.Elementary.address(PENDING_ID);
-    } else if (name === "bool") {
-      return Ast.Type.Elementary.bool(PENDING_ID);
-    } else if (name === "string") {
-      return Ast.Type.Elementary.string(PENDING_ID);
-    } else if (name === "bytes") {
-      return Ast.Type.Elementary.bytes(PENDING_ID);
-    }
-    // This should never happen as elementaryTypeName parser ensures valid names
-    throw new Error(`Unknown elementary type: ${name}`);
-  }),
+  Lang.elementaryType.chain((name: string) =>
+    name === "bytes"
+      ? Lang.keyword("calldata")
+          .atMost(1)
+          .map((calldata) =>
+            Ast.Type.Elementary.bytes(
+              PENDING_ID,
+              undefined,
+              undefined,
+              calldata.length > 0 ? "calldata" : undefined,
+            ),
+          )
+      : P.succeed(elementaryTypeOf(name)),
+  ),
 );
+
+function elementaryTypeOf(name: string): Ast.Type.Elementary {
+  // Parse the type name to extract kind and bits
+  if (name.startsWith("uint")) {
+    const bits = parseInt(name.substring(4), 10);
+    return Ast.Type.Elementary.uint(PENDING_ID, bits);
+  } else if (name.startsWith("int")) {
+    const bits = parseInt(name.substring(3), 10);
+    return Ast.Type.Elementary.int(PENDING_ID, bits);
+  } else if (name.startsWith("bytes") && name !== "bytes") {
+    const size = parseInt(name.substring(5), 10);
+    return Ast.Type.Elementary.bytes(PENDING_ID, size);
+  } else if (name === "address") {
+    return Ast.Type.Elementary.address(PENDING_ID);
+  } else if (name === "bool") {
+    return Ast.Type.Elementary.bool(PENDING_ID);
+  } else if (name === "string") {
+    return Ast.Type.Elementary.string(PENDING_ID);
+  }
+  // This should never happen as elementaryTypeName parser ensures valid names
+  throw new Error(`Unknown elementary type: ${name}`);
+}
 
 // Reference type (identifier in type position)
 const referenceType = located(

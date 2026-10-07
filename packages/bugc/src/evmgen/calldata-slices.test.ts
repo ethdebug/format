@@ -40,11 +40,19 @@ function stored(text: string, slot: bigint): Map<bigint, bigint> {
   return slots;
 }
 
-// The text's bounds come from its ABI offset and length words
-const decode = `
+/**
+ * Declare `text`, with an annotation (`: bytes calldata` or `: bytes`)
+ * or none. Its bounds come from its ABI offset and length words.
+ */
+const decodeAs = (annotation: string) => `
   let offset = msg.data[4:36] as bytes32 as uint256;
   let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
-  let text = msg.data[36 + offset:36 + offset + n];`;
+  let text${annotation} = msg.data[36 + offset:36 + offset + n];`;
+
+const decode = decodeAs("");
+
+// A calldata reference untyped or typed so, and a copy in memory
+const annotations = ["", ": bytes calldata", ": bytes"];
 
 const texts = [
   "",
@@ -55,8 +63,11 @@ const texts = [
 ];
 
 describe.each(levels)("a slice of calldata at O%i", (level) => {
-  for (const text of texts) {
-    const label = `${text.length} bytes`;
+  for (const [text, annotation] of texts.flatMap((text) =>
+    annotations.map((annotation) => [text, annotation] as const),
+  )) {
+    const label = `${text.length} bytes, \`let text${annotation}\``;
+    const decode = decodeAs(annotation);
 
     it(`reads its length and bytes from calldata, ${label}`, async () => {
       const result = await executeProgram(

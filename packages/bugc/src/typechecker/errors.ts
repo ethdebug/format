@@ -25,6 +25,7 @@ export enum ErrorCode {
   INVALID_TYPE_CAST = "TYPE013",
   INTERNAL_ERROR = "TYPE014",
   MISSING_RETURN = "TYPE015",
+  CALLDATA_TYPE = "TYPE016",
   GENERAL = "TYPE_ERROR", // Legacy support
 }
 

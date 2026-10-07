@@ -9,6 +9,7 @@ import {
   assertExhausted,
 } from "./errors.js";
 import { isAssignable, commonType } from "./assignable.js";
+import { calldataTypeError, calldataTypeNode } from "./declarations.js";
 import { fits, integerLiteral, isInteger } from "./literals.js";
 
 /**
@@ -802,6 +803,29 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
       errors.push(...targetTypeResult.errors);
 
       if (!targetTypeResult.type) {
+        return { symbols, nodeTypes, bindings, errors };
+      }
+
+      // `bytes calldata` is only the whole target type, and only bytes
+      // in calldata cast to it
+      const calldata = calldataTypeNode(node.targetType);
+      if (calldata && calldata !== node.targetType) {
+        errors.push(calldataTypeError(calldata));
+        return { symbols, nodeTypes, bindings, errors };
+      }
+      if (
+        Type.Elementary.Bytes.isCalldata(targetTypeResult.type) &&
+        !Type.Elementary.Bytes.isCalldata(exprResult.type)
+      ) {
+        errors.push(
+          new TypeError(
+            `Cannot cast from ${Type.format(exprResult.type)} to bytes calldata`,
+            node.loc || undefined,
+            "bytes calldata",
+            Type.format(exprResult.type),
+            ErrorCode.INVALID_TYPE_CAST,
+          ),
+        );
         return { symbols, nodeTypes, bindings, errors };
       }
 
