@@ -165,7 +165,7 @@ export class Formatter {
         return `${destWithType(inst.dest)} = env ${inst.op}`;
 
       case "hash":
-        return `${destWithType(inst.dest)} = hash ${this.formatValue(inst.value)}`;
+        return `${destWithType(inst.dest)} = hash ${inst.values.map((value) => this.formatValue(value)).join(", ")}`;
 
       case "cast":
         return `${destWithType(inst.dest, inst.targetType)} = cast ${this.formatValue(inst.value)} to ${this.formatType(inst.targetType)}`;
@@ -299,6 +299,13 @@ export class Formatter {
             return `${location}[] = ${value}`;
           }
         }
+      }
+
+      case "copy": {
+        const offset = this.formatValue(inst.offset);
+        const length = this.formatValue(inst.length);
+        const source = this.formatValue(inst.source);
+        return `memory[offset: ${offset}, length: ${length}] = copy ${inst.location}[${source}]`;
       }
 
       // NEW: unified compute offset

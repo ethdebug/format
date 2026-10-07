@@ -9,6 +9,21 @@ support. Changes to the specification itself are tracked in the root
 
 ### Added
 
+- `block.prevrandao`, the previous block's RANDAO value (EIP-4399), as a
+  `uint256`. It compiles to the EVM's `PREVRANDAO` (`0x44`) ([#363]).
+- `keccak256` over value types: `keccak256(a, b, ...)` hashes the 32-byte
+  words of one or more integers, `address`, `bool` or `bytesN` values, in
+  order. For integers, `address` and `bool` this equals Solidity's
+  `keccak256(abi.encode(a, b, ...))`. A `bytesN` narrower than 32 bytes
+  hashes its word with its bytes at the right end, unlike `abi.encode`;
+  cast it to `bytes32` to match Solidity. A single dynamic `bytes` or
+  `string` argument still hashes its data, and must be the only argument.
+  The optimizer folds a hash of constant words at levels 1 to 3 ([#365]).
+- `push` on a dynamic array in storage, as in Solidity: `a.push(v)`
+  writes `v` at index `a.length` and adds one to the length, and
+  `a.push()` adds a zero element, as for an array of arrays. `a` may be
+  in a mapping or a struct. A push has no value. On an array in memory
+  or a fixed-size array, it is a type error ([#366]).
 - The `%` operator, with the precedence of `*` and `/`. It compiles to
   the EVM's `MOD` (`SMOD` for signed operands), so `x % 0` is `0`, as
   `x / 0` is ([#321]).
@@ -28,6 +43,24 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- The IR `hash` instruction now has `values`, a list, in place of
+  `value` and `valueDebug` ([#365]).
+- An index into a dynamic array in storage now reverts with Solidity's
+  `Panic(0x32)` unless it is less than the array's length, for reads and
+  writes, as an index into an array in memory does. Before, a write past
+  the end wrote there and left the length as it was, so the array's
+  pointer did not show the element ([#366]).
+- Storage arrays now have Solidity's layout. A fixed-size array is
+  inline: its elements start at its own slot, so `[0] a: array<uint256,
+3>` takes slots 0 to 2, and a struct member that is a fixed-size array
+  takes all its slots. A dynamic array still keeps its length in its
+  slot and its elements from `keccak256(slot)`. In either, elements
+  narrower than 16 bytes now share a slot, as many as fit, from its
+  low-order end: an `array<uint8, 40>` takes two slots. Each storage
+  variable's pointer describes the same layout. Before, every array's
+  elements started at `keccak256(slot)`, one element to a slot, while
+  the pointer of a fixed-size array described it inline, and the pointer
+  of an array of narrow elements described them packed ([#364]).
 - An integer literal operand of an arithmetic or comparison operator now
   takes the type of the other operand when its value fits, so with
   `x: int8`, `x < 0`, `x == 1` and `-1 < x` compare as `int8`. A literal
@@ -79,6 +112,8 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- `a.length` on a dynamic array in storage now reads the length in the
+  array's slot. Before, it did not read that slot ([#366]).
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that
@@ -89,6 +124,61 @@ support. Changes to the specification itself are tracked in the root
   has the branch's context: its source range, its variables (the storage
   variables too) and its transforms. Before, it had no context, so a
   debugger listed no variables while it ran ([#356]).
+- `!` is now a logical not: `!true` is `false`. Before, at every
+  optimization level, it compiled to the EVM's bitwise `NOT`, so `!x` was
+  a non-zero word, and so `true`, for every `x` ([#353]).
+- A source range now ends at its node's last token. Before, a node
+  followed by whitespace or a comment included them, so most `code`
+  ranges had trailing whitespace: `block.number ` in `block.number + 1`,
+  the target `x ` in `x = 1`, a statement up to the next statement, and
+  the `create` and `code` blocks up to the next block ([#362]).
+- A slice of a fixed-size `bytesN` value, as in
+  `keccak256("transfer(address,uint256)")[0:4]`, now gives those bytes as
+  dynamic `bytes`. Before, at every optimization level, the compiler read
+  the value as the memory address of dynamic `bytes`, so the slice
+  reverted with `Panic(0x32)` or held other memory ([#357]).
+- `keccak256` of dynamic `bytes` or a `string` now hashes its data, and
+  `keccak256(msg.data)` hashes the calldata. Before, code generation
+  hashed the word that refers to the data (its memory address, or 0 for
+  `msg.data`). So at optimization level 0, `keccak256("transfer()")` was
+  wrong, while levels 1 to 3 folded it to the right constant; at every
+  level, the hash of a slice or of `msg.data` was wrong ([#360]).
+- The `invoke` context on a caller's `JUMP` into a function now has the
+  call's `arguments`, as the callee's entry `JUMPDEST` does: the `JUMP`
+  leaves them on the stack, and the `JUMPDEST` does not change it.
+  Before, only the `JUMPDEST`'s `invoke` had them, so a debugger that
+  opens the frame on the step after the `JUMP` showed it for one step
+  without its arguments ([#354]).
+- The instructions that run before a function's first statement now have
+  a `variables` context: the memory setup at the start of the code (and
+  `create`) blocks, and a function's entry `JUMPDEST` and prologue. They
+  list the storage variables and the locals in scope, a local without a
+  pointer: a parameter is not yet in its home there, and the `invoke`'s
+  `arguments` point at it on the stack. Before, they listed no variables,
+  so a debugger showed none for those steps ([#358]).
+- Assigning a memory `string` or `bytes` to storage, as in `s = m;`, now
+  stores its bytes as Solidity does: up to 31 bytes in the slot, with
+  twice the length in the low byte; else twice the length plus one in the
+  slot, and the data from `keccak256(slot)`. A slice's bytes past its
+  length are stored as zero. Before, the slot held the value's memory
+  address ([#355]).
+- A slice now copies all its bytes, as in `msg.data[4:]` or `m[1:40]`.
+  The IR has a `copy` instruction, which compiles to `CALLDATACOPY` from
+  calldata and `MCOPY` from memory. Before, a slice copied one word, so a
+  slice longer than 32 bytes held zeros after its first 32 ([#359]).
+- A struct read from storage into a local, as in
+  `let p = players[who];` or `let s = stored;`, is now a copy in memory,
+  as the examples' README describes: reading `p.score` reads the copy,
+  and a write to `p.score` changes the copy, not storage. A field that is
+  a struct is copied too; a struct with an array, mapping, `string` or
+  dynamic `bytes` field is an error. Before, at every optimization level,
+  the local held the struct's first storage word as if it were a memory
+  address, and a write to one of its fields failed code generation
+  ([#361]).
+- A value whose only later uses are as the address, slot or value of a
+  read or write, or as the base of an offset, now gets a home in memory
+  when code generation cannot keep it on the stack. Before, such a value
+  could fail code generation with "Cannot load value" ([#361]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -300,4 +390,17 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#353]: https://github.com/ethdebug/format/pull/353
+[#354]: https://github.com/ethdebug/format/pull/354
+[#355]: https://github.com/ethdebug/format/pull/355
 [#356]: https://github.com/ethdebug/format/pull/356
+[#357]: https://github.com/ethdebug/format/pull/357
+[#358]: https://github.com/ethdebug/format/pull/358
+[#359]: https://github.com/ethdebug/format/pull/359
+[#360]: https://github.com/ethdebug/format/pull/360
+[#361]: https://github.com/ethdebug/format/pull/361
+[#362]: https://github.com/ethdebug/format/pull/362
+[#363]: https://github.com/ethdebug/format/pull/363
+[#364]: https://github.com/ethdebug/format/pull/364
+[#365]: https://github.com/ethdebug/format/pull/365
+[#366]: https://github.com/ethdebug/format/pull/366

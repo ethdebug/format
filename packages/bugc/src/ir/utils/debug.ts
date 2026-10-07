@@ -294,7 +294,6 @@ export function extractSubInstructionContexts(
       }
       break;
 
-    case "hash":
     case "cast":
       if (instruction.valueDebug?.context) {
         contexts.push(instruction.valueDebug.context);
@@ -345,6 +344,11 @@ export function extractSubInstructionContexts(
       addValueDebug(instruction.length);
       addValueDebug(instruction.value);
       break;
+    case "copy":
+      addValueDebug(instruction.source);
+      addValueDebug(instruction.offset);
+      addValueDebug(instruction.length);
+      break;
     case "compute_offset":
       addValueDebug(instruction.base);
       if (instruction.offsetKind === "array") {
@@ -364,6 +368,8 @@ export function extractSubInstructionContexts(
       addValueDebug(instruction.size);
       break;
     case "hash":
+      instruction.values.forEach(addValueDebug);
+      break;
     case "cast":
       addValueDebug(instruction.value);
       break;

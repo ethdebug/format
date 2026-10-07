@@ -1,7 +1,10 @@
 import * as Ir from "#ir";
 import type { Stack } from "#evm";
+import { Type as BugType } from "#types";
 
+import type { State } from "#evmgen/state";
 import { type Transition, rebrand, pipe, operations } from "#evmgen/operations";
+import { calculateSize } from "#evmgen/serialize";
 
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
 import { generateCastSteps } from "./cast.js";
@@ -108,6 +111,32 @@ function signExtend<S extends Stack>(
   );
 }
 
+/** Whether a storage offset is the constant 0 (or absent) */
+function isZero(offset: Ir.Value | undefined): boolean {
+  return !offset || (offset.kind === "const" && BigInt(offset.value) === 0n);
+}
+
+/**
+ * Push a storage offset in bits: `offset * 8`. A storage array's
+ * element that shares its slot has an offset known only at run time.
+ */
+function bitOffset<S extends Stack>(
+  offset: Ir.Value | undefined,
+  debug: Ir.Instruction.Debug,
+): Transition<S, readonly ["shift", ...S]> {
+  if (!offset || offset.kind === "const") {
+    const bytes = offset ? BigInt(offset.value as bigint) : 0n;
+    return pipe<S>()
+      .then(PUSHn(bytes * 8n, { debug }), { as: "shift" })
+      .done();
+  }
+  return pipe<S>()
+    .then(loadValue(offset, { debug }), { as: "value" })
+    .then(PUSHn(3n, { debug }), { as: "shift" })
+    .then(SHL({ debug }), { as: "shift" })
+    .done();
+}
+
 /**
  * Storage read: SLOAD with optional partial-slot extraction
  */
@@ -115,10 +144,9 @@ function generateStorageRead<S extends Stack>(
   inst: Ir.Instruction.Read,
   debug: Ir.Instruction.Debug,
 ): Transition<S, readonly ["value", ...S]> {
-  const offset = inst.offset?.kind === "const" ? inst.offset.value : 0n;
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
 
-  if (offset === 0n && length === 32n) {
+  if (isZero(inst.offset) && length === 32n) {
     // Full slot read - simple SLOAD
     return pipe<S>()
       .then(loadValue(inst.slot!, { debug }), { as: "key" })
@@ -136,7 +164,7 @@ function generateStorageRead<S extends Stack>(
 
       // Shift right by offset * 8 bits: storage writes count `offset`
       // from the low-order end of the slot
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
+      .then(bitOffset(inst.offset, debug), { as: "shift" })
       .then(SHR({ debug }), { as: "shiftedValue" })
       .then(PUSHn(1n, { debug }), { as: "b" })
 
@@ -402,10 +430,13 @@ function generateStorageWrite<S extends Stack>(
   inst: Ir.Instruction.Write,
   debug: Ir.Instruction.Debug,
 ): Transition<S, S> {
-  const offset = inst.offset?.kind === "const" ? inst.offset.value : 0n;
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
 
-  if (offset === 0n && length === 32n) {
+  if (isMemoryBytes(inst.value!.type)) {
+    return generateBytesStorageWrite(inst, debug);
+  }
+
+  if (isZero(inst.offset) && length === 32n) {
     // Full slot write - simple SSTORE
     return pipe<S>()
       .then(loadValue(inst.value!, { debug }), { as: "value" })
@@ -430,9 +461,7 @@ function generateStorageWrite<S extends Stack>(
       .then(SUB({ debug }), { as: "lengthMask" })
 
       // Shift mask to offset position
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), {
-        as: "bitOffset",
-      })
+      .then(bitOffset(inst.offset, debug), { as: "bitOffset" })
       .then(
         rebrand<"bitOffset", "shift", "lengthMask", "value">({
           1: "shift",
@@ -460,7 +489,7 @@ function generateStorageWrite<S extends Stack>(
         as: "a",
       })
       .then(AND({ debug }), { as: "value" })
-      .then(PUSHn(BigInt(offset) * 8n, { debug }), { as: "shift" })
+      .then(bitOffset(inst.offset, debug), { as: "shift" })
       .then(SHL({ debug }), { as: "shiftedValue" })
 
       .then(
@@ -477,4 +506,198 @@ function generateStorageWrite<S extends Stack>(
       .then(SSTORE({ debug }))
       .done()
   );
+}
+
+/**
+ * Whether a value is a reference to a string or `bytes` in memory: a
+ * length word, then the data
+ */
+function isMemoryBytes(type: Ir.Type): boolean {
+  return (
+    type.kind === "ref" &&
+    type.location === "memory" &&
+    type.origin !== "synthetic" &&
+    BugType.isElementary(type.origin) &&
+    (BugType.Elementary.isString(type.origin) ||
+      (BugType.Elementary.isBytes(type.origin) &&
+        type.origin.size === undefined))
+  );
+}
+
+type Step = (state: State<Stack>) => State<Stack>;
+type Op = (options?: { debug: Ir.Instruction.Debug }) => Step;
+
+/**
+ * Store a string or `bytes` from memory as Solidity encodes it in
+ * storage. Up to 31 bytes go in the slot itself, left-aligned, with
+ * length * 2 in the low byte. Longer data puts length * 2 + 1 in the
+ * slot and the data in the slots from keccak256(slot). The bytes
+ * after the end of the data, in its last word, are stored as zero.
+ *
+ *   [slot, ptr]   DUP2 MLOAD
+ *   [len, ...]    PUSH1 31 DUP2 GT PUSH2 long JUMPI
+ *                 DUP3 PUSH1 32 ADD MLOAD DUP2 <mask>
+ *                 DUP2 DUP1 ADD OR DUP3 SSTORE PUSH2 end JUMP
+ *   long:         JUMPDEST DUP1 DUP1 ADD PUSH1 1 ADD DUP3 SSTORE
+ *                 DUP2 PUSH0 MSTORE PUSH1 32 PUSH0 KECCAK256
+ *                 DUP4 PUSH1 32 ADD DUP3 DUP2 ADD
+ *   loop:         JUMPDEST            [end, src, dataSlot, len, ...]
+ *                 DUP2 MLOAD DUP3 DUP3 SUB <mask> DUP4 SSTORE
+ *                 SWAP2 PUSH1 1 ADD SWAP2 SWAP1 PUSH1 32 ADD SWAP1
+ *                 DUP2 DUP2 GT PUSH2 loop JUMPI POP POP POP
+ *   end:          JUMPDEST POP POP POP
+ *
+ * `<mask>` takes [k, word] to the word with all but its first k bytes
+ * cleared, when k < 32: it shifts the word right, then left, by
+ * (k < 32) * (256 - 8k) bits.
+ */
+function generateBytesStorageWrite<S extends Stack>(
+  inst: Ir.Instruction.Write,
+  debug: Ir.Instruction.Debug,
+): Transition<S, S> {
+  const raw = operations as unknown as Record<string, Op>;
+  const op =
+    (name: string): Step =>
+    (state) =>
+      raw[name]({ debug })(state);
+  const push =
+    (value: bigint): Step =>
+    (state) =>
+      (operations.PUSHn(value, { debug }) as unknown as Step)(state);
+
+  // Push a jump target, patched to the offset of `label`
+  const target =
+    (label: string): Step =>
+    (state) => {
+      const index = state.instructions.length;
+      const pushed = (operations.PUSH2([0, 0], { debug }) as unknown as Step)(
+        state,
+      );
+      return {
+        ...pushed,
+        patches: [...pushed.patches, { index, target: label }],
+      };
+    };
+  const mark =
+    (label: string): Step =>
+    (state) => {
+      const marked = {
+        ...state,
+        blockOffsets: {
+          ...state.blockOffsets,
+          [label]: calculateSize(state.instructions),
+        },
+      };
+      return op("JUMPDEST")(marked);
+    };
+
+  const mask: Step[] = [
+    op("DUP1"),
+    push(3n),
+    op("SHL"),
+    push(256n),
+    op("SUB"),
+    op("SWAP1"),
+    push(32n),
+    op("SWAP1"),
+    op("LT"),
+    op("MUL"),
+    op("DUP1"),
+    op("SWAP2"),
+    op("SWAP1"),
+    op("SHR"),
+    op("SWAP1"),
+    op("SHL"),
+  ];
+
+  return ((state: State<Stack>): State<Stack> => {
+    const id = state.nextId;
+    const long = `$bytes_long_${id}`;
+    const loop = `$bytes_loop_${id}`;
+    const end = `$bytes_end_${id}`;
+
+    const loaded = pipe<Stack>()
+      .then(loadValue(inst.value!, { debug }), { as: "value" })
+      .then(loadValue(inst.slot!, { debug }), { as: "key" })
+      .done()({ ...state, nextId: id + 1 }) as State<Stack>;
+
+    const steps: Step[] = [
+      op("DUP2"),
+      op("MLOAD"),
+      push(31n),
+      op("DUP2"),
+      op("GT"),
+      target(long),
+      op("JUMPI"),
+
+      op("DUP3"),
+      push(32n),
+      op("ADD"),
+      op("MLOAD"),
+      op("DUP2"),
+      ...mask,
+      op("DUP2"),
+      op("DUP1"),
+      op("ADD"),
+      op("OR"),
+      op("DUP3"),
+      op("SSTORE"),
+      target(end),
+      op("JUMP"),
+
+      mark(long),
+      op("DUP1"),
+      op("DUP1"),
+      op("ADD"),
+      push(1n),
+      op("ADD"),
+      op("DUP3"),
+      op("SSTORE"),
+      op("DUP2"),
+      push(0n),
+      op("MSTORE"),
+      push(32n),
+      push(0n),
+      op("KECCAK256"),
+      op("DUP4"),
+      push(32n),
+      op("ADD"),
+      op("DUP3"),
+      op("DUP2"),
+      op("ADD"),
+
+      mark(loop),
+      op("DUP2"),
+      op("MLOAD"),
+      op("DUP3"),
+      op("DUP3"),
+      op("SUB"),
+      ...mask,
+      op("DUP4"),
+      op("SSTORE"),
+      op("SWAP2"),
+      push(1n),
+      op("ADD"),
+      op("SWAP2"),
+      op("SWAP1"),
+      push(32n),
+      op("ADD"),
+      op("SWAP1"),
+      op("DUP2"),
+      op("DUP2"),
+      op("GT"),
+      target(loop),
+      op("JUMPI"),
+      op("POP"),
+      op("POP"),
+      op("POP"),
+
+      mark(end),
+      op("POP"),
+      op("POP"),
+      op("POP"),
+    ];
+
+    return steps.reduce<State<Stack>>((current, step) => step(current), loaded);
+  }) as unknown as Transition<S, S>;
 }

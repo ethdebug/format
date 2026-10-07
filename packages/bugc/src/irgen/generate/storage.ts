@@ -1,7 +1,7 @@
 import * as Ast from "#ast";
 import * as Ir from "#ir";
 import { Severity } from "#result";
-import { Type } from "#types";
+import { Storage, Type } from "#types";
 
 import { Error as IrgenError } from "#irgen/errors";
 import { fromBugType } from "#irgen/type";
@@ -24,6 +24,8 @@ export interface StorageAccessChain {
   accesses: Array<{
     kind: "index" | "member";
     key?: Ir.Value;
+    /** An index that is not checked against the length (a push's) */
+    unchecked?: boolean;
     fieldName?: string;
     fieldOffset?: number;
     fieldType?: Ir.Type;
@@ -153,6 +155,97 @@ export function* emitStorageVariableStore(
 }
 
 /**
+ * Emit the slot of element `index` of the storage array at `slot` (see
+ * `Storage`), and, for an element that shares its slot, its byte offset
+ * from the slot's low-order end. An index at or past the array's length
+ * reverts, unless it is not `checked` (as a push's, which is the length).
+ */
+export function* emitArrayElement(
+  array: Type.Array,
+  slot: Ir.Value,
+  index: Ir.Value,
+  node: Ast.Node | undefined,
+  checked: boolean = true,
+): Process<{ slot: Ir.Value; offset?: Ir.Value }> {
+  const debug = node ? yield* Process.Debug.forAstNode(node) : {};
+
+  if (checked) {
+    // A dynamic array's length is the word in its slot
+    let length = Ir.Value.constant(
+      BigInt(array.size ?? 0),
+      Ir.Type.Scalar.uint256,
+    );
+    if (array.size === undefined) {
+      const dest = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "read",
+        location: "storage",
+        slot,
+        offset: Ir.Value.constant(0n, Ir.Type.Scalar.uint256),
+        length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
+        type: Ir.Type.Scalar.uint256,
+        dest,
+        operationDebug: debug,
+      } as Ir.Instruction.Read);
+      length = Ir.Value.temp(dest, Ir.Type.Scalar.uint256);
+    }
+    yield* emitBoundsCheck("lt", index, length, node);
+  }
+  const binary = function* (
+    op: "add" | "mul" | "div" | "mod",
+    left: Ir.Value,
+    right: Ir.Value | number,
+  ): Process<Ir.Value> {
+    const dest = yield* Process.Variables.newTemp();
+    yield* Process.Instructions.emit({
+      kind: "binary",
+      op,
+      left,
+      right:
+        typeof right === "number"
+          ? Ir.Value.constant(BigInt(right), Ir.Type.Scalar.uint256)
+          : right,
+      dest,
+      operationDebug: debug,
+    } as Ir.Instruction.BinaryOp);
+    return Ir.Value.temp(dest, Ir.Type.Scalar.uint256);
+  };
+
+  // A fixed-size array's elements start at its slot; a dynamic array's
+  // at keccak256 of its slot
+  let first = slot;
+  if (array.size === undefined) {
+    const dest = yield* Process.Variables.newTemp();
+    yield* Process.Instructions.emit({
+      kind: "compute_slot",
+      slotKind: "array",
+      base: slot,
+      dest,
+      operationDebug: debug,
+    } as Ir.Instruction.ComputeSlot);
+    first = Ir.Value.temp(dest, Ir.Type.Scalar.uint256);
+  }
+
+  const perSlot = Storage.elementsPerSlot(array.element);
+  if (perSlot > 1) {
+    const position = yield* binary("mod", index, perSlot);
+    return {
+      slot: yield* binary("add", first, yield* binary("div", index, perSlot)),
+      offset: yield* binary("mul", position, Storage.size(array.element)!),
+    };
+  }
+
+  const stride = Storage.slots(array.element);
+  return {
+    slot: yield* binary(
+      "add",
+      first,
+      stride === 1 ? index : yield* binary("mul", index, stride),
+    ),
+  };
+}
+
+/**
  * Emit a storage chain load
  */
 export function* emitStorageChainLoad(
@@ -170,9 +263,12 @@ export function* emitStorageChainLoad(
 
   // Track the Bug type for semantic information
   let currentOrigin = bugType;
+  // An array element's byte offset in its slot, if it shares the slot
+  let elementOffset: Ir.Value | undefined;
 
   // Process each access in the chain
   for (const access of chain.accesses) {
+    elementOffset = undefined;
     if (access.kind === "index" && access.key) {
       // For mapping/array access
       const tempId = yield* Process.Variables.newTemp();
@@ -193,41 +289,17 @@ export function* emitStorageChainLoad(
         // Update to the value type
         currentOrigin = currentOrigin.value;
       } else if (currentOrigin && Type.isArray(currentOrigin)) {
-        // A fixed-size array reverts on an index out of bounds. (A
-        // dynamic array in storage grows when written past its end.)
-        if (currentOrigin.size !== undefined) {
-          yield* emitBoundsCheck(
-            "lt",
-            access.key,
-            Ir.Value.constant(
-              BigInt(currentOrigin.size),
-              Ir.Type.Scalar.uint256,
-            ),
-            node,
-          );
-        }
-
-        // Array access - first compute the array's first slot (hash of base)
-        const firstSlotTempId = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "compute_slot",
-          slotKind: "array",
-          base: currentSlot,
-          dest: firstSlotTempId,
-          operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
-        } as Ir.Instruction.ComputeSlot);
-
-        // Then add the index to get the actual element slot
-        yield* Process.Instructions.emit({
-          kind: "binary",
-          op: "add",
-          left: Ir.Value.temp(firstSlotTempId, Ir.Type.Scalar.uint256),
-          right: access.key,
-          dest: tempId,
-          operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
-        } as Ir.Instruction.BinaryOp);
-        // Update to the element type
+        const element = yield* emitArrayElement(
+          currentOrigin,
+          currentSlot,
+          access.key,
+          node,
+          !access.unchecked,
+        );
+        elementOffset = element.offset;
+        currentSlot = element.slot;
         currentOrigin = currentOrigin.element;
+        continue;
       }
 
       currentSlot = Ir.Value.temp(tempId, Ir.Type.Scalar.uint256);
@@ -271,6 +343,11 @@ export function* emitStorageChainLoad(
     }
   }
 
+  // A struct is a copy in memory, not the slot's word
+  if (currentOrigin && Type.isStruct(currentOrigin)) {
+    return yield* emitStorageStructCopy(currentSlot, currentOrigin, node);
+  }
+
   // Check if the last access was a struct field to get packed field info
   let byteOffset = 0;
   let fieldSize = 32; // Default to full slot
@@ -289,13 +366,19 @@ export function* emitStorageChainLoad(
     }
   }
 
+  if (elementOffset && currentOrigin) {
+    fieldSize = Storage.size(currentOrigin) ?? 32;
+  }
+
   // Generate the final read instruction using new unified format
   const loadTempId = yield* Process.Variables.newTemp();
   yield* Process.Instructions.emit({
     kind: "read",
     location: "storage",
     slot: currentSlot,
-    offset: Ir.Value.constant(BigInt(byteOffset), Ir.Type.Scalar.uint256),
+    offset:
+      elementOffset ??
+      Ir.Value.constant(BigInt(byteOffset), Ir.Type.Scalar.uint256),
     length: Ir.Value.constant(BigInt(fieldSize), Ir.Type.Scalar.uint256),
     type: valueType,
     dest: loadTempId,
@@ -303,6 +386,117 @@ export function* emitStorageChainLoad(
   } as Ir.Instruction.Read);
 
   return Ir.Value.temp(loadTempId, valueType);
+}
+
+/**
+ * Copy a struct from storage, starting at `slot`, into new memory, and
+ * return its address. A struct in memory has one word per field, in
+ * order; a struct field is the address of its own copy.
+ */
+export function* emitStorageStructCopy(
+  slot: Ir.Value,
+  struct: Type.Struct,
+  node: Ast.Node | undefined,
+): Process<Ir.Value> {
+  const debug = node ? yield* Process.Debug.forAstNode(node) : {};
+  const uint256 = Ir.Type.Scalar.uint256;
+  const constant = (value: bigint) => Ir.Value.constant(value, uint256);
+
+  const address = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "allocate",
+    location: "memory",
+    size: constant(BigInt(struct.fields.size * 32)),
+    dest: address,
+    operationDebug: debug,
+  } as Ir.Instruction);
+
+  let index = 0;
+  for (const [name, fieldType] of struct.fields) {
+    const layout = struct.layout.get(name);
+    if (!layout) {
+      throw new Error(`Field ${name} not found in struct ${struct.name}`);
+    }
+
+    // The field's slot
+    let fieldSlot = slot;
+    if (layout.byteOffset >= 32) {
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "compute_slot",
+        slotKind: "field",
+        base: slot,
+        fieldOffset: layout.byteOffset,
+        dest: temp,
+        operationDebug: debug,
+      } as Ir.Instruction.ComputeSlot);
+      fieldSlot = Ir.Value.temp(temp, uint256);
+    }
+
+    let value: Ir.Value;
+    if (Type.isStruct(fieldType)) {
+      value = yield* emitStorageStructCopy(fieldSlot, fieldType, node);
+    } else if (
+      Type.isElementary(fieldType) &&
+      !(Type.Elementary.isBytes(fieldType) && fieldType.size === undefined) &&
+      !Type.Elementary.isString(fieldType)
+    ) {
+      const irType = fromBugType(fieldType);
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "read",
+        location: "storage",
+        slot: fieldSlot,
+        offset: constant(BigInt(layout.byteOffset % 32)),
+        length: constant(BigInt(getFieldSize(irType))),
+        type: irType,
+        dest: temp,
+        operationDebug: debug,
+      } as Ir.Instruction.Read);
+      value = Ir.Value.temp(temp, irType);
+    } else {
+      yield* Process.Errors.report(
+        new IrgenError(
+          `Cannot copy struct ${struct.name} from storage: its field ` +
+            `${name} is a ${Type.format(fieldType)}, and only value ` +
+            `and struct fields can be copied to memory`,
+          node?.loc ?? undefined,
+          Severity.Error,
+        ),
+      );
+      value = constant(0n);
+    }
+
+    // The field's word in memory
+    let offset = Ir.Value.temp(address, uint256);
+    if (index > 0) {
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit(
+        Ir.Instruction.ComputeOffset.field(
+          "memory",
+          offset,
+          name,
+          index * 32,
+          temp,
+          debug,
+        ),
+      );
+      offset = Ir.Value.temp(temp, uint256);
+    }
+
+    yield* Process.Instructions.emit({
+      kind: "write",
+      location: "memory",
+      offset,
+      length: constant(32n),
+      value,
+      operationDebug: debug,
+    } as Ir.Instruction.Write);
+
+    index++;
+  }
+
+  return Ir.Value.temp(address, Ir.Type.Ref.memory());
 }
 
 /**
@@ -328,9 +522,12 @@ export function* emitStorageChainStore(
     Ir.Type.Scalar.uint256,
   );
   let currentOrigin = bugType;
+  // An array element's byte offset in its slot, if it shares the slot
+  let elementOffset: Ir.Value | undefined;
 
   // Process each access in the chain
   for (const access of chain.accesses) {
+    elementOffset = undefined;
     if (access.kind === "index" && access.key) {
       // For mapping/array access
       if (currentOrigin && Type.isMapping(currentOrigin)) {
@@ -349,41 +546,15 @@ export function* emitStorageChainStore(
         currentSlot = Ir.Value.temp(slotTemp, Ir.Type.Scalar.uint256);
         currentOrigin = currentOrigin.value;
       } else if (currentOrigin && Type.isArray(currentOrigin)) {
-        // A fixed-size array reverts on an index out of bounds. (A
-        // dynamic array in storage grows when written past its end.)
-        if (currentOrigin.size !== undefined) {
-          yield* emitBoundsCheck(
-            "lt",
-            access.key,
-            Ir.Value.constant(
-              BigInt(currentOrigin.size),
-              Ir.Type.Scalar.uint256,
-            ),
-            node,
-          );
-        }
-
-        // Array access - first compute the array's first slot (hash of base)
-        const firstSlotTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "compute_slot",
-          slotKind: "array",
-          base: currentSlot,
-          dest: firstSlotTemp,
-          operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
-        });
-
-        // Then add the index to get the actual element slot
-        const slotTemp = yield* Process.Variables.newTemp();
-        yield* Process.Instructions.emit({
-          kind: "binary",
-          op: "add",
-          left: Ir.Value.temp(firstSlotTemp, Ir.Type.Scalar.uint256),
-          right: access.key,
-          dest: slotTemp,
-          operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},
-        });
-        currentSlot = Ir.Value.temp(slotTemp, Ir.Type.Scalar.uint256);
+        const element = yield* emitArrayElement(
+          currentOrigin,
+          currentSlot,
+          access.key,
+          node,
+          !access.unchecked,
+        );
+        elementOffset = element.offset;
+        currentSlot = element.slot;
         currentOrigin = currentOrigin.element;
       }
     } else if (access.kind === "member" && access.fieldName) {
@@ -458,7 +629,9 @@ export function* emitStorageChainStore(
     kind: "write",
     location: "storage",
     slot: currentSlot,
-    offset: Ir.Value.constant(BigInt(byteOffset), Ir.Type.Scalar.uint256),
+    offset:
+      elementOffset ??
+      Ir.Value.constant(BigInt(byteOffset), Ir.Type.Scalar.uint256),
     length: Ir.Value.constant(BigInt(actualFieldSize), Ir.Type.Scalar.uint256),
     value,
     operationDebug: node ? yield* Process.Debug.forAstNode(node) : {},

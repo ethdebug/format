@@ -563,15 +563,27 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
       let symbols = context.symbols;
       let bindings = context.bindings;
 
+      // `a.push(v)` or `a.push()` on a dynamic array in storage
+      if (
+        Ast.Expression.isAccess(node.callee) &&
+        Ast.Expression.Access.isMember(node.callee) &&
+        node.callee.property === "push"
+      ) {
+        return checkPush(node, node.callee, context);
+      }
+
       // Check if this is a built-in function call
       if (node.callee.kind === "expression:identifier") {
         const functionName = node.callee.name;
 
         // Handle keccak256 built-in function
         if (functionName === "keccak256") {
-          if (node.arguments.length !== 1) {
+          // keccak256 takes one dynamic `bytes` or `string`, and hashes
+          // its data; or one or more value types, and hashes their
+          // words in order, as Solidity's keccak256(abi.encode(...))
+          if (node.arguments.length === 0) {
             const error = new TypeError(
-              "keccak256 expects exactly 1 argument",
+              "keccak256 expects at least 1 argument",
               node.loc || undefined,
               undefined,
               undefined,
@@ -581,39 +593,51 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
             return { symbols, nodeTypes, bindings, errors };
           }
 
-          const argContext: Context = {
-            ...context,
-            nodeTypes,
-            symbols,
-            bindings,
-          };
-          const argResult = Ast.visit(
-            context.visitor,
-            node.arguments[0],
-            argContext,
-          );
-          nodeTypes = argResult.nodeTypes;
-          symbols = argResult.symbols;
-          bindings = argResult.bindings;
-          errors.push(...argResult.errors);
+          const argTypes: (Type | undefined)[] = [];
+          for (const argument of node.arguments) {
+            const argContext: Context = {
+              ...context,
+              nodeTypes,
+              symbols,
+              bindings,
+            };
+            const argResult = Ast.visit(context.visitor, argument, argContext);
+            nodeTypes = argResult.nodeTypes;
+            symbols = argResult.symbols;
+            bindings = argResult.bindings;
+            errors.push(...argResult.errors);
+            argTypes.push(argResult.type);
+          }
 
-          if (!argResult.type) {
+          if (argTypes.some((type) => !type)) {
             return { symbols, nodeTypes, bindings, errors };
           }
 
-          // keccak256 accepts bytes types and strings
-          if (
-            !Type.Elementary.isBytes(argResult.type) &&
-            !Type.Elementary.isString(argResult.type)
-          ) {
-            const error = new TypeError(
-              "keccak256 argument must be bytes or string type",
-              node.arguments[0].loc || undefined,
-              undefined,
-              undefined,
-              ErrorCode.TYPE_MISMATCH,
-            );
-            errors.push(error);
+          const isData = (type: Type) =>
+            Type.isElementary(type) &&
+            ((Type.Elementary.isBytes(type) && type.size === undefined) ||
+              Type.Elementary.isString(type));
+          const isWord = (type: Type) =>
+            Type.isElementary(type) && !isData(type);
+
+          const single = argTypes.length === 1 && isData(argTypes[0]!);
+          const invalid = single
+            ? []
+            : node.arguments.filter((_, index) => !isWord(argTypes[index]!));
+          if (invalid.length > 0) {
+            for (const argument of invalid) {
+              const error = new TypeError(
+                argTypes.length === 1
+                  ? "keccak256 argument must be a value type, bytes or string"
+                  : "keccak256 of several arguments takes only value types; " +
+                      "bytes or string must be its only argument",
+                argument.loc || undefined,
+                undefined,
+                undefined,
+                ErrorCode.TYPE_MISMATCH,
+              );
+              errors.push(error);
+            }
             return { symbols, nodeTypes, bindings, errors };
           }
 
@@ -1037,6 +1061,9 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         case "expression:special:block.number":
           type = Type.Elementary.uint(256);
           break;
+        case "expression:special:block.prevrandao":
+          type = Type.Elementary.uint(256);
+          break;
       }
 
       const nodeTypes = new Map(context.nodeTypes);
@@ -1218,4 +1245,86 @@ function indexTypeError(what: string, type: Type): string | undefined {
     );
   }
   return undefined;
+}
+
+/**
+ * Type check `a.push(v)` (or `a.push()`, which adds a zero element), as
+ * in Solidity: `a` must be a dynamic array in storage, and `v` must be
+ * assignable to its element type. A push has no value.
+ */
+function checkPush(
+  node: Ast.Expression.Call,
+  callee: Ast.Expression.Access.Member,
+  context: Context,
+): Report {
+  const errors: TypeError[] = [];
+  const objectResult = Ast.visit(context.visitor, callee.object, context);
+  let { nodeTypes, symbols, bindings } = objectResult;
+  errors.push(...objectResult.errors);
+  const report = () => ({ symbols, nodeTypes, bindings, errors });
+
+  const objectType = objectResult.type;
+  if (!objectType) return report();
+
+  const fail = (message: string, code: ErrorCode, at: Ast.Node = node) => {
+    errors.push(
+      new TypeError(message, at.loc || undefined, undefined, undefined, code),
+    );
+    return report();
+  };
+
+  // The array's root: the storage variable it is in, if any
+  let root: Ast.Expression = callee.object;
+  while (Ast.Expression.isAccess(root)) {
+    root = (root as Ast.Expression.Access.Member | Ast.Expression.Access.Index)
+      .object;
+  }
+  const inStorage =
+    Ast.Expression.isIdentifier(root) &&
+    symbols.lookup(root.name)?.location === "storage";
+
+  if (
+    !Type.isArray(objectType) ||
+    objectType.size !== undefined ||
+    !inStorage
+  ) {
+    return fail(
+      `push needs a dynamic array in storage, not ${Type.format(objectType)}`,
+      ErrorCode.INVALID_OPERATION,
+    );
+  }
+
+  if (node.arguments.length > 1) {
+    return fail(
+      `push takes at most 1 argument, but got ${node.arguments.length}`,
+      ErrorCode.INVALID_ARGUMENT_COUNT,
+    );
+  }
+
+  if (node.arguments.length === 1) {
+    const argument = node.arguments[0];
+    const argResult = Ast.visit(context.visitor, argument, {
+      ...context,
+      nodeTypes,
+      symbols,
+      bindings,
+    });
+    ({ nodeTypes, symbols, bindings } = argResult);
+    errors.push(...argResult.errors);
+    if (argResult.type && !isAssignable(objectType.element, argResult.type)) {
+      return fail(
+        ErrorMessages.TYPE_MISMATCH(
+          Type.format(objectType.element),
+          Type.format(argResult.type),
+        ),
+        ErrorCode.TYPE_MISMATCH,
+        argument,
+      );
+    }
+  }
+
+  const type = Type.failure("void function");
+  nodeTypes = new Map(nodeTypes);
+  nodeTypes.set(node.id, type);
+  return { type, symbols, nodeTypes, bindings, errors };
 }

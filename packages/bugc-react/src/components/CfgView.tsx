@@ -349,12 +349,14 @@ function CfgViewContent({ ir }: CfgViewProps): JSX.Element {
             return `${envInst.dest} = block.timestamp`;
           case "block_number":
             return `${envInst.dest} = block.number`;
+          case "block_prevrandao":
+            return `${envInst.dest} = block.prevrandao`;
           default:
             return `${envInst.dest} = ${envInst.op}`;
         }
       }
       case "hash":
-        return `${inst.dest} = keccak256(${formatValue(inst.value)})`;
+        return `${inst.dest} = keccak256(${inst.values.map(formatValue).join(", ")})`;
       case "cast":
         return `${inst.dest} = cast ${formatValue(inst.value)} to ${inst.targetType.kind}`;
       case "compute_slot": {

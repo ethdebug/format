@@ -10,3 +10,4 @@ export { generateComputeSlot } from "./compute-slot.js";
 export { generateAllocate } from "./allocate.js";
 export { generateComputeOffset } from "./compute-offset.js";
 export { generateAssert } from "./assert.js";
+export { generateCopy } from "./copy.js";

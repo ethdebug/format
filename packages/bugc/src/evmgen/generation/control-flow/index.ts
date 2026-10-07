@@ -1,1 +1,5 @@
-export { generateTerminator, generateCallTerminator } from "./terminator.js";
+export {
+  generateTerminator,
+  generateCallTerminator,
+  invokeArguments,
+} from "./terminator.js";

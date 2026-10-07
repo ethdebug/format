@@ -42,7 +42,7 @@ describe("ConstantFoldingStep", () => {
       },
       {
         kind: "hash",
-        value: { kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 },
+        values: [{ kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 }],
         dest: "t1",
         operationDebug: {},
       },
@@ -72,15 +72,14 @@ describe("ConstantFoldingStep", () => {
   it("should not fold keccak256 on non-constant values", () => {
     const module = createTestModule([
       {
-        kind: "const",
-        value: 123n,
-        type: Ir.Type.Scalar.uint256,
+        kind: "env",
+        op: "msg_sender",
         dest: "t0",
         operationDebug: {},
       },
       {
         kind: "hash",
-        value: { kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 },
+        values: [{ kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 }],
         dest: "t1",
         operationDebug: {},
       },
@@ -99,7 +98,7 @@ describe("ConstantFoldingStep", () => {
     expect(block.instructions).toHaveLength(2);
     expect(block.instructions[1]).toMatchObject({
       kind: "hash",
-      value: { kind: "temp", id: "t0" },
+      values: [{ kind: "temp", id: "t0" }],
       dest: "t1",
     });
   });
@@ -115,7 +114,7 @@ describe("ConstantFoldingStep", () => {
       },
       {
         kind: "hash",
-        value: { kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 },
+        values: [{ kind: "temp", id: "t0", type: Ir.Type.Scalar.uint256 }],
         dest: "t1",
         operationDebug: {},
       },
@@ -128,7 +127,7 @@ describe("ConstantFoldingStep", () => {
       },
       {
         kind: "hash",
-        value: { kind: "temp", id: "t2", type: Ir.Type.Scalar.uint256 },
+        values: [{ kind: "temp", id: "t2", type: Ir.Type.Scalar.uint256 }],
         dest: "t3",
         operationDebug: {},
       },

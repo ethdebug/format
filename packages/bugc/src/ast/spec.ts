@@ -1439,7 +1439,8 @@ export namespace Expression {
     | Expression.Special.MsgValue
     | Expression.Special.MsgData
     | Expression.Special.BlockTimestamp
-    | Expression.Special.BlockNumber;
+    | Expression.Special.BlockNumber
+    | Expression.Special.BlockPrevrandao;
 
   export const isSpecial = (
     expression: Expression.Base,
@@ -1451,6 +1452,7 @@ export namespace Expression {
       Expression.Special.isMsgSender,
       Expression.Special.isBlockNumber,
       Expression.Special.isBlockTimestamp,
+      Expression.Special.isBlockPrevrandao,
     ].some((guard) => guard(expression));
 
   export namespace Special {
@@ -1531,6 +1533,26 @@ export namespace Expression {
 
     export function blockNumber(id: Id, loc?: SourceLocation): BlockNumber {
       return { id, kind: "expression:special:block.number", loc: loc ?? null };
+    }
+
+    export interface BlockPrevrandao extends Base {
+      kind: "expression:special:block.prevrandao";
+    }
+
+    export const isBlockPrevrandao = (
+      expression: Expression.Base,
+    ): expression is BlockPrevrandao =>
+      expression.kind === "expression:special:block.prevrandao";
+
+    export function blockPrevrandao(
+      id: Id,
+      loc?: SourceLocation,
+    ): BlockPrevrandao {
+      return {
+        id,
+        kind: "expression:special:block.prevrandao",
+        loc: loc ?? null,
+      };
     }
   }
 }

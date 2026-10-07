@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
 
+import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
 
 describe("behavioral tests", () => {
@@ -1289,6 +1290,514 @@ code {
     }
   });
 
+  describe("logical not", () => {
+    const program = `name Not;
+
+define {
+  function isSet(x: uint256) -> bool {
+    return x != 0;
+  };
+}
+
+storage {
+  [0] t: bool;
+  [1] notTrue: bool;
+  [2] notFalse: bool;
+  [3] notNot: bool;
+  [4] branch: uint256;
+  [5] notCall: bool;
+}
+
+create {
+  t = true;
+}
+
+code {
+  notTrue = !t;
+  notFalse = !notTrue;
+  notNot = !!t;
+  if (!t) {
+    branch = 1;
+  } else {
+    branch = 2;
+  }
+  notCall = !isSet(0);
+}`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should negate a bool (level ${level})`, async () => {
+        const result = await executeProgram(program, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(1n)).toBe(0n);
+        expect(await result.getStorage(2n)).toBe(1n);
+        expect(await result.getStorage(3n)).toBe(1n);
+        expect(await result.getStorage(4n)).toBe(2n);
+        expect(await result.getStorage(5n)).toBe(1n);
+      });
+    }
+  });
+
+  describe("block.prevrandao", () => {
+    const source = `name Randao;
+storage { [0] out: uint256; }
+code {
+  out = block.prevrandao + 1;
+}`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should read PREVRANDAO (level ${level})`, async () => {
+        const compiled = await compile({
+          to: "bytecode",
+          source,
+          optimizer: { level },
+        });
+        if (!compiled.success) throw new Error("compile failed");
+        const mnemonics =
+          compiled.value.bytecode.runtimeProgram.instructions.map(
+            (instruction) => instruction.operation?.mnemonic,
+          );
+        expect(mnemonics).toContain("PREVRANDAO");
+
+        // @ethdebug/evm runs each call in a block whose prevrandao is 0
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(1n);
+      });
+    }
+  });
+
+  describe("keccak256 over words", () => {
+    // Solidity's keccak256(abi.encode(...)) for value types: each value
+    // is one 32-byte word, in order
+    const word = (value: bigint) =>
+      BigInt.asUintN(256, value).toString(16).padStart(64, "0");
+    const hashOfWords = (...values: bigint[]) =>
+      BigInt(
+        "0x" +
+          bytesToHex(
+            keccak256(
+              Uint8Array.from(Buffer.from(values.map(word).join(""), "hex")),
+            ),
+          ),
+      );
+
+    const sender = 1n; // @ethdebug/evm calls from address 0x00..01
+
+    const hashes: Record<string, [string, bigint]> = {
+      "two uint256 constants": [
+        `out = keccak256(7, 9) as uint256;`,
+        hashOfWords(7n, 9n),
+      ],
+      "a uint256 and an address": [
+        `let n: uint256 = 42;
+  out = keccak256(n, msg.sender) as uint256;`,
+        hashOfWords(42n, sender),
+      ],
+      "storage values": [
+        `out = keccak256(a, b) as uint256;`,
+        hashOfWords(1071n, 462n),
+      ],
+      "narrow integers and a bool": [
+        `let x: uint8 = 200;
+  let t = true;
+  out = keccak256(x, t) as uint256;`,
+        hashOfWords(200n, 1n),
+      ],
+      "a negative int8": [
+        `let x = (0 as int8) - 3;
+  out = keccak256(x, a) as uint256;`,
+        hashOfWords(-3n, 1071n),
+      ],
+      "a bytes32 and three words": [
+        `let h: bytes32 =
+    0x1122334400000000000000000000000000000000000000000000000000000000;
+  out = keccak256(h, a, b) as uint256;`,
+        hashOfWords(
+          0x1122334400000000000000000000000000000000000000000000000000000000n,
+          1071n,
+          462n,
+        ),
+      ],
+      // Not as in Solidity, which left-aligns bytesN in abi.encode
+      "a bytes4, by its right-aligned word": [
+        `let s: bytes4 = 0xaabbccdd;
+  out = keccak256(s, a) as uint256;`,
+        hashOfWords(0xaabbccddn, 1071n),
+      ],
+      "a bytes4 cast to bytes32, as Solidity encodes it": [
+        `let s: bytes4 = 0xaabbccdd;
+  out = keccak256(s as bytes32, a) as uint256;`,
+        hashOfWords(0xaabbccddn << 224n, 1071n),
+      ],
+      "one uint256": [`out = keccak256(a) as uint256;`, hashOfWords(1071n)],
+      "a roll": [
+        `if ((keccak256(a, msg.sender) as uint256) % 3 != 0) { out = 1; }`,
+        hashOfWords(1071n, sender) % 3n !== 0n ? 1n : 0n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name HashWords;
+storage {
+  [0] a: uint256;
+  [1] b: uint256;
+  [2] out: uint256;
+}
+create { a = 1071; b = 462; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(2n)).toBe(expected);
+        });
+      }
+    }
+
+    for (const level of [1, 2, 3] as const) {
+      it(`should fold a hash of constant words (level ${level})`, async () => {
+        const result = await compile({
+          to: "ir",
+          source: `name Fold;
+storage { [0] out: uint256; }
+code { out = keccak256(7, 9) as uint256; }`,
+          optimizer: { level },
+        });
+        if (!result.success) throw new Error("compile failed");
+
+        const instructions = [...result.value.ir.main.blocks.values()].flatMap(
+          (block) => block.instructions,
+        );
+        expect(instructions.some(({ kind }) => kind === "hash")).toBe(false);
+        expect(instructions).toContainEqual(
+          expect.objectContaining({
+            kind: "write",
+            value: expect.objectContaining({
+              kind: "const",
+              value: hashOfWords(7n, 9n),
+            }),
+          }),
+        );
+      });
+    }
+  });
+
+  describe("slices of fixed-size bytes", () => {
+    // The leading four bytes of the hash of the word 0x00..01
+    const hashPrefix = BigInt(
+      "0x" + bytesToHex(keccak256(new Uint8Array(32).fill(1, 31))).slice(0, 8),
+    );
+
+    const slices: Record<string, [string, bigint]> = {
+      "the leading bytes of a hash": [
+        `out = keccak256(0x01)[0:4] as bytes4 as uint256;`,
+        hashPrefix,
+      ],
+      "the leading bytes of a hash, compared": [
+        `let sel = keccak256(0x01)[0:4] as bytes4;
+  if (sel == keccak256(0x01) as bytes4) { out = 1; }`,
+        1n,
+      ],
+      "inner bytes of a bytes32": [
+        `let h: bytes32 =
+    0x1122334455667788000000000000000000000000000000000000000000000000;
+  out = h[1:5] as bytes4 as uint256;`,
+        0x22334455n,
+      ],
+      "fewer bytes than the cast": [
+        `let h: bytes32 =
+    0x1122334455667788000000000000000000000000000000000000000000000000;
+  out = h[2:4] as bytes4 as uint256;`,
+        0x33440000n,
+      ],
+      "the trailing bytes of a bytes32": [
+        `let h: bytes32 =
+    0x00000000000000000000000000000000000000000000000000000000aabbccdd;
+  out = h[28:32] as bytes4 as uint256;`,
+        0xaabbccddn,
+      ],
+      "a bytes4": [
+        `let b: bytes4 = 0x11223344;
+  out = b[1:3] as bytes4 as uint256;`,
+        0x22330000n,
+      ],
+      "the length": [
+        `let h: bytes32 = keccak256(0x01);
+  out = h[3:10].length;`,
+        7n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(slices)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should slice ${name} (level ${level})`, async () => {
+          const source = `name Slice;
+storage { [0] n: uint256; [1] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should revert on a slice past the end (level ${level})`, async () => {
+        const source = `name Slice;
+storage { [0] end: uint256; [1] out: uint256; }
+create { end = 33; }
+code {
+  let h: bytes32 = keccak256(0x01);
+  out = h[30:end].length;
+}`;
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(false);
+      });
+    }
+  });
+
+  describe("hashes of dynamic bytes", () => {
+    const hashOf = (data: string | Uint8Array) =>
+      BigInt(
+        "0x" +
+          bytesToHex(
+            keccak256(
+              typeof data === "string" ? new TextEncoder().encode(data) : data,
+            ),
+          ),
+      );
+
+    const long = "season 2 starts friday, see you on the leaderboard";
+    const calldata = "0xaabbccdd" + "11".repeat(32);
+
+    const hashes: Record<string, [string, bigint]> = {
+      "a string literal": [
+        `out = keccak256("setMotd(string)") as uint256;`,
+        hashOf("setMotd(string)"),
+      ],
+      "a selector": [
+        `out = keccak256("setMotd(string)") as bytes4 as uint256;`,
+        0x5fe59b9dn,
+      ],
+      "an empty string": [`out = keccak256("") as uint256;`, hashOf("")],
+      "a string longer than a word": [
+        `out = keccak256("${long}") as uint256;`,
+        hashOf(long),
+      ],
+      "a string local": [
+        `let s = "setMotd(string)";
+  out = keccak256(s) as uint256;`,
+        hashOf("setMotd(string)"),
+      ],
+      "a calldata slice": [
+        `out = keccak256(msg.data[0:4]) as uint256;`,
+        hashOf(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
+      ],
+      "msg.data": [
+        `out = keccak256(msg.data) as uint256;`,
+        hashOf(new Uint8Array(Buffer.from(calldata.slice(2), "hex"))),
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name Hash;
+storage { [0] n: uint256; [1] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+  });
+
+  describe("keccak256 of one data value or of words", () => {
+    // one word hashes its 32 bytes, one string or msg.data hashes its
+    // data, and several values hash their words in order
+    const hashOf = (bytes: Uint8Array) =>
+      BigInt("0x" + bytesToHex(keccak256(bytes)));
+    const words = (...values: bigint[]) =>
+      Uint8Array.from(
+        Buffer.from(
+          values.map((value) => value.toString(16).padStart(64, "0")).join(""),
+          "hex",
+        ),
+      );
+    const calldata = "0xaabbccdd" + "11".repeat(32);
+
+    const hashes: Record<string, [string, bigint]> = {
+      "a uint256 by its word": [
+        `let x: uint256 = 7;
+  out = keccak256(x) as uint256;`,
+        hashOf(words(7n)),
+      ],
+      "a string by its data": [
+        `let s = "abc";
+  out = keccak256(s) as uint256;`,
+        hashOf(new TextEncoder().encode("abc")),
+      ],
+      "msg.data by the calldata bytes": [
+        `out = keccak256(msg.data) as uint256;`,
+        hashOf(Uint8Array.from(Buffer.from(calldata.slice(2), "hex"))),
+      ],
+      "two uint256 values by their words": [
+        `let a: uint256 = 7;
+  let b: uint256 = 9;
+  out = keccak256(a, b) as uint256;`,
+        hashOf(words(7n, 9n)),
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(hashes)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should hash ${name} (level ${level})`, async () => {
+          const source = `name HashDispatch;
+storage { [0] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        });
+      }
+    }
+  });
+
+  describe("struct locals copied from storage", () => {
+    const program = (body: string) => `name StructCopy;
+
+define {
+  struct Inner {
+    a: uint8;
+    b: uint256;
+  };
+  struct Player {
+    score: uint64;
+    combo: int32;
+    active: bool;
+    total: uint256;
+    inner: Inner;
+  };
+}
+
+storage {
+  [0] players: mapping<address, Player>;
+  [1] out: uint256;
+  [2] one: Player;
+}
+
+create {
+  players[0x0000000000000000000000000000000000000000].score = 10;
+  players[0x0000000000000000000000000000000000000000].combo = (0 as int32) - 3;
+  players[0x0000000000000000000000000000000000000000].active = true;
+  players[0x0000000000000000000000000000000000000000].total = 99;
+  players[0x0000000000000000000000000000000000000000].inner.a = 7;
+  players[0x0000000000000000000000000000000000000000].inner.b = 8;
+  one.score = 20;
+  one.total = 21;
+}
+
+code {
+  let who = 0x0000000000000000000000000000000000000000;
+  ${body}
+}`;
+
+    const cases: Record<string, [string, bigint]> = {
+      "a field in the first slot": [
+        `let p = players[who];
+  out = p.score;`,
+        10n,
+      ],
+      "a signed field": [
+        `let p = players[who];
+  if (p.combo == (0 as int32) - 3) { out = 1; }`,
+        1n,
+      ],
+      "a bool field": [
+        `let p = players[who];
+  if (p.active) { out = 1; }`,
+        1n,
+      ],
+      "a field in the second slot": [
+        `let p = players[who];
+  out = p.total;`,
+        99n,
+      ],
+      "a nested struct's fields": [
+        `let p = players[who];
+  out = (p.inner.a as uint256) * 1000 + p.inner.b;`,
+        7008n,
+      ],
+      "a storage struct variable": [
+        `let p = one;
+  out = p.score + p.total;`,
+        41n,
+      ],
+      "a write to the copy, which storage does not see": [
+        `let p = players[who];
+  p.score = 50;
+  out = p.score * 1000 + players[who].score;`,
+        50010n,
+      ],
+      "a write to storage, which the copy does not see": [
+        `let p = players[who];
+  players[who].score = 50;
+  out = p.score * 1000 + players[who].score;`,
+        10050n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(cases)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should copy ${name} (level ${level})`, async () => {
+          const result = await executeProgram(program(body), {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+  });
+
   describe("modulo", () => {
     const program = (expr: string) => `name Modulo;
 
@@ -1843,7 +2352,8 @@ code {
   o5 = m128[6];
 }`;
 
-    // bugc gives each array element its own slot
+    // A fixed-size array is inline, and its narrow elements share a
+    // slot, from the low-order end (a[1] is its bytes 2 and 3)
     const arrays = `name NarrowArrays;
 storage { [0] a: array<int16, 3>; [1] n: int256; [10] o0: int256; }
 create { n = -2 as int256; }
@@ -1882,7 +2392,7 @@ code { a[1] = n as int16; o0 = a[1]; }`;
           optimizationLevel: level,
         });
         expect(result.callSuccess).toBe(true);
-        expect(await result.getStorage(hash(pad(0n)) + 1n)).toBe(0xfffen);
+        expect(await result.getStorage(0n)).toBe(0xfffe0000n);
         expect(await result.getStorage(10n)).toBe(neg(2n));
       });
     }

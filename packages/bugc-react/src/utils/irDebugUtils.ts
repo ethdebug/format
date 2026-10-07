@@ -90,10 +90,6 @@ export function extractInstructionDebug(
       operands.push({ label: "operand", debug: instruction.operandDebug });
       break;
 
-    case "hash":
-      operands.push({ label: "value", debug: instruction.valueDebug });
-      break;
-
     case "cast":
       operands.push({ label: "value", debug: instruction.valueDebug });
       break;

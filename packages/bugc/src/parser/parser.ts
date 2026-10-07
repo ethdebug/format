@@ -16,6 +16,7 @@ const PENDING_ID = "<pending>" as Ast.Id;
  * Parse a BUG program and return Result
  */
 export function parse(input: string): Result<Ast.Program, ParseError> {
+  tokenEnds.clear();
   return runParser(parser, input);
 }
 
@@ -29,8 +30,20 @@ export function parse(input: string): Result<Ast.Program, ParseError> {
 function toSourceLocation(mark: P.Mark<unknown>): Ast.SourceLocation {
   return {
     offset: mark.start.offset,
-    length: mark.end.offset - mark.start.offset,
+    length: tokenEnd(mark.start.offset, mark.end.offset) - mark.start.offset,
   };
+}
+
+/**
+ * For the input being parsed: the end of each token, before the
+ * whitespace and comments after it, by the index after them. A node's
+ * location ends at its last token's end, not after the whitespace and
+ * comments that follow it.
+ */
+const tokenEnds = new Map<number, number>();
+
+function tokenEnd(start: number, end: number): number {
+  return Math.max(start, tokenEnds.get(end) ?? end);
 }
 
 /**
@@ -51,7 +64,11 @@ const _ = whitespaceOrComment.many().result(undefined);
 const __ = whitespaceOrComment.atLeast(1).result(undefined);
 
 // Lexeme: consume trailing whitespace/comments
-const lexeme = <T>(p: P.Parser<T>): P.Parser<T> => p.skip(_);
+const lexeme = <T>(p: P.Parser<T>): P.Parser<T> =>
+  P.seqMap(p, P.index, _, P.index, (value, end, _skipped, next) => {
+    tokenEnds.set(next.offset, end.offset);
+    return value;
+  });
 
 // Keywords - must not be followed by identifier chars
 const keyword = (name: string): P.Parser<string> =>
@@ -535,18 +552,25 @@ const msgExpression = located(
   }),
 );
 
-// block.timestamp and block.number as special expressions
+// block.timestamp, block.number and block.prevrandao as special
+// expressions
 const blockExpression = located(
   P.seq(
     Lang.keyword("block"),
     Lang.dot,
-    P.alt(Lang.keyword("timestamp"), Lang.keyword("number")),
+    P.alt(
+      Lang.keyword("timestamp"),
+      Lang.keyword("number"),
+      Lang.keyword("prevrandao"),
+    ),
   ).map(([_, __, property]) => {
-    const kind = property === "timestamp" ? "block.timestamp" : "block.number";
-    if (kind === "block.timestamp") {
-      return Ast.Expression.Special.blockTimestamp(PENDING_ID);
-    } else {
-      return Ast.Expression.Special.blockNumber(PENDING_ID);
+    switch (property) {
+      case "timestamp":
+        return Ast.Expression.Special.blockTimestamp(PENDING_ID);
+      case "number":
+        return Ast.Expression.Special.blockNumber(PENDING_ID);
+      default:
+        return Ast.Expression.Special.blockPrevrandao(PENDING_ID);
     }
   }),
 );
@@ -651,7 +675,7 @@ const postfixExpression = P.lazy(() => {
     suffixes.reduce<Ast.Expression>((obj, [suffix, end]) => {
       const loc = {
         offset: start.offset,
-        length: end.offset - start.offset,
+        length: tokenEnd(start.offset, end.offset) - start.offset,
       };
       const id = `${loc.offset}_${loc.length}` as Ast.Id;
 

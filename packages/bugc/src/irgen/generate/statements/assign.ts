@@ -173,15 +173,16 @@ function* assignToTarget(node: Ast.Expression, value: Ir.Value): Process<void> {
           const offsetTemp = yield* Process.Variables.newTemp();
           // Calculate field offset - assuming 32 bytes per field for now
           const fieldOffset = fieldIndex * 32;
-          yield* Process.Instructions.emit({
-            kind: "compute_offset",
-            location: "memory",
-            base: object,
-            field: fieldName,
-            fieldOffset,
-            dest: offsetTemp,
-            operationDebug: yield* Process.Debug.forAstNode(accessNode),
-          } as Ir.Instruction.ComputeOffset);
+          yield* Process.Instructions.emit(
+            Ir.Instruction.ComputeOffset.field(
+              "memory",
+              object,
+              fieldName,
+              fieldOffset,
+              offsetTemp,
+              yield* Process.Debug.forAstNode(accessNode),
+            ),
+          );
 
           // Then write to that offset
           yield* Process.Instructions.emit({

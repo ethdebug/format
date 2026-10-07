@@ -12,6 +12,7 @@ export type Instruction =
   // Unified read/write operations
   | Instruction.Read
   | Instruction.Write
+  | Instruction.Copy
   // Storage slot computation
   | Instruction.ComputeSlot
   // Unified compute operations
@@ -123,6 +124,18 @@ export namespace Instruction {
     // Value to write
     value: Value;
     valueDebug?: Instruction.Debug;
+  }
+
+  /**
+   * Copy `length` bytes from `source` in `location` to memory at
+   * `offset`
+   */
+  export interface Copy extends Instruction.Base {
+    kind: "copy";
+    location: "memory" | "calldata";
+    source: Value;
+    offset: Value;
+    length: Value;
   }
 
   // NEW: Unified compute offset instruction
@@ -383,15 +396,20 @@ export namespace Instruction {
       | "msg_value"
       | "msg_data"
       | "block_number"
-      | "block_timestamp";
+      | "block_timestamp"
+      | "block_prevrandao";
 
     dest: string;
   }
 
+  /**
+   * keccak256 of the 32-byte words of `values`, in order. A single
+   * memory reference (dynamic `bytes` or a `string`) instead hashes
+   * the data it refers to.
+   */
   export interface Hash extends Instruction.Base {
     kind: "hash";
-    value: Value;
-    valueDebug?: Instruction.Debug;
+    values: Value[];
     dest: string;
   }
 

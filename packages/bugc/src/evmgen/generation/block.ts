@@ -21,7 +21,11 @@ import {
   generateCallTerminator,
 } from "./control-flow/index.js";
 import { annotateTop } from "./values/identify.js";
-import { withReturned, withStackLocals } from "../debug/local-variables.js";
+import {
+  preludeVariables,
+  withReturned,
+  withStackLocals,
+} from "../debug/local-variables.js";
 
 /**
  * Generate code for a basic block
@@ -59,7 +63,11 @@ export function generate<S extends Stack>(
             ? { sourceId: func.sourceId, loc: func.loc }
             : undefined;
         result = result.then(
-          initializeMemory(state.memory.nextStaticOffset, sourceInfo),
+          initializeMemory(
+            state.memory.nextStaticOffset,
+            sourceInfo,
+            func ? preludeVariables(func) : [],
+          ),
         );
       }
 
@@ -385,23 +393,23 @@ function storePhiDest<S extends Stack>(
 function initializeMemory<S extends Stack>(
   nextStaticOffset: number,
   sourceInfo?: { sourceId: string; loc: Ast.SourceLocation },
+  variables: Format.Program.Context.Variables["variables"] = [],
 ): Transition<S, S> {
   const { PUSHn, MSTORE } = operations;
 
-  const debug = sourceInfo
-    ? {
-        context: {
-          code: {
-            source: { id: sourceInfo.sourceId },
-            range: sourceInfo.loc,
-          },
-        } as Format.Program.Context,
-      }
-    : {
-        context: {
-          remark: "initialize free memory pointer",
-        } as Format.Program.Context,
-      };
+  const debug = {
+    context: {
+      ...(sourceInfo
+        ? {
+            code: {
+              source: { id: sourceInfo.sourceId },
+              range: sourceInfo.loc,
+            },
+          }
+        : { remark: "initialize free memory pointer" }),
+      ...(variables.length > 0 ? { variables } : {}),
+    } as Format.Program.Context,
+  };
 
   const { PUSH0 } = operations;
 

@@ -127,7 +127,14 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
         }
         break;
       case "hash":
-        this.collectValueUse(inst.value, used);
+        for (const value of inst.values) {
+          this.collectValueUse(value, used);
+        }
+        break;
+      case "copy":
+        this.collectValueUse(inst.source, used);
+        this.collectValueUse(inst.offset, used);
+        this.collectValueUse(inst.length, used);
         break;
       case "cast":
         this.collectValueUse(inst.value, used);
@@ -168,6 +175,7 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
   private hasSideEffects(inst: Ir.Instruction): boolean {
     switch (inst.kind) {
       case "write":
+      case "copy":
       case "allocate": // Allocate modifies the free memory pointer
       case "assert": // Assert may revert
         return true;

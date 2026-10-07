@@ -160,7 +160,10 @@ function InstructionRenderer({
 
     case "hash":
       add(`${formatDest(instruction.dest)} = hash `);
-      addOperand("value", formatValue(instruction.value));
+      instruction.values.forEach((value, index) => {
+        if (index > 0) add(", ");
+        addOperand("value", formatValue(value));
+      });
       break;
 
     case "cast":
@@ -335,6 +338,16 @@ function InstructionRenderer({
       addOperand("value", value);
       break;
     }
+
+    case "copy":
+      add("memory[offset: ");
+      addOperand("offset", formatValue(instruction.offset));
+      add(", length: ");
+      addOperand("length", formatValue(instruction.length));
+      add(`] = copy ${instruction.location}[`);
+      addOperand("source", formatValue(instruction.source));
+      add("]");
+      break;
 
     default:
       add(`; unknown instruction: ${(instruction as { kind?: string }).kind}`);

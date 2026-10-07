@@ -6,7 +6,7 @@ import { type Transition, pipe, operations } from "#evmgen/operations";
 
 import { storeValueIfNeeded } from "../values/index.js";
 
-const { CALLER, CALLVALUE, PUSH0, TIMESTAMP, NUMBER } = operations;
+const { CALLER, CALLVALUE, PUSH0, TIMESTAMP, NUMBER, PREVRANDAO } = operations;
 
 /**
  * Generate code for environment operations
@@ -26,6 +26,7 @@ export function generateEnvOp<S extends Stack>(
     msg_data: PUSH0({ debug }), // Returns calldata offset (0)
     block_timestamp: TIMESTAMP({ debug }),
     block_number: NUMBER({ debug }),
+    block_prevrandao: PREVRANDAO({ debug }),
   };
 
   return pipe<S>()

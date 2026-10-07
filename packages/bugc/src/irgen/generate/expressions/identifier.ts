@@ -5,7 +5,10 @@ import { Severity } from "#result";
 import { Error as IrgenError, ErrorMessages } from "#irgen/errors";
 import { fromBugType } from "#irgen/type";
 
+import { Type } from "#types";
+
 import { Process } from "../process.js";
+import { emitStorageStructCopy } from "../storage.js";
 
 /**
  * Build an identifier expression
@@ -29,6 +32,15 @@ export function* buildIdentifier(
     const irType = storageType
       ? fromBugType(storageType)
       : Ir.Type.Scalar.uint256;
+
+    // A struct is a copy in memory, not the slot's word
+    if (storageType && Type.isStruct(storageType)) {
+      return yield* emitStorageStructCopy(
+        Ir.Value.constant(BigInt(storageSlot.slot), Ir.Type.Scalar.uint256),
+        storageType,
+        expr,
+      );
+    }
 
     // Build storage load using new unified read instruction
     const tempId = yield* Process.Variables.newTemp();

@@ -236,8 +236,15 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         result.size = replaceValue(result.size);
         break;
       case "hash":
+        result.values = result.values.map(replaceValue);
+        break;
       case "cast":
         result.value = replaceValue(result.value);
+        break;
+      case "copy":
+        result.source = replaceValue(result.source);
+        result.offset = replaceValue(result.offset);
+        result.length = replaceValue(result.length);
         break;
       case "length":
         result.object = replaceValue(result.object);
@@ -317,6 +324,7 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
   private hasSideEffects(inst: Ir.Instruction): boolean {
     switch (inst.kind) {
       case "write":
+      case "copy":
         return true;
       default:
         return false;

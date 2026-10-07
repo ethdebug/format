@@ -21,6 +21,7 @@ import {
   generateAllocate,
   generateComputeOffset,
   generateAssert,
+  generateCopy,
 } from "./instructions/index.js";
 
 /**
@@ -41,10 +42,12 @@ export function generate<S extends Stack>(
       return generateRead(inst);
     case "write":
       return generateWrite(inst);
+    case "copy":
+      return generateCopy(inst);
     case "env":
       return generateEnvOp(inst);
     case "hash":
-      return generateHashOp(inst);
+      return generateHashOp(inst, msgDataIds);
     case "length":
       return generateLength(inst, msgDataIds);
     case "compute_slot":

@@ -3,6 +3,9 @@ import { describe, it, expect } from "vitest";
 import { compile } from "#compiler";
 import type * as Format from "@ethdebug/format";
 import { Pointer, Program } from "@ethdebug/format";
+import { createMachineState } from "@ethdebug/evm";
+import { dereference } from "@ethdebug/pointers";
+import { traceLocals } from "#test/evm/locals";
 
 const { Context } = Program;
 const { Invocation } = Context.Invoke;
@@ -70,7 +73,7 @@ code {
 
   it(
     "should emit invoke context on caller JUMP " +
-      "(identity + code target, no args)",
+      "(identity, code target and args)",
     async () => {
       const program = await compileProgram(source);
 
@@ -100,11 +103,51 @@ code {
       expect(call.target).toBeDefined();
       expect(Pointer.Region.isCode(call.target!.pointer)).toBe(true);
 
-      // Caller JUMP should NOT have argument pointers
-      // (args live on the callee JUMPDEST invoke context)
-      expect(call.arguments).toBeUndefined();
+      // The JUMP's invoke opens the frame, so it names the
+      // arguments too: the JUMP leaves them on the stack, where the
+      // callee's entry JUMPDEST (which does not change the stack)
+      // finds them
+      expect(call.arguments).toBeDefined();
+      expect(call.arguments!.pointer).toEqual({
+        group: [
+          { name: "a", location: "stack", slot: 1 },
+          { name: "b", location: "stack", slot: 0 },
+        ],
+      });
     },
   );
+
+  it("should give the caller JUMP's arguments their values", async () => {
+    const { executor, steps, instructionAt } = await traceLocals(source);
+
+    const index = steps.findIndex((step) => {
+      const instruction = instructionAt(step);
+      return (
+        instruction?.operation?.mnemonic === "JUMP" &&
+        Context.isInvoke(instruction.context)
+      );
+    });
+    expect(index).toBeGreaterThanOrEqual(0);
+
+    // Contexts are postconditions: read the JUMP's pointers against
+    // the state after it, at the callee's entry JUMPDEST
+    const { invoke } = instructionAt(steps[index])!
+      .context as Format.Program.Context.Invoke;
+    const state = createMachineState(executor, {
+      traceStep: steps[index + 1],
+    });
+    const cursor = await dereference(
+      (invoke as InternalCall).arguments!.pointer,
+      { state },
+    );
+    const view = await cursor.view(state);
+    const values = await Promise.all(
+      ["a", "b"].map(async (name) =>
+        (await view.read(view.regions.lookup[name])).asUint(),
+      ),
+    );
+    expect(values).toEqual([10n, 20n]);
+  });
 
   it("should emit return context on the callee's exit JUMP", async () => {
     const program = await compileProgram(source);

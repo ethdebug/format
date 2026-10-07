@@ -1,4 +1,4 @@
-import { Type } from "../types/index.js";
+import { Storage, Type } from "../types/index.js";
 
 /**
  * Compute storage layout for a struct's fields.
@@ -25,13 +25,14 @@ export function computeStructLayout(
         currentSlotUsed = 0;
       }
 
-      layout.set(fieldName, {
-        byteOffset: currentSlotOffset,
-        size: SLOT_SIZE, // Dynamic types use full slot for reference
-      });
+      // A fixed-size array is inline, so it takes all its slots
+      const size = Type.isArray(fieldType)
+        ? Storage.slots(fieldType) * SLOT_SIZE
+        : SLOT_SIZE;
+      layout.set(fieldName, { byteOffset: currentSlotOffset, size });
 
-      // Move to next slot
-      currentSlotOffset += SLOT_SIZE;
+      // Move to the slot after it
+      currentSlotOffset += size;
       currentSlotUsed = 0;
     } else {
       // For non-dynamic types, try to pack them

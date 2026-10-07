@@ -248,9 +248,13 @@ function simulateInstruction(stack: string[], inst: Ir.Instruction): string[] {
   // Pop consumed values based on instruction type
   switch (inst.kind) {
     case "binary":
-    case "hash":
       newStack.pop(); // Two operands
       newStack.pop();
+      break;
+    case "hash":
+      for (const _ of inst.values) {
+        newStack.pop();
+      }
       break;
     case "compute_slot":
       // Depends on kind
@@ -280,6 +284,11 @@ function simulateInstruction(stack: string[], inst: Ir.Instruction): string[] {
       if (inst.offset) newStack.pop();
       if (inst.length) newStack.pop();
       newStack.pop(); // value
+      break;
+    case "copy":
+      newStack.pop(); // source
+      newStack.pop(); // offset
+      newStack.pop(); // length
       break;
     // NEW: compute offset
     case "compute_offset":
@@ -355,10 +364,34 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
       addValue(inst.object);
       break;
     case "hash":
-      addValue(inst.value);
+      inst.values.forEach(addValue);
+      break;
+    case "copy":
+      addValue(inst.source);
+      addValue(inst.offset);
+      addValue(inst.length);
       break;
     case "assert":
       addValue(inst.condition);
+      break;
+    case "read":
+      addValue(inst.slot);
+      addValue(inst.offset);
+      addValue(inst.length);
+      break;
+    case "write":
+      addValue(inst.slot);
+      addValue(inst.offset);
+      addValue(inst.length);
+      addValue(inst.value);
+      break;
+    case "compute_offset":
+      addValue(inst.base);
+      if (Ir.Instruction.ComputeOffset.isArray(inst)) {
+        addValue(inst.index);
+      } else if (Ir.Instruction.ComputeOffset.isByte(inst)) {
+        addValue(inst.offset);
+      }
       break;
     // Call instruction removed - calls are now block terminators
   }
@@ -416,6 +449,7 @@ function definedType(inst: Ir.Instruction): Ir.Type | undefined {
     case "compute_offset":
       return Ir.Type.Scalar.word;
     case "write":
+    case "copy":
     case "assert":
       return undefined;
   }

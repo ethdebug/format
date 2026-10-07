@@ -129,7 +129,12 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
         }
         break;
       case "hash":
-        result.value = propagateValue(result.value);
+        result.values = result.values.map(propagateValue);
+        break;
+      case "copy":
+        result.source = propagateValue(result.source);
+        result.offset = propagateValue(result.offset);
+        result.length = propagateValue(result.length);
         break;
       case "cast":
         result.value = propagateValue(result.value);
@@ -182,6 +187,7 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
   private hasSideEffects(inst: Ir.Instruction): boolean {
     switch (inst.kind) {
       case "write":
+      case "copy":
         return true;
       default:
         return false;

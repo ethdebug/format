@@ -275,7 +275,7 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
       }
       break;
     case "hash":
-      addValue(inst.value);
+      inst.values.forEach(addValue);
       break;
     case "cast":
       addValue(inst.value);
@@ -302,6 +302,11 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
       addValue(inst.offset); // For memory/calldata/etc
       addValue(inst.length);
       addValue(inst.value);
+      break;
+    case "copy":
+      addValue(inst.source);
+      addValue(inst.offset);
+      addValue(inst.length);
       break;
     // NEW: unified compute offset
     case "compute_offset":
@@ -341,6 +346,7 @@ function getDefinedValue(inst: Ir.Instruction): string | undefined {
       return inst.dest;
     // These instructions don't define values
     case "write": // NEW: unified write
+    case "copy":
     case "assert":
       return undefined;
   }
