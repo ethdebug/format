@@ -151,7 +151,7 @@ support. Changes to the specification itself are tracked in the root
   template is named `entry` for a mapping variable, `<name>-entry` for a
   mapping member `name`, and `value-entry` for a mapping in an entry.
   Before, the pointer gave only the mapping's slot, so a debugger could
-  not find an entry or its members from it.
+  not find an entry or its members from it ([#371]).
 - At optimization levels 2 and 3, an inlined body's control flow now has
   a `transform: ["inline"]` context: the branch of an `if`, the jumps
   between the body's blocks, each block's `JUMPDEST`, and the jump that
@@ -444,3 +444,4 @@ First publication.
 [#366]: https://github.com/ethdebug/format/pull/366
 [#367]: https://github.com/ethdebug/format/pull/367
 [#369]: https://github.com/ethdebug/format/pull/369
+[#371]: https://github.com/ethdebug/format/pull/371
