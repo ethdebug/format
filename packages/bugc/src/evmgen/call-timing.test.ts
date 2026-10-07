@@ -55,6 +55,27 @@ create { r = 0; }
 code { r = fact(4); }`,
     returns: [1n, 2n, 6n, 24n],
   },
+  {
+    // From O2, TCO turns count's self-call into a back-edge JUMP
+    // that pops the old frame and pushes the new one at once, so
+    // the frame depth stays constant. That JUMP carries a `return`
+    // with no `data`: nothing is returned yet. The only value count
+    // returns is its last one, from its real exit.
+    name: "tail call",
+    source: `name TailCall;
+define {
+  function succ(n: uint256) -> uint256 { return n + 1; };
+  function count(n: uint256, target: uint256) -> uint256 {
+    if (n < target) { return count(succ(n), target); }
+    else { return n; }
+  };
+}
+storage { [0] r: uint256; }
+create { r = 0; }
+code { r = count(0, 5); }`,
+    // At O0: succ's five returns, then count's six, unwinding
+    returns: [1n, 2n, 3n, 4n, 5n, 5n, 5n, 5n, 5n, 5n, 5n],
+  },
 ];
 
 /** A context's invoke and return leaves, outside inlined bodies */
@@ -141,6 +162,24 @@ describe("call frame timing", () => {
             frames[frames.length - 1]?.name,
             `step ${i} (pc ${steps[i].pc})`,
           ).toBe(functionAt(steps[i].pc));
+        }
+
+        // An exit with no `data` is never run. Bugc gives an if/else
+        // whose branches both return an empty merge block, with an
+        // implicit void return that nothing jumps to (O0 and O1; the
+        // optimizer drops it from O2). A value-returning function
+        // that runs off its end would reach such an exit, but the
+        // functions here do not.
+        const visited = new Set(steps.map(({ pc }) => pc));
+        for (const instruction of program.instructions) {
+          const { invoke, return: returned } = events(instruction.context);
+          const ret = (instruction.context as Format.Program.Context.Return)
+            ?.return;
+          if (returned !== undefined && invoke === undefined && !ret.data) {
+            expect(visited, `exit at ${instruction.offset}`).not.toContain(
+              Number(instruction.offset),
+            );
+          }
         }
 
         expect(frames).toEqual([]);
