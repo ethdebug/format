@@ -374,6 +374,25 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
     case "assert":
       addValue(inst.condition);
       break;
+    case "read":
+      addValue(inst.slot);
+      addValue(inst.offset);
+      addValue(inst.length);
+      break;
+    case "write":
+      addValue(inst.slot);
+      addValue(inst.offset);
+      addValue(inst.length);
+      addValue(inst.value);
+      break;
+    case "compute_offset":
+      addValue(inst.base);
+      if (Ir.Instruction.ComputeOffset.isArray(inst)) {
+        addValue(inst.index);
+      } else if (Ir.Instruction.ComputeOffset.isByte(inst)) {
+        addValue(inst.offset);
+      }
+      break;
     // Call instruction removed - calls are now block terminators
   }
 

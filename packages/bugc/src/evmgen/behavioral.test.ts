@@ -1699,6 +1699,105 @@ code {
     }
   });
 
+  describe("struct locals copied from storage", () => {
+    const program = (body: string) => `name StructCopy;
+
+define {
+  struct Inner {
+    a: uint8;
+    b: uint256;
+  };
+  struct Player {
+    score: uint64;
+    combo: int32;
+    active: bool;
+    total: uint256;
+    inner: Inner;
+  };
+}
+
+storage {
+  [0] players: mapping<address, Player>;
+  [1] out: uint256;
+  [2] one: Player;
+}
+
+create {
+  players[0x0000000000000000000000000000000000000000].score = 10;
+  players[0x0000000000000000000000000000000000000000].combo = (0 as int32) - 3;
+  players[0x0000000000000000000000000000000000000000].active = true;
+  players[0x0000000000000000000000000000000000000000].total = 99;
+  players[0x0000000000000000000000000000000000000000].inner.a = 7;
+  players[0x0000000000000000000000000000000000000000].inner.b = 8;
+  one.score = 20;
+  one.total = 21;
+}
+
+code {
+  let who = 0x0000000000000000000000000000000000000000;
+  ${body}
+}`;
+
+    const cases: Record<string, [string, bigint]> = {
+      "a field in the first slot": [
+        `let p = players[who];
+  out = p.score;`,
+        10n,
+      ],
+      "a signed field": [
+        `let p = players[who];
+  if (p.combo == (0 as int32) - 3) { out = 1; }`,
+        1n,
+      ],
+      "a bool field": [
+        `let p = players[who];
+  if (p.active) { out = 1; }`,
+        1n,
+      ],
+      "a field in the second slot": [
+        `let p = players[who];
+  out = p.total;`,
+        99n,
+      ],
+      "a nested struct's fields": [
+        `let p = players[who];
+  out = (p.inner.a as uint256) * 1000 + p.inner.b;`,
+        7008n,
+      ],
+      "a storage struct variable": [
+        `let p = one;
+  out = p.score + p.total;`,
+        41n,
+      ],
+      "a write to the copy, which storage does not see": [
+        `let p = players[who];
+  p.score = 50;
+  out = p.score * 1000 + players[who].score;`,
+        50010n,
+      ],
+      "a write to storage, which the copy does not see": [
+        `let p = players[who];
+  players[who].score = 50;
+  out = p.score * 1000 + players[who].score;`,
+        10050n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(cases)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should copy ${name} (level ${level})`, async () => {
+          const result = await executeProgram(program(body), {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+  });
+
   describe("modulo", () => {
     const program = (expr: string) => `name Modulo;
 

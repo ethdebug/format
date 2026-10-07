@@ -271,6 +271,11 @@ export function* emitStorageChainLoad(
     }
   }
 
+  // A struct is a copy in memory, not the slot's word
+  if (currentOrigin && Type.isStruct(currentOrigin)) {
+    return yield* emitStorageStructCopy(currentSlot, currentOrigin, node);
+  }
+
   // Check if the last access was a struct field to get packed field info
   let byteOffset = 0;
   let fieldSize = 32; // Default to full slot
@@ -303,6 +308,117 @@ export function* emitStorageChainLoad(
   } as Ir.Instruction.Read);
 
   return Ir.Value.temp(loadTempId, valueType);
+}
+
+/**
+ * Copy a struct from storage, starting at `slot`, into new memory, and
+ * return its address. A struct in memory has one word per field, in
+ * order; a struct field is the address of its own copy.
+ */
+export function* emitStorageStructCopy(
+  slot: Ir.Value,
+  struct: Type.Struct,
+  node: Ast.Node | undefined,
+): Process<Ir.Value> {
+  const debug = node ? yield* Process.Debug.forAstNode(node) : {};
+  const uint256 = Ir.Type.Scalar.uint256;
+  const constant = (value: bigint) => Ir.Value.constant(value, uint256);
+
+  const address = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "allocate",
+    location: "memory",
+    size: constant(BigInt(struct.fields.size * 32)),
+    dest: address,
+    operationDebug: debug,
+  } as Ir.Instruction);
+
+  let index = 0;
+  for (const [name, fieldType] of struct.fields) {
+    const layout = struct.layout.get(name);
+    if (!layout) {
+      throw new Error(`Field ${name} not found in struct ${struct.name}`);
+    }
+
+    // The field's slot
+    let fieldSlot = slot;
+    if (layout.byteOffset >= 32) {
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "compute_slot",
+        slotKind: "field",
+        base: slot,
+        fieldOffset: layout.byteOffset,
+        dest: temp,
+        operationDebug: debug,
+      } as Ir.Instruction.ComputeSlot);
+      fieldSlot = Ir.Value.temp(temp, uint256);
+    }
+
+    let value: Ir.Value;
+    if (Type.isStruct(fieldType)) {
+      value = yield* emitStorageStructCopy(fieldSlot, fieldType, node);
+    } else if (
+      Type.isElementary(fieldType) &&
+      !(Type.Elementary.isBytes(fieldType) && fieldType.size === undefined) &&
+      !Type.Elementary.isString(fieldType)
+    ) {
+      const irType = fromBugType(fieldType);
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit({
+        kind: "read",
+        location: "storage",
+        slot: fieldSlot,
+        offset: constant(BigInt(layout.byteOffset % 32)),
+        length: constant(BigInt(getFieldSize(irType))),
+        type: irType,
+        dest: temp,
+        operationDebug: debug,
+      } as Ir.Instruction.Read);
+      value = Ir.Value.temp(temp, irType);
+    } else {
+      yield* Process.Errors.report(
+        new IrgenError(
+          `Cannot copy struct ${struct.name} from storage: its field ` +
+            `${name} is a ${Type.format(fieldType)}, and only value ` +
+            `and struct fields can be copied to memory`,
+          node?.loc ?? undefined,
+          Severity.Error,
+        ),
+      );
+      value = constant(0n);
+    }
+
+    // The field's word in memory
+    let offset = Ir.Value.temp(address, uint256);
+    if (index > 0) {
+      const temp = yield* Process.Variables.newTemp();
+      yield* Process.Instructions.emit(
+        Ir.Instruction.ComputeOffset.field(
+          "memory",
+          offset,
+          name,
+          index * 32,
+          temp,
+          debug,
+        ),
+      );
+      offset = Ir.Value.temp(temp, uint256);
+    }
+
+    yield* Process.Instructions.emit({
+      kind: "write",
+      location: "memory",
+      offset,
+      length: constant(32n),
+      value,
+      operationDebug: debug,
+    } as Ir.Instruction.Write);
+
+    index++;
+  }
+
+  return Ir.Value.temp(address, Ir.Type.Ref.memory());
 }
 
 /**
