@@ -91,7 +91,7 @@ support. Changes to the specification itself are tracked in the root
   debugger listed no variables while it ran ([#356]).
 - `!` is now a logical not: `!true` is `false`. Before, at every
   optimization level, it compiled to the EVM's bitwise `NOT`, so `!x` was
-  a non-zero word, and so `true`, for every `x` ([#PR]).
+  a non-zero word, and so `true`, for every `x` ([#353]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -303,4 +303,5 @@ First publication.
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
+[#353]: https://github.com/ethdebug/format/pull/353
 [#356]: https://github.com/ethdebug/format/pull/356
