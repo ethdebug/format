@@ -92,6 +92,11 @@ support. Changes to the specification itself are tracked in the root
 - `!` is now a logical not: `!true` is `false`. Before, at every
   optimization level, it compiled to the EVM's bitwise `NOT`, so `!x` was
   a non-zero word, and so `true`, for every `x` ([#353]).
+- A source range now ends at its node's last token. Before, a node
+  followed by whitespace or a comment included them, so most `code`
+  ranges had trailing whitespace: `block.number ` in `block.number + 1`,
+  the target `x ` in `x = 1`, a statement up to the next statement, and
+  the `create` and `code` blocks up to the next block ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
