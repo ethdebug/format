@@ -119,7 +119,7 @@ support. Changes to the specification itself are tracked in the root
   hashed the word that refers to the data (its memory address, or 0 for
   `msg.data`). So at optimization level 0, `keccak256("transfer()")` was
   wrong, while levels 1 to 3 folded it to the right constant; at every
-  level, the hash of a slice or of `msg.data` was wrong ([#PR]).
+  level, the hash of a slice or of `msg.data` was wrong ([#360]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -334,6 +334,7 @@ First publication.
 [#353]: https://github.com/ethdebug/format/pull/353
 [#356]: https://github.com/ethdebug/format/pull/356
 [#357]: https://github.com/ethdebug/format/pull/357
+[#360]: https://github.com/ethdebug/format/pull/360
 [#362]: https://github.com/ethdebug/format/pull/362
 [#363]: https://github.com/ethdebug/format/pull/363
 [#365]: https://github.com/ethdebug/format/pull/365
