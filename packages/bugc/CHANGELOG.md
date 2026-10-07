@@ -139,6 +139,10 @@ support. Changes to the specification itself are tracked in the root
   slot, and the data from `keccak256(slot)`. A slice's bytes past its
   length are stored as zero. Before, the slot held the value's memory
   address ([#355]).
+- A slice now copies all its bytes, as in `msg.data[4:]` or `m[1:40]`.
+  The IR has a `copy` instruction, which compiles to `CALLDATACOPY` from
+  calldata and `MCOPY` from memory. Before, a slice copied one word, so a
+  slice longer than 32 bytes held zeros after its first 32 ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert

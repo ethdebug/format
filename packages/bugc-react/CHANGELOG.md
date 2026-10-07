@@ -16,6 +16,7 @@ specification itself are tracked in the root
 
 - The IR and CFG views show each operand of a `hash` instruction, which
   now has a list of `values` ([#365]).
+- The IR view shows bugc's new `copy` instruction ([#PR]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 

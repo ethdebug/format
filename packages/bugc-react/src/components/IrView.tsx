@@ -339,6 +339,16 @@ function InstructionRenderer({
       break;
     }
 
+    case "copy":
+      add("memory[offset: ");
+      addOperand("offset", formatValue(instruction.offset));
+      add(", length: ");
+      addOperand("length", formatValue(instruction.length));
+      add(`] = copy ${instruction.location}[`);
+      addOperand("source", formatValue(instruction.source));
+      add("]");
+      break;
+
     default:
       add(`; unknown instruction: ${(instruction as { kind?: string }).kind}`);
   }

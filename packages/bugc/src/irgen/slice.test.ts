@@ -33,20 +33,20 @@ describe("IR slice generation", () => {
         const allInsts = mainBlocks.flatMap((block) => block.instructions);
 
         // Should have operations for: sub (length calc), add (size calc),
-        // allocate, write (length), add (source offset), add (adjusted source),
-        // read, add (dest offset), write (data)
+        // allocate, write (length), add (dest offset), copy (data)
         const subInsts = allInsts.filter(
           (inst) => inst.kind === "binary" && inst.op === "sub",
         );
         const allocInsts = allInsts.filter((inst) => inst.kind === "allocate");
-        const readInsts = allInsts.filter((inst) => inst.kind === "read");
+        const copyInsts = allInsts.filter((inst) => inst.kind === "copy");
         const writeInsts = allInsts.filter((inst) => inst.kind === "write");
 
         // Should have decomposed the slice into multiple operations
         expect(subInsts.length).toBeGreaterThan(0); // Length calculation
         expect(allocInsts.length).toBeGreaterThan(0); // Memory allocation(s) - may allocate for result
-        expect(readInsts.length).toBeGreaterThan(0); // Read slice data
-        expect(writeInsts.length).toBeGreaterThan(0); // Write length and data
+        expect(writeInsts.length).toBeGreaterThan(0); // Write length
+        // Copy the data from calldata
+        expect(copyInsts).toMatchObject([{ location: "calldata" }]);
       }
     }
   });

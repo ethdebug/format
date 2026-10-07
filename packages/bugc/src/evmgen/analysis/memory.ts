@@ -285,6 +285,11 @@ function simulateInstruction(stack: string[], inst: Ir.Instruction): string[] {
       if (inst.length) newStack.pop();
       newStack.pop(); // value
       break;
+    case "copy":
+      newStack.pop(); // source
+      newStack.pop(); // offset
+      newStack.pop(); // length
+      break;
     // NEW: compute offset
     case "compute_offset":
       newStack.pop(); // base
@@ -361,6 +366,11 @@ function getUsedValues(inst: Ir.Instruction): Set<string> {
     case "hash":
       inst.values.forEach(addValue);
       break;
+    case "copy":
+      addValue(inst.source);
+      addValue(inst.offset);
+      addValue(inst.length);
+      break;
     case "assert":
       addValue(inst.condition);
       break;
@@ -420,6 +430,7 @@ function definedType(inst: Ir.Instruction): Ir.Type | undefined {
     case "compute_offset":
       return Ir.Type.Scalar.word;
     case "write":
+    case "copy":
     case "assert":
       return undefined;
   }

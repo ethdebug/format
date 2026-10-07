@@ -301,6 +301,13 @@ export class Formatter {
         }
       }
 
+      case "copy": {
+        const offset = this.formatValue(inst.offset);
+        const length = this.formatValue(inst.length);
+        const source = this.formatValue(inst.source);
+        return `memory[offset: ${offset}, length: ${length}] = copy ${inst.location}[${source}]`;
+      }
+
       // NEW: unified compute offset
       case "compute_offset": {
         const base = this.formatValue(inst.base);
