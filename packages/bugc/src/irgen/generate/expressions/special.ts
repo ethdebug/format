@@ -44,6 +44,9 @@ export function* buildSpecial(expr: Ast.Expression.Special): Process<Ir.Value> {
     case "expression:special:block.number":
       op = "block_number";
       break;
+    case "expression:special:block.prevrandao":
+      op = "block_prevrandao";
+      break;
     default:
       assertExhausted(expr);
   }

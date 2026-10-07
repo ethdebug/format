@@ -383,7 +383,8 @@ export namespace Instruction {
       | "msg_value"
       | "msg_data"
       | "block_number"
-      | "block_timestamp";
+      | "block_timestamp"
+      | "block_prevrandao";
 
     dest: string;
   }

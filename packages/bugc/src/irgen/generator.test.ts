@@ -417,6 +417,7 @@ describe("generateModule", () => {
         code {
           let num = block.number;
           let time = block.timestamp;
+          let randao = block.prevrandao;
         }
       `;
 
@@ -430,8 +431,13 @@ describe("generateModule", () => {
         (i) => i.kind === "env" && i.op === "block_timestamp",
       );
 
+      const prevrandaoInst = entry.instructions.find(
+        (i) => i.kind === "env" && i.op === "block_prevrandao",
+      );
+
       expect(numberInst).toBeDefined();
       expect(timestampInst).toBeDefined();
+      expect(prevrandaoInst).toBeDefined();
     });
   });
 

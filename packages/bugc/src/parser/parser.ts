@@ -552,18 +552,25 @@ const msgExpression = located(
   }),
 );
 
-// block.timestamp and block.number as special expressions
+// block.timestamp, block.number and block.prevrandao as special
+// expressions
 const blockExpression = located(
   P.seq(
     Lang.keyword("block"),
     Lang.dot,
-    P.alt(Lang.keyword("timestamp"), Lang.keyword("number")),
+    P.alt(
+      Lang.keyword("timestamp"),
+      Lang.keyword("number"),
+      Lang.keyword("prevrandao"),
+    ),
   ).map(([_, __, property]) => {
-    const kind = property === "timestamp" ? "block.timestamp" : "block.number";
-    if (kind === "block.timestamp") {
-      return Ast.Expression.Special.blockTimestamp(PENDING_ID);
-    } else {
-      return Ast.Expression.Special.blockNumber(PENDING_ID);
+    switch (property) {
+      case "timestamp":
+        return Ast.Expression.Special.blockTimestamp(PENDING_ID);
+      case "number":
+        return Ast.Expression.Special.blockNumber(PENDING_ID);
+      default:
+        return Ast.Expression.Special.blockPrevrandao(PENDING_ID);
     }
   }),
 );

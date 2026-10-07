@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
 
+import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
 
 describe("behavioral tests", () => {
@@ -1336,6 +1337,38 @@ code {
         expect(await result.getStorage(3n)).toBe(1n);
         expect(await result.getStorage(4n)).toBe(2n);
         expect(await result.getStorage(5n)).toBe(1n);
+      });
+    }
+  });
+
+  describe("block.prevrandao", () => {
+    const source = `name Randao;
+storage { [0] out: uint256; }
+code {
+  out = block.prevrandao + 1;
+}`;
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should read PREVRANDAO (level ${level})`, async () => {
+        const compiled = await compile({
+          to: "bytecode",
+          source,
+          optimizer: { level },
+        });
+        if (!compiled.success) throw new Error("compile failed");
+        const mnemonics =
+          compiled.value.bytecode.runtimeProgram.instructions.map(
+            (instruction) => instruction.operation?.mnemonic,
+          );
+        expect(mnemonics).toContain("PREVRANDAO");
+
+        // @ethdebug/evm runs each call in a block whose prevrandao is 0
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(1n);
       });
     }
   });

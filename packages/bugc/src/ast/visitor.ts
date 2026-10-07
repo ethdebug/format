@@ -201,6 +201,7 @@ export function visitDetailed<N extends Ast.Node, T, C = never>(
     case "expression:special:msg.data":
     case "expression:special:block.timestamp":
     case "expression:special:block.number":
+    case "expression:special:block.prevrandao":
       return visitor.expressionSpecial(node as Ast.Expression.Special, context);
 
     default:

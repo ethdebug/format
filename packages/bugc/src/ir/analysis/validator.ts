@@ -212,6 +212,7 @@ export class Validator {
       "msg_value",
       "block_number",
       "block_timestamp",
+      "block_prevrandao",
     ];
     if (!validOps.includes(inst.op)) {
       this.error(`Invalid env operation '${inst.op}'`);
