@@ -1052,3 +1052,61 @@ describe.each(levels)("locals hold the program's values at O%i", (level) => {
     (program) => check(program, level),
   );
 });
+
+describe("variables before a function's first statement", () => {
+  // Contexts are postconditions: the step after an instruction shows
+  // its context. Every step lists the storage variable; from the
+  // callee's entry JUMPDEST through its prologue, the parameters.
+  const source = `name Prelude;
+define {
+  function add(a: uint256, b: uint256) -> uint256 {
+    let c = a + b;
+    return c;
+  };
+}
+storage { [0] r: uint256; }
+code { let x = 7; r = add(x, 3); }`;
+
+  for (const level of [0, 1] as Level[]) {
+    it(`lists variables at every step (O${level})`, async () => {
+      const { steps, instructionAt } = await traceLocals(source, level);
+      const unlisted = steps
+        .map((_, i) => i)
+        .filter(
+          (i) =>
+            i > 0 &&
+            localsOf(instructionAt(steps[i - 1])?.context).length === 0,
+        );
+      expect(unlisted).toEqual([]);
+    });
+
+    it(`lists the parameters in the prologue (O${level})`, async () => {
+      const { program } = await traceLocals(source, level);
+      const at = program.instructions.findIndex(
+        (instruction) =>
+          instruction.operation?.mnemonic === "JUMPDEST" &&
+          Program.Context.isInvoke(instruction.context),
+      );
+      // The entry JUMPDEST, then the prologue: the ops that map to the
+      // whole function, before its body's
+      const whole = codeOffset(program.instructions[at + 1].context);
+      const rest = program.instructions.slice(at + 1);
+      const prologue = [
+        program.instructions[at],
+        ...rest.slice(
+          0,
+          rest.findIndex(
+            (instruction) => codeOffset(instruction.context) !== whole,
+          ),
+        ),
+      ];
+      expect(prologue.length).toBeGreaterThan(1);
+      for (const instruction of prologue) {
+        const names = localsOf(instruction.context).map((v) => v.identifier);
+        expect(names, `pc ${instruction.offset}`).toEqual(
+          expect.arrayContaining(["r", "a", "b"]),
+        );
+      }
+    });
+  }
+});

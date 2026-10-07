@@ -89,6 +89,13 @@ support. Changes to the specification itself are tracked in the root
   has the branch's context: its source range, its variables (the storage
   variables too) and its transforms. Before, it had no context, so a
   debugger listed no variables while it ran ([#356]).
+- The instructions that run before a function's first statement now have
+  a `variables` context: the memory setup at the start of the code (and
+  `create`) blocks, and a function's entry `JUMPDEST` and prologue. They
+  list the storage variables and the locals in scope, a local without a
+  pointer: a parameter is not yet in its home there, and the `invoke`'s
+  `arguments` point at it on the stack. Before, they listed no variables,
+  so a debugger showed none for those steps ([#358]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -301,3 +308,4 @@ First publication.
 [#351]: https://github.com/ethdebug/format/pull/351
 [#352]: https://github.com/ethdebug/format/pull/352
 [#356]: https://github.com/ethdebug/format/pull/356
+[#358]: https://github.com/ethdebug/format/pull/358
