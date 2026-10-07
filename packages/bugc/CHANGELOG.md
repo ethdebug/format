@@ -69,6 +69,13 @@ support. Changes to the specification itself are tracked in the root
   range. Before, the `return` was on that `JUMPDEST`, one instruction
   later, so a debugger showed the function's frame for two steps after
   control was back in the caller ([#349]).
+- A function with a return type must now return on every path through
+  its body, as in Rust: a body that can end without a `return` is a type
+  error (`TYPE015`, "Missing return"). An `if` returns on every path only
+  when it has an `else` and both branches do; a loop never does, so a
+  function whose `return` is only inside a loop needs one after it.
+  Before, such a function compiled, and the compiler ended it with a
+  `return` that gave no value ([#352]).
 
 ### Fixed
 
@@ -282,3 +289,4 @@ First publication.
 [#347]: https://github.com/ethdebug/format/pull/347
 [#349]: https://github.com/ethdebug/format/pull/349
 [#351]: https://github.com/ethdebug/format/pull/351
+[#352]: https://github.com/ethdebug/format/pull/352

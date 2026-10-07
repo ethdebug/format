@@ -24,6 +24,7 @@ export enum ErrorCode {
   INVALID_ARGUMENT_COUNT = "TYPE012",
   INVALID_TYPE_CAST = "TYPE013",
   INTERNAL_ERROR = "TYPE014",
+  MISSING_RETURN = "TYPE015",
   GENERAL = "TYPE_ERROR", // Legacy support
 }
 
@@ -42,6 +43,9 @@ export const ErrorMessages = {
   NO_SUCH_FIELD: (structName: string, fieldName: string) =>
     `Struct ${structName} has no field ${fieldName}`,
   CANNOT_INDEX: (type: string) => `Cannot index ${type}`,
+  MISSING_RETURN: (name: string, type: string) =>
+    `Missing return: function ${name} returns ${type}, ` +
+    `but its body can end without a return`,
 } as const;
 
 class TypeError extends BugError {

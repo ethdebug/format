@@ -563,4 +563,81 @@ describe("checkProgram", () => {
       expect(result.success).toBe(true);
     });
   });
+  describe("Missing return", () => {
+    function checkFunction(body: string, returnType = " -> uint256") {
+      return check(`
+        name Test;
+        define {
+          function f(x: uint256)${returnType} {
+            ${body}
+          };
+        }
+        storage {}
+        code {}
+      `);
+    }
+
+    const accepted: Record<string, string> = {
+      "a return at the end": "return x;",
+      "statements after a return": "return x; x = 1;",
+      "an if/else where both branches return":
+        "if (x > 1) { return 1; } else { return 2; }",
+      "nested if/else where every path returns": `
+        if (x > 1) {
+          if (x > 2) { return 3; } else { return 2; }
+        } else {
+          return 1;
+        }`,
+      "an early return then a final return": `
+        if (x > 1) { return 1; }
+        return 2;`,
+      "a return after a loop": `
+        for (let i = 0; i < x; i = i + 1) { x = x + 1; }
+        return x;`,
+    };
+
+    for (const [name, body] of Object.entries(accepted)) {
+      it(`should accept ${name}`, () => {
+        const result = checkFunction(body);
+        expect(result.success).toBe(true);
+        expect(Result.hasMessages(result)).toBe(false);
+      });
+    }
+
+    const rejected: Record<string, string> = {
+      "an empty body": "",
+      "a body without a return": "x = x + 1;",
+      "an early return in one branch only": "if (x > 1) { return 1; }",
+      "an if/else where one branch falls through":
+        "if (x > 1) { return 1; } else { x = 2; }",
+      "nested if/else with a path that falls through": `
+        if (x > 1) {
+          if (x > 2) { return 3; }
+        } else {
+          return 1;
+        }`,
+      "a return only inside a loop": `
+        for (let i = 0; i < x; i = i + 1) { return i; }`,
+    };
+
+    for (const [name, body] of Object.entries(rejected)) {
+      it(`should reject ${name}`, () => {
+        const result = checkFunction(body);
+        expect(result.success).toBe(false);
+        expect(Result.countErrors(result)).toBe(1);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message:
+            "Missing return: function f returns uint256, " +
+            "but its body can end without a return",
+        });
+      });
+    }
+
+    it("should accept a void function without a return", () => {
+      const result = checkFunction("x = x + 1;", "");
+      expect(result.success).toBe(true);
+      expect(Result.hasMessages(result)).toBe(false);
+    });
+  });
 });
