@@ -126,6 +126,13 @@ support. Changes to the specification itself are tracked in the root
   Before, only the `JUMPDEST`'s `invoke` had them, so a debugger that
   opens the frame on the step after the `JUMP` showed it for one step
   without its arguments ([#354]).
+- The instructions that run before a function's first statement now have
+  a `variables` context: the memory setup at the start of the code (and
+  `create`) blocks, and a function's entry `JUMPDEST` and prologue. They
+  list the storage variables and the locals in scope, a local without a
+  pointer: a parameter is not yet in its home there, and the `invoke`'s
+  `arguments` point at it on the stack. Before, they listed no variables,
+  so a debugger showed none for those steps ([#358]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
@@ -341,6 +348,7 @@ First publication.
 [#354]: https://github.com/ethdebug/format/pull/354
 [#356]: https://github.com/ethdebug/format/pull/356
 [#357]: https://github.com/ethdebug/format/pull/357
+[#358]: https://github.com/ethdebug/format/pull/358
 [#360]: https://github.com/ethdebug/format/pull/360
 [#362]: https://github.com/ethdebug/format/pull/362
 [#363]: https://github.com/ethdebug/format/pull/363

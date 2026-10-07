@@ -459,6 +459,33 @@ export function withoutFrameLocals(
   };
 }
 
+/**
+ * The variables in scope before a function's entry block: during the
+ * memory setup of main or create, or a function's entry JUMPDEST and
+ * prologue. They are the entry block's, as listed just before its first
+ * instruction. No local is in its home yet (the prologue is still
+ * setting the frame up), so a local is listed without a pointer.
+ */
+export function preludeVariables(func: Ir.Function): VariableEntry[] {
+  const block = func.blocks.get(func.entry);
+  if (!block) return [];
+  const first = block.instructions[0] ?? block.terminator;
+  const context = (block.entryDebug?.context ??
+    first.operationDebug?.context) as Record<string, unknown> | undefined;
+  if (!context) return [];
+
+  const locals = new Set(
+    [...(func.ssaVariables?.values() ?? [])].map((ssa) => ssa.name),
+  );
+  return liftVariables(context).variables.map((entry) => {
+    if (entry.identifier === undefined || !locals.has(entry.identifier)) {
+      return entry;
+    }
+    const { pointer: _, ...rest } = entry;
+    return rest;
+  });
+}
+
 /** The source offsets of an instruction/terminator: of its `code`
  * context, or of each `code` in a `gather` (all of which apply). */
 function codeOffsets(context: unknown): number[] {

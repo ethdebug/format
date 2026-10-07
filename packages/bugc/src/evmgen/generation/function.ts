@@ -13,6 +13,7 @@ import type { Error as EvmgenError } from "#evmgen/errors";
 
 import * as Block from "./block.js";
 import { invokeArguments } from "./control-flow/index.js";
+import { preludeVariables } from "../debug/local-variables.js";
 import { serialize } from "../serialize.js";
 import { type Transition } from "../operations.js";
 
@@ -57,8 +58,15 @@ function generatePrologue<S extends Stack>(
         ...invokeArguments(params),
       },
     };
+    // Until the prologue has stored the arguments in the frame, the
+    // parameters are listed without a pointer (the invoke's
+    // `arguments` point at them on the stack)
+    const variables = preludeVariables(func);
     const entryDebug = {
-      context: entryInvoke as Format.Program.Context,
+      context: {
+        ...entryInvoke,
+        ...(variables.length > 0 ? { variables } : {}),
+      } as Format.Program.Context,
     };
     currentState = {
       ...currentState,
@@ -68,7 +76,7 @@ function generatePrologue<S extends Stack>(
       ],
     };
 
-    const d = makePrologueDebug(func);
+    const d = makePrologueDebug(func, variables);
     const frameSize = currentState.memory.frameSize;
 
     if (frameSize !== undefined) {
@@ -254,21 +262,23 @@ function emitFpRelativeStore<S extends Stack>(
   );
 }
 
-function makePrologueDebug(func: Ir.Function): Debug {
-  return func.sourceId && func.loc
-    ? {
-        context: {
-          code: {
-            source: { id: func.sourceId },
-            range: func.loc,
-          },
-        } as Format.Program.Context,
-      }
-    : {
-        context: {
-          remark: "prologue: allocate call frame",
-        } as Format.Program.Context,
-      };
+function makePrologueDebug(
+  func: Ir.Function,
+  variables: Format.Program.Context.Variables["variables"],
+): Debug {
+  return {
+    context: {
+      ...(func.sourceId && func.loc
+        ? {
+            code: {
+              source: { id: func.sourceId },
+              range: func.loc,
+            },
+          }
+        : { remark: "prologue: allocate call frame" }),
+      ...(variables.length > 0 ? { variables } : {}),
+    } as Format.Program.Context,
+  };
 }
 
 /**
