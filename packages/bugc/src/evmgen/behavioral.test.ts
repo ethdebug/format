@@ -1495,6 +1495,90 @@ code { out = keccak256(7, 9) as uint256; }`,
     }
   });
 
+  describe("slices of fixed-size bytes", () => {
+    // The leading four bytes of the hash of the word 0x00..01
+    const hashPrefix = BigInt(
+      "0x" + bytesToHex(keccak256(new Uint8Array(32).fill(1, 31))).slice(0, 8),
+    );
+
+    const slices: Record<string, [string, bigint]> = {
+      "the leading bytes of a hash": [
+        `out = keccak256(0x01)[0:4] as bytes4 as uint256;`,
+        hashPrefix,
+      ],
+      "the leading bytes of a hash, compared": [
+        `let sel = keccak256(0x01)[0:4] as bytes4;
+  if (sel == keccak256(0x01) as bytes4) { out = 1; }`,
+        1n,
+      ],
+      "inner bytes of a bytes32": [
+        `let h: bytes32 =
+    0x1122334455667788000000000000000000000000000000000000000000000000;
+  out = h[1:5] as bytes4 as uint256;`,
+        0x22334455n,
+      ],
+      "fewer bytes than the cast": [
+        `let h: bytes32 =
+    0x1122334455667788000000000000000000000000000000000000000000000000;
+  out = h[2:4] as bytes4 as uint256;`,
+        0x33440000n,
+      ],
+      "the trailing bytes of a bytes32": [
+        `let h: bytes32 =
+    0x00000000000000000000000000000000000000000000000000000000aabbccdd;
+  out = h[28:32] as bytes4 as uint256;`,
+        0xaabbccddn,
+      ],
+      "a bytes4": [
+        `let b: bytes4 = 0x11223344;
+  out = b[1:3] as bytes4 as uint256;`,
+        0x22330000n,
+      ],
+      "the length": [
+        `let h: bytes32 = keccak256(0x01);
+  out = h[3:10].length;`,
+        7n,
+      ],
+    };
+
+    for (const [name, [body, expected]] of Object.entries(slices)) {
+      for (const level of [0, 1, 2, 3] as const) {
+        it(`should slice ${name} (level ${level})`, async () => {
+          const source = `name Slice;
+storage { [0] n: uint256; [1] out: uint256; }
+code {
+  ${body}
+}`;
+          const result = await executeProgram(source, {
+            calldata: "",
+            optimizationLevel: level,
+          });
+
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(1n)).toBe(expected);
+        });
+      }
+    }
+
+    for (const level of [0, 1, 2, 3] as const) {
+      it(`should revert on a slice past the end (level ${level})`, async () => {
+        const source = `name Slice;
+storage { [0] end: uint256; [1] out: uint256; }
+create { end = 33; }
+code {
+  let h: bytes32 = keccak256(0x01);
+  out = h[30:end].length;
+}`;
+        const result = await executeProgram(source, {
+          calldata: "",
+          optimizationLevel: level,
+        });
+
+        expect(result.callSuccess).toBe(false);
+      });
+    }
+  });
+
   describe("modulo", () => {
     const program = (expr: string) => `name Modulo;
 

@@ -109,6 +109,11 @@ support. Changes to the specification itself are tracked in the root
   ranges had trailing whitespace: `block.number ` in `block.number + 1`,
   the target `x ` in `x = 1`, a statement up to the next statement, and
   the `create` and `code` blocks up to the next block ([#362]).
+- A slice of a fixed-size `bytesN` value, as in
+  `keccak256("transfer(address,uint256)")[0:4]`, now gives those bytes as
+  dynamic `bytes`. Before, at every optimization level, the compiler read
+  the value as the memory address of dynamic `bytes`, so the slice
+  reverted with `Panic(0x32)` or held other memory ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert
