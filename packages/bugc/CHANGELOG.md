@@ -130,6 +130,11 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- Assigning a shorter `string` or `bytes` to storage now sets to zero
+  the data words of the old value that the new value does not use, as
+  Solidity does: all of them when the new value fits in its slot (31
+  bytes or fewer), else the words past the new value's last one.
+  Before, the old bytes stayed in storage past the new value ([#370]).
 - `a.length` on a dynamic array in storage now reads the length in the
   array's slot. Before, it did not read that slot ([#366]).
 - The pointer for a storage `string` or `bytes` value, as a variable, a
@@ -444,4 +449,5 @@ First publication.
 [#366]: https://github.com/ethdebug/format/pull/366
 [#367]: https://github.com/ethdebug/format/pull/367
 [#369]: https://github.com/ethdebug/format/pull/369
+[#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
