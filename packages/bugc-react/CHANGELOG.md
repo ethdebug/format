@@ -11,12 +11,12 @@ specification itself are tracked in the root
 
 - The CFG view shows a `block.prevrandao` read as `block.prevrandao`
   ([#363]).
+- The IR view shows bugc's new `copy` instruction ([#359]).
 
 ### Changed
 
 - The IR and CFG views show each operand of a `hash` instruction, which
   now has a list of `values` ([#365]).
-- The IR view shows bugc's new `copy` instruction ([#PR]).
 
 ## 0.1.0-preview.1 — 2026-10-03
 
@@ -45,5 +45,6 @@ First publication.
 
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
+[#359]: https://github.com/ethdebug/format/pull/359
 [#363]: https://github.com/ethdebug/format/pull/363
 [#365]: https://github.com/ethdebug/format/pull/365
