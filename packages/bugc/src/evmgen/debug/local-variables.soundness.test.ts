@@ -1015,6 +1015,33 @@ code {
     locals: { b: { shape: { kind: "bytes" }, values: ["0x"] } },
   },
   {
+    // A slice longer than a word: its pointer reads every byte
+    name: "a long bytes slice",
+    source: `name LongSlice;
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 1; }
+code {
+  let data: bytes = 0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223;
+  let b = data[1:35];
+  if (s > 0) { r = b.length; }
+  r = r + b.length;
+}`,
+    locals: {
+      data: {
+        shape: { kind: "bytes" },
+        values: [
+          "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+        ],
+      },
+      b: {
+        shape: { kind: "bytes" },
+        values: [
+          "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122",
+        ],
+      },
+    },
+  },
+  {
     name: "a uint8 cast",
     source: `name U8;
 storage { [0] r: uint256; [1] s: uint256; }

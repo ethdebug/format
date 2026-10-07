@@ -345,6 +345,11 @@ export function extractSubInstructionContexts(
       addValueDebug(instruction.length);
       addValueDebug(instruction.value);
       break;
+    case "copy":
+      addValueDebug(instruction.source);
+      addValueDebug(instruction.offset);
+      addValueDebug(instruction.length);
+      break;
     case "compute_offset":
       addValueDebug(instruction.base);
       if (instruction.offsetKind === "array") {

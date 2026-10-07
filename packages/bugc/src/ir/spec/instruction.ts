@@ -12,6 +12,7 @@ export type Instruction =
   // Unified read/write operations
   | Instruction.Read
   | Instruction.Write
+  | Instruction.Copy
   // Storage slot computation
   | Instruction.ComputeSlot
   // Unified compute operations
@@ -123,6 +124,18 @@ export namespace Instruction {
     // Value to write
     value: Value;
     valueDebug?: Instruction.Debug;
+  }
+
+  /**
+   * Copy `length` bytes from `source` in `location` to memory at
+   * `offset`
+   */
+  export interface Copy extends Instruction.Base {
+    kind: "copy";
+    location: "memory" | "calldata";
+    source: Value;
+    offset: Value;
+    length: Value;
   }
 
   // NEW: Unified compute offset instruction

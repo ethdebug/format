@@ -256,21 +256,11 @@ const makeBuildSliceAccess = (
         operationDebug: yield* Process.Debug.forAstNode(expr),
       } as Ir.Instruction.Write);
 
-      // Read the slice data from the source: `msg.data` is calldata
-      // from offset 0; other bytes are in memory after a length word.
-      // Either read copies one word.
-      const dataTemp = yield* Process.Variables.newTemp();
-      if (Ast.Expression.Special.isMsgData(expr.object)) {
-        yield* Process.Instructions.emit({
-          kind: "read",
-          location: "calldata",
-          offset: start,
-          length: Ir.Value.constant(32n, Ir.Type.Scalar.uint256),
-          type: resultType,
-          dest: dataTemp,
-          operationDebug: yield* Process.Debug.forAstNode(expr),
-        } as Ir.Instruction.Read);
-      } else {
+      // Copy the slice's bytes from the source: `msg.data` is calldata
+      // from offset 0; other bytes are in memory after a length word
+      const isCalldata = Ast.Expression.Special.isMsgData(expr.object);
+      let source = start;
+      if (!isCalldata) {
         const sourceOffsetTemp = yield* Process.Variables.newTemp();
         yield* Process.Instructions.emit({
           kind: "binary",
@@ -290,16 +280,7 @@ const makeBuildSliceAccess = (
           dest: adjustedSourceTemp,
           operationDebug: yield* Process.Debug.forAstNode(expr),
         } as Ir.Instruction);
-
-        yield* Process.Instructions.emit({
-          kind: "read",
-          location: "memory",
-          offset: Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256),
-          length,
-          type: resultType,
-          dest: dataTemp,
-          operationDebug: yield* Process.Debug.forAstNode(expr),
-        } as Ir.Instruction.Read);
+        source = Ir.Value.temp(adjustedSourceTemp, Ir.Type.Scalar.uint256);
       }
 
       // Calculate destination offset (skip length prefix)
@@ -313,15 +294,14 @@ const makeBuildSliceAccess = (
         operationDebug: yield* Process.Debug.forAstNode(expr),
       } as Ir.Instruction);
 
-      // Write the slice data to destination
       yield* Process.Instructions.emit({
-        kind: "write",
-        location: "memory",
+        kind: "copy",
+        location: isCalldata ? "calldata" : "memory",
+        source,
         offset: Ir.Value.temp(destDataOffsetTemp, Ir.Type.Scalar.uint256),
         length,
-        value: Ir.Value.temp(dataTemp, resultType),
         operationDebug: yield* Process.Debug.forAstNode(expr),
-      } as Ir.Instruction.Write);
+      } as Ir.Instruction.Copy);
 
       return Ir.Value.temp(destTemp, resultType);
     }
