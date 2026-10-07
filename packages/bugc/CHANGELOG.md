@@ -79,6 +79,9 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- `!` is now a logical not: `!true` is `false`. Before, at every
+  optimization level, it compiled to the EVM's bitwise `NOT`, so `!x` was
+  a non-zero word, and so `true`, for every `x` ([#PR]).
 - A call to a function with no return type now compiles as a statement,
   as in `bump();`, at every optimization level. The function's `return`
   context has no `data`. Before, IR generation failed with "Cannot convert

@@ -10,7 +10,7 @@ import {
 } from "#evmgen/operations";
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
 
-const { NOT, PUSHn, SUB } = operations;
+const { ISZERO, PUSHn, SUB } = operations;
 
 /**
  * Generate code for unary operations
@@ -25,7 +25,8 @@ export function generateUnary<S extends Stack>(
       state: State<readonly ["a", ...S]>,
     ) => State<readonly [Stack.Brand, ...S]>;
   } = {
-    not: NOT({ debug }),
+    // `!` takes a bool, so it is a logical not, not a bitwise one
+    not: ISZERO({ debug }),
     neg: pipe<readonly ["a", ...S]>()
       .then(rebrandTop("b"))
       .then(PUSHn(0n, { debug }), { as: "a" })
