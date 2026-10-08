@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/spec/changelog"}]}</script><link rel="stylesheet" href="/format/assets/css/styles.c9557740.css">
-<script src="/format/assets/js/runtime~main.3ac23694.js" defer="defer"></script>
-<script src="/format/assets/js/main.fa2d7ab2.js" defer="defer"></script>
+<script src="/format/assets/js/runtime~main.e0138790.js" defer="defer"></script>
+<script src="/format/assets/js/main.0411c479.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -90,6 +90,22 @@ constant in <code>enum</code> (<code>~wordsize</code>), and the reference in <co
 named by <strong>ethdebug/format/pointer/expression</strong>&#x27;s <code>properties</code>,
 <code>patternProperties</code>, <code>enum</code> and <code>const</code>. The <code>$</code> spellings, such as
 <code>&quot;$wordsize&quot;</code> and <code>{ &quot;$sum&quot;: [...] }</code>, are no longer format terms.</li>
+</ul>
+</li>
+<li class="">
+<p>An identifier may now start with <code>$</code>, so a compiler can use a
+source-language name such as Solidity&#x27;s <code>$balance</code> as it is. This relies on
+the <code>~</code> sigil of <a href="https://github.com/ethdebug/format/pull/323" target="_blank" rel="noopener noreferrer" class="">#323<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>: a name that starts with <code>$</code> cannot be confused with
+a format term (<a href="https://github.com/ethdebug/format/pull/325" target="_blank" rel="noopener noreferrer" class="">#325<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/pointer/identifier</strong></li>
+<li class="">Producers: optional: a name may now start with <code>$</code>
+(<strong>ethdebug/format/pointer/identifier</strong> <code>pattern</code>
+<code>^[a-zA-Z$_\-]+[a-zA-Z0-9$_\-]*$</code>).</li>
+<li class="">Consumers: required: accept a name that starts with <code>$</code>, which
+<strong>ethdebug/format/pointer/identifier</strong>&#x27;s <code>pattern</code> now allows. Such a
+string is a name, not a format term: <code>&quot;$wordsize&quot;</code> is a variable and
+<code>{ &quot;.offset&quot;: &quot;$this&quot; }</code> looks up a region named <code>$this</code>.</li>
 </ul>
 </li>
 <li class="">
