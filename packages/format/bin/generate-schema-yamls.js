@@ -36,6 +36,22 @@ const rawSchemas = Object.entries(schemaYamls)
   .map(([id, yaml]) => ({ [id]: YAML.parse(yaml) }))
   .reduce((a, b) => ({ ...a, ...b }), {});
 
+// Write a parsed schema as the type that `as const` would give it, so the
+// generated module carries no parsed copy of the schemas at runtime
+const toConstType = (value) => {
+  if (Array.isArray(value)) {
+    return `readonly [${value.map(toConstType).join(", ")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const members = Object.entries(value).map(
+      ([key, member]) =>
+        `readonly ${JSON.stringify(key)}: ${toConstType(member)}`,
+    );
+    return `{ ${members.join("; ")} }`;
+  }
+  return JSON.stringify(value);
+};
+
 const output = `// THIS FILE GETS AUTO-GENERATED AS PART OF THIS PACKAGE'S BUILD PROCESS
 // Please do not modify it directly or allow it to get checked into source control.
 
@@ -49,10 +65,9 @@ export const schemaYamls: SchemaYamlsById = ${JSON.stringify(
   2,
 )};
 
-const rawSchemas = ${JSON.stringify(rawSchemas, undefined, 2)} as const;
+type RawSchemas = ${toConstType(rawSchemas)};
 
-export type Schema<Id extends keyof typeof rawSchemas> =
-  (typeof rawSchemas)[Id];
+export type Schema<Id extends keyof RawSchemas> = RawSchemas[Id];
 `;
 
 const outputPath = path.resolve(__dirname, "../src/schemas/yamls.ts");

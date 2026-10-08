@@ -6,6 +6,13 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- `schemas` parses each schema from YAML on first access instead of at
+  module load, and the package declares `"sideEffects": false`. A bundle
+  that imports only the types and guards no longer includes the `yaml`
+  library or the schema sources. The API is unchanged ([#373]).
+
 ## 0.1.0-draft.2 — 2026-10-07
 
 ### Changed
@@ -148,6 +155,7 @@ First publication.
 [#305]: https://github.com/ethdebug/format/pull/305
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
+[#373]: https://github.com/ethdebug/format/pull/373
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e
