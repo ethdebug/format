@@ -53,6 +53,8 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+## 0.1.0-draft.2 — 2026-10-07
+
 ### Changed
 
 - The format's own vocabulary inside pointer expressions uses the sigil `~`

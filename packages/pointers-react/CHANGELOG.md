@@ -7,6 +7,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
 ### Breaking
 
 - Follows the `~` vocabulary of `@ethdebug/pointers` ([#323]).

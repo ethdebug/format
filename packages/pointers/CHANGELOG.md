@@ -6,6 +6,8 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
 ### Changed
 
 - `evaluate` and `dereference` resolve variable, region and template names

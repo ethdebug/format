@@ -7,6 +7,8 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
 ### Added
 
 - The CFG view shows a `block.prevrandao` read as `block.prevrandao`

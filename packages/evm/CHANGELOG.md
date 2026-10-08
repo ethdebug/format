@@ -7,6 +7,10 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
+Updated `@ethdebug/pointers` to `0.1.0-preview.2`.
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 ### Fixed

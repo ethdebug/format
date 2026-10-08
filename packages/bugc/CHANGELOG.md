@@ -7,6 +7,8 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
 ### Added
 
 - `block.prevrandao`, the previous block's RANDAO value (EIP-4399), as a
