@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import * as YAML from "yaml";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { schemaYamls } from "./yamls.js";
 
@@ -12,9 +11,25 @@ vi.mock("yaml", async (importOriginal) => {
   };
 });
 
+// a fresh copy of the package root, with fresh yaml spies, for each test
+beforeEach(() => {
+  vi.resetModules();
+});
+const load = async () => ({
+  ...(await import("../index.js")),
+  YAML: await import("yaml"),
+});
+
+const parsedYamls = async () => {
+  const YAML = await vi.importActual<typeof import("yaml")>("yaml");
+  return Object.entries(schemaYamls).map(
+    ([id, yaml]) => [id, YAML.parse(yaml, { merge: true })] as const,
+  );
+};
+
 describe("schemas", () => {
   it("parses each schema only when it is first read", async () => {
-    const { schemas, schemaIds } = await import("../index.js");
+    const { schemas, schemaIds, YAML } = await load();
     const parse = vi.mocked(YAML.parse);
 
     expect(schemaIds.length).toBeGreaterThan(0);
@@ -31,18 +46,34 @@ describe("schemas", () => {
   });
 
   it("holds every schema, parsed from its YAML", async () => {
-    const { schemas, schemaIds } = await import("../index.js");
+    const { schemas, schemaIds } = await load();
 
     expect(Object.keys(schemas)).toEqual(Object.keys(schemaYamls));
     expect(schemaIds).toEqual(Object.keys(schemaYamls));
 
-    for (const [id, yaml] of Object.entries(schemaYamls)) {
-      expect(schemas[id]).toEqual(YAML.parse(yaml, { merge: true }));
+    for (const [id, expected] of await parsedYamls()) {
+      expect(schemas[id]).toEqual(expected);
     }
   });
 
+  for (const lock of [Object.freeze, Object.seal]) {
+    it(`reads every schema after ${lock.name}`, async () => {
+      const { schemas } = await load();
+      const id = "schema:ethdebug/format/pointer";
+      const before = schemas[id];
+
+      lock(schemas);
+
+      for (const [id, expected] of await parsedYamls()) {
+        expect(schemas[id]).toEqual(expected);
+        expect(schemas[id]).toBe(schemas[id]);
+      }
+      expect(schemas[id]).toBe(before);
+    });
+  }
+
   it("accepts assignment like a plain object", async () => {
-    const { schemas } = await import("../index.js");
+    const { schemas } = await load();
     const id = "schema:ethdebug/format/data/value";
     const replacement = { $id: id, title: "replaced" };
 
