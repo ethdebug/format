@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
@@ -15,11 +16,11 @@ const { imports } = JSON.parse(
 const sourceImports: Plugin = {
   name: "source-imports",
   setup(build) {
-    build.onResolve({ filter: /^#/ }, ({ path }) => ({
-      path: fileURLToPath(
-        new URL(imports[path].types, `file://${packageRoot}`),
-      ),
-    }));
+    build.onResolve({ filter: /^#/ }, ({ path }) =>
+      typeof imports[path]?.types === "string"
+        ? { path: resolve(packageRoot, imports[path].types) }
+        : undefined,
+    );
   },
 };
 
