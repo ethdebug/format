@@ -6,6 +6,8 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-draft.2 — 2026-10-07
+
 ### Changed
 
 - `Pointer.isIdentifier` accepts a name that starts with `$`, and still

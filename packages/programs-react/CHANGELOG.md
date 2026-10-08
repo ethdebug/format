@@ -7,6 +7,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-10-07
+
 ### Changed
 
 - `buildCallStack` now pops a frame on the step that observes its
