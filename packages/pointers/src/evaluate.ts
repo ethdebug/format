@@ -121,10 +121,13 @@ export async function evaluate(
     return evaluateRead(expression, options);
   }
 
+  const keys =
+    expression && typeof expression === "object" ? Object.keys(expression) : [];
+
   throw new Error(
     `Unexpected runtime failure to recognize kind of expression: ${JSON.stringify(
       expression,
-    )}${sigilHint(...namesIn(expression))}`,
+    )}${sigilHint(...keys)}`,
   );
 }
 
@@ -134,29 +137,9 @@ const formerTerm = new RegExp(
 );
 
 /**
- * The strings in an unrecognized expression that may be old `$` terms: the
- * expression itself, or an object's keys and string values (as in
- * `{ ".offset": "$this" }`)
- */
-function namesIn(expression: unknown): string[] {
-  if (typeof expression === "string") {
-    return [expression];
-  }
-  if (expression && typeof expression === "object") {
-    return [
-      ...Object.keys(expression),
-      ...Object.values(expression).filter(
-        (value): value is string => typeof value === "string",
-      ),
-    ];
-  }
-  return [];
-}
-
-/**
  * For an error message: if one of `names` is a format term written with
  * the old `$` sigil, suggest its `~` spelling. The value still fails;
- * `$` is not an alias.
+ * `$` is not an alias, because a name may start with `$`.
  */
 function sigilHint(...names: string[]): string {
   const name = names.find((name) => formerTerm.test(name));
@@ -238,7 +221,9 @@ async function evaluateVariable(
 ): Promise<Value> {
   const value = variables[identifier];
   if (typeof value === "undefined") {
-    throw new Error(`Unknown variable with identifier ${identifier}`);
+    throw new Error(
+      `Unknown variable with identifier ${identifier}${sigilHint(identifier)}`,
+    );
   }
 
   return value;
@@ -334,7 +319,7 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
   const identifier = lookup[operation];
   const region = regions[identifier];
   if (!region) {
-    throw new Error(`Region not found: ${identifier}`);
+    throw new Error(`Region not found: ${identifier}${sigilHint(identifier)}`);
   }
 
   const property = Pointer.Expression.Lookup.propertyFrom(operation);
@@ -359,7 +344,7 @@ async function evaluateRead(
   const identifier = expression["~read"];
   const region = regions[identifier];
   if (!region) {
-    throw new Error(`Region not found: ${identifier}`);
+    throw new Error(`Region not found: ${identifier}${sigilHint(identifier)}`);
   }
 
   return Value.bytes(await read(region, options));

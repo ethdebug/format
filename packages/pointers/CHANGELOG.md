@@ -6,6 +6,13 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- `evaluate` and `dereference` resolve variable, region and template names
+  that start with `$`: `"$wordsize"` is a variable, and `{ ".offset": "$this" }`
+  looks up a region named `$this`. The hint for an old `$` term now comes with
+  an unknown variable or a region that is not found ([#325]).
+
 ### Fixed
 
 - `dereference` scopes the variables of a `define` to its `in`. They used to
@@ -129,3 +136,4 @@ First publication.
 [#316]: https://github.com/ethdebug/format/pull/316
 [#317]: https://github.com/ethdebug/format/pull/317
 [#323]: https://github.com/ethdebug/format/pull/323
+[#325]: https://github.com/ethdebug/format/pull/325

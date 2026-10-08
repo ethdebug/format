@@ -6,6 +6,12 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- `Pointer.isIdentifier` accepts a name that starts with `$`, and still
+  rejects one that starts with `~`. See the root
+  [`CHANGELOG.md`](../../CHANGELOG.md) ([#325]).
+
 ### Breaking
 
 - The bundled schemas write the pointer vocabulary with `~` instead of `$`
@@ -139,6 +145,7 @@ First publication.
 [#303]: https://github.com/ethdebug/format/pull/303
 [#305]: https://github.com/ethdebug/format/pull/305
 [#323]: https://github.com/ethdebug/format/pull/323
+[#325]: https://github.com/ethdebug/format/pull/325
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

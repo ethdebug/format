@@ -816,17 +816,71 @@ describe("dereference", () => {
     expect(regions.lookup["my-slot-value"]).toBeDefined();
   });
 
-  it("rejects a $ operator", async () => {
-    const pointer = {
-      location: "memory",
-      offset: { $sum: [1, 2] },
-      length: 0x20,
-    } as unknown as Pointer;
+  describe("names that start with $", () => {
+    it("resolves a region named $this, not the current region", async () => {
+      const pointer: Pointer = {
+        group: [
+          { name: "$this", location: "memory", offset: 0x40, length: 0x20 },
+          {
+            location: "memory",
+            offset: { ".offset": "$this" },
+            length: 0x10,
+          },
+        ],
+      };
 
-    const cursor = await dereference(pointer);
+      const cursor = await dereference(pointer);
 
-    await expect(cursor.view(state)).rejects.toThrow(
-      "Unexpected unknown kind of pointer",
-    );
+      const { regions } = await cursor.view(state);
+
+      expect(regions[1]).toEqual({
+        location: "memory",
+        offset: Data.fromNumber(0x40),
+        length: Data.fromNumber(0x10),
+      });
+    });
+
+    it("dereferences a define and a template named with $", async () => {
+      const pointer: Pointer = {
+        define: { $wordsize: 7 },
+        in: {
+          templates: {
+            $template: {
+              expect: ["$wordsize"],
+              for: {
+                location: "memory",
+                offset: "$wordsize",
+                length: "$wordsize",
+              },
+            },
+          },
+          in: { template: "$template" },
+        },
+      };
+
+      const cursor = await dereference(pointer);
+
+      const { regions } = await cursor.view(state);
+
+      expect(regions[0]).toEqual({
+        location: "memory",
+        offset: Data.fromNumber(7),
+        length: Data.fromNumber(7),
+      });
+    });
+
+    it("rejects a $ operator", async () => {
+      const pointer = {
+        location: "memory",
+        offset: { $sum: [1, 2] },
+        length: 0x20,
+      } as unknown as Pointer;
+
+      const cursor = await dereference(pointer);
+
+      await expect(cursor.view(state)).rejects.toThrow(
+        "Unexpected unknown kind of pointer",
+      );
+    });
   });
 });

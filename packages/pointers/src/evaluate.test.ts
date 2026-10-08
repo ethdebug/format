@@ -415,8 +415,29 @@ describe("evaluate", () => {
   });
 });
 
-describe("evaluate, with the old $ sigil", () => {
-  const options: EvaluateOptions = { state, variables: {}, regions: {} };
+describe("evaluate, with names that start with $", () => {
+  const region = (name: string, offset: number): Cursor.Region => ({
+    name,
+    location: "memory",
+    offset: Data.fromNumber(offset),
+    length: Data.fromNumber(0x20),
+  });
+
+  const options: EvaluateOptions = {
+    state,
+    variables: { $wordsize: Value.integer(7n) },
+    regions: { $this: region("$this", 0x40), "~this": region("~this", 0x80) },
+  };
+
+  it("reads $wordsize as a variable, not the constant", async () => {
+    expect(await evaluate("$wordsize", options)).toEqual(Value.integer(7n));
+  });
+
+  it("looks up a region named $this, not the current region", async () => {
+    expect(await evaluate({ ".offset": "$this" }, options)).toEqual(
+      Value.integer(0x40n),
+    );
+  });
 
   it("rejects a $ operator, with a hint", async () => {
     const expression = { $sum: [1, 2] } as unknown as Pointer.Expression;
@@ -426,19 +447,21 @@ describe("evaluate, with the old $ sigil", () => {
     );
   });
 
-  it("hints at ~ for a $ constant or reference", async () => {
-    await expect(evaluate("$wordsize", options)).rejects.toThrow(
-      'expression: "$wordsize"; did you mean `~wordsize`?',
+  it("hints at ~ for an unknown $ variable or region", async () => {
+    const empty = { ...options, variables: {}, regions: {} };
+
+    await expect(evaluate("$wordsize", empty)).rejects.toThrow(
+      "Unknown variable with identifier $wordsize; did you mean `~wordsize`?",
     );
-    await expect(evaluate({ ".offset": "$this" }, options)).rejects.toThrow(
-      '{".offset":"$this"}; did you mean `~this`?',
+    await expect(evaluate({ ".offset": "$this" }, empty)).rejects.toThrow(
+      "Region not found: $this; did you mean `~this`?",
     );
   });
 
   it("gives no hint for other names", async () => {
-    await expect(evaluate("$balance", options)).rejects.toThrow(
-      /^Unexpected runtime failure to recognize kind of expression: "\$balance"$/,
-    );
+    await expect(
+      evaluate("$balance", { ...options, variables: {} }),
+    ).rejects.toThrow(/^Unknown variable with identifier \$balance$/);
   });
 });
 
