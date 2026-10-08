@@ -52,7 +52,7 @@ $defs:
 examples:
   - ethdebug:
       schema: "ethdebug/format/info"
-      version: "0.1.0-draft.1"
+      version: "0.1.0-draft.2"
     compilation:
       id: __301f3b6d85831638
       compiler:

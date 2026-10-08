@@ -94,7 +94,7 @@ examples:
     # ```
     ethdebug:
       schema: "ethdebug/format/program"
-      version: "0.1.0-draft.1"
+      version: "0.1.0-draft.2"
     contract:
       name: "Incrementer"
       definition:
