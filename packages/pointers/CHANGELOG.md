@@ -14,6 +14,13 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   template for a struct with a string member read the members after it one slot
   too far ([#317]).
 
+### Breaking
+
+- `evaluate` and `dereference` read the pointer vocabulary with `~` instead of
+  `$` (`~wordsize`, `~this`, `~sum`, `~read`, `~keccak256`, `~sized<N>`, and so
+  on). The `$` spellings are no longer format terms; the error for one
+  suggests its `~` spelling ([#323]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 ### Fixed
@@ -121,3 +128,4 @@ First publication.
 [#315]: https://github.com/ethdebug/format/pull/315
 [#316]: https://github.com/ethdebug/format/pull/316
 [#317]: https://github.com/ethdebug/format/pull/317
+[#323]: https://github.com/ethdebug/format/pull/323

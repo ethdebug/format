@@ -175,16 +175,16 @@ examples:
               length: 1
             - name: "beneficiary"
               location: "storage"
-              slot: { "$sum": ["slot", 1] }
+              slot: { "~sum": ["slot", 1] }
             - name: "asset"
               location: "storage"
-              slot: { "$sum": ["slot", 2] }
+              slot: { "~sum": ["slot", 2] }
             - name: "amount"
               location: "storage"
-              slot: { "$sum": ["slot", 3] }
+              slot: { "~sum": ["slot", 3] }
             - name: "canRemit"
               location: "storage"
-              slot: { "$sum": ["slot", 4] }
+              slot: { "~sum": ["slot", 4] }
 
     programs:
       - contract:

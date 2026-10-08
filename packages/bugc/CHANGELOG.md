@@ -121,8 +121,8 @@ support. Changes to the specification itself are tracked in the root
   assignment to a `bytes` local or to storage, a cast to `bytes` or
   `string`, a function argument or return value, and the argument of
   `keccak256` copy the bytes to memory. A local's pointer names its word
-  and then a `calldata` region whose offset and length are `$quotient`
-  and `$remainder` of that word by 2^128, so it reads exactly the local's
+  and then a `calldata` region whose offset and length are `~quotient`
+  and `~remainder` of that word by 2^128, so it reads exactly the local's
   bytes, even when its bounds are computed. Writing to bytes in
   calldata, or assigning or casting memory bytes to `bytes calldata`, is
   a type error. Before, every slice was copied to memory, and a local's
@@ -375,6 +375,12 @@ support. Changes to the specification itself are tracked in the root
   the literal, so its debug pointer read zeros and then that address
   ([#345]).
 
+### Breaking
+
+- Emitted pointer expressions use the `~` vocabulary (`~sum`, `~product`,
+  `~quotient`, `~remainder`, `~difference`, `~read`, `~keccak256`,
+  `~wordsized`, `~wordsize`) instead of `$` ([#323]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 ### Changed
@@ -414,6 +420,7 @@ First publication.
 [#305]: https://github.com/ethdebug/format/pull/305
 [#320]: https://github.com/ethdebug/format/pull/320
 [#321]: https://github.com/ethdebug/format/pull/321
+[#323]: https://github.com/ethdebug/format/pull/323
 [#327]: https://github.com/ethdebug/format/pull/327
 [#328]: https://github.com/ethdebug/format/pull/328
 [#330]: https://github.com/ethdebug/format/pull/330

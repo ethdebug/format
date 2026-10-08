@@ -95,7 +95,7 @@ examples:
               location: storage
               slot: contract_variable_slot__struct__Coordinate__storage
               offset:
-                $sum:
+                ~sum:
                   - .offset: member__x__struct__Coordinate__storage
                   - .length: member__x__struct__Coordinate__storage
               length: 16

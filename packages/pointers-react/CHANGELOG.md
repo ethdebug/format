@@ -7,6 +7,10 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Breaking
+
+- Follows the `~` vocabulary of `@ethdebug/pointers` ([#323]).
+
 ## 0.1.0-preview.1 — 2026-10-03
 
 Updated `@ethdebug/format` to `0.1.0-draft.1` and `@ethdebug/pointers` to
@@ -39,3 +43,4 @@ First publication.
 [#298]: https://github.com/ethdebug/format/pull/298
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
+[#323]: https://github.com/ethdebug/format/pull/323

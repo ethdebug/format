@@ -19,7 +19,9 @@ export const arrayElementPointer = {
   in: {
     name: "element",
     location: "storage",
-    slot: { $sum: [{ $keccak256: [{ $wordsized: 5 }] }, "element-index"] },
+    slot: {
+      "~sum": [{ "~keccak256": [{ "~wordsized": 5 }] }, "element-index"],
+    },
   },
 };
 
@@ -29,7 +31,7 @@ export const mappingValuePointer = {
     {
       name: "value",
       location: "storage",
-      slot: { $keccak256: [{ $read: "key-region" }, { $wordsized: 3 }] },
+      slot: { "~keccak256": [{ "~read": "key-region" }, { "~wordsized": 3 }] },
     },
   ],
 };
@@ -46,10 +48,10 @@ export const solidityStringPointer = {
         length: 1,
       },
       {
-        if: { $remainder: [{ $sum: [{ $read: "length-flag" }, 1] }, 2] },
+        if: { "~remainder": [{ "~sum": [{ "~read": "length-flag" }, 1] }, 2] },
         then: {
           define: {
-            "string-length": { $quotient: [{ $read: "length-flag" }, 2] },
+            "string-length": { "~quotient": [{ "~read": "length-flag" }, 2] },
           },
           in: {
             name: "string",
@@ -71,15 +73,20 @@ export const solidityStringPointer = {
             {
               define: {
                 "string-length": {
-                  $quotient: [
-                    { $difference: [{ $read: "long-string-length-data" }, 1] },
+                  "~quotient": [
+                    {
+                      "~difference": [
+                        { "~read": "long-string-length-data" },
+                        1,
+                      ],
+                    },
                     2,
                   ],
                 },
-                "start-slot": { $keccak256: [{ $wordsized: "slot" }] },
+                "start-slot": { "~keccak256": [{ "~wordsized": "slot" }] },
                 "total-slots": {
-                  $quotient: [
-                    { $sum: ["string-length", { $difference: [32, 1] }] },
+                  "~quotient": [
+                    { "~sum": ["string-length", { "~difference": [32, 1] }] },
                     32,
                   ],
                 },
@@ -90,14 +97,14 @@ export const solidityStringPointer = {
                   each: "i",
                   is: {
                     define: {
-                      "current-slot": { $sum: ["start-slot", "i"] },
-                      "previous-length": { $product: ["i", 32] },
+                      "current-slot": { "~sum": ["start-slot", "i"] },
+                      "previous-length": { "~product": ["i", 32] },
                     },
                     in: {
                       if: {
-                        $difference: [
+                        "~difference": [
                           "string-length",
-                          { $sum: ["previous-length", 32] },
+                          { "~sum": ["previous-length", 32] },
                         ],
                       },
                       then: {
@@ -111,7 +118,7 @@ export const solidityStringPointer = {
                         slot: "current-slot",
                         offset: 0,
                         length: {
-                          $difference: ["string-length", "previous-length"],
+                          "~difference": ["string-length", "previous-length"],
                         },
                       },
                     },
@@ -319,6 +326,6 @@ across that slot and the next.
 - [Collections](/docs/core-schemas/pointers/collections) for groups,
   lists, and conditionals
 - [Expressions](/docs/core-schemas/pointers/expressions) for arithmetic,
-  reads, and `$keccak256`
+  reads, and `~keccak256`
 
 </PointerPlayground>

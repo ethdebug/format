@@ -32,6 +32,6 @@ examples:
   - location: stack
     slot: 1
     length:
-      $product:
-        - $wordsize
+      ~product:
+        - ~wordsize
         - 2

@@ -34,7 +34,7 @@ expression properties and converts them into their `Data` values.
 
 This process would be very straightforward, except that pointer expressions
 may reference the region in which they are specified by use of the special
-region identifier `"$this"`.
+region identifier `"~this"`.
 
 Fortunately, the schema does not allow any kind of circular reference, so a
 more robust implementation could pre-process a region's properties to detect
@@ -45,14 +45,14 @@ might take this pointer:
 <SchemaExample
   schema="pointer/region/memory"
   href="/spec/pointer/region/location/memory"
-  title="Self-referential $this"
+  title="Self-referential ~this"
 >
   {`{
   "location": "memory",
   "offset": {
-    "$sum": [0x60, { ".length": "$this" }]
+    "~sum": [0x60, { ".length": "~this" }]
   },
-  "length": "$wordsize"
+  "length": "~wordsize"
 }`}
 </SchemaExample>
 

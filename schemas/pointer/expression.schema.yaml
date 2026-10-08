@@ -16,17 +16,17 @@ description: |
 
   The two sorts are produced by different forms:
 
-  - **Integers** are produced by a JSON-number literal, the `$wordsize`
+  - **Integers** are produced by a JSON-number literal, the `~wordsize`
     constant, a variable or lookup (`.offset` / `.length` / `.slot`) that
-    denotes an index or count, an arithmetic operation (`$sum`,
-    `$difference`, `$product`, `$quotient`, `$remainder`), and a
+    denotes an index or count, an arithmetic operation (`~sum`,
+    `~difference`, `~product`, `~quotient`, `~remainder`), and a
     hexadecimal literal that has an **odd** number of digits (which has no
     whole-byte width — see `Literal`).
   - **Bytes** are produced by a hexadecimal literal with an **even** number
-    of digits (its width is the number of bytes written), `$read` (its
+    of digits (its width is the number of bytes written), `~read` (its
     width is the length of the region read), the resize forms
-    `$sizedN` / `$wordsized` (whose width is `N` / the word size),
-    `$keccak256` (width 32), and `$concat` (width the sum of its operands').
+    `~sizedN` / `~wordsized` (whose width is `N` / the word size),
+    `~keccak256` (width 32), and `~concat` (width the sum of its operands').
 
   ## Coercion and the width-bearing requirement
 
@@ -34,11 +34,11 @@ description: |
   segment `slot` / `offset` / `length` — a bytes value is accepted and read
   as the non-negative integer its bytes encode (big-endian).
 
-  Where **bytes** are expected — the operands of `$concat` and `$keccak256`,
+  Where **bytes** are expected — the operands of `~concat` and `~keccak256`,
   whose results depend on operand widths — the operand **must** be
   width-bearing. A bare integer (a JSON number, an odd-digit hex literal,
-  `$wordsize`, an arithmetic result, or a lookup) is **not** valid there:
-  give it a width first with `$sizedN` or `$wordsized`. There is no
+  `~wordsize`, an arithmetic result, or a lookup) is **not** valid there:
+  give it a width first with `~sizedN` or `~wordsized`. There is no
   implicit widening; the resize forms are the only bridge from an integer
   to bytes.
 
@@ -80,7 +80,7 @@ $defs:
     title: Constant value
     type: string
     enum:
-      - $wordsize
+      - ~wordsize
 
   Variable:
     title: Variable identifier
@@ -96,15 +96,15 @@ $defs:
       Ordinary integer arithmetic. Each operand is taken as an **integer**
       (a bytes operand is read as the non-negative integer its bytes encode),
       and the result is an **integer** with no width. To use an arithmetic
-      result where bytes are required, give it a width with `$sizedN` or
-      `$wordsized`.
+      result where bytes are required, give it a width with `~sizedN` or
+      `~wordsized`.
     type: object
     properties:
-      "$sum":
+      "~sum":
         description: |
           A list of expressions to be added together.
         $ref: "#/$defs/Operands"
-      "$difference":
+      "~difference":
         description: |
           A tuple of two expressions where the second is to be subtracted from
           the first.
@@ -112,31 +112,31 @@ $defs:
           If the second operand is larger than the first, the result of this
           arithmetic operation is defined to equal zero (`0`).
 
-          (i.e., `{ "$difference": [a, b] }` equals `a` minus `b`.)
+          (i.e., `{ "~difference": [a, b] }` equals `a` minus `b`.)
         $ref: "#/$defs/Operands"
         minItems: 2
         maxItems: 2
-      "$product":
+      "~product":
         description: |
           A list of expressions to be multiplied.
         $ref: "#/$defs/Operands"
-      "$quotient":
+      "~quotient":
         description: |
           A tuple of two expressions where the first corresponds to the
           dividend and the second corresponds to the divisor, for the purposes
           of doing integer division.
 
-          (i.e., `{ "$quotient": [a, b] }` equals `a` divided by `b`.)
+          (i.e., `{ "~quotient": [a, b] }` equals `a` divided by `b`.)
         $ref: "#/$defs/Operands"
         minItems: 2
         maxItems: 2
-      "$remainder":
+      "~remainder":
         description: |
           A tuple of two expressions where the first corresponds to the
           dividend and the second corresponds to the divisor, for the purposes
           of computing the modular-arithmetic remainder.
 
-          (i.e., `{ "$remainder": [a, b] }` equals `a` mod `b`.)
+          (i.e., `{ "~remainder": [a, b] }` equals `a` mod `b`.)
         $ref: "#/$defs/Operands"
         minItems: 2
         maxItems: 2
@@ -144,12 +144,12 @@ $defs:
     minProperties: 1
     maxProperties: 1
     examples:
-      - "$sum": [5, 3, 4]
-      - "$difference": [5, 3]
-      - "$product": [5, 3, 0]
-      - "$quotient": [5, 3]
-      - "$remainder":
-          - "$product":
+      - "~sum": [5, 3, 4]
+      - "~difference": [5, 3]
+      - "~product": [5, 3, 0]
+      - "~quotient": [5, 3]
+      - "~remainder":
+          - "~product":
               - 2
               - 2
               - 2
@@ -184,31 +184,31 @@ $defs:
     examples:
       - .offset: "array-count"
       - .length: "array-item"
-      - .offset: $this
+      - .offset: ~this
 
   Read:
     title: Read region bytes
     description: |
-      An object of the form `{ "$read": "<region>" }`. The value of this
+      An object of the form `{ "~read": "<region>" }`. The value of this
       expression equals the raw bytes present in the running machine state
       in the referenced region. The result is **bytes** whose width is the
       length of the region read.
     type: object
     properties:
-      $read:
+      ~read:
         $ref: "#/$defs/Reference"
     required:
-      - $read
+      - ~read
     additionalProperties: false
     examples:
-      - $read: "struct-start"
+      - ~read: "struct-start"
 
   Reference:
     title: Region reference
     description: |
       A string value that **must** either be the `"name"` of at least one
       region declared with `{ "name": "<region>" }` previously in some root
-      pointer representation, or it **must** be the literal value `"$this"`,
+      pointer representation, or it **must** be the literal value `"~this"`,
       which indicates a reference to the region containing this expression.
 
       If more than one region is defined with the same name, resolution is
@@ -218,71 +218,71 @@ $defs:
     type: string
     oneOf:
       - $ref: "schema:ethdebug/format/pointer/identifier"
-      - const: "$this"
+      - const: "~this"
         description: |
           Indicates a reference to the region containing this expression.
-          A property lookup via `$this` (e.g. `{ ".length": "$this" }`) must
+          A property lookup via `~this` (e.g. `{ ".length": "~this" }`) must
           not be circular: the referenced property must be resolvable without
           depending on the value currently being defined.
 
   Keccak256:
     title: Keccak256 hash
     description: |
-      An object of the form `{ "$keccak256": [...values] }`, indicating
+      An object of the form `{ "~keccak256": [...values] }`, indicating
       that this expression evaluates to the Solidity-style keccak256 hash
       of the tightly-packed bytes encoded by `values`. The result is
       **bytes** of width 32.
 
       Because the hash is taken over the concatenation of the operands'
       bytes, each operand **must** be width-bearing (bytes): a bare integer
-      is not valid here and must be given a width first with `$sizedN` or
-      `$wordsized`. This is why a mapping-slot computation word-sizes its key
+      is not valid here and must be given a width first with `~sizedN` or
+      `~wordsized`. This is why a mapping-slot computation word-sizes its key
       and slot before hashing.
     type: object
     properties:
-      $keccak256:
+      ~keccak256:
         title: Array of hashed values
         type: array
         items:
           $ref: "schema:ethdebug/format/pointer/expression"
     additionalProperties: false
     required:
-      - $keccak256
+      - ~keccak256
     examples:
-      - $keccak256:
-          - $wordsized: 0
+      - ~keccak256:
+          - ~wordsized: 0
           - "0x00"
 
   Concat:
     title: Concatenate values
     description: |
-      An object of the form `{ "$concat": [...values] }`, indicating that this
+      An object of the form `{ "~concat": [...values] }`, indicating that this
       expression evaluates to the concatenation of bytes from each value.
       The byte width of each operand is preserved; no padding is added or
       removed between operands. The result is **bytes** whose width is the
       sum of the operand widths.
 
       Each operand **must** be width-bearing (bytes): a bare integer is not
-      valid here and must be given a width first with `$sizedN` or
-      `$wordsized`.
+      valid here and must be given a width first with `~sizedN` or
+      `~wordsized`.
     type: object
     properties:
-      $concat:
+      ~concat:
         title: Array of values to concatenate
         type: array
         items:
           $ref: "schema:ethdebug/format/pointer/expression"
     additionalProperties: false
     required:
-      - $concat
+      - ~concat
     examples:
-      - $concat:
+      - ~concat:
           - "0x00"
           - "0x00"
-      - $concat:
+      - ~concat:
           - "0xdead"
           - "0xbeef"
-      - $concat: []
+      - ~concat: []
 
   Resize:
     title: Resize data
@@ -292,14 +292,14 @@ $defs:
       yields bytes of the requested width.
 
       A resize operation expression is either an object of the form
-      `{ "$sized<N>": <expression> }` or an object of the form
-      `{ "$wordsized": <expression> }`, where `<expression>` is an expression
+      `{ "~sized<N>": <expression> }` or an object of the form
+      `{ "~wordsized": <expression> }`, where `<expression>` is an expression
       whose value is to be resized, and, if applicable, where `<N>` is the
       smallest decimal representation of an unsigned integer.
 
       This object's value is evaluated as follows, based on the bytes width of
       the value `<expression>` evaluates to and based on `<N>` (using the
-      value of `"$wordsize"` for `<N>` in the case of the latter form above):
+      value of `"~wordsize"` for `<N>` in the case of the latter form above):
       - If the width equals `<N>`, this object evaluates to the same value as
         `<expression>` (equivalent to the identity function or no-op).
       - If the width is less than `<N>`, this object evaluates to the same value
@@ -317,29 +317,29 @@ $defs:
       - title: Resize to literal number of bytes
         type: object
         patternProperties:
-          "^\\$sized([1-9]+[0-9]*)$":
+          "^~sized([1-9]+[0-9]*)$":
             $ref: "schema:ethdebug/format/pointer/expression"
         additionalProperties: false
       - title: Resize to word-size
         type: object
         patternProperties:
-          "^\\$wordsized$":
+          "^~wordsized$":
             $ref: "schema:ethdebug/format/pointer/expression"
         additionalProperties: false
     minProperties: 1
     maxProperties: 1
     examples:
-      - $sized2: "0x00" # 0x0000
-      - $sized2: "0xffffff" # 0xffff
-      - $wordsized: "0x00" # 0x0000000000000000000000000000000000000000000000000000000000000000
+      - ~sized2: "0x00" # 0x0000
+      - ~sized2: "0xffffff" # 0xffff
+      - ~wordsized: "0x00" # 0x0000000000000000000000000000000000000000000000000000000000000000
 
 examples:
   - 0
-  - $sum:
+  - ~sum:
       - .offset: "array-start"
       - .length: "array-start"
       - 1
-  - $keccak256:
-      - $wordsized: 5
-      - $wordsized:
+  - ~keccak256:
+      - ~wordsized: 5
+      - ~wordsized:
           .offset: "array-start"

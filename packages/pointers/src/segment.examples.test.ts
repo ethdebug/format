@@ -60,10 +60,10 @@ describe("segment schema examples (packed)", () => {
       12,
       8,
       {
-        $difference: ["$wordsize", { ".length": "$this" }],
+        "~difference": ["~wordsize", { ".length": "~this" }],
       },
       {
-        $difference: ["$wordsize", { $sum: [20, { ".length": "$this" }] }],
+        "~difference": ["~wordsize", { "~sum": [20, { ".length": "~this" }] }],
       },
     ]);
   });

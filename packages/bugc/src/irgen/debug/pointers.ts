@@ -96,7 +96,7 @@ export function generatePointer(
  * Translate a compute_slot chain to an ethdebug/format pointer expression
  *
  * Takes a chain of compute_slot instructions and generates the corresponding
- * pointer expression using $keccak256, $sum, and other operations.
+ * pointer expression using ~keccak256, ~sum, and other operations.
  *
  * SAFETY: Handles unknown patterns gracefully by returning simple expressions.
  * Never crashes - just returns best-effort pointer.
@@ -133,14 +133,14 @@ export function translateComputeSlotChain(
       // Note: actual element access is done with binary.add afterward
       // which we don't see in the compute_slot chain
       expr = {
-        $keccak256: [wordsized(expr)],
+        "~keccak256": [wordsized(expr)],
       };
     } else if (inst.slotKind === "field") {
       // Struct field: slot + fieldSlotOffset
       const slotOffset = step.fieldSlotOffset ?? 0;
       if (slotOffset > 0) {
         expr = {
-          $sum: [expr, slotOffset],
+          "~sum": [expr, slotOffset],
         };
       }
       // If offset is 0, no change needed
@@ -181,19 +181,19 @@ function valueToExpression(
 }
 
 /**
- * Give an expression a 32-byte width for use as a `$keccak256` operand.
+ * Give an expression a 32-byte width for use as a `~keccak256` operand.
  *
- * `$keccak256` operands must be width-bearing bytes; a bare integer
- * (literal, `$sum`, ...) is invalid there. A `$keccak256` result is
+ * `~keccak256` operands must be width-bearing bytes; a bare integer
+ * (literal, `~sum`, ...) is invalid there. A `~keccak256` result is
  * already 32 bytes wide, so it is passed through unwrapped.
  */
 function wordsized(
   expression: Format.Pointer.Expression,
 ): Format.Pointer.Expression {
-  if (typeof expression === "object" && "$keccak256" in expression) {
+  if (typeof expression === "object" && "~keccak256" in expression) {
     return expression;
   }
-  return { $wordsized: expression };
+  return { "~wordsized": expression };
 }
 
 /**
@@ -207,7 +207,7 @@ export function mappingAccess(
   key: Format.Pointer.Expression,
 ): Format.Pointer.Expression {
   return {
-    $keccak256: [{ $wordsized: key }, wordsized(slot)],
+    "~keccak256": [{ "~wordsized": key }, wordsized(slot)],
   };
 }
 
@@ -225,12 +225,12 @@ export function arrayElementAccess(
   if (isDynamic) {
     // Dynamic array: keccak256(wordsized(slot)) + index
     return {
-      $sum: [{ $keccak256: [wordsized(baseSlot)] }, index],
+      "~sum": [{ "~keccak256": [wordsized(baseSlot)] }, index],
     };
   } else {
     // Fixed array: slot + index
     return {
-      $sum: [baseSlot, index],
+      "~sum": [baseSlot, index],
     };
   }
 }
@@ -249,6 +249,6 @@ export function structFieldAccess(
   }
 
   return {
-    $sum: [baseSlot, fieldOffset],
+    "~sum": [baseSlot, fieldOffset],
   };
 }

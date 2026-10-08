@@ -34,19 +34,19 @@ base and the index.
 
 ## Integers and bytes
 
-Expressions produce two kinds of value. Arithmetic (`$sum`, `$product`, and
+Expressions produce two kinds of value. Arithmetic (`~sum`, `~product`, and
 so on) is unbounded integer math: the result is a number with no byte width.
-`$read`, hexadecimal literals with an even number of digits, and the resize
+`~read`, hexadecimal literals with an even number of digits, and the resize
 operations produce **bytes** of a definite width.
 
-The distinction matters for hashing and concatenation. `$keccak256` and
-`$concat` work on bytes, and their results depend on how wide each operand
+The distinction matters for hashing and concatenation. `~keccak256` and
+`~concat` work on bytes, and their results depend on how wide each operand
 is, so every operand must already be bytes. A bare number like `5` or an
-arithmetic result is not; wrap it in `$wordsized` (or `$sized<N>`) first.
+arithmetic result is not; wrap it in `~wordsized` (or `~sized<N>`) first.
 That applies to mapping keys _and_ to slot numbers before hashing:
 
 <SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
-  {`{ "$keccak256": [{ "$wordsized": "key" }, { "$wordsized": "slot" }] }`}
+  {`{ "~keccak256": [{ "~wordsized": "key" }, { "~wordsized": "slot" }] }`}
 </SchemaExample>
 
 Resizes are the only way to turn an integer into bytes; nothing pads
@@ -59,33 +59,33 @@ a slot or added to.
 
 Basic math operations for computing addresses:
 
-### `$sum` — Addition
+### `~sum` — Addition
 
 Adds all values in an array.
 
-### `$difference` — Subtraction
+### `~difference` — Subtraction
 
 Subtracts the second value from the first (saturates at zero).
 
-### `$product` — Multiplication
+### `~product` — Multiplication
 
 Multiplies all values in an array.
 
-### `$quotient` — Division
+### `~quotient` — Division
 
 Integer division of the first value by the second.
 
-### `$remainder` — Modulo
+### `~remainder` — Modulo
 
 Remainder after division.
 
 ## Reading values
 
-### `$read` — Read from a named region
+### `~read` — Read from a named region
 
 Reads the bytes from a previously defined region; the result is bytes as
 wide as the region. For example, a group can name an `array-length-slot`
-region and then use `{ $read: "array-length-slot" }` to retrieve the array's
+region and then use `{ "~read": "array-length-slot" }` to retrieve the array's
 length at runtime and use it in a later computation.
 
 ## Region property lookups
@@ -122,7 +122,7 @@ Property lookups can compute the next element's position from the previous
 one. For example, `element-1`'s offset can be computed as the sum of
 `element-0`'s `.offset` and its `.length`.
 
-## Computing storage slots with `$keccak256`
+## Computing storage slots with `~keccak256`
 
 Solidity uses keccak256 hashing to compute storage locations for dynamic data.
 
@@ -130,12 +130,12 @@ Solidity uses keccak256 hashing to compute storage locations for dynamic data.
 
 For a dynamic array at slot `n`, elements start at `keccak256(n)`, so element
 `i` lives at `keccak256(n) + i`. The slot is word-sized before hashing, and
-the 32-byte hash is then read as an integer by `$sum`:
+the 32-byte hash is then read as an integer by `~sum`:
 
 <SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
   {`{
-  "$sum": [
-    { "$keccak256": [{ "$wordsized": 5 }] },
+  "~sum": [
+    { "~keccak256": [{ "~wordsized": 5 }] },
     "element-index"
   ]
 }`}
@@ -147,7 +147,7 @@ For a mapping at slot `n`, the value for key `k` is at `keccak256(k, n)`, with
 both the key and the slot word-sized:
 
 <SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
-  {`{ "$keccak256": [{ "$wordsized": "key" }, { "$wordsized": 3 }] }`}
+  {`{ "~keccak256": [{ "~wordsized": "key" }, { "~wordsized": 3 }] }`}
 </SchemaExample>
 
 ### Nested mappings
@@ -158,28 +158,28 @@ bytes and needs no resize; the keys and the literal slot do:
 
 <SchemaExample schema="pointer/expression" href="/spec/pointer/expression">
   {`{
-  "$keccak256": [
-    { "$wordsized": "inner-key" },
-    { "$keccak256": [{ "$wordsized": "outer-key" }, { "$wordsized": 2 }] }
+  "~keccak256": [
+    { "~wordsized": "inner-key" },
+    { "~keccak256": [{ "~wordsized": "outer-key" }, { "~wordsized": 2 }] }
   ]
 }`}
 </SchemaExample>
 
 ## Data manipulation
 
-### `$concat` — Concatenate bytes
+### `~concat` — Concatenate bytes
 
 Joins byte sequences without padding. Every operand must be bytes. Useful
 for building hash inputs from multiple values.
 
-### `$sized<N>` — resize to N bytes
+### `~sized<N>` — resize to N bytes
 
 Truncates or pads to exactly N bytes. Pads with zeros on the left; truncates
 from the left if too long.
 
-### `$wordsized` — Resize to word size
+### `~wordsized` — Resize to word size
 
-Equivalent to `$sized32` on the EVM (pads or truncates to 32 bytes).
+Equivalent to `~sized32` on the EVM (pads or truncates to 32 bytes).
 
 ## Variables in expressions
 

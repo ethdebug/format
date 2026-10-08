@@ -178,14 +178,14 @@ and length are computed while the program runs:
       "name": "text-data",
       "location": "calldata",
       "offset": {
-        "$quotient": [
-          { "$read": "text" },
+        "~quotient": [
+          { "~read": "text" },
           "0x100000000000000000000000000000000"
         ]
       },
       "length": {
-        "$remainder": [
-          { "$read": "text" },
+        "~remainder": [
+          { "~read": "text" },
           "0x100000000000000000000000000000000"
         ]
       }
@@ -321,9 +321,9 @@ a slot of its own.
     "is": {
       "name": "element",
       "location": "storage",
-      "slot": { "$sum": [0, { "$quotient": ["i", 32] }] },
+      "slot": { "~sum": [0, { "~quotient": ["i", 32] }] },
       "offset": {
-        "$difference": [31, { "$product": [{ "$remainder": ["i", 32] }, 1] }]
+        "~difference": [31, { "~product": [{ "~remainder": ["i", 32] }, 1] }]
       },
       "length": 1
     }
@@ -345,12 +345,12 @@ For dynamic arrays, BUG generates pointers with keccak256 expressions:
     { "name": "array-length", "location": "storage", "slot": 0 },
     {
       "list": {
-        "count": { "$read": "array-length" },
+        "count": { "~read": "array-length" },
         "each": "i",
         "is": {
           "name": "element",
           "location": "storage",
-          "slot": { "$sum": [{ "$keccak256": [{ "$wordsized": 0 }] }, "i"] }
+          "slot": { "~sum": [{ "~keccak256": [{ "~wordsized": 0 }] }, "i"] }
         }
       }
     }

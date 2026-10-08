@@ -28,16 +28,16 @@ examples:
   - location: storage
     slot: "0x06"
     length:
-      $product:
-        - $wordsize
+      ~product:
+        - ~wordsize
         - 2
   - location: storage
     slot: "0x08"
     offset:
-      $quotient:
-        - $wordsize
+      ~quotient:
+        - ~wordsize
         - 2
     length:
-      $quotient:
-        - $wordsize
+      ~quotient:
+        - ~wordsize
         - 2

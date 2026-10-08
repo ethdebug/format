@@ -6,13 +6,13 @@ import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 /**
  * Evaluate all Pointer.Expression-value properties on a given region
  *
- * Due to the availability of `$this` as a builtin allowable by the schema,
+ * Due to the availability of `~this` as a builtin allowable by the schema,
  * this function evaluates each property as part of a queue. If a property's
  * expression fails to evaluate due to a missing reference, the property is
  * added to the end of the queue.
  *
  * Circular dependencies are detected naïvely by counting evaluation attempts
- * for each property, since the maximum length of a chain of $this references
+ * for each property, since the maximum length of a chain of ~this references
  * within a single region is one less than the number of properties that
  * require evaluation). Exceeding this many attempts indicates circularity.
  */
@@ -35,7 +35,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
           return evaluatedProperties[property as keyof R];
         }
         throw new Error(
-          `Property not evaluated yet: $this.${property.toString()}`,
+          `Property not evaluated yet: ~this.${property.toString()}`,
         );
       },
     },
@@ -59,7 +59,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
         ...options,
         regions: {
           ...options.regions,
-          $this: partialRegion,
+          "~this": partialRegion,
         },
       });
 
@@ -67,14 +67,14 @@ export async function evaluateRegion<R extends Pointer.Region>(
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.startsWith("Property not evaluated yet: $this.")
+        error.message.startsWith("Property not evaluated yet: ~this.")
       ) {
         const attempts = propertyAttempts[property] || 0;
         // fields may reference each other, but the chain of references
         // should not exceed the number of fields minus 1
         if (attempts > propertiesRequiringEvaluation.length - 1) {
           throw new Error(
-            `Circular reference detected: $this.${property.toString()}`,
+            `Circular reference detected: ~this.${property.toString()}`,
           );
         }
 
@@ -106,9 +106,9 @@ export function adjustStackLength<R extends Pointer.Region>(
       stackLengthChange === 0n
         ? region.slot
         : stackLengthChange > 0n
-          ? { $sum: [region.slot, `0x${stackLengthChange.toString(16)}`] }
+          ? { "~sum": [region.slot, `0x${stackLengthChange.toString(16)}`] }
           : {
-              $difference: [
+              "~difference": [
                 region.slot,
                 `0x${-stackLengthChange.toString(16)}`,
               ],

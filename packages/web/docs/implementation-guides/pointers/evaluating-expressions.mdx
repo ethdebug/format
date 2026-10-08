@@ -15,11 +15,11 @@ if variable and region references are pre-evaluated.
 
 The schema defines every expression to evaluate to one of two sorts of
 value: an **integer**, which has a numeric value but no width, or **bytes**,
-which have a definite width. The distinction matters because `$keccak256`
-and `$concat` produce results that depend on the widths of their operands,
+which have a definite width. The distinction matters because `~keccak256`
+and `~concat` produce results that depend on the widths of their operands,
 so the schema requires those operands to be bytes. A bare integer (a JSON
-number, `$wordsize`, an arithmetic result, or a lookup) must first be given
-a width with `$sized<N>` or `$wordsized`; the resize forms are the only
+number, `~wordsize`, an arithmetic result, or a lookup) must first be given
+a width with `~sized<N>` or `~wordsized`; the resize forms are the only
 bridge from an integer to bytes.
 
 This reference implementation represents the two sorts as a tagged union:
@@ -74,7 +74,7 @@ specific logic based on the kind of expression:
 
 ## Evaluating constants, literals, and variables
 
-Evaluating constant expressions is quite straightforward; `$wordsize` is the
+Evaluating constant expressions is quite straightforward; `~wordsize` is the
 integer 32:
 
 <CodeListing
@@ -127,13 +127,13 @@ while differences, quotients, and remainders take exactly two:
   extract={(sourceFile) => sourceFile.getFunction("evaluateArithmetic")}
 />
 
-**Note** how `$difference` operates on unsigned values only by bounding the
-result below at 0, and how `$quotient` uses integer division only.
+**Note** how `~difference` operates on unsigned values only by bounding the
+result below at 0, and how `~quotient` uses integer division only.
 
 ## Evaluating resize expressions
 
-This schema provides the `{ "$sized<N>": <expression> }` and
-`{ "$wordsized": <expression> }` constructs to allow explicitly resizing a
+This schema provides the `{ "~sized<N>": <expression> }` and
+`{ "~wordsized": <expression> }` constructs to allow explicitly resizing a
 subexpression. A resize always produces bytes of the requested width, and
 so is the way to give an integer a width; this implementation encodes an
 integer as its minimal big-endian bytes and then uses the
@@ -238,18 +238,18 @@ this function presents no surprises:
   extract={(sourceFile) => sourceFile.getFunction("evaluateRead")}
 />
 
-## Note on `"$this"` region lookups
+## Note on `"~this"` region lookups
 
 Astute readers might notice that these docs contain no mention until now
 about how to implement support for expressions that reference the region in
 which they are defined, a mechanism the schema permits via the special region
-name identifier `"$this"`.
+name identifier `"~this"`.
 
-Performing _read_ operations against `"$this"` region is meaningless since
+Performing _read_ operations against `"~this"` region is meaningless since
 this schema does not afford any mechanism for defining regions recursively
 down to a base case (or similar composition). Thus, the only syntactic
 construct for self-referential reads resembles, e.g., defining a storage region
-whose `slot` is `{ $read: "$this" }`. Evaluating this `slot` would require
+whose `slot` is `{ "~read": "~this" }`. Evaluating this `slot` would require
 knowing the slot before knowing where to read, and knowing the slow requires
 knowing the machine value, ad nauseum.
 
@@ -261,9 +261,9 @@ Since the `evaluate<.*>()` functions here are written to accept only one
 expression at a time, this reference implementation relegates this concern to a
 higher-level module; proper use of `evaluate()` here requires its
 `options.regions` map to include a pre-evaluated (albeit partial)
-`"$this"` region.
+`"~this"` region.
 
-The logic for creating `"$this"` regions and calling `evaluate()` correctly
+The logic for creating `"~this"` regions and calling `evaluate()` correctly
 is described in the section pertaining to that area of the code. Be
 forewarned that this reference implementation takes a naïve trial-and-error
 approach for determining property evaluation order; implementations requiring

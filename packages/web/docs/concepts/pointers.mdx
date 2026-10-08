@@ -43,7 +43,7 @@ Complex pointers describe dynamic locations that depend on runtime values:
   {`{
   "location": "storage",
   "slot": {
-    "$keccak256": [{ "$read": "key-value" }, { "$wordsized": 3 }]
+    "~keccak256": [{ "~read": "key-value" }, { "~wordsized": 3 }]
   }
 }`}
 </SchemaExample>
@@ -227,18 +227,18 @@ mapping values, and many other locations depend on runtime values.
   {`{
   "location": "storage",
   "slot": {
-    "$sum": [{ "$keccak256": [{ "$wordsized": 5 }] }, "element-index"]
+    "~sum": [{ "~keccak256": [{ "~wordsized": 5 }] }, "element-index"]
   }
 }`}
 </SchemaExample>
 
 Expressions support:
 
-- **Arithmetic**: `$sum`, `$difference`, `$product`, `$quotient`, `$remainder`
-- **Reading values**: `$read` retrieves bytes from a named region
+- **Arithmetic**: `~sum`, `~difference`, `~product`, `~quotient`, `~remainder`
+- **Reading values**: `~read` retrieves bytes from a named region
 - **Region properties**: `.offset`, `.length`, `.slot` reference region fields
-- **Hashing**: `$keccak256` computes storage slots for dynamic data
-- **Data manipulation**: `$concat`, `$sized<N>`, `$wordsized`
+- **Hashing**: `~keccak256` computes storage slots for dynamic data
+- **Data manipulation**: `~concat`, `~sized<N>`, `~wordsized`
 
 Variables in expressions come from list iteration (`each`) or scope definitions
 (`define`).
@@ -276,7 +276,7 @@ Giving a region a `name` lets you reference it elsewhere:
     },
     {
       "location": "memory",
-      "offset": { "$read": "base-pointer" },
+      "offset": { "~read": "base-pointer" },
       "length": 32
     }
   ]

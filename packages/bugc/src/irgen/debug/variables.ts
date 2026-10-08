@@ -56,7 +56,7 @@ function plus(
   slots: number,
 ): Format.Pointer.Expression {
   if (slots === 0) return slot;
-  return typeof slot === "number" ? slot + slots : { $sum: [slot, slots] };
+  return typeof slot === "number" ? slot + slots : { "~sum": [slot, slots] };
 }
 
 /**
@@ -138,7 +138,7 @@ export function generateStoragePointer(
     const index = depth === 0 ? "i" : `i${depth}`;
     const first: Format.Pointer.Expression =
       bugType.size === undefined
-        ? { $keccak256: [{ $wordsized: baseSlot }] }
+        ? { "~keccak256": [{ "~wordsized": baseSlot }] }
         : baseSlot;
 
     let elementPointer: Format.Pointer | undefined;
@@ -150,11 +150,11 @@ export function generateStoragePointer(
       elementPointer = {
         name: `${prefix}element`,
         location: "storage",
-        slot: { $sum: [first, { $quotient: [index, perSlot] }] },
+        slot: { "~sum": [first, { "~quotient": [index, perSlot] }] },
         offset: {
-          $difference: [
+          "~difference": [
             32 - size,
-            { $product: [{ $remainder: [index, perSlot] }, size] },
+            { "~product": [{ "~remainder": [index, perSlot] }, size] },
           ],
         },
         length: size,
@@ -163,7 +163,10 @@ export function generateStoragePointer(
       const stride = Storage.slots(element);
       elementPointer = generateStoragePointer(
         {
-          $sum: [first, stride === 1 ? index : { $product: [index, stride] }],
+          "~sum": [
+            first,
+            stride === 1 ? index : { "~product": [index, stride] },
+          ],
         },
         element,
         0,
@@ -181,7 +184,7 @@ export function generateStoragePointer(
       list: {
         count:
           bugType.size === undefined
-            ? { $read: `${prefix}array-length` }
+            ? { "~read": `${prefix}array-length` }
             : bugType.size,
         each: index,
         is: elementPointer,
@@ -272,7 +275,9 @@ function generateMappingPointer(
       expect: ["slot", "key"],
       for: {
         define: {
-          slot: { $keccak256: [{ $wordsized: "key" }, { $wordsized: "slot" }] },
+          slot: {
+            "~keccak256": [{ "~wordsized": "key" }, { "~wordsized": "slot" }],
+          },
         },
         in: Format.Pointer.isRegion(value)
           ? { ...value, name: "value" }
@@ -304,13 +309,13 @@ function generateStorageBytesPointer(
         name: flag,
         location: "storage",
         slot,
-        offset: { $difference: ["$wordsize", 1] },
+        offset: { "~difference": ["~wordsize", 1] },
         length: 1,
       },
       {
-        if: { $remainder: [{ $sum: [{ $read: flag }, 1] }, 2] },
+        if: { "~remainder": [{ "~sum": [{ "~read": flag }, 1] }, 2] },
         then: {
-          define: { length: { $quotient: [{ $read: flag }, 2] } },
+          define: { length: { "~quotient": [{ "~read": flag }, 2] } },
           in: { name: data, location: "storage", slot, length: "length" },
         },
         else: {
@@ -319,9 +324,12 @@ function generateStorageBytesPointer(
             {
               define: {
                 length: {
-                  $quotient: [{ $difference: [{ $read: longLength }, 1] }, 2],
+                  "~quotient": [
+                    { "~difference": [{ "~read": longLength }, 1] },
+                    2,
+                  ],
                 },
-                start: { $keccak256: [{ $wordsized: slot }] },
+                start: { "~keccak256": [{ "~wordsized": slot }] },
               },
               in: {
                 name: data,

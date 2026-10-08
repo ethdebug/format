@@ -88,8 +88,8 @@ describe("evaluate", () => {
     });
   });
 
-  it("evaluates $wordsize to the integer 32", async () => {
-    expect(await evaluate("$wordsize", options)).toEqual(Value.integer(32n));
+  it("evaluates ~wordsize to the integer 32", async () => {
+    expect(await evaluate("~wordsize", options)).toEqual(Value.integer(32n));
   });
 
   it("evaluates variables to their values, preserving sort", async () => {
@@ -109,7 +109,7 @@ describe("evaluate", () => {
   describe("arithmetic", () => {
     it("evaluates sums to an integer, coercing bytes operands", async () => {
       const expression: Pointer.Expression = {
-        $sum: [42, "0x1f", "foo", "bar"],
+        "~sum": [42, "0x1f", "foo", "bar"],
       };
 
       expect(await evaluate(expression, options)).toEqual(
@@ -118,20 +118,20 @@ describe("evaluate", () => {
     });
 
     it("evaluates differences", async () => {
-      expect(await evaluate({ $difference: ["foo", "bar"] }, options)).toEqual(
-        Value.integer(42n - 0x1fn),
-      );
+      expect(
+        await evaluate({ "~difference": ["foo", "bar"] }, options),
+      ).toEqual(Value.integer(42n - 0x1fn));
     });
 
     it("clamps differences at zero", async () => {
-      expect(await evaluate({ $difference: ["bar", "foo"] }, options)).toEqual(
-        Value.integer(0n),
-      );
+      expect(
+        await evaluate({ "~difference": ["bar", "foo"] }, options),
+      ).toEqual(Value.integer(0n));
     });
 
     it("evaluates products", async () => {
       const expression: Pointer.Expression = {
-        $product: [42, "0x1f", "foo", "bar"],
+        "~product": [42, "0x1f", "foo", "bar"],
       };
 
       expect(await evaluate(expression, options)).toEqual(
@@ -140,26 +140,26 @@ describe("evaluate", () => {
     });
 
     it("evaluates quotients", async () => {
-      expect(await evaluate({ $quotient: ["foo", "bar"] }, options)).toEqual(
+      expect(await evaluate({ "~quotient": ["foo", "bar"] }, options)).toEqual(
         Value.integer(42n / 0x1fn),
       );
     });
 
     it("evaluates remainders", async () => {
-      expect(await evaluate({ $remainder: ["foo", "bar"] }, options)).toEqual(
+      expect(await evaluate({ "~remainder": ["foo", "bar"] }, options)).toEqual(
         Value.integer(42n % 0x1fn),
       );
     });
 
     it("reads bytes operands as big-endian integers", async () => {
-      expect(await evaluate({ $sum: ["0x0100", "0x00"] }, options)).toEqual(
+      expect(await evaluate({ "~sum": ["0x0100", "0x00"] }, options)).toEqual(
         Value.integer(256n),
       );
     });
 
     it("produces integers with no width, even from wide operands", async () => {
       expect(
-        await evaluate({ $difference: ["0x0000", "0x0000"] }, options),
+        await evaluate({ "~difference": ["0x0000", "0x0000"] }, options),
       ).toEqual(Value.integer(0n));
     });
   });
@@ -171,9 +171,9 @@ describe("evaluate", () => {
       );
     });
 
-    it("evaluates offset lookups with $this", async () => {
-      const $this = {
-        name: "$this",
+    it("evaluates offset lookups with ~this", async () => {
+      const thisRegion = {
+        name: "~this",
         location: "memory",
         offset: Data.fromNumber(0x120),
         length: Data.fromNumber(0x40),
@@ -181,12 +181,12 @@ describe("evaluate", () => {
 
       expect(
         await evaluate(
-          { ".offset": "$this" },
+          { ".offset": "~this" },
           {
             ...options,
             regions: {
               ...regions,
-              $this,
+              "~this": thisRegion,
             },
           },
         ),
@@ -212,8 +212,8 @@ describe("evaluate", () => {
     });
   });
 
-  it("evaluates $read to bytes of the region's length", async () => {
-    const result = await evaluate({ $read: "memory" }, options);
+  it("evaluates ~read to bytes of the region's length", async () => {
+    const result = await evaluate({ "~read": "memory" }, options);
 
     expect(result).toEqual(
       Value.bytes(Data.fromBytes(new Uint8Array(11).fill(0xee))),
@@ -222,80 +222,87 @@ describe("evaluate", () => {
 
   describe("resize", () => {
     it("gives an integer a width", async () => {
-      expect(await evaluate({ $sized1: 0 }, options)).toEqual(
+      expect(await evaluate({ "~sized1": 0 }, options)).toEqual(
         Value.bytes(Data.fromHex("0x00")),
       );
 
-      expect(await evaluate({ $sized2: 42 }, options)).toEqual(
+      expect(await evaluate({ "~sized2": 42 }, options)).toEqual(
         Value.bytes(Data.fromHex("0x002a")),
       );
 
-      expect(await evaluate({ $wordsized: 0xabcd }, options)).toEqual(
+      expect(await evaluate({ "~wordsized": 0xabcd }, options)).toEqual(
         Value.bytes(Data.fromNumber(0xabcd).resizeTo(32)),
       );
     });
 
     it("resizes bytes, padding or truncating on the left", async () => {
-      expect(await evaluate({ $sized1: "0xabcd" }, options)).toEqual(
+      expect(await evaluate({ "~sized1": "0xabcd" }, options)).toEqual(
         Value.bytes(Data.fromHex("0xcd")),
       );
 
-      expect(await evaluate({ $sized4: "0xabcd" }, options)).toEqual(
+      expect(await evaluate({ "~sized4": "0xabcd" }, options)).toEqual(
         Value.bytes(Data.fromHex("0x0000abcd")),
       );
 
-      expect(await evaluate({ $wordsized: "0xabcd" }, options)).toEqual(
+      expect(await evaluate({ "~wordsized": "0xabcd" }, options)).toEqual(
         Value.bytes(Data.fromHex("0xabcd").resizeTo(32)),
       );
     });
 
     it("truncates an integer too large for the requested width", async () => {
-      expect(await evaluate({ $sized1: 0x1234 }, options)).toEqual(
+      expect(await evaluate({ "~sized1": 0x1234 }, options)).toEqual(
         Value.bytes(Data.fromHex("0x34")),
       );
     });
 
     it("gives arithmetic results a width", async () => {
-      expect(await evaluate({ $sized2: { $sum: [1, 2] } }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x0003")),
-      );
+      expect(
+        await evaluate({ "~sized2": { "~sum": [1, 2] } }, options),
+      ).toEqual(Value.bytes(Data.fromHex("0x0003")));
     });
   });
 
-  describe("$concat", () => {
+  describe("~concat", () => {
     it("concatenates hex literals", async () => {
-      expect(await evaluate({ $concat: ["0x00", "0x00"] }, options)).toEqual(
+      expect(await evaluate({ "~concat": ["0x00", "0x00"] }, options)).toEqual(
         Value.bytes(Data.fromHex("0x0000")),
       );
     });
 
     it("concatenates multiple values preserving byte widths", async () => {
       expect(
-        await evaluate({ $concat: ["0xdead", "0xbeef"] }, options),
+        await evaluate({ "~concat": ["0xdead", "0xbeef"] }, options),
       ).toEqual(Value.bytes(Data.fromHex("0xdeadbeef")));
     });
 
     it("returns empty bytes for an empty operand list", async () => {
-      expect(await evaluate({ $concat: [] }, options)).toEqual(
+      expect(await evaluate({ "~concat": [] }, options)).toEqual(
         Value.bytes(Data.zero()),
       );
     });
 
     it("preserves a single operand unchanged", async () => {
-      expect(await evaluate({ $concat: ["0xabcdef"] }, options)).toEqual(
+      expect(await evaluate({ "~concat": ["0xabcdef"] }, options)).toEqual(
         Value.bytes(Data.fromHex("0xabcdef")),
       );
     });
 
     it("preserves leading zeros in hex literals", async () => {
-      const result = await evaluate({ $concat: ["0x0001", "0x0002"] }, options);
+      const result = await evaluate(
+        { "~concat": ["0x0001", "0x0002"] },
+        options,
+      );
 
       expect(result).toEqual(Value.bytes(Data.fromHex("0x00010002")));
     });
 
     it("concatenates bytes-valued variables and resized integers", async () => {
       const expression: Pointer.Expression = {
-        $concat: [{ $sized2: "foo" }, "bar", { $sized1: { $sum: [1, 2] } }],
+        "~concat": [
+          { "~sized2": "foo" },
+          "bar",
+          { "~sized1": { "~sum": [1, 2] } },
+        ],
       };
 
       expect(await evaluate(expression, options)).toEqual(
@@ -305,48 +312,53 @@ describe("evaluate", () => {
 
     it("rejects a JSON number operand", async () => {
       await expect(
-        evaluate({ $concat: ["0xdead", 0] }, options),
+        evaluate({ "~concat": ["0xdead", 0] }, options),
       ).rejects.toThrow(
-        "Operand 1 of $concat (0) evaluates to the integer 0, which has no " +
-          "byte width; give it a width with $wordsized or $sizedN",
+        "Operand 1 of ~concat (0) evaluates to the integer 0, which has no " +
+          "byte width; give it a width with ~wordsized or ~sizedN",
       );
     });
 
     it("rejects an integer-valued variable operand", async () => {
       await expect(
-        evaluate({ $concat: ["foo", "bar"] }, options),
+        evaluate({ "~concat": ["foo", "bar"] }, options),
       ).rejects.toThrow(
-        'Operand 0 of $concat ("foo") evaluates to the integer 42',
+        'Operand 0 of ~concat ("foo") evaluates to the integer 42',
       );
     });
 
     it("rejects an arithmetic result operand", async () => {
       await expect(
-        evaluate({ $concat: [{ $sum: [1, 2] }, "0xff"] }, options),
+        evaluate({ "~concat": [{ "~sum": [1, 2] }, "0xff"] }, options),
       ).rejects.toThrow("evaluates to the integer 3");
     });
 
     it("rejects an odd-digit hex literal operand", async () => {
-      await expect(evaluate({ $concat: ["0x1"] }, options)).rejects.toThrow(
+      await expect(evaluate({ "~concat": ["0x1"] }, options)).rejects.toThrow(
         "evaluates to the integer 1",
       );
     });
 
-    it("rejects $wordsize and lookups as operands", async () => {
+    it("rejects ~wordsize and lookups as operands", async () => {
       await expect(
-        evaluate({ $concat: ["$wordsize"] }, options),
+        evaluate({ "~concat": ["~wordsize"] }, options),
       ).rejects.toThrow("evaluates to the integer 32");
 
       await expect(
-        evaluate({ $concat: [{ ".slot": "stack" }] }, options),
+        evaluate({ "~concat": [{ ".slot": "stack" }] }, options),
       ).rejects.toThrow("evaluates to the integer 42");
     });
   });
 
-  describe("$keccak256", () => {
+  describe("~keccak256", () => {
     it("hashes the concatenation of bytes operands", async () => {
       const expression: Pointer.Expression = {
-        $keccak256: [{ $wordsized: "foo" }, "bar", { $sized1: 42 }, "0x1f"],
+        "~keccak256": [
+          { "~wordsized": "foo" },
+          "bar",
+          { "~sized1": 42 },
+          "0x1f",
+        ],
       };
 
       const preimage = Data.fromNumber(42)
@@ -363,7 +375,7 @@ describe("evaluate", () => {
     });
 
     it("produces 32 bytes", async () => {
-      const result = await evaluate({ $keccak256: [] }, options);
+      const result = await evaluate({ "~keccak256": [] }, options);
 
       expect(Value.isBytes(result) && result.data.length).toBe(32);
       expect(result).toEqual(
@@ -373,7 +385,7 @@ describe("evaluate", () => {
 
     it("hashes a word-sized key and slot over 64 bytes", async () => {
       const expression: Pointer.Expression = {
-        $keccak256: [{ $wordsized: "0x1234" }, { $wordsized: 0 }],
+        "~keccak256": [{ "~wordsized": "0x1234" }, { "~wordsized": 0 }],
       };
 
       const preimage = Data.fromHex("0x1234").resizeTo(32).concat(word(0));
@@ -385,21 +397,48 @@ describe("evaluate", () => {
     });
 
     it("rejects a bare integer slot operand", async () => {
-      // the shape `{ $keccak256: [{ $wordsized: key }, slot] }` with a bare
+      // the shape `{ "~keccak256": [{ "~wordsized": key }, slot] }` with a bare
       // integer slot would hash 32 bytes instead of 64
       await expect(
-        evaluate({ $keccak256: [{ $wordsized: "0x1234" }, 0] }, options),
+        evaluate({ "~keccak256": [{ "~wordsized": "0x1234" }, 0] }, options),
       ).rejects.toThrow(
-        "Operand 1 of $keccak256 (0) evaluates to the integer 0, which has " +
-          "no byte width; give it a width with $wordsized or $sizedN",
+        "Operand 1 of ~keccak256 (0) evaluates to the integer 0, which has " +
+          "no byte width; give it a width with ~wordsized or ~sizedN",
       );
     });
 
     it("rejects an integer-valued variable operand", async () => {
-      await expect(evaluate({ $keccak256: ["foo"] }, options)).rejects.toThrow(
-        'Operand 0 of $keccak256 ("foo")',
-      );
+      await expect(
+        evaluate({ "~keccak256": ["foo"] }, options),
+      ).rejects.toThrow('Operand 0 of ~keccak256 ("foo")');
     });
+  });
+});
+
+describe("evaluate, with the old $ sigil", () => {
+  const options: EvaluateOptions = { state, variables: {}, regions: {} };
+
+  it("rejects a $ operator, with a hint", async () => {
+    const expression = { $sum: [1, 2] } as unknown as Pointer.Expression;
+
+    await expect(evaluate(expression, options)).rejects.toThrow(
+      "did you mean `~sum`? (the expression sigil changed from `$` to `~`)",
+    );
+  });
+
+  it("hints at ~ for a $ constant or reference", async () => {
+    await expect(evaluate("$wordsize", options)).rejects.toThrow(
+      'expression: "$wordsize"; did you mean `~wordsize`?',
+    );
+    await expect(evaluate({ ".offset": "$this" }, options)).rejects.toThrow(
+      '{".offset":"$this"}; did you mean `~this`?',
+    );
+  });
+
+  it("gives no hint for other names", async () => {
+    await expect(evaluate("$balance", options)).rejects.toThrow(
+      /^Unexpected runtime failure to recognize kind of expression: "\$balance"$/,
+    );
   });
 });
 

@@ -6,6 +6,15 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Breaking
+
+- The bundled schemas write the pointer vocabulary with `~` instead of `$`
+  (`~wordsize`, `~this`, `~sum`, `~read`, `~keccak256`, `~sized<N>`, and so
+  on). The `Pointer.Expression` types and guards follow: an operation such as
+  `Pointer.Expression.Arithmetic.Sum` has the key `"~sum"`, `Constant` is
+  `"~wordsize"`, and `Reference` admits `"~this"`. See the root
+  [`CHANGELOG.md`](../../CHANGELOG.md) ([#323]).
+
 ## 0.1.0-draft.1 — 2026-10-03
 
 ### Added
@@ -129,6 +138,7 @@ First publication.
 [#300]: https://github.com/ethdebug/format/pull/300
 [#303]: https://github.com/ethdebug/format/pull/303
 [#305]: https://github.com/ethdebug/format/pull/305
+[#323]: https://github.com/ethdebug/format/pull/323
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

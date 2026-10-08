@@ -288,7 +288,7 @@ describe("read (segment carry)", () => {
       ),
     );
 
-  it("treats offset $wordsize as byte 0 of the next slot", async () => {
+  it("treats offset ~wordsize as byte 0 of the next slot", async () => {
     const region: Cursor.Region<Pointer.Region.Storage> = {
       location: "storage",
       slot: Data.fromNumber(0),
@@ -306,7 +306,7 @@ describe("read (segment carry)", () => {
     expect(result).toEqual(bytes([0xa1, 4]));
   });
 
-  it("carries an offset beyond $wordsize into a later slot", async () => {
+  it("carries an offset beyond ~wordsize into a later slot", async () => {
     const region: Cursor.Region<Pointer.Region.Storage> = {
       location: "storage",
       slot: Data.fromNumber(5),

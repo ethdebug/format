@@ -8,7 +8,7 @@ import type { Cursor } from "#cursor";
 import { evaluate, Value, type EvaluateOptions } from "./evaluate.js";
 
 /**
- * Every `$keccak256` / `$concat` expression appearing in the examples of
+ * Every `~keccak256` / `~concat` expression appearing in the examples of
  * the pointer schemas, along with the `define`d variable names seen along
  * the way (so that a variable can be stubbed with the sort of its defining
  * expression).
