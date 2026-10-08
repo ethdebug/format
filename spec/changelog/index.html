@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/spec/changelog"}]}</script><link rel="stylesheet" href="/format/assets/css/styles.c9557740.css">
-<script src="/format/assets/js/runtime~main.e50f3735.js" defer="defer"></script>
-<script src="/format/assets/js/main.2c4309a4.js" defer="defer"></script>
+<script src="/format/assets/js/runtime~main.3ac23694.js" defer="defer"></script>
+<script src="/format/assets/js/main.fa2d7ab2.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -61,10 +61,42 @@ The sections do not signal obligations; the prefixes do.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Direct link to Unreleased" title="Direct link to Unreleased" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="changed">Changed<a href="#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed" translate="no">​</a></h3>
 <ul>
-<li class="">The variables of a scope (<code>define</code>/<code>in</code>) are visible only within its <code>in</code>.
+<li class="">
+<p>The format&#x27;s own vocabulary inside pointer expressions uses the sigil <code>~</code>
+instead of <code>$</code>, which leaves <code>$</code> free for source-language names (Solidity
+allows a name to start with <code>$</code>). The terms are the constants and
+references <code>~wordsize</code> and <code>~this</code>, and the operators <code>~sum</code>,
+<code>~difference</code>, <code>~product</code>, <code>~quotient</code>, <code>~remainder</code>, <code>~read</code>, <code>~keccak256</code>,
+<code>~concat</code>, <code>~wordsized</code>, and <code>~sized&lt;N&gt;</code>. An identifier still must not
+start with <code>~</code> (<a href="https://github.com/ethdebug/format/pull/323" target="_blank" rel="noopener noreferrer" class="">#323<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong>,
+<strong>ethdebug/format/pointer/identifier</strong>, <strong>ethdebug/format/pointer</strong>,
+<strong>ethdebug/format/pointer/collection/group</strong>,
+<strong>ethdebug/format/pointer/collection/scope</strong>,
+<strong>ethdebug/format/pointer/region/stack</strong>,
+<strong>ethdebug/format/pointer/region/storage</strong>,
+<strong>ethdebug/format/pointer/region/transient</strong>,
+<strong>ethdebug/format/pointer/scheme/segment</strong>, <strong>ethdebug/format/info</strong>,
+<strong>ethdebug/format/info/resources</strong></li>
+<li class="">Producers: required: emit <code>~</code> for the operators, constants and the
+<code>~this</code> reference; the <code>$</code> forms no longer validate.
+<strong>ethdebug/format/pointer/expression</strong> names the operators in
+<code>properties</code> (<code>~sum</code>, <code>~read</code>, <code>~keccak256</code>, and so on) and
+<code>patternProperties</code> (<code>^~sized([1-9]+[0-9]*)$</code>, <code>^~wordsized$</code>), the
+constant in <code>enum</code> (<code>~wordsize</code>), and the reference in <code>const</code>
+(<code>~this</code>).</li>
+<li class="">Consumers: required: read the <code>~</code> operators, constants and reference
+named by <strong>ethdebug/format/pointer/expression</strong>&#x27;s <code>properties</code>,
+<code>patternProperties</code>, <code>enum</code> and <code>const</code>. The <code>$</code> spellings, such as
+<code>&quot;$wordsize&quot;</code> and <code>{ &quot;$sum&quot;: [...] }</code>, are no longer format terms.</li>
+</ul>
+</li>
+<li class="">
+<p>The variables of a scope (<code>define</code>/<code>in</code>) are visible only within its <code>in</code>.
 Pointers outside the scope, such as later members of an enclosing group, do
 not see them, and a variable defined with an outer variable&#x27;s identifier
-shadows it only within <code>in</code>. The description now says so (<a href="https://github.com/ethdebug/format/pull/318" target="_blank" rel="noopener noreferrer" class="">#318<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).<!-- -->
+shadows it only within <code>in</code>. The description now says so (<a href="https://github.com/ethdebug/format/pull/318" target="_blank" rel="noopener noreferrer" class="">#318<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/collection/scope</strong></li>
 <li class="">Producers: no change needed. The text states the existing meaning; solc&#x27;s
