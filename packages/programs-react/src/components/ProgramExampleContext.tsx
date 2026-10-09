@@ -74,7 +74,7 @@ export function ProgramExampleContextProvider({
   ...props
 }: ProgramExampleProps & {
   children: React.ReactNode;
-}): JSX.Element {
+}): React.JSX.Element {
   const { sources, instructions: dynamicInstructionsWithoutOffsets } = props;
 
   const dynamicInstructions = computeOffsets(dynamicInstructionsWithoutOffsets);

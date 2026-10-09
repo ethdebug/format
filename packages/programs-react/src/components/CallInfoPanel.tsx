@@ -74,7 +74,7 @@ function bannerClassName(info: ResolvedCallInfo): string {
 export function CallInfoPanel({
   showPointers = false,
   className = "",
-}: CallInfoPanelProps): JSX.Element | null {
+}: CallInfoPanelProps): React.JSX.Element | null {
   const { currentCallInfo } = useTraceContext();
 
   if (!currentCallInfo) {
@@ -110,7 +110,7 @@ interface PointerRefItemProps {
 function PointerRefItem({
   ref_,
   showPointer,
-}: PointerRefItemProps): JSX.Element {
+}: PointerRefItemProps): React.JSX.Element {
   return (
     <div className="call-info-ref">
       <span className="call-info-ref-label">{ref_.label}:</span>

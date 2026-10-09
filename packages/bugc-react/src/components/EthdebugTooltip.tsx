@@ -41,7 +41,7 @@ export function EthdebugTooltip({
   tooltip,
   onUpdate,
   onClose,
-}: EthdebugTooltipProps): JSX.Element | null {
+}: EthdebugTooltipProps): React.JSX.Element | null {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,7 +128,7 @@ export function DebugInfoIcon({
   onMouseEnter,
   onMouseLeave,
   onClick,
-}: DebugInfoIconProps): JSX.Element {
+}: DebugInfoIconProps): React.JSX.Element {
   return (
     <span
       className="debug-info-icon"
@@ -145,6 +145,6 @@ export function DebugInfoIcon({
 /**
  * Spacer element to maintain alignment when no debug icon is shown.
  */
-export function DebugInfoSpacer(): JSX.Element {
+export function DebugInfoSpacer(): React.JSX.Element {
   return <span className="debug-info-spacer" />;
 }

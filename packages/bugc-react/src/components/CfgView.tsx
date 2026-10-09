@@ -53,7 +53,7 @@ async function loadDependencies(): Promise<boolean> {
 function BlockNodeComponent(props: {
   data: BlockNodeData;
   selected: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
   const { data, selected } = props;
 
   if (!rfModule) {
@@ -84,7 +84,7 @@ function BlockNodeComponent(props: {
   );
 }
 
-function CfgViewContent({ ir }: CfgViewProps): JSX.Element {
+function CfgViewContent({ ir }: CfgViewProps): React.JSX.Element {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   if (!rfModule || !dagreModule) {
@@ -503,7 +503,7 @@ function CfgViewContent({ ir }: CfgViewProps): JSX.Element {
  * <CfgView ir={compileResult.ir} />
  * ```
  */
-export function CfgView(props: CfgViewProps): JSX.Element {
+export function CfgView(props: CfgViewProps): React.JSX.Element {
   const [loaded, setLoaded] = useState(dependenciesLoaded);
   const [error, setError] = useState<string | null>(null);
 

@@ -25,7 +25,7 @@ import { Materials, Program } from "@ethdebug/format";
  */
 export function SourceContents(
   props: Omit<ShikiCodeBlockProps, "code" | "decorations">,
-): JSX.Element {
+): React.JSX.Element {
   const { sources, highlightedInstruction, highlightMode } =
     useProgramExampleContext();
 

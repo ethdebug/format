@@ -73,7 +73,7 @@ export function RegionMap({
   regions,
   selectedName,
   onRegionClick,
-}: RegionMapProps): JSX.Element {
+}: RegionMapProps): React.JSX.Element {
   const names = Object.keys(regions).sort();
 
   if (names.length === 0) {
