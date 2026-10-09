@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import { compile } from "#compiler";
 import type * as Format from "@ethdebug/format";
 import { Pointer, Program } from "@ethdebug/format";
-import { createMachineState } from "@ethdebug/evm";
 import { dereference } from "@ethdebug/pointers";
 import { traceLocals } from "#test/evm/locals";
 
@@ -118,7 +117,7 @@ code {
   );
 
   it("should give the caller JUMP's arguments their values", async () => {
-    const { executor, steps, instructionAt } = await traceLocals(source);
+    const { steps, stateAt, instructionAt } = await traceLocals(source);
 
     const index = steps.findIndex((step) => {
       const instruction = instructionAt(step);
@@ -133,9 +132,7 @@ code {
     // the state after it, at the callee's entry JUMPDEST
     const { invoke } = instructionAt(steps[index])!
       .context as Format.Program.Context.Invoke;
-    const state = createMachineState(executor, {
-      traceStep: steps[index + 1],
-    });
+    const state = stateAt(index + 1);
     const cursor = await dereference(
       (invoke as InternalCall).arguments!.pointer,
       { state },

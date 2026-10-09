@@ -10,16 +10,18 @@
  *
  * @example
  * ```typescript
- * import { Executor, createMachineState } from "@ethdebug/evm";
+ * import { Executor, createTrace, createMachineState } from "@ethdebug/evm";
  * import { dereference } from "@ethdebug/pointers";
  *
- * // Create executor and deploy contract
  * const executor = new Executor();
- * await executor.deploy(bytecode);
- * await executor.execute();
+ * await executor.fund(alice, 10n ** 18n);
+ * const { address } = await executor.deploy({ from: alice, create });
  *
- * // Create machine state for pointer evaluation
- * const state = createMachineState(executor);
+ * // Record a transaction, then evaluate a pointer at one of its steps
+ * const trace = createTrace({ memory: "changed" });
+ * await executor.call({ from: alice, to: address!, input }, trace);
+ * const { pc, opcode } = trace.steps[i];
+ * const state = createMachineState(trace.stateAt(i), { pc, opcode });
  * const cursor = await dereference(pointer, { state });
  * ```
  */
@@ -38,15 +40,19 @@ export type {
 
 // Machine state adapter
 export { createMachineState } from "#machine";
-export type { MachineStateOptions, StepState } from "#machine";
+export type { MachineStateOptions } from "#machine";
 
-// Trace types and Machine
-export { createTraceCollector, createMachine } from "#trace";
+// Traces and Machine
+export { createTrace, createMachine } from "#trace";
 export type {
   TraceStep,
+  StepState,
+  StepStateWithoutMemory,
   TraceHandler,
-  Trace,
   TraceOptions,
+  RecordOptions,
+  Trace,
+  TraceFrame,
   MemoryPolicy,
   MessageFrame,
   FrameEvent,

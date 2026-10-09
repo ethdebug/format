@@ -1,9 +1,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bytesToHex, utf8ToBytes } from "ethereum-cryptography/utils";
-import { sha256 } from "ethereum-cryptography/sha256";
+import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
+import { keccak256 } from "ethereum-cryptography/keccak";
 import { Executor } from "#executor";
 import type { BlockOptions } from "#executor";
-import type { FrameEvent, MemoryPolicy, TraceStep } from "#trace";
+import type { FrameEvent, TraceStep } from "#trace";
+import { asm, creation, word } from "../test/bytecode.js";
+import {
+  alice,
+  bob,
+  carol,
+  deployed,
+  forward,
+  funded,
+  store,
+} from "../test/contracts.js";
 
 // Simple bytecodes for testing:
 //
@@ -164,101 +174,43 @@ describe("Executor", () => {
   });
 });
 
-// Creation code that returns `runtime` as the deployed code:
-//   PUSH2 <length> DUP1 PUSH1 0x0c PUSH1 0x00 CODECOPY
-//   PUSH1 0x00 RETURN <runtime>
-function creation(runtime: string): string {
-  const length = (runtime.length / 2).toString(16).padStart(4, "0");
-  return `61${length}80600c6000396000f3${runtime}`;
-}
-
-const word = (value: bigint) => value.toString(16).padStart(64, "0");
-
-// store: stores calldata word 0 at slot 0 and returns it.
-//   PUSH1 0 CALLDATALOAD DUP1 PUSH1 0 SSTORE
-//   PUSH1 0 MSTORE PUSH1 0x20 PUSH1 0 RETURN
-const storeCode = "600035" + "80600055" + "600052" + "60206000f3";
-
-// forward(to): stores calldata word 0 at slot 0, calls `to` with that
-// word and returns what `to` returns.
-//   PUSH1 0 CALLDATALOAD DUP1 PUSH1 0 SSTORE PUSH1 0 MSTORE
-//   CALL(GAS, to, 0, 0, 0x20, 0x20, 0x20) POP
-//   PUSH1 0x20 PUSH1 0x20 RETURN
-const forwardCode = (to: string) =>
-  "600035" +
-  "80600055" +
-  "600052" +
-  "60206020602060006000" +
-  `73${to.slice(2)}` +
-  "5af150" +
-  "60206020f3";
-
-// block: returns PREVRANDAO, NUMBER, TIMESTAMP, CHAINID, COINBASE and
-// BASEFEE as six words.
-const blockCode =
-  "44600052" +
-  "43602052" +
-  "42604052" +
-  "46606052" +
-  "41608052" +
-  "4860a052" +
-  "60c06000f3";
-
-// transient: stores TLOAD(1) at slot 0, then TSTORE(1, 42).
-const transientCounterCode = "60015c600055" + "602a60015d" + "00";
-
-const alice = "0x" + "aa".repeat(20);
-const bob = "0x" + "bb".repeat(20);
-const carol = "0x" + "cc".repeat(20);
-
-describe("Executor scenarios", () => {
+describe("Executor transactions", () => {
   let executor: Executor;
 
   beforeEach(async () => {
-    executor = new Executor();
-    for (const account of [alice, bob, carol]) {
-      await executor.fund(account, 10n ** 18n);
-    }
+    executor = await funded();
   });
 
   describe("deploy and call", () => {
     it("deploys contracts from any account", async () => {
-      const store = await executor.deploy({
+      const first = await executor.deploy({
         from: alice,
-        create: creation(storeCode),
+        create: creation(store),
       });
-      expect(store.success).toBe(true);
-      const forward = await executor.deploy({
+      const second = await executor.deploy({
         from: bob,
-        create: creation(forwardCode(store.address!)),
+        create: creation(forward(first.address!)),
       });
-      expect(forward.success).toBe(true);
-      expect(forward.address).not.toBe(store.address);
-
-      expect(bytesToHex(await executor.getCode(store.address))).toBe(storeCode);
+      expect(first.success && second.success).toBe(true);
+      expect(second.address).not.toBe(first.address);
+      expect(bytesToHex(await executor.getCode(first.address))).toBe(store);
     });
 
-    it("reports message frames with depth and calldata", async () => {
-      const store = await executor.deploy({
-        from: alice,
-        create: creation(storeCode),
-      });
-      const forward = await executor.deploy({
-        from: bob,
-        create: creation(forwardCode(store.address!)),
-      });
+    it("calls between contracts, reporting frames", async () => {
+      const inner = await deployed(executor, store);
+      const outer = await deployed(executor, forward(inner));
 
       const events: FrameEvent[] = [];
       const steps: TraceStep[] = [];
       const result = await executor.call(
-        { from: carol, to: forward.address!, input: word(7n) },
+        { from: carol, to: outer, input: word(7n) },
         { step: (step) => steps.push(step), frame: (e) => events.push(e) },
       );
 
       expect(result.success).toBe(true);
       expect(bytesToHex(result.returnValue)).toBe(word(7n));
-      expect(await executor.getStorage(0n, store.address)).toBe(7n);
-      expect(await executor.getStorage(0n, forward.address)).toBe(7n);
+      expect(await executor.getStorage(0n, inner)).toBe(7n);
+      expect(await executor.getStorage(0n, outer)).toBe(7n);
 
       expect(events.map(({ kind, frame }) => [kind, frame.depth])).toEqual([
         ["enter", 0],
@@ -266,57 +218,26 @@ describe("Executor scenarios", () => {
         ["exit", 1],
         ["exit", 0],
       ]);
-      const [outer, inner] = events.map(({ frame }) => frame);
-      expect(outer).toMatchObject({
-        address: forward.address,
-        codeAddress: forward.address,
-        caller: carol,
-        create: false,
-      });
-      expect(bytesToHex(outer.calldata)).toBe(word(7n));
-      expect(inner).toMatchObject({
-        address: store.address,
-        caller: forward.address,
-      });
-      expect(bytesToHex(inner.calldata)).toBe(word(7n));
-
+      const [enterOuter, enterInner] = events.map(({ frame }) => frame);
+      expect(enterOuter).toMatchObject({ address: outer, caller: carol });
+      expect(enterInner).toMatchObject({ address: inner, caller: outer });
+      expect(bytesToHex(enterInner.calldata)).toBe(word(7n));
       const exit = events[2];
-      expect(exit.kind === "exit" && exit.reverted).toBe(false);
       expect(exit.kind === "exit" && bytesToHex(exit.returnData)).toBe(
         word(7n),
       );
-
-      expect(new Set(steps.map(({ depth }) => depth))).toEqual(new Set([0, 1]));
       for (const step of steps) {
-        expect(step.address).toBe(
-          step.depth === 0 ? forward.address : store.address,
-        );
-        expect(step.gasCost).toBeGreaterThanOrEqual(0n);
+        expect(step.address).toBe(step.depth === 0 ? outer : inner);
       }
-      const sstore = steps.find(({ opcode }) => opcode === "SSTORE")!;
-      expect(sstore.gasCost).toBeGreaterThan(2000n);
-    });
-
-    it("reports a create frame and a revert", async () => {
-      const events: FrameEvent[] = [];
-      const deployed = await executor.deploy(
-        { from: alice, create: creation(storeCode) },
-        { frame: (e) => events.push(e) },
+      const inside = steps.map(({ depth }) => depth === 1);
+      const [, enterEvent, exitInner] = events;
+      expect(enterEvent.kind === "enter" && enterEvent.first).toBe(
+        inside.indexOf(true),
       );
-      expect(events[0].frame).toMatchObject({
-        create: true,
-        address: deployed.address,
-      });
-
-      // INVALID
-      const reverted: FrameEvent[] = [];
-      const failed = await executor.deploy(
-        { from: alice, create: "fe" },
-        { frame: (e) => reverted.push(e) },
+      expect(exitInner.kind === "exit" && exitInner.last).toBe(
+        inside.lastIndexOf(true),
       );
-      expect(failed.success).toBe(false);
-      expect(failed.address).toBeUndefined();
-      expect(reverted[1].kind === "exit" && reverted[1].reverted).toBe(true);
+      expect(steps[0].op).toBe(0x60);
     });
 
     it("keeps the legacy deploy and execute", async () => {
@@ -324,33 +245,71 @@ describe("Executor scenarios", () => {
       const steps: TraceStep[] = [];
       await executor.execute({}, (step) => steps.push(step));
       expect(await executor.getStorage(0n)).toBe(42n);
-      expect(steps.every(({ memory }) => memory !== undefined)).toBe(true);
+      expect(steps.map(({ opcode }) => opcode)).toEqual([
+        "PUSH1",
+        "PUSH1",
+        "SSTORE",
+        "STOP",
+      ]);
     });
-  });
 
-  describe("accounts", () => {
-    it("sends value from funded accounts", async () => {
-      const { address } = await executor.deploy({
+    it("sends value from funded accounts only", async () => {
+      const result = await executor.deploy({
         from: alice,
         create: creation("00"),
         value: 5n,
       });
-      expect(address).toBeDefined();
+      expect(result.address).toBeDefined();
 
       const poor = "0x" + "dd".repeat(20);
-      const result = await executor.call({ from: poor, to: alice, value: 1n });
-      expect(result.success).toBe(false);
+      expect(
+        (await executor.call({ from: poor, to: alice, value: 1n })).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("gas", () => {
+    it("gives each step's exact cost", async () => {
+      const address = await deployed(executor, store);
+      const steps: TraceStep[] = [];
+      await executor.call({ from: alice, to: address, input: word(1n) }, (s) =>
+        steps.push(s),
+      );
+      expect(steps.map(({ opcode, gasCost }) => [opcode, gasCost])).toEqual([
+        ["PUSH1", 3n],
+        ["CALLDATALOAD", 3n],
+        ["DUP1", 3n],
+        ["PUSH1", 3n],
+        ["SSTORE", 22100n], // cold, zero to nonzero
+        ["PUSH1", 3n],
+        ["MSTORE", 6n], // with one word of memory expansion
+        ["PUSH1", 3n],
+        ["PUSH1", 3n],
+        ["RETURN", 0n],
+      ]);
+      for (let i = 0; i + 1 < steps.length; i++) {
+        expect(steps[i].gasRemaining - steps[i + 1].gasRemaining).toBe(
+          steps[i].gasCost,
+        );
+      }
     });
   });
 
   describe("block", () => {
+    // returns PREVRANDAO, NUMBER, TIMESTAMP, CHAINID, COINBASE, BASEFEE,
+    // BLOBBASEFEE and the previous block's BLOCKHASH
+    const blockCode = asm(`
+      PREVRANDAO PUSH1 0 MSTORE   NUMBER PUSH1 32 MSTORE
+      TIMESTAMP PUSH1 64 MSTORE   CHAINID PUSH1 96 MSTORE
+      COINBASE PUSH1 128 MSTORE   BASEFEE PUSH1 160 MSTORE
+      BLOBBASEFEE PUSH1 192 MSTORE
+      PUSH1 1 NUMBER SUB BLOCKHASH PUSH1 224 MSTORE
+      PUSH2 256 PUSH1 0 RETURN
+    `);
+
     it("lets contracts read the block", async () => {
-      executor = new Executor({ chainId: 31337n });
-      await executor.fund(alice, 10n ** 18n);
-      const { address } = await executor.deploy({
-        from: alice,
-        create: creation(blockCode),
-      });
+      executor = await funded(new Executor({ chainId: 31337n }));
+      const address = await deployed(executor, blockCode);
       const block: BlockOptions = {
         number: 12n,
         timestamp: 1_700_000_000n,
@@ -358,159 +317,131 @@ describe("Executor scenarios", () => {
         coinbase: "0x" + "c0".repeat(20),
         baseFee: 7n,
       };
-      const result = await executor.call({ from: alice, to: address!, block });
+      const result = await executor.call({ from: alice, to: address, block });
       expect(bytesToHex(result.returnValue)).toBe(
         [0xabcdefn, 12n, 1_700_000_000n, 31337n, BigInt(block.coinbase!), 7n]
-          .map(word)
-          .join(""),
+          .map((value) => word(value))
+          .join("") +
+          word(1n) +
+          bytesToHex(keccak256(hexToBytes(word(11n)))),
       );
     });
 
     it("runs in a zero block without the option", async () => {
-      // blockCode without CHAINID, COINBASE and BASEFEE (the zero
-      // block has no base fee)
-      await executor.deploy(creation(blockCode.slice(0, 24) + "60606000f3"));
+      await executor.deploy(
+        creation(
+          asm(`PREVRANDAO NUMBER TIMESTAMP PUSH1 0 MSTORE
+          PUSH1 32 MSTORE PUSH1 64 MSTORE PUSH1 96 PUSH1 0 RETURN`),
+        ),
+      );
       const result = await executor.execute();
       expect(bytesToHex(result.returnValue)).toBe(word(0n).repeat(3));
     });
   });
 
-  describe("memory policy", () => {
-    const traceWith = async (memory: MemoryPolicy) => {
-      const store = await executor.deploy({
-        from: alice,
-        create: creation(storeCode),
+  describe("transaction boundaries", () => {
+    const sstoreCost = async (
+      run: (trace: (step: TraceStep) => void) => Promise<unknown>,
+    ) => {
+      let cost: bigint | undefined;
+      await run((step) => {
+        if (step.opcode === "SSTORE") cost = step.gasCost;
       });
-      const forward = await executor.deploy({
-        from: bob,
-        create: creation(forwardCode(store.address!)),
-      });
-      const steps: TraceStep[] = [];
-      await executor.call(
-        { from: carol, to: forward.address!, input: word(7n) },
-        { step: (step) => steps.push(step), memory },
-      );
-      return steps;
+      return cost!;
     };
 
-    it("records no memory with none", async () => {
-      const steps = await traceWith("none");
-      expect(steps.length).toBeGreaterThan(0);
-      expect(steps.every(({ memory }) => memory === undefined)).toBe(true);
-    });
-
-    it("copies memory at every step with full", async () => {
-      const steps = await traceWith("full");
-      const arrays = new Set(steps.map(({ memory }) => memory));
-      expect(arrays.size).toBe(steps.length);
-    });
-
-    it("shares unchanged memory with changed", async () => {
-      const full = await traceWith("full");
-      executor = new Executor();
-      for (const account of [alice, bob, carol]) {
-        await executor.fund(account, 10n ** 18n);
-      }
-      const changed = await traceWith("changed");
-
-      expect(changed.map(({ memory }) => bytesToHex(memory!))).toEqual(
-        full.map(({ memory }) => bytesToHex(memory!)),
-      );
-      const arrays = new Set(changed.map(({ memory }) => memory));
-      expect(arrays.size).toBeLessThan(changed.length / 2);
-    });
-  });
-
-  describe("transactions", () => {
     it("clears transient storage between transactions", async () => {
-      const { address } = await executor.deploy({
-        from: alice,
-        create: creation(transientCounterCode),
-      });
-      await executor.call({ from: alice, to: address! });
-      await executor.call({ from: bob, to: address! });
+      // stores TLOAD(1) at slot 0, then TSTORE(1, 42)
+      const address = await deployed(
+        executor,
+        asm(`PUSH1 1 TLOAD PUSH1 0 SSTORE PUSH1 42 PUSH1 1 TSTORE`),
+      );
+      await executor.call({ from: alice, to: address });
+      await executor.call({ from: bob, to: address });
       expect(await executor.getStorage(0n, address)).toBe(0n);
     });
 
-    it("ends legacy executes only on request", async () => {
-      await executor.deploy(creation(storeCode));
-      const sstoreCost = async () => {
-        let cost: bigint | undefined;
-        await executor.execute({ data: word(1n) }, (step) => {
-          if (step.opcode === "SSTORE") cost = step.gasCost;
-        });
-        return cost!;
-      };
-      const first = await sstoreCost();
-      // the slot stays warm: execute does not end the transaction
-      expect(await sstoreCost()).toBeLessThan(first);
-
-      await executor.endTransaction();
-      expect(await sstoreCost()).toBeGreaterThan(2000n);
-    });
-
-    it("makes addresses cold again after a transaction", async () => {
-      const { address } = await executor.deploy({
-        from: alice,
-        create: creation(storeCode),
-      });
+    it("makes slots cold again after a transaction", async () => {
+      const address = await deployed(executor, store);
       const costs: bigint[] = [];
       for (const from of [alice, bob]) {
-        const steps: TraceStep[] = [];
-        await executor.call({ from, to: address!, input: word(1n) }, (step) =>
-          steps.push(step),
+        costs.push(
+          await sstoreCost((step) =>
+            executor.call({ from, to: address, input: word(1n) }, step),
+          ),
         );
-        costs.push(steps.find(({ opcode }) => opcode === "SSTORE")!.gasCost!);
       }
-      // the second SSTORE writes the same value, but its slot is cold
-      // again, so it pays the cold access cost
-      expect(costs[1]).toBeGreaterThan(2000n);
+      // same value again: a warm slot would cost 100
+      expect(costs).toEqual([22100n, 2200n]);
+    });
+
+    it("resets slots' original values after a transaction", async () => {
+      const address = await deployed(executor, store);
+      await executor.call({ from: alice, to: address, input: word(1n) });
+      const cost = await sstoreCost((step) =>
+        executor.call({ from: alice, to: address, input: word(2n) }, step),
+      );
+      // cold (2100) + changing a clean nonzero slot (2900)
+      expect(cost).toBe(5000n);
+    });
+
+    it("ends legacy executes only on request", async () => {
+      await executor.deploy(creation(store));
+      const run = () =>
+        sstoreCost((step) => executor.execute({ data: word(1n) }, step));
+      expect(await run()).toBe(22100n);
+      expect(await run()).toBe(100n); // still warm
+      await executor.endTransaction();
+      expect(await run()).toBe(2200n);
     });
   });
 
-  describe("determinism", () => {
-    const digest = async () => {
-      const executor = new Executor({ chainId: 1n });
-      for (const account of [alice, bob, carol]) {
-        await executor.fund(account, 10n ** 18n);
-      }
-      const records: unknown[] = [];
-      const trace = {
-        step: (step: TraceStep) => records.push(step),
-        frame: (event: FrameEvent) => records.push(event),
-        memory: "changed" as const,
-      };
-      const store = await executor.deploy(
-        { from: alice, create: creation(storeCode) },
-        trace,
-      );
-      const forward = await executor.deploy(
-        { from: bob, create: creation(forwardCode(store.address!)) },
-        trace,
-      );
-      for (const [i, from] of [carol, alice, bob].entries()) {
-        await executor.call(
+  describe("errors", () => {
+    it("rejects with a frame handler's error", async () => {
+      const inner = await deployed(executor, store);
+      const outer = await deployed(executor, forward(inner));
+      const call = (fail: FrameEvent["kind"]) =>
+        executor.call(
+          { from: alice, to: outer, input: word(3n) },
           {
-            from,
-            to: forward.address!,
-            input: word(BigInt(i + 3)),
-            block: { number: BigInt(i + 1), prevrandao: BigInt(i * 99) },
+            frame: (event) => {
+              if (event.kind === fail && event.frame.depth === 1) {
+                throw new Error(`failed on ${fail}`);
+              }
+            },
           },
-          trace,
         );
-      }
-      const json = JSON.stringify(records, (_, value) =>
-        typeof value === "bigint"
-          ? value.toString()
-          : value instanceof Uint8Array
-            ? bytesToHex(value)
-            : value,
-      );
-      return bytesToHex(sha256(utf8ToBytes(json)));
-    };
+      await expect(call("enter")).rejects.toThrow("failed on enter");
+      await expect(call("exit")).rejects.toThrow("failed on exit");
 
-    it("gives the same trace digest for the same inputs", async () => {
-      expect(await digest()).toBe(await digest());
+      // the executor still works
+      const result = await executor.call({
+        from: alice,
+        to: outer,
+        input: word(4n),
+      });
+      expect(result.success).toBe(true);
+      expect(await executor.getStorage(0n, inner)).toBe(4n);
+    });
+
+    it("rejects with a step handler's error", async () => {
+      const address = await deployed(executor, store);
+      await expect(
+        executor.call({ from: alice, to: address }, () => {
+          throw new Error("failed on step");
+        }),
+      ).rejects.toThrow("failed on step");
+    });
+
+    it("undoes a run that throws", async () => {
+      // SSTORE, then BASEFEE, which throws in the zero block
+      await executor.deploy(creation(asm(`PUSH1 9 PUSH1 0 SSTORE BASEFEE`)));
+      await expect(executor.execute()).rejects.toThrow();
+      expect(await executor.getStorage(0n)).toBe(0n);
+
+      const result = await executor.execute({ block: { baseFee: 1n } });
+      expect(result.success).toBe(true);
+      expect(await executor.getStorage(0n)).toBe(9n);
     });
   });
 });

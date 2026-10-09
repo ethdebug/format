@@ -162,7 +162,7 @@ async function checkScalarValue(
     }
 
     // Dereference the pointer
-    const state = createMachineState(executor);
+    const state = createMachineState(await executor.currentState());
     const cursor = await dereference(pointer, { state });
     const view = await cursor.view(state);
 
@@ -234,7 +234,7 @@ async function checkRegionValues(
     }
 
     // Dereference the pointer
-    const state = createMachineState(executor);
+    const state = createMachineState(await executor.currentState());
     const cursor = await dereference(pointer, { state });
     const view = await cursor.view(state);
 

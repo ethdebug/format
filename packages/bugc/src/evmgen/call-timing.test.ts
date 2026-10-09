@@ -9,7 +9,6 @@
  * `return` data pointer must read the returned value.
  */
 import { describe, it, expect } from "vitest";
-import { createMachineState } from "@ethdebug/evm";
 import { dereference } from "@ethdebug/pointers";
 import { Program } from "@ethdebug/format";
 import type * as Format from "@ethdebug/format";
@@ -115,7 +114,7 @@ describe("call frame timing", () => {
       ("voids" in testCase ? testCase.voids : undefined) ?? [];
     for (const level of [0, 1, 2, 3] as Level[]) {
       it(`${name} at O${level}`, async () => {
-        const { program, executor, steps, instructionAt } = await traceLocals(
+        const { program, steps, stateAt, instructionAt } = await traceLocals(
           source,
           level,
         );
@@ -155,9 +154,7 @@ describe("call frame timing", () => {
               const ret = (previous!.context as Format.Program.Context.Return)
                 .return;
               if (ret.data) {
-                const state = createMachineState(executor, {
-                  traceStep: steps[i],
-                });
+                const state = stateAt(i);
                 const cursor = await dereference(ret.data.pointer, { state });
                 const view = await cursor.view(state);
                 read.push((await view.read(view.regions[0])).asUint());
