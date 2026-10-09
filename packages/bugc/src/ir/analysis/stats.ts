@@ -160,6 +160,9 @@ export namespace Statistics {
           case "branch":
             edges += 2;
             break;
+          case "call":
+            edges += 1;
+            break;
           // return has no edges
         }
       }
@@ -174,12 +177,14 @@ export namespace Statistics {
       const dominators: Record<string, string | null> = {};
       const blockIds = Array.from(func.blocks.keys());
 
-      // Build predecessor map for efficiency
+      // Build predecessor map for efficiency, from the terminators (a
+      // call's continuation is a successor, which `predecessors` omits)
       const predecessors: Record<string, string[]> = {};
-      for (const blockId of blockIds) {
-        predecessors[blockId] = Array.from(
-          func.blocks.get(blockId)?.predecessors || [],
-        );
+      for (const blockId of blockIds) predecessors[blockId] = [];
+      for (const [blockId, block] of func.blocks) {
+        for (const succ of this.getSuccessors(block)) {
+          predecessors[succ]?.push(blockId);
+        }
       }
 
       // Entry block dominates itself (has no dominator)
@@ -422,6 +427,8 @@ export namespace Statistics {
           return [block.terminator.target];
         case "branch":
           return [block.terminator.trueTarget, block.terminator.falseTarget];
+        case "call":
+          return [block.terminator.continuation];
         case "return":
           return [];
         default:
