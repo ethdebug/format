@@ -7,6 +7,36 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Added
+
+- A struct copied from storage to memory may have `string` and `bytes`
+  fields: each field's word holds the address of its own copy. A struct
+  in memory assigned to storage (`players[msg.sender] = player;`) is
+  copied field by field, each to its bytes in its slot, and a `string`
+  or `bytes` field as Solidity encodes it, clearing the data words the
+  old value used past the new one's ([#PR]).
+- A struct local's pointer is a group of its fields: each field's bytes
+  in its word in memory and, for a `string` or `bytes` field, the
+  field's word, then the length and data it refers to. Regions are
+  named after the local and the field (`player-score`, `player-name`,
+  `player-name-length`, `player-name-data`) ([#PR]).
+
+### Fixed
+
+- Reading a `string` or `bytes` from storage as a whole, as in
+  `let m: string = motd;`, now copies it to memory, decoded from its
+  storage encoding. Before, the local held the slot's word as if it
+  were a memory address ([#PR]).
+- Assigning a struct in memory to storage now writes each of its
+  fields. Before, it wrote the struct's memory address to the first
+  slot ([#PR]).
+- A struct field of a struct in storage now takes all the slots the
+  field's struct needs, as in Solidity. Before, it took one slot, and
+  the fields after it shared the slots of its fields ([#PR]).
+- Copying an array between storage and memory, which bugc does not
+  support, is now an error. Before, it compiled to a copy of the slot's
+  word ([#PR]).
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Added
