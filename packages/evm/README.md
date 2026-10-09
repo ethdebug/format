@@ -26,6 +26,5 @@ await executor.call(
   { from: alice, to: address!, input, block: { number: 1n } },
   trace,
 );
-const { pc, opcode } = trace.steps[i];
-const state = createMachineState(trace.stateAt(i), { pc, opcode });
+const state = createMachineState(trace.stateAt(i));
 ```

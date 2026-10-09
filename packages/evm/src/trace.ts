@@ -51,6 +51,11 @@ export interface StepState {
   returndata: Uint8Array;
   /** The code the frame runs */
   code: Uint8Array;
+  /**
+   * Where the state is in a trace, for `createMachineState`; absent
+   * for a state that is not a trace step's
+   */
+  at?: { traceIndex: number; pc: number; opcode: string };
 }
 
 /**
@@ -199,10 +204,15 @@ export interface Recorder {
 export function createTrace(
   options: RecordOptions & { memory: "none" },
 ): Trace<StepStateWithoutMemory>;
-export function createTrace(options?: RecordOptions): Trace<StepState>;
+export function createTrace(
+  options?: RecordOptions & { memory?: "full" | "changed" },
+): Trace<StepState>;
+export function createTrace(
+  options: RecordOptions,
+): Trace<StepState | StepStateWithoutMemory>;
 export function createTrace(
   options: RecordOptions = {},
-): Trace<StepState> | Trace<StepStateWithoutMemory> {
+): Trace<StepState | StepStateWithoutMemory> {
   const policy = options.memory ?? "full";
 
   const steps: TraceStep[] = [];
@@ -298,6 +308,12 @@ export function createTrace(
         memories.push(shared);
       }
 
+      // a call or create clears the return data, even when it fails
+      // before its message starts (then no exit sets it)
+      if (callOpcodes.has(opcode)) {
+        current.returndata = new Uint8Array();
+      }
+
       if (opcode === 0x55 /* SSTORE */ || opcode === 0x5d /* TSTORE */) {
         const [value, slot] = stack.slice(-2);
         (opcode === 0x55 ? storage : transient).write(
@@ -328,7 +344,9 @@ export function createTrace(
 
   const stateAt = (index: number): StepState | StepStateWithoutMemory => {
     const frame = frameAt(index);
+    const { pc, opcode } = steps[index];
     const state: StepStateWithoutMemory = {
+      at: { traceIndex: index, pc, opcode },
       stack: stacks[index],
       async storage(slot) {
         const key = keyOf(frame.address, slot);
@@ -357,7 +375,7 @@ export function createTrace(
     frameAt,
     stateAt,
     [recorder]: record,
-  } as Trace<StepState> | Trace<StepStateWithoutMemory>;
+  } as Trace<StepState | StepStateWithoutMemory>;
 }
 
 interface Write {
@@ -404,6 +422,9 @@ function createJournal() {
 function keyOf(address: string, slot: bigint): string {
   return `${address}:${slot.toString(16)}`;
 }
+
+/** CREATE, CALL, CALLCODE, DELEGATECALL, CREATE2, STATICCALL */
+const callOpcodes = new Set([0xf0, 0xf1, 0xf2, 0xf4, 0xf5, 0xfa]);
 
 /**
  * Opcodes after which a frame's memory may differ: they write memory
@@ -484,11 +505,6 @@ async function* traceExecution(
   await executor.execute(options, trace);
 
   for (let i = 0; i < trace.steps.length; i++) {
-    const { pc, opcode } = trace.steps[i];
-    yield createMachineState(trace.stateAt(i), {
-      pc,
-      opcode,
-      traceIndex: i,
-    });
+    yield createMachineState(trace.stateAt(i));
   }
 }

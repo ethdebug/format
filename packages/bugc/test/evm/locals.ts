@@ -64,12 +64,7 @@ export async function traceLocals(
     executor,
     trace,
     steps: trace.steps,
-    stateAt: (index) =>
-      createMachineState(trace.stateAt(index), {
-        pc: trace.steps[index].pc,
-        opcode: trace.steps[index].opcode,
-        traceIndex: index,
-      }),
+    stateAt: (index) => createMachineState(trace.stateAt(index)),
     instructionAt: (step) => byOffset.get(step.pc),
   };
 }

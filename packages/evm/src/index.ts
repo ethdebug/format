@@ -20,8 +20,7 @@
  * // Record a transaction, then evaluate a pointer at one of its steps
  * const trace = createTrace({ memory: "changed" });
  * await executor.call({ from: alice, to: address!, input }, trace);
- * const { pc, opcode } = trace.steps[i];
- * const state = createMachineState(trace.stateAt(i), { pc, opcode });
+ * const state = createMachineState(trace.stateAt(i));
  * const cursor = await dereference(pointer, { state });
  * ```
  */

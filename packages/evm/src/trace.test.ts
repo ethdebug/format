@@ -4,7 +4,7 @@ import { sha256 } from "ethereum-cryptography/sha256";
 import { Executor } from "#executor";
 import { createMachineState } from "#machine";
 import { createTrace, createMachine } from "#trace";
-import type { FrameEvent, Trace } from "#trace";
+import type { FrameEvent, MemoryPolicy, Trace } from "#trace";
 import { asm, creation, word } from "../test/bytecode.js";
 import {
   alice,
@@ -109,6 +109,12 @@ describe("createTrace", () => {
     expect(calldata.asUint()).toBe(7n);
     expect((await state.stack.peek({ depth: 1n })).asUint()).toBe(7n);
 
+    // a trace's state knows its step
+    const own = createMachineState(trace.stateAt(sstore));
+    expect(await own.traceIndex).toBe(BigInt(sstore));
+    expect(await own.programCounter).toBe(BigInt(pc));
+    expect(await own.opcode).toBe("SSTORE");
+
     const next = trace.stateAt(sstore + 1);
     expect(await next.storage(0n)).toBe(7n);
   });
@@ -145,6 +151,63 @@ describe("createTrace", () => {
     const tstore = find(trace, (step) => step.opcode === "TSTORE");
     expect(await trace.stateAt(tstore).transient(1n)).toBe(0n);
     expect(await trace.stateAt(tstore + 1).transient(1n)).toBe(42n);
+  });
+
+  it("undoes transient storage written in a reverted frame", async () => {
+    // TSTORE(1, 0x20 + n); for n = 0, calls itself with 1; for n = 1,
+    // reverts
+    const address = await deployed(
+      executor,
+      asm(`PUSH1 0 CALLDATALOAD
+        DUP1 PUSH1 32 ADD PUSH1 1 TSTORE
+        DUP1 @child JUMPI
+        PUSH1 1 PUSH1 0 MSTORE
+        PUSH1 0 PUSH1 0 PUSH1 32 PUSH1 0 PUSH1 0 ADDRESS GAS CALL POP
+        STOP
+        child: PUSH1 0 PUSH1 0 REVERT`),
+    );
+    const trace = createTrace();
+    await executor.call({ from: alice, to: address, input: word(0n) }, trace);
+    expect(trace.frames.map(({ reverted }) => reverted)).toEqual([false, true]);
+
+    const revert = find(trace, (step) => step.opcode === "REVERT");
+    expect(await trace.stateAt(revert).transient(1n)).toBe(0x21n);
+    const after = find(trace, (step) => step.opcode === "POP");
+    expect(await trace.stateAt(after).transient(1n)).toBe(0x20n);
+  });
+
+  it("clears return data at a call that fails before it starts", async () => {
+    const other = await deployed(executor, store);
+    // CALL other (returns a word); then CALL other with 1 wei, which
+    // the contract does not have
+    const address = await deployed(
+      executor,
+      asm(`PUSH1 0 PUSH1 0 PUSH1 0 PUSH1 0 PUSH1 0 PUSH20 ${other} GAS
+        CALL POP
+        PUSH1 0 PUSH1 0 PUSH1 0 PUSH1 0 PUSH1 1 PUSH20 ${other} GAS
+        CALL POP
+        STOP`),
+    );
+    const trace = createTrace();
+    await executor.call({ from: alice, to: address }, trace);
+    const pop = (n: number) =>
+      find(trace, (step) => step.opcode === "POP" && step.depth === 0, n);
+    expect(trace.stateAt(pop(0)).returndata).toHaveLength(32);
+    expect(trace.stateAt(pop(1)).returndata).toHaveLength(0);
+  });
+
+  it("types a trace's state by its memory policy", () => {
+    // type checks only: these functions do not run
+    const literal = () => createMachineState(createTrace().stateAt(0));
+    const changed = () =>
+      createMachineState(createTrace({ memory: "changed" }).stateAt(0));
+    const general = (memory: MemoryPolicy) =>
+      // @ts-expect-error: a policy that may be "none" may give no memory
+      createMachineState(createTrace({ memory }).stateAt(0));
+    const none = () =>
+      // @ts-expect-error: no memory
+      createMachineState(createTrace({ memory: "none" }).stateAt(0));
+    expect([literal, changed, general, none]).toHaveLength(4);
   });
 
   it("reports DELEGATECALL frames", async () => {

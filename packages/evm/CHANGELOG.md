@@ -30,6 +30,9 @@ specification itself are tracked in the root
   event for each call or create, with its depth, addresses, caller,
   calldata, value, return data, whether it reverted, and its first and
   last step indexes ([#375]).
+- A trace's step state carries its position (`at`), so
+  `createMachineState(trace.stateAt(i))` has the step's pc, opcode and
+  index ([#375]).
 - `executor.currentState()` gives the executor's state now, as a step
   state ([#375]).
 - `endTransaction()` clears transient storage, the warm address and

@@ -10,14 +10,14 @@ import { Data } from "@ethdebug/pointers";
 import type { StepState } from "#trace";
 
 /**
- * What ran at the step, for a Machine.State.
+ * What ran at the step, for a Machine.State. Each defaults to the
+ * state's own (`state.at`, from a trace), else to 0, "STOP" and 0.
  */
 export interface MachineStateOptions {
-  /** Program counter (default 0) */
   pc?: number | bigint;
-  /** Opcode name (default "STOP") */
+  /** Opcode name */
   opcode?: string;
-  /** Trace index (step number, default 0) */
+  /** Trace index (step number) */
   traceIndex?: number | bigint;
 }
 
@@ -33,7 +33,11 @@ export function createMachineState(
   state: StepState,
   options: MachineStateOptions = {},
 ): Machine.State {
-  const { pc = 0, opcode = "STOP", traceIndex = 0 } = options;
+  const {
+    pc = state.at?.pc ?? 0,
+    opcode = state.at?.opcode ?? "STOP",
+    traceIndex = state.at?.traceIndex ?? 0,
+  } = options;
   const { stack } = state;
 
   return {
