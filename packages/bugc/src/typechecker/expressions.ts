@@ -250,7 +250,25 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
 
           case "==":
           case "!=":
-            if (!isAssignable(leftType, rightType)) {
+            // Bytes or a string in calldata is a word of offset and
+            // length, which compares with no other value's
+            if (
+              Type.Elementary.isCalldata(leftType) ||
+              Type.Elementary.isCalldata(rightType)
+            ) {
+              const type = Type.Elementary.isCalldata(leftType)
+                ? leftType
+                : rightType;
+              errors.push(
+                new TypeError(
+                  `Cannot compare ${Type.format(type)}`,
+                  node.loc || undefined,
+                  undefined,
+                  undefined,
+                  ErrorCode.INVALID_OPERATION,
+                ),
+              );
+            } else if (!isAssignable(leftType, rightType)) {
               const error = new TypeError(
                 `Cannot compare ${Type.format(leftType)} with ${Type.format(rightType)}`,
                 node.loc || undefined,
@@ -506,7 +524,18 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           }
           resultType = objectType.element;
         } else if (Type.isMapping(objectType)) {
-          if (!isAssignable(objectType.key, indexType)) {
+          // A key in calldata would hash its word of offset and length
+          if (Type.Elementary.isCalldata(indexType)) {
+            errors.push(
+              new TypeError(
+                `Cannot use ${Type.format(indexType)} as a mapping key`,
+                indexExpr.loc || undefined,
+                undefined,
+                undefined,
+                ErrorCode.TYPE_MISMATCH,
+              ),
+            );
+          } else if (!isAssignable(objectType.key, indexType)) {
             const error = new TypeError(
               `Invalid mapping key: expected ${Type.format(objectType.key)}, got ${Type.format(indexType)}`,
               indexExpr.loc || undefined,

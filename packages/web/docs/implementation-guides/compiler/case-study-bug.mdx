@@ -173,7 +173,8 @@ motd = name;                     // stored as Solidity stores a string
 
 As a `string` in memory, a `string calldata` has no index or slice,
 and bytes do not assign to it without a cast. It too can only be the
-type of a `let` or of a cast.
+type of a `let` or of a cast. Bytes or a string in calldata cannot be
+compared with `==` or `!=`, or be a mapping key.
 
 A value of bytes in calldata is one word: the offset of the first byte
 in the high 128 bits, and the length in the low 128 bits. A local's

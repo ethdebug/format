@@ -33,6 +33,9 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- `==`, `!=` and a mapping key with bytes or a string in calldata are
+  now type errors. Before, they compared or hashed the calldata
+  reference's word (offset and length), not the bytes ([#379]).
 - A struct member of a struct in storage now takes all the slots its
   struct needs, as in Solidity, and the member after it starts at the
   next free slot. Before, it took one slot, so the members after a
@@ -46,6 +49,9 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- `push` of bytes in calldata onto an `array<bytes>` in storage now
+  stores the bytes. Before, it stored the calldata reference's word
+  (offset and length) ([#379]).
 - Reading a `string` or `bytes` from storage as a whole, as in
   `let m: string = motd;`, now copies it to memory, decoded from its
   storage encoding. This also corrects an index (`data[3]`), a slice

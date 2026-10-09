@@ -9,6 +9,32 @@ import { checkProgram } from "./checker.js";
 
 import "#test/matchers";
 
+/** The messages of a program's type errors */
+const typeErrors = (source: string) => {
+  const result = parse(source);
+  if (!result.success) throw new Error("Parse failed");
+  const typeResult = checkProgram(result.value);
+  expect(typeResult.success).toBe(false);
+  return (typeResult.messages[Severity.Error] ?? []).map((m) => m.message);
+};
+
+/** The type of each `let` in a program's `code` block, by name */
+function letTypes(source: string): Record<string, string> {
+  const result = parse(source);
+  if (!result.success) throw new Error("Parse failed");
+  const typeResult = checkProgram(result.value);
+  if (!typeResult.success) throw new Error("Type check failed");
+  const { types } = typeResult.value;
+  const lets: Record<string, string> = {};
+  for (const item of result.value.body?.items ?? []) {
+    if (Ast.isStatement(item) && Ast.Statement.isDeclare(item)) {
+      const decl = item.declaration;
+      lets[decl.name] = Type.format(types.get(decl.id)!);
+    }
+  }
+  return lets;
+}
+
 describe("Slice type checking", () => {
   test("validates slice of msg.data", () => {
     const result = parse(`
@@ -41,23 +67,6 @@ describe("Slice type checking", () => {
       }
     }
   });
-
-  /** The type of each `let` in a program's `code` block, by name */
-  function letTypes(source: string): Record<string, string> {
-    const result = parse(source);
-    if (!result.success) throw new Error("Parse failed");
-    const typeResult = checkProgram(result.value);
-    if (!typeResult.success) throw new Error("Type check failed");
-    const { types } = typeResult.value;
-    const lets: Record<string, string> = {};
-    for (const item of result.value.body?.items ?? []) {
-      if (Ast.isStatement(item) && Ast.Statement.isDeclare(item)) {
-        const decl = item.declaration;
-        lets[decl.name] = Type.format(types.get(decl.id)!);
-      }
-    }
-    return lets;
-  }
 
   test("keeps a slice of calldata in calldata, unless typed bytes", () => {
     expect(
@@ -131,15 +140,53 @@ describe("Slice type checking", () => {
     ]);
   });
 
-  /** The messages of a program's type errors */
-  const typeErrors = (source: string) => {
-    const result = parse(source);
+  test("rejects slice of non-bytes type", () => {
+    const result = parse(`
+      name Test;
+      storage {
+        [0] numbers: array<uint256, 10>;
+      }
+      code {
+        let slice = numbers[0:4];
+      }
+    `);
+
+    expect(result.success).toBe(true);
     if (!result.success) throw new Error("Parse failed");
+
     const typeResult = checkProgram(result.value);
     expect(typeResult.success).toBe(false);
-    return (typeResult.messages[Severity.Error] ?? []).map((m) => m.message);
-  };
+    expect(typeResult).toHaveMessage({
+      severity: Severity.Error,
+      message: "Cannot slice",
+    });
+  });
 
+  test("validates slice indices are numeric", () => {
+    const result = parse(`
+      name Test;
+      code {
+        let slice = msg.data["start":"end"];
+      }
+    `);
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("Parse failed");
+
+    const typeResult = checkProgram(result.value);
+    expect(typeResult.success).toBe(false);
+    expect(typeResult).toHaveMessage({
+      severity: Severity.Error,
+      message: "Slice start index must be numeric",
+    });
+    expect(typeResult).toHaveMessage({
+      severity: Severity.Error,
+      message: "Slice end index must be numeric",
+    });
+  });
+});
+
+describe("String calldata type checking", () => {
   test("types a string in calldata", () => {
     expect(
       letTypes(`
@@ -209,48 +256,29 @@ describe("Slice type checking", () => {
     ]);
   });
 
-  test("rejects slice of non-bytes type", () => {
-    const result = parse(`
-      name Test;
-      storage {
-        [0] numbers: array<uint256, 10>;
-      }
-      code {
-        let slice = numbers[0:4];
-      }
-    `);
-
-    expect(result.success).toBe(true);
-    if (!result.success) throw new Error("Parse failed");
-
-    const typeResult = checkProgram(result.value);
-    expect(typeResult.success).toBe(false);
-    expect(typeResult).toHaveMessage({
-      severity: Severity.Error,
-      message: "Cannot slice",
-    });
-  });
-
-  test("validates slice indices are numeric", () => {
-    const result = parse(`
-      name Test;
-      code {
-        let slice = msg.data["start":"end"];
-      }
-    `);
-
-    expect(result.success).toBe(true);
-    if (!result.success) throw new Error("Parse failed");
-
-    const typeResult = checkProgram(result.value);
-    expect(typeResult.success).toBe(false);
-    expect(typeResult).toHaveMessage({
-      severity: Severity.Error,
-      message: "Slice start index must be numeric",
-    });
-    expect(typeResult).toHaveMessage({
-      severity: Severity.Error,
-      message: "Slice end index must be numeric",
-    });
+  test("rejects comparing or keying a mapping by calldata", () => {
+    for (const type of ["string calldata", "bytes calldata"]) {
+      const memory = type === "string calldata" ? "string" : "bytes";
+      expect(
+        typeErrors(`
+        name Test;
+        storage { [0] m: mapping<${memory}, uint256>; [1] r: bool; }
+        code {
+          let c: ${type} = msg.data[4:36] as ${type};
+          let x: ${memory} = c;
+          r = x == c;
+          r = c != x;
+          m[c] = 1;
+          let y = m[c];
+          m[x] = 2;
+        }
+      `),
+      ).toEqual([
+        `Cannot compare ${type}`,
+        `Cannot compare ${type}`,
+        `Cannot use ${type} as a mapping key`,
+        `Cannot use ${type} as a mapping key`,
+      ]);
+    }
   });
 });
