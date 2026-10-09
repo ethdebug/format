@@ -32,7 +32,23 @@ export namespace Statistics {
     depth: number;
   }
 
+  export interface Options {
+    /**
+     * Whether a call's continuation is a successor of the calling
+     * block (default true). Without call edges, no block after a call
+     * has a dominator: common-subexpression elimination relies on this
+     * to reuse no value across a call.
+     */
+    callEdges?: boolean;
+  }
+
   export class Analyzer {
+    private readonly callEdges: boolean;
+
+    constructor({ callEdges = true }: Options = {}) {
+      this.callEdges = callEdges;
+    }
+
     analyze(module: Ir.Module): Statistics {
       const func = module.main;
       const blocks = Array.from(func.blocks.values());
@@ -161,7 +177,7 @@ export namespace Statistics {
             edges += 2;
             break;
           case "call":
-            edges += 1;
+            if (this.callEdges) edges += 1;
             break;
           // return has no edges
         }
@@ -177,15 +193,7 @@ export namespace Statistics {
       const dominators: Record<string, string | null> = {};
       const blockIds = Array.from(func.blocks.keys());
 
-      // Build predecessor map for efficiency, from the terminators (a
-      // call's continuation is a successor, which `predecessors` omits)
-      const predecessors: Record<string, string[]> = {};
-      for (const blockId of blockIds) predecessors[blockId] = [];
-      for (const [blockId, block] of func.blocks) {
-        for (const succ of this.getSuccessors(block)) {
-          predecessors[succ]?.push(blockId);
-        }
-      }
+      const predecessors = this.predecessorsOf(func);
 
       // Entry block dominates itself (has no dominator)
       dominators[func.entry] = null;
@@ -400,6 +408,7 @@ export namespace Statistics {
       func: Ir.Function,
     ): string[] {
       // Find all blocks in the loop (simplified)
+      const predecessors = this.predecessorsOf(func);
       const loopBlocks = new Set<string>([header, tail]);
       const worklist = [tail];
 
@@ -408,7 +417,7 @@ export namespace Statistics {
         const block = func.blocks.get(blockId);
         if (!block) continue;
 
-        for (const pred of block.predecessors) {
+        for (const pred of predecessors[blockId] ?? []) {
           if (!loopBlocks.has(pred)) {
             loopBlocks.add(pred);
             if (pred !== header) {
@@ -421,6 +430,29 @@ export namespace Statistics {
       return Array.from(loopBlocks);
     }
 
+    /**
+     * Each block's predecessors. With call edges, from the terminators:
+     * `Block.predecessors` omits a call's edge to its continuation.
+     * Without, `Block.predecessors` as it is.
+     */
+    private predecessorsOf(func: Ir.Function): Record<string, string[]> {
+      const predecessors: Record<string, string[]> = {};
+      for (const [blockId, block] of func.blocks) {
+        predecessors[blockId] = this.callEdges
+          ? []
+          : Array.from(block.predecessors || []);
+      }
+      if (!this.callEdges) return predecessors;
+      for (const [blockId, block] of func.blocks) {
+        for (const succ of this.getSuccessors(block)) {
+          // (a successor that is not one of the function's blocks has
+          // no entry, and is skipped)
+          predecessors[succ]?.push(blockId);
+        }
+      }
+      return predecessors;
+    }
+
     private getSuccessors(block: Ir.Block): string[] {
       switch (block.terminator.kind) {
         case "jump":
@@ -428,7 +460,7 @@ export namespace Statistics {
         case "branch":
           return [block.terminator.trueTarget, block.terminator.falseTarget];
         case "call":
-          return [block.terminator.continuation];
+          return this.callEdges ? [block.terminator.continuation] : [];
         case "return":
           return [];
         default:

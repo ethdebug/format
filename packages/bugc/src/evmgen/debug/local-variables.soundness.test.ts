@@ -39,6 +39,24 @@ function codeOffset(context: unknown): number | undefined {
     ?.code?.range?.offset;
 }
 
+/** A struct local, a call, then the local again */
+const acrossCall = `name AcrossCall;
+define {
+  struct P { a: uint64; b: uint32; };
+  function f() -> uint256 { return r + 3; };
+}
+storage { [0] r: uint256; [1] ps: mapping<address, P>; }
+create {}
+code {
+  let p: P = ps[msg.sender];
+  p.a = p.a + 5;
+  let h = f();
+  if (h == 0) { return; }
+  p.b = p.b + 1;
+  ps[msg.sender] = p;
+  r = h;
+}`;
+
 describe("which locals are listed", () => {
   it("(a) does not list a local before its declaration", async () => {
     const source = `name PreDef;
@@ -155,6 +173,22 @@ code {
       }
     }
     expect(rows.some(({ names }) => names.includes("i"))).toBe(true);
+  });
+
+  it("(g) keeps a local located after a call", async () => {
+    // A call's continuation is dominated by the calling block: wherever
+    // the call's result `h` is located, so is `p`, defined before it
+    for (const level of levels) {
+      const { program } = await traceLocals(acrossCall, level);
+      const located = program.instructions
+        .map((instruction) => localsOf(instruction.context))
+        .filter((vs) => vs.some((v) => v.identifier === "h" && v.pointer));
+      expect(located.length, `O${level}`).toBeGreaterThan(0);
+      for (const vs of located) {
+        const p = vs.find((v) => v.identifier === "p");
+        expect(p?.pointer, `O${level}`).toBeDefined();
+      }
+    }
   });
 
   it("(f) gives a stack-resident local a stack pointer", async () => {
@@ -850,6 +884,28 @@ code {
       d: { values: [14n] },
       m: { values: [5n] },
       k: { values: [7n] },
+    },
+  },
+  {
+    name: "a struct local across a call",
+    source: acrossCall,
+    locals: {
+      p: {
+        shape: {
+          kind: "struct",
+          fields: {
+            a: { kind: "scalar", size: 8 },
+            b: { kind: "scalar", size: 4 },
+          },
+        },
+        everyLevel: true,
+        values: [
+          { a: 0n, b: 0n },
+          { value: { a: 5n, b: 0n }, after: "p.a = p.a + 5" },
+          { value: { a: 5n, b: 1n }, after: "p.b = p.b + 1" },
+        ],
+      },
+      h: { values: [3n] },
     },
   },
   {

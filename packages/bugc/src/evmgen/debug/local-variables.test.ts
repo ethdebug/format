@@ -169,45 +169,6 @@ code {
     }
   });
 
-  describe("a local defined before a call", () => {
-    // The call's continuation is dominated by the calling block, so a
-    // local defined before the call is located after it too: wherever
-    // `h` (the call's result) is located, so is `p`
-    const source = `name AfterCall;
-define {
-  struct P { a: uint64; b: uint32; };
-  function f() -> bool { return block.number > 0; };
-}
-storage { [0] x: uint64; [1] ps: mapping<address, P>; }
-create {}
-code {
-  let p: P = ps[msg.sender];
-  p.a = p.a + 1;
-  let h = f();
-  if (!h) { return; }
-  p.b = p.b + 1;
-  x = p.a;
-  ps[msg.sender] = p;
-}`;
-
-    for (const level of [0, 2] as const) {
-      it(`is located after the call (level ${level})`, async () => {
-        const program = await compileProgram(source, level);
-        const located = program.instructions
-          .map(
-            (instr) =>
-              ((instr.context as Record<string, unknown> | undefined)
-                ?.variables ?? []) as Array<Record<string, unknown>>,
-          )
-          .filter((vs) => vs.some((v) => v.identifier === "h" && v.pointer));
-        expect(located.length).toBeGreaterThan(0);
-        for (const vs of located) {
-          expect(vs.find((v) => v.identifier === "p")?.pointer).toBeDefined();
-        }
-      });
-    }
-  });
-
   describe("contract without functions", () => {
     // No user functions, no frames — the pass is a no-op and must
     // not disturb compilation.

@@ -173,6 +173,52 @@ describe("Statistics", () => {
     });
   });
 
+  describe("calls", () => {
+    const source = `
+      name Test;
+      define {
+        function f(n: uint256) -> uint256 { return n + 1; };
+      }
+      storage { [0] x: uint256; }
+      code {
+        for (let i = 0; i < 3; i = i + 1) {
+          let y = f(i);
+          x = x + y;
+        }
+        return;
+      }
+    `;
+
+    it("follows a call to its continuation", async () => {
+      const ir = await compileToIr(source);
+      const call = [...ir.main.blocks.entries()].find(
+        ([, block]) => block.terminator.kind === "call",
+      )!;
+      const terminator = call[1].terminator;
+      if (terminator.kind !== "call") throw new Error("no call");
+      const { continuation } = terminator;
+
+      const dom = new Statistics.Analyzer().analyze(ir).dominatorTree;
+      expect(dom[continuation]).toBe(call[0]);
+
+      // without call edges, no block after a call has a dominator
+      const without = new Statistics.Analyzer({ callEdges: false }).analyze(
+        ir,
+      ).dominatorTree;
+      expect(without[continuation]).toBeUndefined();
+    });
+
+    it("finds a loop's blocks through a call", async () => {
+      const ir = await compileToIr(source);
+      const { loopInfo } = new Statistics.Analyzer().analyze(ir);
+      expect(loopInfo).toHaveLength(1);
+      const body = [...ir.main.blocks.keys()].find((id) =>
+        id.startsWith("for_body"),
+      )!;
+      expect(loopInfo[0].blocks).toContain(body);
+    });
+  });
+
   describe("detectLoops", () => {
     it("should detect nested loops", async () => {
       const source = `
