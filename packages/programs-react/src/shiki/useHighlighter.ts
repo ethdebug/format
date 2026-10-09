@@ -6,8 +6,6 @@ import { useEffect, useState } from "react";
 
 import * as Shiki from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
-import { bundledLanguages } from "shiki/langs";
-import { bundledThemes } from "shiki/themes";
 
 /**
  * Highlighter interface for syntax highlighting.
@@ -44,8 +42,11 @@ export function useHighlighter(): Highlighter | undefined {
 
 async function createHighlighter(): Promise<Highlighter> {
   const shiki = await Shiki.createHighlighterCore({
-    themes: [bundledThemes["github-light"]()],
-    langs: [bundledLanguages.solidity(), bundledLanguages.javascript()],
+    themes: [import("@shikijs/themes/github-light")],
+    langs: [
+      import("@shikijs/langs/solidity"),
+      import("@shikijs/langs/javascript"),
+    ],
     engine: createOnigurumaEngine(import("shiki/wasm")),
   });
 

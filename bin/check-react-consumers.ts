@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,6 +18,8 @@ const pairs = [
   { react: "18", types: "18", shiki: "2.5" },
   { react: "19", types: "19", shiki: "3" },
 ];
+
+const maxBundleKb = 400;
 
 const run = (cmd: string, args: string[], cwd: string) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit" });
@@ -71,11 +74,38 @@ export const b = Pointers;
       `@types/react-dom@${types}`,
       `shiki@${shiki}`,
       "typescript",
+      "esbuild",
       "@types/node@20",
       ...tarballs,
     ],
     dir,
   );
   run("node", [join(dir, "node_modules/typescript/bin/tsc")], dir);
-  console.log(`ok: React ${react} + shiki ${shiki}`);
+  // Without code splitting, every dynamic import is inlined, so this is
+  // the worst-case size of the highlighter loader. Importing all grammars
+  // and themes (`shiki/langs`, `shiki/themes`) once made it about 1.6 MB.
+  writeFileSync(
+    join(dir, "entry.js"),
+    'import { ShikiCodeBlock } from "@ethdebug/programs-react";\nconsole.log(ShikiCodeBlock);\n',
+  );
+  const bundle = execFileSync(
+    join(dir, "node_modules/.bin/esbuild"),
+    [
+      "entry.js",
+      "--bundle",
+      "--minify",
+      "--format=esm",
+      "--platform=browser",
+      "--external:react",
+      "--external:react-dom",
+      "--external:react/jsx-runtime",
+      "--external:node:*",
+    ],
+    { cwd: dir, maxBuffer: 1 << 28 },
+  );
+  const kb = Math.round(gzipSync(bundle).length / 1024);
+  if (kb > maxBundleKb) {
+    throw new Error(`bundle is ${kb} KB gzipped; limit is ${maxBundleKb}`);
+  }
+  console.log(`ok: React ${react} + shiki ${shiki}, bundle ${kb} KB gz`);
 }

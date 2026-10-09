@@ -13,11 +13,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
   (`^18.0.0 || ^19.0.0`) ([#374]). The components' return types now
   read `React.JSX.Element`, which both React 18 and 19 types define;
   the global `JSX` they used before is gone in `@types/react` 19.
-- The `shiki` dependency range now includes version 3
-  (`^2.5.0 || ^3.0.0`) ([#374]). The package no longer depends on
-  `@shikijs/langs` and `@shikijs/themes`, which could resolve to a
-  different major than `shiki`. It loads its grammars and theme through
-  `shiki/langs` and `shiki/themes` instead.
+- The `shiki`, `@shikijs/langs` and `@shikijs/themes` dependency ranges
+  now include version 3 (`^2.5.0 || ^3.0.0`) ([#374]).
 
 ## 0.1.0-preview.2 — 2026-10-07
 
