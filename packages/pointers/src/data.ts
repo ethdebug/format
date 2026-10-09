@@ -1,6 +1,18 @@
 import { toHex } from "ethereum-cryptography/utils";
 
-import type * as Util from "util";
+/**
+ * The part of Node's `util.inspect` options that `Data` uses. Declared here so
+ * the published types do not depend on `@types/node`.
+ */
+export interface InspectOptions {
+  stylize(text: string, styleType: string): string;
+  depth?: number | null;
+}
+
+/**
+ * Structural stand-in for Node's `util.inspect` function.
+ */
+export type Inspect = (value: unknown, ...rest: unknown[]) => string;
 
 // Symbol for custom inspect (Node.js util.inspect.custom)
 // We use a well-known symbol value to avoid top-level await issues
@@ -100,18 +112,14 @@ export class Data extends Uint8Array {
     return Data.fromHex(concatenatedHex);
   }
 
-  inspect(
-    _depth: number,
-    options: Util.InspectOptionsStylized,
-    _inspect: typeof Util.inspect,
-  ): string {
+  inspect(_depth: number, options: InspectOptions, _inspect: Inspect): string {
     return `Data[${options.stylize(this.toHex(), "number")}]`;
   }
 
   [customInspectSymbol](
     depth: number,
-    options: Util.InspectOptionsStylized,
-    inspect: typeof Util.inspect,
+    options: InspectOptions,
+    inspect: Inspect,
   ): string {
     return this.inspect(depth, options, inspect);
   }
