@@ -135,7 +135,12 @@ function computePredecessors(
         }
         break;
       }
-      // "return" and "unreachable" have no successors
+      // "return" and "unreachable" have no successors. A "call"'s edge
+      // to its continuation is left out: the passes that read
+      // `predecessors` (block merging, jump optimization, return
+      // merging, tail calls) see the CFG without it, and adding it here
+      // can change the code they make. Dominators and loops
+      // (Statistics.Analyzer) derive their own, with call edges.
     }
   }
 

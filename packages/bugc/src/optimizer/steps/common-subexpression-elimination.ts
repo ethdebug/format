@@ -13,8 +13,12 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
 
     // Process each function separately
     this.processAllFunctions(optimized, (func) => {
-      // Compute dominator tree for this function
-      const analyzer = new Ir.Analysis.Statistics.Analyzer();
+      // Compute dominator tree for this function, without call edges:
+      // no value is reused across a call (keeping one live across a
+      // call can cost more than computing it again)
+      const analyzer = new Ir.Analysis.Statistics.Analyzer({
+        callEdges: false,
+      });
       const analysis = analyzer.analyze({ ...module, main: func });
       const dominators = analysis.dominatorTree;
 
