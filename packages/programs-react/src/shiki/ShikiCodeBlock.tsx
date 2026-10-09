@@ -23,7 +23,7 @@ export function ShikiCodeBlock({
   code,
   className,
   ...highlightOptions
-}: ShikiCodeBlockProps): JSX.Element {
+}: ShikiCodeBlockProps): React.JSX.Element {
   const highlighter = useHighlighter();
 
   if (!highlighter) {

@@ -15,7 +15,7 @@ import { Data, Program } from "@ethdebug/format";
  *
  * @returns Opcodes list element
  */
-export function Opcodes(): JSX.Element {
+export function Opcodes(): React.JSX.Element {
   const {
     instructions,
     highlightedInstruction,
@@ -93,7 +93,7 @@ function Opcode(props: {
   onClick: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const {
     instruction,
     active,

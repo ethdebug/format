@@ -24,7 +24,7 @@ export function VariableInspector({
   showTypes = false,
   showPointers = false,
   className = "",
-}: VariableInspectorProps): JSX.Element {
+}: VariableInspectorProps): React.JSX.Element {
   const { currentVariables, currentInstruction } = useTraceContext();
 
   if (!currentInstruction) {
@@ -77,7 +77,7 @@ function VariableItem({
   variable,
   showType,
   showPointer,
-}: VariableItemProps): JSX.Element {
+}: VariableItemProps): React.JSX.Element {
   const { identifier, type, pointer, value, error } = variable;
 
   // Extract type name if available
@@ -136,7 +136,7 @@ export interface StackInspectorProps {
 export function StackInspector({
   maxEntries = 10,
   className = "",
-}: StackInspectorProps): JSX.Element {
+}: StackInspectorProps): React.JSX.Element {
   const { currentStep } = useTraceContext();
 
   if (!currentStep || !currentStep.stack || currentStep.stack.length === 0) {

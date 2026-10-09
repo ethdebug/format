@@ -47,7 +47,7 @@ export interface PointerResolverProviderProps extends UsePointerResolutionOption
 export function PointerResolverProvider({
   children,
   ...options
-}: PointerResolverProviderProps): JSX.Element {
+}: PointerResolverProviderProps): React.JSX.Element {
   const state = usePointerResolution(options);
 
   return (

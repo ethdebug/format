@@ -28,7 +28,7 @@ function StorageEditor({
 }: {
   storage: Record<string, string>;
   onChange: (storage: Record<string, string>) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const entries = Object.entries(storage);
 
   const handleSlotChange = (oldSlot: string, newSlot: string) => {
@@ -112,7 +112,7 @@ function StackEditor({
 }: {
   stack: Array<string | bigint>;
   onChange: (stack: Array<string | bigint>) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const handleEntryChange = (index: number, value: string) => {
     const newStack = [...stack];
     newStack[index] = value;
@@ -181,7 +181,7 @@ function MemoryEditor({
 }: {
   memory: string | undefined;
   onChange: (memory: string) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="state-editor-section">
       <div className="state-editor-header">
@@ -206,7 +206,7 @@ export function ResolutionVisualizer({
   showStateEditor = true,
   showControls = true,
   showFullValues = false,
-}: ResolutionVisualizerProps): JSX.Element {
+}: ResolutionVisualizerProps): React.JSX.Element {
   const {
     pointer,
     stateSpec,

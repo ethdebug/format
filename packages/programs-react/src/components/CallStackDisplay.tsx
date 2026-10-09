@@ -60,7 +60,7 @@ function formatAsDecimal(hex: string): string {
 
 export function CallStackDisplay({
   className = "",
-}: CallStackDisplayProps): JSX.Element {
+}: CallStackDisplayProps): React.JSX.Element {
   const { callStack, resolvedCallStack, jumpToStep } = useTraceContext();
 
   if (callStack.length === 0) {

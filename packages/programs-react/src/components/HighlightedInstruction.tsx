@@ -12,7 +12,7 @@ import { ShikiCodeBlock } from "#shiki/ShikiCodeBlock";
  *
  * @returns JSON representation of the highlighted instruction
  */
-export function HighlightedInstruction(): JSX.Element {
+export function HighlightedInstruction(): React.JSX.Element {
   const { highlightedInstruction } = useProgramExampleContext();
 
   return (

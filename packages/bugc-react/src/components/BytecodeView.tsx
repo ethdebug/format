@@ -50,7 +50,7 @@ function InstructionsView({
   instructions,
   onOpcodeHover,
   onDeclarationClick,
-}: InstructionsViewProps): JSX.Element {
+}: InstructionsViewProps): React.JSX.Element {
   const {
     tooltip,
     setTooltip,
@@ -225,7 +225,7 @@ export function BytecodeView({
   bytecode,
   onOpcodeHover,
   onDeclarationClick,
-}: BytecodeViewProps): JSX.Element {
+}: BytecodeViewProps): React.JSX.Element {
   const runtimeHex = Array.from(bytecode.runtime)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");

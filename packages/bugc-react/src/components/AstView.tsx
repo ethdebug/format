@@ -26,7 +26,7 @@ export interface AstViewProps {
  * <AstView ast={compileResult.ast} />
  * ```
  */
-export function AstView({ ast }: AstViewProps): JSX.Element {
+export function AstView({ ast }: AstViewProps): React.JSX.Element {
   // Format AST as JSON, excluding parent references to avoid circular structure
   const astJson = JSON.stringify(
     ast,

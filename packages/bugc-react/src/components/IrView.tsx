@@ -44,7 +44,7 @@ function HoverablePart({
   onLeave: () => void;
   onDebugIconHover?: (e: React.MouseEvent<HTMLSpanElement>) => void;
   showDebugIcon?: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <span
       className={`hoverable-part ${part.className || ""} ${part.ranges.length > 0 ? "has-debug" : ""}`}
@@ -112,7 +112,7 @@ function InstructionRenderer({
   showTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   pinTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   hideTooltip: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const debugInfo = extractInstructionDebug(instruction);
   const operationRanges = debugInfo.operation?.context
     ? extractAllSourceRanges({ operation: debugInfo.operation, operands: [] })
@@ -416,7 +416,7 @@ function TerminatorRenderer({
   showTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   pinTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   hideTooltip: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const debugInfo = extractTerminatorDebug(terminator);
   const operationRanges = debugInfo.operation?.context
     ? extractAllSourceRanges({ operation: debugInfo.operation, operands: [] })
@@ -529,7 +529,7 @@ function PhiRenderer({
   showTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   pinTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   hideTooltip: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const debugInfo = extractPhiDebug(phi);
   const operationRanges = debugInfo.operation?.context
     ? extractAllSourceRanges({ operation: debugInfo.operation, operands: [] })
@@ -621,7 +621,7 @@ function BlockRenderer({
   showTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   pinTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   hideTooltip: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="ir-block">
       <div className="block-header">
@@ -680,7 +680,7 @@ function FunctionRenderer({
   showTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   pinTooltip: (e: React.MouseEvent<HTMLElement>, content: string) => void;
   hideTooltip: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const sortedBlocks = useMemo(() => {
     const result: [string, Ir.Block][] = [];
     const visited = new Set<string>();
@@ -760,7 +760,7 @@ function FunctionRenderer({
  * />
  * ```
  */
-export function IrView({ ir, onOpcodeHover }: IrViewProps): JSX.Element {
+export function IrView({ ir, onOpcodeHover }: IrViewProps): React.JSX.Element {
   const {
     tooltip,
     setTooltip,

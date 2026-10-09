@@ -24,7 +24,7 @@ export function TraceControls({
   showStepCount = true,
   showOpcode = true,
   className = "",
-}: TraceControlsProps): JSX.Element {
+}: TraceControlsProps): React.JSX.Element {
   const {
     currentStepIndex,
     totalSteps,
@@ -124,7 +124,7 @@ export interface TraceProgressProps {
  */
 export function TraceProgress({
   className = "",
-}: TraceProgressProps): JSX.Element {
+}: TraceProgressProps): React.JSX.Element {
   const { currentStepIndex, totalSteps, jumpToStep } = useTraceContext();
 
   const progress = totalSteps > 1 ? currentStepIndex / (totalSteps - 1) : 0;

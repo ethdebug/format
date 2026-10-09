@@ -54,7 +54,7 @@ function RegionItem({
   value: Data | undefined;
   showFullValues: boolean;
   index: number;
-}): JSX.Element {
+}): React.JSX.Element {
   const location = getLocationType(region);
   const locationClass = getLocationClass(location);
   const name = "name" in region ? (region.name as string) : undefined;
@@ -119,7 +119,7 @@ export function RegionOutput({
   regions,
   values,
   showFullValues = false,
-}: RegionOutputProps): JSX.Element {
+}: RegionOutputProps): React.JSX.Element {
   if (regions.length === 0) {
     return (
       <div className="region-output region-output-empty">

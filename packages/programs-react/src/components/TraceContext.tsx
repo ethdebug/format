@@ -268,7 +268,7 @@ export function TraceProvider({
   templates = {},
   resolveVariables: shouldResolve = true,
   children,
-}: TraceProviderProps): JSX.Element {
+}: TraceProviderProps): React.JSX.Element {
   const [currentStepIndex, setCurrentStepIndex] = useState(
     Math.min(initialStepIndex, trace.length - 1),
   );

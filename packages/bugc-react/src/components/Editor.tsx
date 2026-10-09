@@ -85,7 +85,7 @@ export function Editor({
   highlightedRanges = [],
   theme = "auto",
   height = "100%",
-}: EditorProps): JSX.Element {
+}: EditorProps): React.JSX.Element {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
