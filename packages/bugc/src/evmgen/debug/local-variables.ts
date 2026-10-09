@@ -122,10 +122,15 @@ function stackPointer(
  *   word; a reference element's word holds the address of its data,
  *   described the same way.
  *
+ * - struct: one word per field, in order, from `base`. A scalar field
+ *   is right-aligned in its word; a reference field's word holds the
+ *   address of its data, described the same way.
+ *
  * Regions are named after the local: `x-length`, `x-data`,
- * `x-element`, and for a nested reference `x-element-length` and so
- * on. Fixed-size arrays and structs are left out: bugc cannot build
- * one in memory yet (no struct literal; array literals are dynamic).
+ * `x-element`, `x-<field>`, and for a nested reference
+ * `x-element-length`, `x-<field>-data` and so on. Fixed-size arrays
+ * are left out: bugc cannot build one in memory yet (array literals
+ * are dynamic).
  */
 function dataPointers(
   base: Format.Pointer.Expression,
@@ -155,6 +160,39 @@ function dataPointers(
         length: { "~read": `${name}-length` },
       },
     ];
+  }
+
+  if (BugType.isStruct(type)) {
+    const fields: Format.Pointer[] = [];
+    let index = 0;
+    for (const [field, fieldType] of type.fields) {
+      const region = `${name}-${field}`;
+      const word = 32 * index++;
+      const offset = (within: number): Format.Pointer.Expression =>
+        word + within === 0 ? base : { "~sum": [base, word + within] };
+      const irType = fromBugType(fieldType);
+      if (Ir.Type.isScalar(irType)) {
+        fields.push({
+          name: region,
+          location: "memory",
+          offset: offset(32 - irType.size),
+          length: irType.size,
+        });
+        continue;
+      }
+      const nested = dataPointers(
+        { "~read": region },
+        fieldType,
+        region,
+        depth,
+      );
+      if (!nested) return undefined;
+      fields.push(
+        { name: region, location: "memory", offset: offset(0), length: 32 },
+        ...nested,
+      );
+    }
+    return fields;
   }
 
   if (!BugType.isArray(type) || type.size !== undefined) return undefined;

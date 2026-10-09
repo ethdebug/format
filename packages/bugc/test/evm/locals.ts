@@ -82,16 +82,36 @@ export function localsOf(context: unknown): Array<Record<string, unknown>> {
 export type Shape =
   | { kind: "bytes" }
   | { kind: "calldata" }
-  | { kind: "array"; element: Shape | { kind: "scalar"; size: number } };
+  | { kind: "array"; element: Shape | Scalar }
+  | { kind: "struct"; fields: Record<string, Shape | Scalar> };
+
+/** A scalar element or field, of `size` bytes */
+export type Scalar = { kind: "scalar"; size: number };
 
 /** A reference's value as its regions read it: hex for bytes and
- * strings, an array of bigints (or nested arrays) for arrays. */
-export type RefValue = string | bigint | RefValue[];
+ * strings, an array of bigints (or nested arrays) for arrays, and an
+ * object by field for structs. */
+export type RefValue =
+  | string
+  | bigint
+  | RefValue[]
+  | { [field: string]: RefValue };
 
 /** A value a local takes, and (optionally) the source text of the
  * statement that gives it: the value may be read only once that
  * statement has run (as many times as the value is listed after it). */
 export type Value = RefValue | { value: RefValue; after: string };
+
+/** Whether a value names the statement that gives it */
+function isTimed(v: Value): v is { value: RefValue; after: string } {
+  return (
+    typeof v === "object" &&
+    !Array.isArray(v) &&
+    "after" in v &&
+    typeof v.after === "string" &&
+    "value" in v
+  );
+}
 
 export interface Local {
   /** The values the local takes, in execution order */
@@ -161,9 +181,7 @@ export async function check(
   const statements = [
     ...new Set(
       Object.values(locals).flatMap((local) =>
-        local.values.flatMap((v) =>
-          typeof v === "object" && v !== null && "after" in v ? [v.after] : [],
-        ),
+        local.values.flatMap((v) => (isTimed(v) ? [v.after] : [])),
       ),
     ),
   ].map((text) => {
@@ -182,10 +200,7 @@ export async function check(
   const valuesOf = (local: Local) => {
     const seen = new Map<string, number>();
     return local.values.map((v) => {
-      const { value, after } =
-        typeof v === "object" && v !== null && "after" in v
-          ? v
-          : { value: v, after: undefined };
+      const { value, after } = isTimed(v) ? v : { value: v, after: undefined };
       const run =
         after === undefined
           ? 0
@@ -362,7 +377,8 @@ async function readScalar(
  * A reference-typed local's value at a step, by its layout: the
  * local's word holds the base address, the length word is at the base,
  * each element is in its word (a scalar right-aligned), and the data
- * follows the length word, as long as the length says. Bytes in
+ * follows the length word, as long as the length says. A struct has no
+ * length word: each field is in its word from the base. Bytes in
  * calldata are the calldata from the offset in the word's high 16
  * bytes, as long as its low 16 bytes say.
  */
@@ -383,33 +399,42 @@ async function readReference(
     return (await regions.read(`${name}-data`, offset, length)).toHex();
   }
 
+  /** A scalar's value, or a reference's, whose word is at `word` */
+  const decodeWord = async (
+    shape: Shape | Scalar,
+    prefix: string,
+    word: bigint,
+  ): Promise<RefValue> => {
+    if (shape.kind === "scalar") {
+      const size = BigInt(shape.size);
+      return (await regions.read(prefix, word + 32n - size, size)).asUint();
+    }
+    const address = (await regions.read(prefix, word, 32n)).asUint();
+    return decode(shape, prefix, address);
+  };
+
   const decode = async (
     shape: Shape,
     prefix: string,
     base: bigint,
   ): Promise<RefValue> => {
+    if (shape.kind === "struct") {
+      const value: { [field: string]: RefValue } = {};
+      let word = base;
+      for (const [field, fieldShape] of Object.entries(shape.fields)) {
+        value[field] = await decodeWord(fieldShape, `${prefix}-${field}`, word);
+        word += 32n;
+      }
+      return value;
+    }
     const length = (await regions.read(`${prefix}-length`, base, 32n)).asUint();
     if (shape.kind !== "array") {
       return (await regions.read(`${prefix}-data`, base + 32n, length)).toHex();
     }
-    const element = shape.element;
     const values: RefValue[] = [];
     for (let i = 0n; i < length; i++) {
       const word = base + 32n + 32n * i;
-      if (element.kind === "scalar") {
-        const size = BigInt(element.size);
-        const value = await regions.read(
-          `${prefix}-element`,
-          word + 32n - size,
-          size,
-        );
-        values.push(value.asUint());
-      } else {
-        const address = (
-          await regions.read(`${prefix}-element`, word, 32n)
-        ).asUint();
-        values.push(await decode(element, `${prefix}-element`, address));
-      }
+      values.push(await decodeWord(shape.element, `${prefix}-element`, word));
     }
     return values;
   };

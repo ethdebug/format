@@ -370,6 +370,24 @@ code { let v = calls + 5; total = outer(v); total = total + v; }`;
 
 const words: Shape = { kind: "array", element: { kind: "scalar", size: 32 } };
 
+/** The layout of the struct programs' `Player` local */
+const player: Shape = {
+  kind: "struct",
+  fields: {
+    score: { kind: "scalar", size: 8 },
+    plays: { kind: "scalar", size: 4 },
+    name: { kind: "bytes" },
+    tag: { kind: "bytes" },
+  },
+};
+const longName = "a name longer than thirty-two bytes, in two words";
+const playerValue = (plays: bigint, name: string) => ({
+  score: 100n,
+  plays,
+  name: textBytes(name),
+  tag: textBytes("hi"),
+});
+
 /** A scalar program for each sub-word kind, `ad` passed as `arg` */
 const kinds = (
   [
@@ -1114,6 +1132,47 @@ code {
         shape: { kind: "bytes" },
         values: [
           "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122",
+        ],
+      },
+    },
+  },
+  {
+    // A struct copied from storage, changed, and written back: its
+    // pointer is a group of its fields' words, a string field's with
+    // the string's length and data
+    name: "a struct copied from storage",
+    source: `name StructLocal;
+define {
+  struct Player { score: uint64; plays: uint32; name: string; tag: string; };
+}
+storage { [0] r: uint256; [1] players: mapping<address, Player>; }
+create {
+  players[msg.sender].score = 100;
+  players[msg.sender].plays = 7;
+  players[msg.sender].name = "${longName}";
+  players[msg.sender].tag = "hi";
+}
+code {
+  let player: Player = players[msg.sender];
+  player.plays = player.plays + 1;
+  player.name = "renamed";
+  players[msg.sender] = player;
+  r = player.score + player.plays;
+}`,
+    locals: {
+      player: {
+        shape: player,
+        everyLevel: true,
+        values: [
+          playerValue(7n, longName),
+          {
+            value: playerValue(8n, longName),
+            after: "player.plays = player.plays + 1",
+          },
+          {
+            value: playerValue(8n, "renamed"),
+            after: 'player.name = "renamed"',
+          },
         ],
       },
     },
