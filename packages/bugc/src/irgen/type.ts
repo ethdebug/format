@@ -57,8 +57,8 @@ export function fromBugType(type: BugType): Ir.Type {
           return Ir.Type.ref(type.location ?? "memory", type);
         }
       case "string":
-        // Strings are always memory references
-        return Ir.Type.ref("memory", type);
+        // Strings are memory references, or calldata ones
+        return Ir.Type.ref(type.location ?? "memory", type);
       default:
         assertExhausted(type);
     }

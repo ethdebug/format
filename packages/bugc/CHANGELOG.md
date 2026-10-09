@@ -9,6 +9,16 @@ support. Changes to the specification itself are tracked in the root
 
 ### Added
 
+- `string calldata`, a string in calldata, as `bytes calldata` is bytes
+  in calldata: `let name: string calldata = msg.data[a:b] as string calldata;`
+  refers to the calldata and copies nothing. Bytes and a string in
+  calldata convert to each other with a cast (`as string calldata`,
+  `as bytes calldata`). A `string calldata` has `.length`, and copies
+  to a `string` in memory or storage (`let m: string = name;`,
+  `name as string`, `players[msg.sender].name = name;`). As `string`
+  is, it is not indexed or sliced, and as `bytes calldata` is, it is
+  only the type of a `let` or a cast. A local's pointer is that of
+  bytes in calldata, and its type is `{ "kind": "string" }` ([#379]).
 - A struct copied from storage to memory may have `string` and `bytes`
   fields: each field's word holds the address of its own copy. A struct
   in memory assigned to storage (`players[msg.sender] = player;`) is
@@ -23,6 +33,9 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- `==`, `!=` and a mapping key with bytes or a string in calldata are
+  now type errors. Before, they compared or hashed the calldata
+  reference's word (offset and length), not the bytes ([#379]).
 - A struct member of a struct in storage now takes all the slots its
   struct needs, as in Solidity, and the member after it starts at the
   next free slot. Before, it took one slot, so the members after a
@@ -36,6 +49,9 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- `push` of bytes in calldata onto an `array<bytes>` in storage now
+  stores the bytes. Before, it stored the calldata reference's word
+  (offset and length) ([#379]).
 - Reading a `string` or `bytes` from storage as a whole, as in
   `let m: string = motd;`, now copies it to memory, decoded from its
   storage encoding. This also corrects an index (`data[3]`), a slice
@@ -509,3 +525,4 @@ First publication.
 [#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
 [#377]: https://github.com/ethdebug/format/pull/377
+[#379]: https://github.com/ethdebug/format/pull/379

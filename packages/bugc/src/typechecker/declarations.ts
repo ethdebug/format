@@ -118,10 +118,13 @@ function buildFunctionSignature(
   return Type.function_(parameterTypes, returnType, decl.name);
 }
 
-/** The `bytes calldata` in a type node, if any */
-export function calldataTypeNode(typeNode: Ast.Type): Ast.Type | undefined {
+/** The `bytes calldata` or `string calldata` in a type node, if any */
+export function calldataTypeNode(
+  typeNode: Ast.Type,
+): Ast.Type.Elementary.Bytes | Ast.Type.Elementary.String | undefined {
   if (Ast.Type.isElementary(typeNode)) {
-    return Ast.Type.Elementary.isBytes(typeNode) &&
+    return (Ast.Type.Elementary.isBytes(typeNode) ||
+      Ast.Type.Elementary.isString(typeNode)) &&
       typeNode.location === "calldata"
       ? typeNode
       : undefined;
@@ -138,12 +141,15 @@ export function calldataTypeNode(typeNode: Ast.Type): Ast.Type | undefined {
 }
 
 /**
- * The error for `bytes calldata` where it cannot be: it is only the
- * whole type of a `let` or of a cast
+ * The error for `bytes calldata` or `string calldata` where it cannot
+ * be: it is only the whole type of a `let` or of a cast
  */
-export function calldataTypeError(typeNode: Ast.Type): TypeError {
+export function calldataTypeError(
+  typeNode: Ast.Type.Elementary.Bytes | Ast.Type.Elementary.String,
+): TypeError {
+  const name = Ast.Type.Elementary.isBytes(typeNode) ? "bytes" : "string";
   return new TypeError(
-    "`bytes calldata` can only be the type of a `let` or a cast",
+    `\`${name} calldata\` can only be the type of a \`let\` or a cast`,
     typeNode.loc || undefined,
     undefined,
     undefined,
@@ -151,7 +157,7 @@ export function calldataTypeError(typeNode: Ast.Type): TypeError {
   );
 }
 
-/** Throw unless a type node has no `bytes calldata` */
+/** Throw unless a type node has no `bytes calldata` or `string calldata` */
 function checkNoCalldata(typeNode: Ast.Type): void {
   const found = calldataTypeNode(typeNode);
   if (found) throw calldataTypeError(found);
@@ -162,6 +168,12 @@ export const dynamicBytes = (typeNode: Ast.Type.Elementary.Bytes): Type =>
   typeNode.location === "calldata"
     ? Type.Elementary.calldataBytes()
     : Type.Elementary.bytes();
+
+/** `string`, or `string calldata` */
+export const elementaryString = (typeNode: Ast.Type.Elementary.String): Type =>
+  typeNode.location === "calldata"
+    ? Type.Elementary.calldataString()
+    : Type.Elementary.string();
 
 /**
  * Resolves an AST type node to a Type object and records bindings
@@ -229,7 +241,7 @@ export function resolveTypeWithBindings(
       return { type: Type.Elementary.bool(), bindings };
     }
     if (Ast.Type.Elementary.isString(typeNode)) {
-      return { type: Type.Elementary.string(), bindings };
+      return { type: elementaryString(typeNode), bindings };
     }
     return {
       type: Type.failure(`Unknown elementary type: ${typeNode.kind}`),
@@ -352,7 +364,7 @@ export function resolveType(
       return Type.Elementary.bool();
     }
     if (Ast.Type.Elementary.isString(typeNode)) {
-      return Type.Elementary.string();
+      return elementaryString(typeNode);
     }
     return Type.failure(`Unknown elementary type: ${typeNode.kind}`);
   }

@@ -127,10 +127,19 @@ export function* emitCopyToMemory(
   return Ir.Value.temp(base, Ir.Type.ref("memory", origin));
 }
 
-/** A value, or, if it is bytes in calldata, a copy of them in memory */
+/**
+ * A value, or, if it is bytes or a string in calldata, a copy of them
+ * in memory, typed `bytes` or `string`
+ */
 export function* emitInMemory(
   value: Ir.Value,
   node: Ast.Node,
 ): Process<Ir.Value> {
-  return isCalldata(value) ? yield* emitCopyToMemory(value, node) : value;
+  if (!isCalldata(value)) return value;
+  const { origin } = value.type;
+  return yield* emitCopyToMemory(
+    value,
+    node,
+    origin === "synthetic" ? undefined : Type.Elementary.inMemory(origin),
+  );
 }

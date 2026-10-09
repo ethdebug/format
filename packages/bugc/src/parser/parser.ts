@@ -376,21 +376,24 @@ let statement: P.Parser<Ast.Statement>;
  * Type Parsers
  */
 
-// Elementary types with location. Dynamic bytes may be followed by
-// `calldata`: bytes in calldata
+// Elementary types with location. Dynamic bytes and string may be
+// followed by `calldata`: bytes or a string in calldata
 const elementaryType = located(
   Lang.elementaryType.chain((name: string) =>
-    name === "bytes"
+    name === "bytes" || name === "string"
       ? Lang.keyword("calldata")
           .atMost(1)
-          .map((calldata) =>
-            Ast.Type.Elementary.bytes(
-              PENDING_ID,
-              undefined,
-              undefined,
-              calldata.length > 0 ? "calldata" : undefined,
-            ),
-          )
+          .map((calldata) => {
+            const location = calldata.length > 0 ? "calldata" : undefined;
+            return name === "bytes"
+              ? Ast.Type.Elementary.bytes(
+                  PENDING_ID,
+                  undefined,
+                  undefined,
+                  location,
+                )
+              : Ast.Type.Elementary.string(PENDING_ID, undefined, location);
+          })
       : P.succeed(elementaryTypeOf(name)),
   ),
 );

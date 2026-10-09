@@ -167,9 +167,13 @@ function* buildPush(
   ) => Process<Ir.Value>,
 ): Process<Ir.Value> {
   const marker = Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
+  // A pushed value's bytes are in memory
   const value =
     expr.arguments.length > 0
-      ? yield* buildExpression(expr.arguments[0], { kind: "rvalue" })
+      ? yield* emitInMemory(
+          yield* buildExpression(expr.arguments[0], { kind: "rvalue" }),
+          expr.arguments[0],
+        )
       : undefined;
 
   const chain = yield* findStorageAccessChain(callee.object);

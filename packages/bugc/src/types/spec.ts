@@ -249,22 +249,55 @@ export namespace Type {
         }${type.location === "calldata" ? " calldata" : ""}`;
     }
 
+    /**
+     * A string: in memory, or, with `location: "calldata"`, a slice of
+     * the calldata, as bytes in calldata are
+     */
     export interface String {
       kind: "string";
+      location?: "calldata";
     }
 
     export const string = (): Type.Elementary.String => ({
       kind: "string",
     });
 
-    export namespace String {
-      export const equals = (
-        _a: Type.Elementary.String,
-        _b: Type.Elementary.String,
-      ): boolean => true;
+    /** A string in calldata */
+    export const calldataString = (): Type.Elementary.String => ({
+      kind: "string",
+      location: "calldata",
+    });
 
-      export const format = (_type: Type.Elementary.String): string => `string`;
+    export namespace String {
+      export const isCalldata = (type: Type): boolean =>
+        Type.isElementary(type) &&
+        Type.Elementary.isString(type) &&
+        type.location === "calldata";
+
+      export const equals = (
+        a: Type.Elementary.String,
+        b: Type.Elementary.String,
+      ): boolean => a.location === b.location;
+
+      export const format = (type: Type.Elementary.String): string =>
+        `string${type.location === "calldata" ? " calldata" : ""}`;
     }
+
+    /** Dynamic bytes or a string in calldata */
+    export const isCalldata = (type: Type): boolean =>
+      Type.Elementary.Bytes.isCalldata(type) ||
+      Type.Elementary.String.isCalldata(type);
+
+    /**
+     * The type in memory of a copy of `type`: `bytes` or `string`
+     * without their calldata location; any other type as it is
+     */
+    export const inMemory = (type: Type): Type =>
+      Type.Elementary.Bytes.isCalldata(type)
+        ? Type.Elementary.bytes()
+        : Type.Elementary.String.isCalldata(type)
+          ? Type.Elementary.string()
+          : type;
 
     const makeIsKind =
       <K extends string>(kind: K) =>

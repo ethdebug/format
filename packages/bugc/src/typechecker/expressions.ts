@@ -250,7 +250,25 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
 
           case "==":
           case "!=":
-            if (!isAssignable(leftType, rightType)) {
+            // Bytes or a string in calldata is a word of offset and
+            // length, which compares with no other value's
+            if (
+              Type.Elementary.isCalldata(leftType) ||
+              Type.Elementary.isCalldata(rightType)
+            ) {
+              const type = Type.Elementary.isCalldata(leftType)
+                ? leftType
+                : rightType;
+              errors.push(
+                new TypeError(
+                  `Cannot compare ${Type.format(type)}`,
+                  node.loc || undefined,
+                  undefined,
+                  undefined,
+                  ErrorCode.INVALID_OPERATION,
+                ),
+              );
+            } else if (!isAssignable(leftType, rightType)) {
               const error = new TypeError(
                 `Cannot compare ${Type.format(leftType)} with ${Type.format(rightType)}`,
                 node.loc || undefined,
@@ -506,7 +524,18 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
           }
           resultType = objectType.element;
         } else if (Type.isMapping(objectType)) {
-          if (!isAssignable(objectType.key, indexType)) {
+          // A key in calldata would hash its word of offset and length
+          if (Type.Elementary.isCalldata(indexType)) {
+            errors.push(
+              new TypeError(
+                `Cannot use ${Type.format(indexType)} as a mapping key`,
+                indexExpr.loc || undefined,
+                undefined,
+                undefined,
+                ErrorCode.TYPE_MISMATCH,
+              ),
+            );
+          } else if (!isAssignable(objectType.key, indexType)) {
             const error = new TypeError(
               `Invalid mapping key: expected ${Type.format(objectType.key)}, got ${Type.format(indexType)}`,
               indexExpr.loc || undefined,
@@ -806,22 +835,23 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         return { symbols, nodeTypes, bindings, errors };
       }
 
-      // `bytes calldata` is only the whole target type, and only bytes
-      // in calldata cast to it
+      // `bytes calldata` and `string calldata` are only the whole
+      // target type, and only bytes or a string in calldata cast to them
       const calldata = calldataTypeNode(node.targetType);
       if (calldata && calldata !== node.targetType) {
         errors.push(calldataTypeError(calldata));
         return { symbols, nodeTypes, bindings, errors };
       }
       if (
-        Type.Elementary.Bytes.isCalldata(targetTypeResult.type) &&
-        !Type.Elementary.Bytes.isCalldata(exprResult.type)
+        Type.Elementary.isCalldata(targetTypeResult.type) &&
+        !Type.Elementary.isCalldata(exprResult.type)
       ) {
+        const target = Type.format(targetTypeResult.type);
         errors.push(
           new TypeError(
-            `Cannot cast from ${Type.format(exprResult.type)} to bytes calldata`,
+            `Cannot cast from ${Type.format(exprResult.type)} to ${target}`,
             node.loc || undefined,
-            "bytes calldata",
+            target,
             Type.format(exprResult.type),
             ErrorCode.INVALID_TYPE_CAST,
           ),
@@ -1142,6 +1172,11 @@ function isValidCast(fromType: Type, toType: Type): boolean {
 
   // Allow casting between bytes types
   if (Type.Elementary.isBytes(fromType) && Type.Elementary.isBytes(toType)) {
+    return true;
+  }
+
+  // Allow casting between strings (a string in calldata to memory)
+  if (Type.Elementary.isString(fromType) && Type.Elementary.isString(toType)) {
     return true;
   }
 

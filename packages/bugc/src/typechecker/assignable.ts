@@ -22,6 +22,16 @@ export function isAssignable(target: Type, value: Type): boolean {
     return true;
   }
 
+  // A string in calldata copies to a string in memory or storage
+  if (
+    Type.Elementary.String.isCalldata(value) &&
+    Type.isElementary(target) &&
+    Type.Elementary.isString(target) &&
+    target.location === undefined
+  ) {
+    return true;
+  }
+
   // Numeric types can be implicitly converted (with range checks)
   if (
     Type.isElementary(target) &&

@@ -476,6 +476,37 @@ code {
   };
 }
 
+/**
+ * A `string calldata` local refers to the calldata as `bytes calldata`
+ * does; its pointer reads exactly the string's bytes
+ */
+function namedProgram(text: string): LocalsProgram {
+  return {
+    name: `a string calldata local of ${text.length} bytes`,
+    source: `name SetName;
+storage { [0] motd: string; [1] r: uint256; }
+create { r = 1; }
+code {
+  let offset = msg.data[4:36] as bytes32 as uint256;
+  let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
+  let name: string calldata =
+    msg.data[36 + offset:36 + offset + n] as string calldata;
+  motd = name;
+  if (r > 0) { r = name.length; }
+}`,
+    calldata: setMotd(text),
+    locals: {
+      offset: { values: [32n] },
+      n: { values: [BigInt(text.length)] },
+      name: {
+        shape: { kind: "calldata" },
+        values: [textBytes(text)],
+        everyLevel: true,
+      },
+    },
+  };
+}
+
 const programs: LocalsProgram[] = [
   {
     name: "straight line",
@@ -1109,6 +1140,9 @@ code {
     locals: { b: { shape: { kind: "calldata" }, values: ["0x"] } },
   },
   ...annotations.map(setMotdProgram),
+  ...["", "a".repeat(31), "b".repeat(32), "c".repeat(33), motd].map(
+    namedProgram,
+  ),
   {
     // A slice longer than a word: its pointer reads every byte
     name: "a long bytes slice",
@@ -1214,6 +1248,40 @@ describe.each(levels)("locals hold the program's values at O%i", (level) => {
     "$name",
     (program) => check(program, level),
   );
+});
+
+describe.each(levels)("a string calldata local at O%i", (level) => {
+  it("has a string type and the pointer of bytes in calldata", async () => {
+    const pointerOf = async (type: string) => {
+      const { program } = await traceLocals(
+        `name SetName;
+storage { [0] motd: string; }
+code {
+  let name: ${type} = msg.data[4:msg.data.length] as ${type};
+  motd = name as string;
+}`,
+        level,
+        setMotd(motd),
+      );
+      const entries = program.instructions
+        .flatMap(({ context }) => localsOf(context))
+        .filter((entry) => entry.identifier === "name" && entry.pointer);
+      expect(entries.length).toBeGreaterThan(0);
+      return entries;
+    };
+
+    const strings = await pointerOf("string calldata");
+    const bytes = await pointerOf("bytes calldata");
+    for (const entry of strings) {
+      expect(entry.type).toEqual({ kind: "string" });
+    }
+    for (const entry of bytes) {
+      expect(entry.type).toEqual({ kind: "bytes" });
+    }
+    expect(strings.map((entry) => entry.pointer)).toEqual(
+      bytes.map((entry) => entry.pointer),
+    );
+  });
 });
 
 describe("variables before a function's first statement", () => {

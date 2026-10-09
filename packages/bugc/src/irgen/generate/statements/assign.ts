@@ -63,10 +63,11 @@ function* buildLValue(
   }
 
   // Evaluate the value expression with the appropriate context. Bytes
-  // in calldata copy to memory, unless the target is in calldata too.
+  // or a string in calldata copy to memory, unless the target is in
+  // calldata too.
   let value = yield* buildExpression(valueExpr, context);
   const targetType = yield* Process.Types.nodeType(target);
-  if (!targetType || !Type.Elementary.Bytes.isCalldata(targetType)) {
+  if (!targetType || !Type.Elementary.isCalldata(targetType)) {
     value = yield* emitInMemory(value, valueExpr);
   }
 
