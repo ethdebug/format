@@ -18,7 +18,7 @@ support. Changes to the specification itself are tracked in the root
   `name as string`, `players[msg.sender].name = name;`). As `string`
   is, it is not indexed or sliced, and as `bytes calldata` is, it is
   only the type of a `let` or a cast. A local's pointer is that of
-  bytes in calldata, and its type is `{ "kind": "string" }`.
+  bytes in calldata, and its type is `{ "kind": "string" }` ([#379]).
 - A struct copied from storage to memory may have `string` and `bytes`
   fields: each field's word holds the address of its own copy. A struct
   in memory assigned to storage (`players[msg.sender] = player;`) is
@@ -519,3 +519,4 @@ First publication.
 [#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
 [#377]: https://github.com/ethdebug/format/pull/377
+[#379]: https://github.com/ethdebug/format/pull/379
