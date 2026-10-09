@@ -141,6 +141,9 @@ export function* emitStorageVariableStore(
   node: Ast.Node | undefined,
 ): Process<void> {
   const type = yield* Process.Types.nodeType(slot.declaration);
+  const base = Ir.Value.constant(BigInt(slot.slot), Ir.Type.Scalar.uint256);
+  if (type && (yield* emitStorageCopyFromMemory(base, type, value, node)))
+    return;
   const size = type ? getFieldSize(fromBugType(type)) : 32;
 
   yield* Process.Instructions.emit({
@@ -343,9 +346,14 @@ export function* emitStorageChainLoad(
     }
   }
 
-  // A struct is a copy in memory, not the slot's word
-  if (currentOrigin && Type.isStruct(currentOrigin)) {
-    return yield* emitStorageStructCopy(currentSlot, currentOrigin, node);
+  // A struct is a copy in memory, not the slot's word; an array cannot
+  // be copied (its length is a word, though)
+  if (
+    currentOrigin &&
+    (Type.isStruct(currentOrigin) ||
+      (Type.isArray(currentOrigin) && valueType.kind === "ref"))
+  ) {
+    return yield* emitStorageCopyToMemory(currentSlot, currentOrigin, node);
   }
 
   // Check if the last access was a struct field to get packed field info
@@ -389,11 +397,110 @@ export function* emitStorageChainLoad(
 }
 
 /**
+ * Whether a type is a string or dynamic `bytes`: in storage, encoded
+ * as Solidity encodes them; in memory, a length word, then the data
+ */
+function isDynamicBytes(type: Type): boolean {
+  return (
+    Type.isElementary(type) &&
+    (Type.Elementary.isString(type) ||
+      (Type.Elementary.isBytes(type) && type.size === undefined))
+  );
+}
+
+/**
+ * Report a value that bugc cannot copy between storage and memory
+ */
+function* reportUncopyable(
+  type: Type,
+  direction: "to memory" | "to storage",
+  node: Ast.Node | undefined,
+  within?: { struct: Type.Struct; field: string },
+): Process<void> {
+  const path =
+    direction === "to memory"
+      ? "from storage to memory"
+      : "from memory to storage";
+  const message = within
+    ? `Cannot copy struct ${within.struct.name} ${path}: field ` +
+      `${within.field} is ${Type.format(type)}; only value, string, ` +
+      `bytes, and struct fields can be copied`
+    : `Cannot copy ${Type.format(type)} ${path}`;
+  yield* Process.Errors.report(
+    new IrgenError(message, node?.loc ?? undefined, Severity.Error),
+  );
+}
+
+/**
+ * Copy a struct or array from storage at `slot` to memory: a struct is
+ * copied field by field (its address in memory is the value); an array
+ * cannot be copied, which is an error.
+ */
+export function* emitStorageCopyToMemory(
+  slot: Ir.Value,
+  type: Type.Struct | Type.Array,
+  node: Ast.Node | undefined,
+): Process<Ir.Value> {
+  if (Type.isStruct(type)) {
+    return yield* emitStorageStructCopy(slot, type, node);
+  }
+  yield* reportUncopyable(type, "to memory", node);
+  return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
+}
+
+/**
+ * The slot of a struct's field, for a struct at `slot`
+ */
+function* emitFieldSlot(
+  slot: Ir.Value,
+  byteOffset: number,
+  debug: Ir.Instruction.Debug,
+): Process<Ir.Value> {
+  if (byteOffset < 32) return slot;
+  const temp = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "compute_slot",
+    slotKind: "field",
+    base: slot,
+    fieldOffset: byteOffset,
+    dest: temp,
+    operationDebug: debug,
+  } as Ir.Instruction.ComputeSlot);
+  return Ir.Value.temp(temp, Ir.Type.Scalar.uint256);
+}
+
+/**
+ * The address of the word of a struct's `index`th field, for a struct
+ * in memory at `address`
+ */
+function* emitFieldWord(
+  address: Ir.Value,
+  name: string,
+  index: number,
+  debug: Ir.Instruction.Debug,
+): Process<Ir.Value> {
+  if (index === 0) return address;
+  const temp = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit(
+    Ir.Instruction.ComputeOffset.field(
+      "memory",
+      address,
+      name,
+      index * 32,
+      temp,
+      debug,
+    ),
+  );
+  return Ir.Value.temp(temp, Ir.Type.Scalar.uint256);
+}
+
+/**
  * Copy a struct from storage, starting at `slot`, into new memory, and
  * return its address. A struct in memory has one word per field, in
- * order; a struct field is the address of its own copy.
+ * order: a value type's value, or the address of a struct, string, or
+ * `bytes` field's own copy.
  */
-export function* emitStorageStructCopy(
+function* emitStorageStructCopy(
   slot: Ir.Value,
   struct: Type.Struct,
   node: Ast.Node | undefined,
@@ -417,77 +524,45 @@ export function* emitStorageStructCopy(
     if (!layout) {
       throw new Error(`Field ${name} not found in struct ${struct.name}`);
     }
-
-    // The field's slot
-    let fieldSlot = slot;
-    if (layout.byteOffset >= 32) {
-      const temp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit({
-        kind: "compute_slot",
-        slotKind: "field",
-        base: slot,
-        fieldOffset: layout.byteOffset,
-        dest: temp,
-        operationDebug: debug,
-      } as Ir.Instruction.ComputeSlot);
-      fieldSlot = Ir.Value.temp(temp, uint256);
-    }
+    const fieldSlot = yield* emitFieldSlot(slot, layout.byteOffset, debug);
 
     let value: Ir.Value;
     if (Type.isStruct(fieldType)) {
       value = yield* emitStorageStructCopy(fieldSlot, fieldType, node);
-    } else if (
-      Type.isElementary(fieldType) &&
-      !(Type.Elementary.isBytes(fieldType) && fieldType.size === undefined) &&
-      !Type.Elementary.isString(fieldType)
-    ) {
+    } else if (Type.isElementary(fieldType)) {
+      // A string or `bytes` reads as a copy in memory; a value type,
+      // from its bytes in the slot
       const irType = fromBugType(fieldType);
+      const length = isDynamicBytes(fieldType) ? 32 : getFieldSize(irType);
       const temp = yield* Process.Variables.newTemp();
       yield* Process.Instructions.emit({
         kind: "read",
         location: "storage",
         slot: fieldSlot,
         offset: constant(BigInt(layout.byteOffset % 32)),
-        length: constant(BigInt(getFieldSize(irType))),
+        length: constant(BigInt(length)),
         type: irType,
         dest: temp,
         operationDebug: debug,
       } as Ir.Instruction.Read);
       value = Ir.Value.temp(temp, irType);
     } else {
-      yield* Process.Errors.report(
-        new IrgenError(
-          `Cannot copy struct ${struct.name} from storage: its field ` +
-            `${name} is a ${Type.format(fieldType)}, and only value ` +
-            `and struct fields can be copied to memory`,
-          node?.loc ?? undefined,
-          Severity.Error,
-        ),
-      );
+      yield* reportUncopyable(fieldType, "to memory", node, {
+        struct,
+        field: name,
+      });
       value = constant(0n);
-    }
-
-    // The field's word in memory
-    let offset = Ir.Value.temp(address, uint256);
-    if (index > 0) {
-      const temp = yield* Process.Variables.newTemp();
-      yield* Process.Instructions.emit(
-        Ir.Instruction.ComputeOffset.field(
-          "memory",
-          offset,
-          name,
-          index * 32,
-          temp,
-          debug,
-        ),
-      );
-      offset = Ir.Value.temp(temp, uint256);
     }
 
     yield* Process.Instructions.emit({
       kind: "write",
       location: "memory",
-      offset,
+      offset: yield* emitFieldWord(
+        Ir.Value.temp(address, uint256),
+        name,
+        index,
+        debug,
+      ),
       length: constant(32n),
       value,
       operationDebug: debug,
@@ -496,7 +571,101 @@ export function* emitStorageStructCopy(
     index++;
   }
 
-  return Ir.Value.temp(address, Ir.Type.Ref.memory());
+  return Ir.Value.temp(address, Ir.Type.ref("memory", struct));
+}
+
+/**
+ * Copy a struct from memory, at `address`, to storage, starting at
+ * `slot`: each field to its bytes in its slot, as the struct's layout
+ * places it. A struct, string, or `bytes` field's word holds the
+ * address of its data, which is copied in turn (a string or `bytes`
+ * as Solidity encodes it).
+ */
+function* emitStorageStructStore(
+  slot: Ir.Value,
+  struct: Type.Struct,
+  address: Ir.Value,
+  node: Ast.Node | undefined,
+): Process<void> {
+  const debug = node ? yield* Process.Debug.forAstNode(node) : {};
+  const uint256 = Ir.Type.Scalar.uint256;
+  const constant = (value: bigint) => Ir.Value.constant(value, uint256);
+
+  let index = 0;
+  for (const [name, fieldType] of struct.fields) {
+    const layout = struct.layout.get(name);
+    if (!layout) {
+      throw new Error(`Field ${name} not found in struct ${struct.name}`);
+    }
+
+    if (!Type.isStruct(fieldType) && !Type.isElementary(fieldType)) {
+      yield* reportUncopyable(fieldType, "to storage", node, {
+        struct,
+        field: name,
+      });
+      index++;
+      continue;
+    }
+
+    // The field's word in memory
+    const irType = fromBugType(fieldType);
+    const word = yield* emitFieldWord(address, name, index, debug);
+    const temp = yield* Process.Variables.newTemp();
+    yield* Process.Instructions.emit({
+      kind: "read",
+      location: "memory",
+      offset: word,
+      length: constant(32n),
+      type: irType,
+      dest: temp,
+      operationDebug: debug,
+    } as Ir.Instruction.Read);
+    const value = Ir.Value.temp(temp, irType);
+
+    const fieldSlot = yield* emitFieldSlot(slot, layout.byteOffset, debug);
+    if (Type.isStruct(fieldType)) {
+      yield* emitStorageStructStore(fieldSlot, fieldType, value, node);
+    } else {
+      yield* Process.Instructions.emit({
+        kind: "write",
+        location: "storage",
+        slot: fieldSlot,
+        offset: constant(BigInt(layout.byteOffset % 32)),
+        length: constant(
+          BigInt(isDynamicBytes(fieldType) ? 32 : getFieldSize(irType)),
+        ),
+        value,
+        operationDebug: debug,
+      } as Ir.Instruction.Write);
+    }
+
+    index++;
+  }
+}
+
+/**
+ * Copy a value in memory to storage at `slot`, if `type` is one stored
+ * by copying its data: a struct is copied field by field;
+ * an array cannot be copied, which is an error. Returns whether the
+ * value was handled here (a string or `bytes` is not: a write of one
+ * copies it).
+ */
+function* emitStorageCopyFromMemory(
+  slot: Ir.Value,
+  type: Type,
+  value: Ir.Value,
+  node: Ast.Node | undefined,
+): Process<boolean> {
+  if (value.type.kind !== "ref") return false;
+  if (Type.isStruct(type)) {
+    yield* emitStorageStructStore(slot, type, value, node);
+    return true;
+  }
+  if (Type.isArray(type)) {
+    yield* reportUncopyable(type, "to storage", node);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -597,6 +766,13 @@ export function* emitStorageChainStore(
         }
       }
     }
+  }
+
+  if (
+    currentOrigin &&
+    (yield* emitStorageCopyFromMemory(currentSlot, currentOrigin, value, node))
+  ) {
+    return;
   }
 
   // Check if the last access was a struct field to handle packed fields

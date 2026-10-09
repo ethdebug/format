@@ -174,6 +174,12 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     // Must be same location type
     if (first.location !== second.location) return false;
 
+    // A write of a reference (a string or `bytes` in memory) copies its
+    // data, not the word
+    if (first.value?.type.kind === "ref" || second.value?.type.kind === "ref") {
+      return false;
+    }
+
     // For storage/transient: must have same slot
     if (first.location === "storage" || first.location === "transient") {
       if (!first.slot || !second.slot) return false;

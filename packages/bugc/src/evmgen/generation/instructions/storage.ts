@@ -5,6 +5,7 @@ import { Type as BugType } from "#types";
 import type { State } from "#evmgen/state";
 import { type Transition, rebrand, pipe, operations } from "#evmgen/operations";
 import { calculateSize } from "#evmgen/serialize";
+import { Memory } from "#evmgen/analysis";
 
 import { loadValue, storeValueIfNeeded } from "../values/index.js";
 import { generateCastSteps } from "./cast.js";
@@ -145,6 +146,10 @@ function generateStorageRead<S extends Stack>(
   debug: Ir.Instruction.Debug,
 ): Transition<S, readonly ["value", ...S]> {
   const length = inst.length?.kind === "const" ? inst.length.value : 32n;
+
+  if (isMemoryBytes(inst.type)) {
+    return generateBytesStorageRead(inst, debug);
+  }
 
   if (isZero(inst.offset) && length === 32n) {
     // Full slot read - simple SLOAD
@@ -528,33 +533,11 @@ type Step = (state: State<Stack>) => State<Stack>;
 type Op = (options?: { debug: Ir.Instruction.Debug }) => Step;
 
 /**
- * Store a string or `bytes` from memory as Solidity encodes it in
- * storage. Up to 31 bytes go in the slot itself, left-aligned, with
- * length * 2 in the low byte. Longer data puts length * 2 + 1 in the
- * slot and the data in the slots from keccak256(slot). The bytes
- * after the end of the data, in its last word, are stored as zero.
- *
- *   [slot, ptr]   DUP2 MLOAD
- *   [len, ...]    PUSH1 31 DUP2 GT PUSH2 long JUMPI
- *                 DUP3 PUSH1 32 ADD MLOAD DUP2 <mask>
- *                 DUP2 DUP1 ADD OR DUP3 SSTORE PUSH2 end JUMP
- *   long:         JUMPDEST DUP1 DUP1 ADD PUSH1 1 ADD DUP3 SSTORE
- *                 DUP2 PUSH0 MSTORE PUSH1 32 PUSH0 KECCAK256
- *                 DUP4 PUSH1 32 ADD DUP3 DUP2 ADD
- *   loop:         JUMPDEST            [end, src, dataSlot, len, ...]
- *                 DUP2 MLOAD DUP3 DUP3 SUB <mask> DUP4 SSTORE
- *                 SWAP2 PUSH1 1 ADD SWAP2 SWAP1 PUSH1 32 ADD SWAP1
- *                 DUP2 DUP2 GT PUSH2 loop JUMPI POP POP POP
- *   end:          JUMPDEST POP POP POP
- *
- * `<mask>` takes [k, word] to the word with all but its first k bytes
- * cleared, when k < 32: it shifts the word right, then left, by
- * (k < 32) * (256 - 8k) bits.
+ * Untyped steps, for routines with loops (whose stack the typed
+ * `pipe` cannot follow): an op by name, a push, a push of a jump
+ * target patched to the offset of a label, and a label's JUMPDEST
  */
-function generateBytesStorageWrite<S extends Stack>(
-  inst: Ir.Instruction.Write,
-  debug: Ir.Instruction.Debug,
-): Transition<S, S> {
+function rawSteps(debug: Ir.Instruction.Debug) {
   const raw = operations as unknown as Record<string, Op>;
   const op =
     (name: string): Step =>
@@ -564,8 +547,6 @@ function generateBytesStorageWrite<S extends Stack>(
     (value: bigint): Step =>
     (state) =>
       (operations.PUSHn(value, { debug }) as unknown as Step)(state);
-
-  // Push a jump target, patched to the offset of `label`
   const target =
     (label: string): Step =>
     (state) => {
@@ -593,6 +574,39 @@ function generateBytesStorageWrite<S extends Stack>(
 
   // [n, ...] to [(n + 31) >> 5, ...]: the words n bytes need
   const words: Step[] = [push(31n), op("ADD"), push(5n), op("SHR")];
+
+  return { op, push, target, mark, words };
+}
+
+/**
+ * Store a string or `bytes` from memory as Solidity encodes it in
+ * storage. Up to 31 bytes go in the slot itself, left-aligned, with
+ * length * 2 in the low byte. Longer data puts length * 2 + 1 in the
+ * slot and the data in the slots from keccak256(slot). The bytes
+ * after the end of the data, in its last word, are stored as zero.
+ *
+ *   [slot, ptr]   DUP2 MLOAD
+ *   [len, ...]    PUSH1 31 DUP2 GT PUSH2 long JUMPI
+ *                 DUP3 PUSH1 32 ADD MLOAD DUP2 <mask>
+ *                 DUP2 DUP1 ADD OR DUP3 SSTORE PUSH2 end JUMP
+ *   long:         JUMPDEST DUP1 DUP1 ADD PUSH1 1 ADD DUP3 SSTORE
+ *                 DUP2 PUSH0 MSTORE PUSH1 32 PUSH0 KECCAK256
+ *                 DUP4 PUSH1 32 ADD DUP3 DUP2 ADD
+ *   loop:         JUMPDEST            [end, src, dataSlot, len, ...]
+ *                 DUP2 MLOAD DUP3 DUP3 SUB <mask> DUP4 SSTORE
+ *                 SWAP2 PUSH1 1 ADD SWAP2 SWAP1 PUSH1 32 ADD SWAP1
+ *                 DUP2 DUP2 GT PUSH2 loop JUMPI POP POP POP
+ *   end:          JUMPDEST POP POP POP
+ *
+ * `<mask>` takes [k, word] to the word with all but its first k bytes
+ * cleared, when k < 32: it shifts the word right, then left, by
+ * (k < 32) * (256 - 8k) bits.
+ */
+function generateBytesStorageWrite<S extends Stack>(
+  inst: Ir.Instruction.Write,
+  debug: Ir.Instruction.Debug,
+): Transition<S, S> {
+  const { op, push, target, mark, words } = rawSteps(debug);
 
   const mask: Step[] = [
     op("DUP1"),
@@ -768,4 +782,164 @@ function generateBytesStorageWrite<S extends Stack>(
 
     return steps.reduce<State<Stack>>((current, step) => step(current), loaded);
   }) as unknown as Transition<S, S>;
+}
+
+/**
+ * Copy a string or `bytes` from storage, as Solidity encodes it there
+ * (see `generateBytesStorageWrite`), into new memory: a length word,
+ * then the data, in whole words. Leaves the copy's address.
+ *
+ *   [slot]        DUP1 SLOAD DUP1 PUSH1 1 AND PUSH2 long JUMPI
+ *   [word, slot]  DUP1 PUSH1 0xff AND PUSH1 1 SHR PUSH1 64 <alloc>
+ *                 SWAP1 DUP2 MSTORE SWAP1 PUSH1 0xff NOT AND
+ *                 DUP2 PUSH1 32 ADD MSTORE PUSH2 end JUMP
+ *   long:         JUMPDEST PUSH1 1 SHR DUP1 <words> PUSH1 5 SHL
+ *                 PUSH1 32 ADD <alloc> DUP2 DUP2 MSTORE
+ *                 DUP4 PUSH0 MSTORE PUSH1 32 PUSH0 KECCAK256
+ *                 DUP2 PUSH1 32 ADD DUP4 <words> PUSH1 5 SHL DUP2 ADD
+ *   loop:         JUMPDEST            [end, dst, dataSlot, ptr, len, slot]
+ *                 DUP1 DUP3 LT ISZERO PUSH2 done JUMPI
+ *                 DUP3 SLOAD DUP3 MSTORE
+ *                 SWAP2 PUSH1 1 ADD SWAP2 SWAP1 PUSH1 32 ADD SWAP1
+ *                 PUSH2 loop JUMP
+ *   done:         JUMPDEST POP POP POP SWAP1 POP
+ *   end:          JUMPDEST SWAP1 POP  [ptr, slot] to [ptr]
+ *
+ * `<alloc>` takes [size] to [ptr], moving the free memory pointer past
+ * `size` bytes. The data's last word holds zero past its end, as the
+ * write stores it.
+ */
+function generateBytesStorageRead<S extends Stack>(
+  inst: Ir.Instruction.Read,
+  debug: Ir.Instruction.Debug,
+): Transition<S, readonly ["value", ...S]> {
+  const { op, push, target, mark, words } = rawSteps(debug);
+  const fmp = BigInt(Memory.regions.FREE_MEMORY_POINTER);
+
+  // [size, ...] to [ptr, ...]
+  const alloc: Step[] = [
+    push(fmp),
+    op("MLOAD"),
+    op("SWAP1"),
+    op("DUP2"),
+    op("ADD"),
+    push(fmp),
+    op("MSTORE"),
+  ];
+
+  return ((state: State<Stack>): State<Stack> => {
+    const id = state.nextId;
+    const long = `$bytes_read_long_${id}`;
+    const loop = `$bytes_read_loop_${id}`;
+    const done = `$bytes_read_done_${id}`;
+    const end = `$bytes_read_end_${id}`;
+
+    const loaded = pipe<Stack>()
+      .then(loadValue(inst.slot!, { debug }), { as: "key" })
+      .done()({ ...state, nextId: id + 1 }) as State<Stack>;
+
+    const steps: Step[] = [
+      op("DUP1"),
+      op("SLOAD"),
+      op("DUP1"),
+      push(1n),
+      op("AND"),
+      target(long),
+      op("JUMPI"),
+
+      // Short: the length is the low byte / 2, the data the rest
+      op("DUP1"),
+      push(0xffn),
+      op("AND"),
+      push(1n),
+      op("SHR"),
+      push(64n),
+      ...alloc,
+      op("SWAP1"),
+      op("DUP2"),
+      op("MSTORE"),
+      op("SWAP1"),
+      push(0xffn),
+      op("NOT"),
+      op("AND"),
+      op("DUP2"),
+      push(32n),
+      op("ADD"),
+      op("MSTORE"),
+      target(end),
+      op("JUMP"),
+
+      // Long: the length is the word / 2; the data from keccak256(slot)
+      mark(long),
+      push(1n),
+      op("SHR"),
+      op("DUP1"),
+      ...words,
+      push(5n),
+      op("SHL"),
+      push(32n),
+      op("ADD"),
+      ...alloc,
+      op("DUP2"),
+      op("DUP2"),
+      op("MSTORE"),
+      op("DUP3"),
+      push(0n),
+      op("MSTORE"),
+      push(32n),
+      push(0n),
+      op("KECCAK256"),
+      op("DUP2"),
+      push(32n),
+      op("ADD"),
+      op("DUP4"),
+      ...words,
+      push(5n),
+      op("SHL"),
+      op("DUP2"),
+      op("ADD"),
+
+      mark(loop),
+      op("DUP1"),
+      op("DUP3"),
+      op("LT"),
+      op("ISZERO"),
+      target(done),
+      op("JUMPI"),
+      op("DUP3"),
+      op("SLOAD"),
+      op("DUP3"),
+      op("MSTORE"),
+      op("SWAP2"),
+      push(1n),
+      op("ADD"),
+      op("SWAP2"),
+      op("SWAP1"),
+      push(32n),
+      op("ADD"),
+      op("SWAP1"),
+      target(loop),
+      op("JUMP"),
+
+      mark(done),
+      op("POP"),
+      op("POP"),
+      op("POP"),
+      op("SWAP1"),
+      op("POP"),
+
+      // Both ways reach here with [ptr, slot]
+      mark(end),
+      op("SWAP1"),
+      op("POP"),
+    ];
+
+    const copied = steps.reduce<State<Stack>>(
+      (current, step) => step(current),
+      loaded,
+    );
+    return (storeValueIfNeeded(inst.dest, { debug }) as unknown as Step)(
+      copied,
+    );
+  }) as unknown as Transition<S, readonly ["value", ...S]>;
 }

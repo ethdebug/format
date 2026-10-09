@@ -8,7 +8,7 @@ import { fromBugType } from "#irgen/type";
 import { Type } from "#types";
 
 import { Process } from "../process.js";
-import { emitStorageStructCopy } from "../storage.js";
+import { emitStorageCopyToMemory } from "../storage.js";
 
 /**
  * Build an identifier expression
@@ -33,9 +33,13 @@ export function* buildIdentifier(
       ? fromBugType(storageType)
       : Ir.Type.Scalar.uint256;
 
-    // A struct is a copy in memory, not the slot's word
-    if (storageType && Type.isStruct(storageType)) {
-      return yield* emitStorageStructCopy(
+    // A struct is a copy in memory, not the slot's word; an array
+    // cannot be copied
+    if (
+      storageType &&
+      (Type.isStruct(storageType) || Type.isArray(storageType))
+    ) {
+      return yield* emitStorageCopyToMemory(
         Ir.Value.constant(BigInt(storageSlot.slot), Ir.Type.Scalar.uint256),
         storageType,
         expr,
