@@ -22,14 +22,14 @@ examples:
       - frame: "ir"
         code:
           source:
-            id: 0
+            id: "0"
           range:
             offset: 8
             length: 11
       - frame: "source"
         code:
           source:
-            id: 3
+            id: "3"
           range:
             offset: 113
             length: 19
@@ -38,7 +38,7 @@ examples:
           - identifier: x
             declaration:
               source:
-                id: 5
+                id: "5"
               range:
                 offset: 10
                 length: 56
@@ -48,7 +48,7 @@ examples:
           - identifier: x
             declaration:
               source:
-                id: 5
+                id: "5"
               range:
                 offset: 10
                 length: 56
