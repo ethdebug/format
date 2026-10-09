@@ -131,6 +131,84 @@ describe("Slice type checking", () => {
     ]);
   });
 
+  /** The messages of a program's type errors */
+  const typeErrors = (source: string) => {
+    const result = parse(source);
+    if (!result.success) throw new Error("Parse failed");
+    const typeResult = checkProgram(result.value);
+    expect(typeResult.success).toBe(false);
+    return (typeResult.messages[Severity.Error] ?? []).map((m) => m.message);
+  };
+
+  test("types a string in calldata", () => {
+    expect(
+      letTypes(`
+      name Test;
+      storage { [0] motd: string; }
+      code {
+        let a: string calldata = msg.data[4:36] as string calldata;
+        let b = a;
+        let c = a as string;
+        let d: string = a;
+        let e = a as bytes calldata;
+        let f = e as string calldata;
+        let g = a as bytes;
+        let n = a.length;
+        motd = a;
+      }
+    `),
+    ).toEqual({
+      a: "string calldata",
+      b: "string calldata",
+      c: "string",
+      d: "string",
+      e: "bytes calldata",
+      f: "string calldata",
+      g: "bytes",
+      n: "uint256",
+    });
+  });
+
+  test("rejects a string in calldata mixed with bytes or memory", () => {
+    const placement =
+      "`string calldata` can only be the type of a `let` or a cast";
+    expect(
+      typeErrors(`
+      name Test;
+      define {
+        function f(s: string calldata) -> uint256 { return s.length; };
+      }
+      code {}
+    `),
+    ).toEqual([placement]);
+
+    expect(
+      typeErrors(`
+      name Test;
+      storage { [0] raw: bytes; }
+      code {
+        let a: string calldata = msg.data[4:36];
+        let b: string calldata = msg.data[4:36] as string calldata;
+        let m = "hello";
+        let c: string calldata = m;
+        let d = m as string calldata;
+        let e: bytes calldata = b;
+        raw = b;
+        let x = b[0];
+        let y = b[0:1];
+      }
+    `),
+    ).toEqual([
+      "Type mismatch: expected string calldata, got bytes calldata",
+      "Type mismatch: expected string calldata, got string",
+      "Cannot cast from string to string calldata",
+      "Type mismatch: expected bytes calldata, got string calldata",
+      "Type mismatch: expected bytes, got string calldata",
+      "Cannot index string calldata",
+      "Cannot slice string calldata - only bytes types can be sliced",
+    ]);
+  });
+
   test("rejects slice of non-bytes type", () => {
     const result = parse(`
       name Test;

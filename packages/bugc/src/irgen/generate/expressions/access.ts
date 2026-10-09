@@ -96,9 +96,9 @@ const makeBuildMemberAccess = (
             (Type.Elementary.isBytes(objectType) ||
               Type.Elementary.isString(objectType))))
       ) {
-        // Bytes in calldata: the length is in their word
+        // Bytes or a string in calldata: the length is in their word
         if (
-          Type.Elementary.Bytes.isCalldata(objectType) &&
+          Type.Elementary.isCalldata(objectType) &&
           !Ast.Expression.Special.isMsgData(expr.object)
         ) {
           const word = yield* buildExpression(expr.object, {

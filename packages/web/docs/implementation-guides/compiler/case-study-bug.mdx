@@ -160,11 +160,27 @@ value, and the argument of `keccak256`. Assigning to a `bytes` or
 `string` storage variable stores the bytes as Solidity does, through
 such a copy.
 
+A string in calldata is `string calldata`. It refers to the calldata
+as `bytes calldata` does, and a cast converts one to the other:
+
+```bug
+let name: string calldata = text as string calldata;
+name.length;                     // n
+let m: string = name;            // a copy in memory
+motd = name;                     // stored as Solidity stores a string
+(name as bytes calldata)[0];     // to index or slice it
+```
+
+As a `string` in memory, a `string calldata` has no index or slice,
+and bytes do not assign to it without a cast. It too can only be the
+type of a `let` or of a cast.
+
 A value of bytes in calldata is one word: the offset of the first byte
 in the high 128 bits, and the length in the low 128 bits. A local's
 pointer names that word and then the bytes in calldata. The region
 `text-data` reads exactly the bytes, even when, as above, the offset
-and length are computed while the program runs:
+and length are computed while the program runs. A `string calldata`
+local has the same pointer, and the type `{ "kind": "string" }`:
 
 <SchemaExample
   schema="pointer/collection/group"

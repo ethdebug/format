@@ -489,8 +489,10 @@ export namespace Type {
       };
     }
 
+    /** `string`, or `string calldata` (`location`) */
     export interface String extends Elementary.Base {
       kind: "type:elementary:string";
+      location?: "calldata";
     }
 
     export const isString = (type: Type.Base): type is Type.Elementary.String =>
@@ -499,8 +501,14 @@ export namespace Type {
     export function string(
       id: Id,
       loc?: SourceLocation,
+      location?: "calldata",
     ): Type.Elementary.String {
-      return { id, kind: "type:elementary:string", loc: loc ?? null };
+      return {
+        id,
+        kind: "type:elementary:string",
+        ...(location ? { location } : {}),
+        loc: loc ?? null,
+      };
     }
 
     export interface Fixed extends Elementary.Base {
