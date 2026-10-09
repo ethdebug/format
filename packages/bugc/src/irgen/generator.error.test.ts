@@ -133,9 +133,9 @@ describe("generateModule error handling", () => {
       severity: Severity.Error,
     }).map((d) => d.message);
     expect(messages).toContainEqual(
-      "Cannot copy struct Bag from storage to memory: field items is " +
-        "array<uint256>; only value, string, bytes, and struct fields " +
-        "can be copied",
+      "bugc cannot copy struct Bag to or from storage: field items is " +
+        "array<uint256>, and bugc can copy only value, string, bytes, " +
+        "and struct fields",
     );
   });
 
@@ -157,7 +157,7 @@ describe("generateModule error handling", () => {
       severity: Severity.Error,
     }).map((d) => d.message);
     expect(messages).toContainEqual(
-      "Cannot copy array<uint256> from storage to memory",
+      "bugc cannot copy array<uint256> to or from storage",
     );
   });
 
@@ -184,7 +184,7 @@ describe("generateModule error handling", () => {
       severity: Severity.Error,
     }).map((d) => d.message);
     expect(messages).toContainEqual(
-      "Cannot copy array<uint256> from memory to storage",
+      "bugc cannot copy array<uint256> to or from storage",
     );
   });
 });

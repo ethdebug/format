@@ -808,6 +808,10 @@ function generateBytesStorageWrite<S extends Stack>(
  * `<alloc>` takes [size] to [ptr], moving the free memory pointer past
  * `size` bytes. The data's last word holds zero past its end, as the
  * write stores it.
+ *
+ * Unlike Solidity, this does not check the encoding (Solidity reverts
+ * with `Panic(0x22)` on a bad one): a corrupt long length allocates as
+ * much memory as it says, and runs out of gas.
  */
 function generateBytesStorageRead<S extends Stack>(
   inst: Ir.Instruction.Read,

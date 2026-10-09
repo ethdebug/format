@@ -3,11 +3,11 @@ name NestedStructsStorage;
 // Example 9: Nested Structs in Storage
 //
 // Expected IR:
-//   // CEO salary is at slot 4 (base slot 2 + struct layout)
-//   write location="storage", slot=4, offset=0, length=32, value=1000000
+//   // CEO salary is at slot 5 (base slot 2 + struct layout)
+//   write location="storage", slot=5, offset=0, length=32, value=1000000
 //
-//   // CEO address is at slot 3, first 20 bytes
-//   %ceo_addr = read location="storage", slot=3, offset=0, length=20
+//   // CEO address is at slot 4, first 20 bytes
+//   %ceo_addr = read location="storage", slot=4, offset=0, length=20
 //
 // EVM Strategy: Calculate nested struct slot offsets based on layout
 //

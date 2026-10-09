@@ -1,60 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { keccak256 } from "ethereum-cryptography/keccak";
-import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
-
 import {
   executeProgram,
   type ExecuteProgramResult,
 } from "#test/evm/behavioral";
+import {
+  expectEncoded,
+  hash,
+  mappingSlot,
+  text,
+  word,
+} from "#test/evm/storage";
 
 const levels = [0, 1, 2, 3] as const;
 
-const alphabet =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const text = (length: number, from: number = 0) =>
-  Array.from({ length }, (_, i) => alphabet[(i + from) % alphabet.length]).join(
-    "",
-  );
-
-const word = (n: bigint) => hexToBytes(n.toString(16).padStart(64, "0"));
-const hash = (bytes: Uint8Array) => BigInt("0x" + bytesToHex(keccak256(bytes)));
-
-/** The slot of a mapping's value: keccak256(key . slot) */
-const mappingSlot = (slot: bigint, key: bigint) =>
-  hash(new Uint8Array([...word(key), ...word(slot)]));
-
 /** The sender of every transaction the executor sends */
 const sender = 1n;
-
-/**
- * Check that storage at `slot` holds `data` as Solidity encodes a
- * string: up to 31 bytes in the slot itself, left-aligned, with
- * length * 2 in the low byte; else length * 2 + 1 in the slot and the
- * data from keccak256(slot).
- */
-async function expectEncoded(
-  result: ExecuteProgramResult,
-  slot: bigint,
-  value: string,
-) {
-  const data = new TextEncoder().encode(value);
-  const length = BigInt(data.length);
-  const padded = new Uint8Array(Math.ceil(data.length / 32) * 32);
-  padded.set(data);
-  const dataWord = (i: number) =>
-    BigInt("0x" + (bytesToHex(padded.slice(i * 32, i * 32 + 32)) || "0"));
-
-  if (length < 32n) {
-    expect(await result.getStorage(slot)).toBe(dataWord(0) | (length * 2n));
-    return;
-  }
-
-  expect(await result.getStorage(slot)).toBe(length * 2n + 1n);
-  const base = hash(word(slot));
-  for (let i = 0; i < padded.length / 32; i++) {
-    expect(await result.getStorage(base + BigInt(i))).toBe(dataWord(i));
-  }
-}
 
 /**
  * The words of storage a `Player` at `base` may use: its own slots, and
@@ -118,7 +78,7 @@ describe("copying a struct from storage to memory and back", () => {
 
   for (const level of levels) {
     for (const [from, to] of changes) {
-      it(`writes back every field, name ${from} to ${to} bytes (level ${level})`, async () => {
+      it(`writes back a name of ${from}, then ${to} bytes (O${level})`, async () => {
         const before = text(from);
         const after = from === to ? before : text(to, 11);
         const rename = from === to ? "" : `player.name = "${after}";`;

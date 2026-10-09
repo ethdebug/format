@@ -409,23 +409,19 @@ function isDynamicBytes(type: Type): boolean {
 }
 
 /**
- * Report a value that bugc cannot copy between storage and memory
+ * Report a value that bugc cannot copy to or from storage: an array, or
+ * a struct with an array or mapping field (`within`)
  */
 function* reportUncopyable(
   type: Type,
-  direction: "to memory" | "to storage",
   node: Ast.Node | undefined,
   within?: { struct: Type.Struct; field: string },
 ): Process<void> {
-  const path =
-    direction === "to memory"
-      ? "from storage to memory"
-      : "from memory to storage";
   const message = within
-    ? `Cannot copy struct ${within.struct.name} ${path}: field ` +
-      `${within.field} is ${Type.format(type)}; only value, string, ` +
-      `bytes, and struct fields can be copied`
-    : `Cannot copy ${Type.format(type)} ${path}`;
+    ? `bugc cannot copy struct ${within.struct.name} to or from ` +
+      `storage: field ${within.field} is ${Type.format(type)}, and bugc ` +
+      `can copy only value, string, bytes, and struct fields`
+    : `bugc cannot copy ${Type.format(type)} to or from storage`;
   yield* Process.Errors.report(
     new IrgenError(message, node?.loc ?? undefined, Severity.Error),
   );
@@ -444,7 +440,7 @@ export function* emitStorageCopyToMemory(
   if (Type.isStruct(type)) {
     return yield* emitStorageStructCopy(slot, type, node);
   }
-  yield* reportUncopyable(type, "to memory", node);
+  yield* reportUncopyable(type, node);
   return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
 }
 
@@ -547,7 +543,7 @@ function* emitStorageStructCopy(
       } as Ir.Instruction.Read);
       value = Ir.Value.temp(temp, irType);
     } else {
-      yield* reportUncopyable(fieldType, "to memory", node, {
+      yield* reportUncopyable(fieldType, node, {
         struct,
         field: name,
       });
@@ -599,7 +595,7 @@ function* emitStorageStructStore(
     }
 
     if (!Type.isStruct(fieldType) && !Type.isElementary(fieldType)) {
-      yield* reportUncopyable(fieldType, "to storage", node, {
+      yield* reportUncopyable(fieldType, node, {
         struct,
         field: name,
       });
@@ -662,7 +658,7 @@ function* emitStorageCopyFromMemory(
     return true;
   }
   if (Type.isArray(type)) {
-    yield* reportUncopyable(type, "to storage", node);
+    yield* reportUncopyable(type, node);
     return true;
   }
   return false;
