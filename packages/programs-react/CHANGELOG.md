@@ -10,9 +10,14 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 ### Changed
 
 - The `react` and `react-dom` peer ranges now include React 19
-  (`^18.0.0 || ^19.0.0`), and the `shiki`, `@shikijs/langs` and
-  `@shikijs/themes` dependency ranges now include version 3
-  (`^2.5.0 || ^3.0.0`). The package needs no code change for either.
+  (`^18.0.0 || ^19.0.0`) ([#374]). The components' return types now
+  read `React.JSX.Element`, which both React 18 and 19 types define;
+  the global `JSX` they used before is gone in `@types/react` 19.
+- The `shiki` dependency range now includes version 3
+  (`^2.5.0 || ^3.0.0`) ([#374]). The package no longer depends on
+  `@shikijs/langs` and `@shikijs/themes`, which could resolve to a
+  different major than `shiki`. It loads its grammars and theme through
+  `shiki/langs` and `shiki/themes` instead.
 
 ## 0.1.0-preview.2 — 2026-10-07
 
@@ -78,3 +83,4 @@ First publication.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#342]: https://github.com/ethdebug/format/pull/342
 [#349]: https://github.com/ethdebug/format/pull/349
+[#374]: https://github.com/ethdebug/format/pull/374

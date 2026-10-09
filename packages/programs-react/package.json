@@ -52,8 +52,6 @@
   "dependencies": {
     "@ethdebug/format": "^0.1.0-draft.2",
     "@ethdebug/pointers": "^0.1.0-preview.2",
-    "@shikijs/langs": "^2.5.0 || ^3.0.0",
-    "@shikijs/themes": "^2.5.0 || ^3.0.0",
     "shiki": "^2.5.0 || ^3.0.0"
   },
   "devDependencies": {

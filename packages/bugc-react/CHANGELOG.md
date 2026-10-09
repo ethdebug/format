@@ -7,6 +7,12 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+### Changed
+
+- The components' return types now read `React.JSX.Element` instead of the
+  global `JSX.Element`, which `@types/react` 19 removes ([#374]). The
+  peer ranges stay on React 18.
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Added
@@ -50,3 +56,4 @@ First publication.
 [#359]: https://github.com/ethdebug/format/pull/359
 [#363]: https://github.com/ethdebug/format/pull/363
 [#365]: https://github.com/ethdebug/format/pull/365
+[#374]: https://github.com/ethdebug/format/pull/374

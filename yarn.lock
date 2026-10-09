@@ -4881,7 +4881,7 @@
   dependencies:
     "@shikijs/types" "2.5.0"
 
-"@shikijs/langs@3.23.0", "@shikijs/langs@^2.5.0 || ^3.0.0":
+"@shikijs/langs@3.23.0":
   version "3.23.0"
   resolved "https://registry.yarnpkg.com/@shikijs/langs/-/langs-3.23.0.tgz#00959d8b16c7f671221ae79b3ad8cde7e6a5c112"
   integrity sha512-2Ep4W3Re5aB1/62RSYQInK9mM3HsLeB91cHqznAJMuylqjzNVAVCMnNWRHFtcNHXsoNRayP9z1qj4Sq3nMqYXg==
@@ -4895,7 +4895,7 @@
   dependencies:
     "@shikijs/types" "2.5.0"
 
-"@shikijs/themes@3.23.0", "@shikijs/themes@^2.5.0 || ^3.0.0":
+"@shikijs/themes@3.23.0":
   version "3.23.0"
   resolved "https://registry.yarnpkg.com/@shikijs/themes/-/themes-3.23.0.tgz#fd96ca5ad52639057995bc2093682884e1846f27"
   integrity sha512-5qySYa1ZgAT18HR/ypENL9cUSGOeI2x+4IvYJu4JgVJdizn6kG4ia5Q1jDEOi7gTbN4RbuYtmHh0W3eccOrjMA==

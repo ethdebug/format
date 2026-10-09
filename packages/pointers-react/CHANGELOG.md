@@ -10,7 +10,9 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 ### Changed
 
 - The `react` and `react-dom` peer ranges now include React 19
-  (`^18.0.0 || ^19.0.0`). The package needs no code change for it.
+  (`^18.0.0 || ^19.0.0`) ([#374]). The components' return types now
+  read `React.JSX.Element`, which both React 18 and 19 types define;
+  the global `JSX` they used before is gone in `@types/react` 19.
 
 ## 0.1.0-preview.2 — 2026-10-07
 
@@ -51,3 +53,4 @@ First publication.
 [#299]: https://github.com/ethdebug/format/pull/299
 [#300]: https://github.com/ethdebug/format/pull/300
 [#323]: https://github.com/ethdebug/format/pull/323
+[#374]: https://github.com/ethdebug/format/pull/374
