@@ -7,6 +7,13 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- The `react` and `react-dom` peer ranges now include React 19
+  (`^18.0.0 || ^19.0.0`), and the `shiki`, `@shikijs/langs` and
+  `@shikijs/themes` dependency ranges now include version 3
+  (`^2.5.0 || ^3.0.0`). The package needs no code change for either.
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Changed

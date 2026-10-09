@@ -7,6 +7,11 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Changed
+
+- The `react` and `react-dom` peer ranges now include React 19
+  (`^18.0.0 || ^19.0.0`). The package needs no code change for it.
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Breaking
