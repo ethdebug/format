@@ -26,12 +26,29 @@
 
 // Executor
 export { Executor } from "#executor";
-export type { ExecutionOptions, ExecutionResult } from "#executor";
+export type {
+  ExecutorOptions,
+  ExecutionOptions,
+  ExecutionResult,
+  BlockOptions,
+  DeployOptions,
+  DeployResult,
+  CallOptions,
+} from "#executor";
 
 // Machine state adapter
 export { createMachineState } from "#machine";
-export type { MachineStateOptions } from "#machine";
+export type { MachineStateOptions, StepState } from "#machine";
 
 // Trace types and Machine
 export { createTraceCollector, createMachine } from "#trace";
-export type { TraceStep, TraceHandler, Trace } from "#trace";
+export type {
+  TraceStep,
+  TraceHandler,
+  Trace,
+  TraceOptions,
+  MemoryPolicy,
+  MessageFrame,
+  FrameEvent,
+  FrameHandler,
+} from "#trace";
