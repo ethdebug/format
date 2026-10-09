@@ -7,12 +7,12 @@
 import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
-import { createMachineState } from "@ethdebug/evm";
 import { dereference } from "@ethdebug/pointers";
 import type * as Format from "@ethdebug/format";
 
 import { compile } from "#compiler";
 import { executeProgram } from "#test/evm/behavioral";
+import { createMachineState } from "@ethdebug/evm";
 import { traceLocals } from "#test/evm/locals";
 
 const levels = [0, 1, 2, 3] as const;
@@ -129,13 +129,12 @@ describe("push on a storage array", () => {
   }
 
   it("gives the pushed elements to the array's pointer", async () => {
-    const { program, executor, steps } = await traceLocals(
+    const { program, executor } = await traceLocals(
       `name Push;\nstorage { [0] h: array<uint16>; }
 code { h.push(5); h.push(7); h.push(9); }`,
     );
-    const state = createMachineState(executor, {
-      traceStep: steps[steps.length - 1],
-    });
+    // the storage after the transaction
+    const state = createMachineState(await executor.currentState());
     const variable = (
       program.context as Format.Program.Context.Variables
     ).variables.find((v) => v.identifier === "h")!;

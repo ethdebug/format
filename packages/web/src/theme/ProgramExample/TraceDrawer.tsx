@@ -23,7 +23,11 @@ import {
   type SourceRange,
   extractSourceRange,
 } from "@ethdebug/bugc-react";
-import { Executor, createTraceCollector, type TraceStep } from "@ethdebug/evm";
+import {
+  Executor,
+  createTrace,
+  type TraceStep as EvmStep,
+} from "@ethdebug/evm";
 import { dereference, Data, type Machine } from "@ethdebug/pointers";
 import { storageByStep } from "./storageByStep";
 import {
@@ -38,6 +42,9 @@ import {
 import type { Program } from "@ethdebug/format";
 import { Drawer } from "@theme/Drawer";
 import { useTracePlayground } from "./TracePlaygroundContext";
+
+/** A trace step with the stack and memory before it */
+type TraceStep = EvmStep & { stack: readonly bigint[]; memory: Uint8Array };
 
 import "./TraceDrawer.css";
 
@@ -507,11 +514,15 @@ function TraceDrawerContent(): JSX.Element {
           }
         }
 
-        const [handler, getTrace] = createTraceCollector();
-        await executor.execute({}, handler);
+        const recorded = createTrace();
+        await executor.execute({}, recorded);
 
-        const collectedTrace = getTrace();
-        setTrace(collectedTrace.steps);
+        setTrace(
+          recorded.steps.map((step, i) => {
+            const { stack, memory } = recorded.stateAt(i);
+            return { ...step, stack, memory };
+          }),
+        );
         setCurrentStep(0);
         setInitialStorage(storageEntries);
       } catch (e) {
@@ -1012,7 +1023,7 @@ function OpcodeList({
 }
 
 interface StackDisplayProps {
-  stack: bigint[];
+  stack: readonly bigint[];
 }
 
 function StackDisplay({ stack }: StackDisplayProps): JSX.Element {
@@ -1329,7 +1340,7 @@ function traceStepToState(
     Data.fromUint(v).padUntilAtLeast(32),
   );
 
-  const memoryData = step.memory ? Data.fromBytes(step.memory) : Data.zero();
+  const memoryData = Data.fromBytes(step.memory);
 
   const storageMap = new Map<string, Data>();
   for (const [slot, value] of Object.entries(storage)) {

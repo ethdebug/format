@@ -90,9 +90,7 @@ describe("storage string and bytes pointers", () => {
       it(`read ${length} bytes (level ${level})`, async () => {
         const program = source(length);
         const run = await traceLocals(program, level);
-        const state = createMachineState(run.executor, {
-          traceStep: run.steps[run.steps.length - 1],
-        });
+        const state = run.stateAt(run.steps.length - 1);
         const pointerOf = (identifier: string) =>
           (
             run.program.context as Format.Program.Context.Variables
@@ -190,7 +188,7 @@ code {
         const run = await executor.execute({ data });
         expect(run.success).toBe(true);
       }
-      const state = createMachineState(executor);
+      const state = createMachineState(await executor.currentState());
       const pointerOf = (identifier: string) =>
         (
           bytecode.runtimeProgram.context as Format.Program.Context.Variables

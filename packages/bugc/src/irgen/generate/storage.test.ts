@@ -129,7 +129,7 @@ describe("packed storage struct field pointers", () => {
           : undefined;
       expect(variable?.pointer).toBeDefined();
 
-      const state = createMachineState(executor);
+      const state = createMachineState(await executor.currentState());
       const cursor = await dereference(variable!.pointer!, { state });
       const view = await cursor.view(state);
       const read = async (name: string) =>

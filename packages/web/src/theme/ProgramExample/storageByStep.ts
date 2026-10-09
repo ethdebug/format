@@ -1,5 +1,3 @@
-import type { TraceStep } from "@ethdebug/evm";
-
 /**
  * Compute the storage that holds at each step of a trace: the
  * initial storage plus the SSTOREs executed before that step.
@@ -10,7 +8,7 @@ import type { TraceStep } from "@ethdebug/evm";
  * its operands on the stack (key on top, then value).
  */
 export function storageByStep(
-  trace: TraceStep[],
+  trace: { opcode: string; stack: readonly bigint[] }[],
   initial: Record<string, string>,
 ): Record<string, string>[] {
   const states: Record<string, string>[] = [];

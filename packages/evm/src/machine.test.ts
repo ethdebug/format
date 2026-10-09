@@ -1,203 +1,116 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Data } from "@ethdebug/pointers";
 import { Executor } from "#executor";
 import { createMachineState } from "#machine";
+import type { StepState } from "#trace";
 
 // Constructor that deploys: PUSH1 0x2a PUSH1 0x00 SSTORE STOP
 const constructorCode = "65602a600055006000526006601af3";
 
-describe("createMachineState", () => {
-  let executor: Executor;
+const memory = new Uint8Array(64);
+memory[31] = 0xff;
+memory[63] = 0xab;
 
-  beforeEach(async () => {
-    executor = new Executor();
+const stepState: StepState = {
+  stack: [100n, 200n, 0xdeadbeefn],
+  memory,
+  storage: async (slot) => (slot === 1n ? 7n : 0n),
+  transient: async (slot) => (slot === 2n ? 9n : 0n),
+  calldata: new Uint8Array([1, 2, 3, 4]),
+  returndata: new Uint8Array([5, 6]),
+  code: new Uint8Array([0x60, 0x2a]),
+};
+
+describe("createMachineState", () => {
+  it("reads the stack, top first", async () => {
+    const state = createMachineState(stepState);
+    expect(await state.stack.length).toBe(3n);
+    expect((await state.stack.peek({ depth: 0n })).asUint()).toBe(0xdeadbeefn);
+    expect((await state.stack.peek({ depth: 2n })).asUint()).toBe(100n);
+    expect((await state.stack.peek({ depth: 5n })).asUint()).toBe(0n);
+    const sliced = await state.stack.peek({
+      depth: 0n,
+      slice: { offset: 28n, length: 4n },
+    });
+    expect(sliced.asUint()).toBe(0xdeadbeefn);
+  });
+
+  it("reads memory, zero past its end", async () => {
+    const state = createMachineState(stepState);
+    expect(await state.memory.length).toBe(64n);
+    const read = (offset: bigint) =>
+      state.memory.read({ slice: { offset, length: 32n } });
+    expect((await read(0n)).asUint()).toBe(0xffn);
+    expect((await read(32n)).asUint()).toBe(0xabn);
+    expect((await read(64n)).asUint()).toBe(0n);
+  });
+
+  it("reads storage and transient storage, with slices", async () => {
+    const state = createMachineState(stepState);
+    const slot = (n: bigint) => Data.fromUint(n);
+    expect((await state.storage.read({ slot: slot(1n) })).asUint()).toBe(7n);
+    const byte = await state.storage.read({
+      slot: slot(1n),
+      slice: { offset: 31n, length: 1n },
+    });
+    expect(byte.asUint()).toBe(7n);
+    expect((await state.transient.read({ slot: slot(2n) })).asUint()).toBe(9n);
+  });
+
+  it("reads calldata, returndata and code", async () => {
+    const state = createMachineState(stepState);
+    expect(await state.calldata.length).toBe(4n);
+    const calldata = await state.calldata.read({
+      slice: { offset: 2n, length: 2n },
+    });
+    expect(calldata.asUint()).toBe(0x0304n);
+    expect(await state.returndata.length).toBe(2n);
+    const code = await state.code.read({ slice: { offset: 0n, length: 1n } });
+    expect(code.asUint()).toBe(0x60n);
+  });
+
+  it("takes the pc, opcode and trace index", async () => {
+    const state = createMachineState(stepState, {
+      pc: 10,
+      opcode: "SLOAD",
+      traceIndex: 5,
+    });
+    expect(await state.programCounter).toBe(10n);
+    expect(await state.opcode).toBe("SLOAD");
+    expect(await state.traceIndex).toBe(5n);
+
+    const defaults = createMachineState(stepState);
+    expect(await defaults.programCounter).toBe(0n);
+    expect(await defaults.opcode).toBe("STOP");
+    expect(await defaults.traceIndex).toBe(0n);
+  });
+
+  it("takes only a complete state (a type check)", () => {
+    const { storage: _, ...partial } = stepState;
+    const create = () =>
+      // @ts-expect-error: a state without storage
+      createMachineState(partial);
+    expect(create).toBeTypeOf("function");
+  });
+});
+
+describe("Executor.currentState", () => {
+  it("reads the executor's storage and code now", async () => {
+    const executor = new Executor();
     await executor.deploy(constructorCode);
     await executor.execute();
-  });
 
-  describe("end-state (no traceStep)", () => {
-    it("reads storage", async () => {
-      const state = createMachineState(executor);
-      const val = await state.storage.read({
-        slot: Data.fromUint(0n),
-      });
-      expect(val.asUint()).toBe(42n);
-    });
+    const state = createMachineState(await executor.currentState());
+    const value = await state.storage.read({ slot: Data.fromUint(0n) });
+    expect(value.asUint()).toBe(42n);
+    expect(await state.code.length).toBe(6n);
+    expect(await state.stack.length).toBe(0n);
+    expect(await state.memory.length).toBe(0n);
+    expect(await state.calldata.length).toBe(0n);
 
-    it("reads storage with slice", async () => {
-      const state = createMachineState(executor);
-      const val = await state.storage.read({
-        slot: Data.fromUint(0n),
-        slice: { offset: 31n, length: 1n },
-      });
-      // 42 = 0x2a, in a 32-byte big-endian word the
-      // last byte is at offset 31
-      expect(val.asUint()).toBe(42n);
-    });
-
-    it("returns zero for stack", async () => {
-      const state = createMachineState(executor);
-      expect(await state.stack.length).toBe(0n);
-      const val = await state.stack.peek({ depth: 0n });
-      expect(val.asUint()).toBe(0n);
-    });
-
-    it("returns zero for memory", async () => {
-      const state = createMachineState(executor);
-      expect(await state.memory.length).toBe(0n);
-      const val = await state.memory.read({
-        slice: { offset: 0n, length: 32n },
-      });
-      expect(val.asUint()).toBe(0n);
-    });
-
-    it("uses default context values", async () => {
-      const state = createMachineState(executor);
-      expect(await state.programCounter).toBe(0n);
-      expect(await state.opcode).toBe("STOP");
-      expect(await state.traceIndex).toBe(0n);
-    });
-
-    it("accepts context overrides", async () => {
-      const state = createMachineState(executor, {
-        programCounter: 10n,
-        opcode: "SLOAD",
-        traceIndex: 5n,
-      });
-      expect(await state.programCounter).toBe(10n);
-      expect(await state.opcode).toBe("SLOAD");
-      expect(await state.traceIndex).toBe(5n);
-    });
-
-    it("reads code length", async () => {
-      const state = createMachineState(executor);
-      const len = await state.code.length;
-      // Deployed runtime is 6 bytes (storeValueCode)
-      expect(len).toBe(6n);
-    });
-
-    it("reads code bytes", async () => {
-      const state = createMachineState(executor);
-      const data = await state.code.read({
-        slice: { offset: 0n, length: 1n },
-      });
-      // First byte of "602a60005500" is 0x60 (PUSH1)
-      expect(data.asUint()).toBe(0x60n);
-    });
-  });
-
-  describe("with traceStep", () => {
-    it("reads stack from trace step", async () => {
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 0,
-          opcode: "SSTORE",
-          stack: [100n, 200n, 300n],
-        },
-      });
-
-      expect(await state.stack.length).toBe(3n);
-
-      // depth 0 = top of stack = last element
-      const top = await state.stack.peek({ depth: 0n });
-      expect(top.asUint()).toBe(300n);
-
-      // depth 1 = second from top
-      const second = await state.stack.peek({
-        depth: 1n,
-      });
-      expect(second.asUint()).toBe(200n);
-
-      // depth 2 = bottom
-      const bottom = await state.stack.peek({
-        depth: 2n,
-      });
-      expect(bottom.asUint()).toBe(100n);
-    });
-
-    it("returns zero for out-of-bounds depth", async () => {
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 0,
-          opcode: "PUSH1",
-          stack: [42n],
-        },
-      });
-
-      const val = await state.stack.peek({ depth: 5n });
-      expect(val.asUint()).toBe(0n);
-    });
-
-    it("supports stack peek with slice", async () => {
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 0,
-          opcode: "PUSH1",
-          stack: [0xdeadbeefn],
-        },
-      });
-
-      // 0xdeadbeef padded to 32 bytes, last 4 bytes
-      const val = await state.stack.peek({
-        depth: 0n,
-        slice: { offset: 28n, length: 4n },
-      });
-      expect(val.asUint()).toBe(0xdeadbeefn);
-    });
-
-    it("reads memory from trace step", async () => {
-      const mem = new Uint8Array(64);
-      mem[31] = 0xff;
-      mem[63] = 0xab;
-
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 0,
-          opcode: "MLOAD",
-          stack: [],
-          memory: mem,
-        },
-      });
-
-      expect(await state.memory.length).toBe(64n);
-
-      const word1 = await state.memory.read({
-        slice: { offset: 0n, length: 32n },
-      });
-      expect(word1.asUint()).toBe(0xffn);
-
-      const word2 = await state.memory.read({
-        slice: { offset: 32n, length: 32n },
-      });
-      expect(word2.asUint()).toBe(0xabn);
-    });
-
-    it("derives pc/opcode from trace step", async () => {
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 42,
-          opcode: "JUMPDEST",
-          stack: [],
-        },
-      });
-
-      expect(await state.programCounter).toBe(42n);
-      expect(await state.opcode).toBe("JUMPDEST");
-    });
-
-    it("allows overriding trace step context", async () => {
-      const state = createMachineState(executor, {
-        traceStep: {
-          pc: 42,
-          opcode: "JUMPDEST",
-          stack: [],
-        },
-        programCounter: 99n,
-        opcode: "STOP",
-      });
-
-      expect(await state.programCounter).toBe(99n);
-      expect(await state.opcode).toBe("STOP");
-    });
+    // it reads live: a later change shows
+    await executor.setStorage(0n, 43n);
+    const later = await state.storage.read({ slot: Data.fromUint(0n) });
+    expect(later.asUint()).toBe(43n);
   });
 });

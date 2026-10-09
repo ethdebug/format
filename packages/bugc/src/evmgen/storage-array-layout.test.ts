@@ -12,11 +12,11 @@
 import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
-import { createMachineState } from "@ethdebug/evm";
 import { dereference } from "@ethdebug/pointers";
 import type * as Format from "@ethdebug/format";
 
 import { executeProgram } from "#test/evm/behavioral";
+import { createMachineState } from "@ethdebug/evm";
 import { traceLocals } from "#test/evm/locals";
 
 const levels = [0, 1, 2, 3] as const;
@@ -155,12 +155,11 @@ describe("storage array pointers", () => {
   for (const [name, { source, pointers }] of Object.entries(cases)) {
     if (!pointers) continue;
     it(name, async () => {
-      const { program, executor, steps } = await traceLocals(
+      const { program, executor } = await traceLocals(
         `name Layout;\n${source}`,
       );
-      const state = createMachineState(executor, {
-        traceStep: steps[steps.length - 1],
-      });
+      // the storage after the transaction
+      const state = createMachineState(await executor.currentState());
       for (const [identifier, regions] of Object.entries(pointers)) {
         const variable = (
           program.context as Format.Program.Context.Variables
