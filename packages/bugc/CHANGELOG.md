@@ -7,6 +7,54 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Added
+
+- A struct copied from storage to memory may have `string` and `bytes`
+  fields: each field's word holds the address of its own copy. A struct
+  in memory assigned to storage (`players[msg.sender] = player;`) is
+  copied field by field, each to its bytes in its slot, and a `string`
+  or `bytes` field as Solidity encodes it, clearing the data words the
+  old value used past the new one's ([#377]).
+- A struct local's pointer is a group of its fields: each field's bytes
+  in its word in memory and, for a `string` or `bytes` field, the
+  field's word, then the length and data it refers to. Regions are
+  named after the local and the field (`player-score`, `player-name`,
+  `player-name-length`, `player-name-data`) ([#377]).
+
+### Changed
+
+- A struct member of a struct in storage now takes all the slots its
+  struct needs, as in Solidity, and the member after it starts at the
+  next free slot. Before, it took one slot, so the members after a
+  struct of two or more slots shared slots with it. This moves those
+  members, and data stored by a contract that an earlier bugc compiled
+  is not where the new build reads it. For example, with
+  `struct Inner { a: uint256; b: uint8; }` and
+  `struct Outer { x: uint8; inner: Inner; y: uint16; }`, `y` is now in
+  slot 3 of an `Outer`, after `inner` in slots 1 and 2. Before, `y` was
+  in slot 2 ([#377]).
+
+### Fixed
+
+- Reading a `string` or `bytes` from storage as a whole, as in
+  `let m: string = motd;`, now copies it to memory, decoded from its
+  storage encoding. This also corrects an index (`data[3]`), a slice
+  (`data[2:40]`), `.length` of a struct member (`p.s.length`), and
+  `keccak256(data)` of a `string` or `bytes` in storage. Before, the
+  value was the slot's word, used as if it were a memory address, so
+  these reverted or read the wrong bytes ([#377]).
+- Assigning a struct in memory to storage now writes each of its
+  fields. Before, it wrote the struct's memory address to the first
+  slot ([#377]).
+- Copying an array to or from storage, which bugc does not support, is
+  now an error: an array read from storage as a whole, as in
+  `let m: array<uint256> = items;`, an array in memory assigned to a
+  struct member or mapping value in storage, as in
+  `bag.items = [1, 2];`, and a struct with an array field copied either
+  way. Before, these compiled to a copy of the slot's word, or wrote
+  the memory address to the slot. An array literal assigned to a storage array variable
+  (`items = [1, 2];`) still compiles ([#377]).
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Added
@@ -460,3 +508,4 @@ First publication.
 [#369]: https://github.com/ethdebug/format/pull/369
 [#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
+[#377]: https://github.com/ethdebug/format/pull/377

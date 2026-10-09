@@ -133,9 +133,58 @@ describe("generateModule error handling", () => {
       severity: Severity.Error,
     }).map((d) => d.message);
     expect(messages).toContainEqual(
-      expect.stringContaining(
-        "Cannot copy struct Bag from storage: its field items",
-      ),
+      "bugc cannot copy struct Bag to or from storage: field items is " +
+        "array<uint256>, and bugc can copy only value, string, bytes, " +
+        "and struct fields",
+    );
+  });
+
+  it("should reject an array copy from storage", async () => {
+    const source = `
+      name Test;
+      storage {
+        [0] items: array<uint256>;
+      }
+      code {
+        let m: array<uint256> = items;
+      }
+    `;
+
+    const result = await compileTest(source);
+
+    expect(result.success).toBe(false);
+    const messages = Result.findMessages(result, {
+      severity: Severity.Error,
+    }).map((d) => d.message);
+    expect(messages).toContainEqual(
+      "bugc cannot copy array<uint256> to or from storage",
+    );
+  });
+
+  it("should reject an array copy to storage", async () => {
+    const source = `
+      name Test;
+      define {
+        struct Bag {
+          items: array<uint256>;
+        };
+      }
+      storage {
+        [0] bag: Bag;
+      }
+      code {
+        bag.items = [1, 2];
+      }
+    `;
+
+    const result = await compileTest(source);
+
+    expect(result.success).toBe(false);
+    const messages = Result.findMessages(result, {
+      severity: Severity.Error,
+    }).map((d) => d.message);
+    expect(messages).toContainEqual(
+      "bugc cannot copy array<uint256> to or from storage",
     );
   });
 });

@@ -25,10 +25,12 @@ export function computeStructLayout(
         currentSlotUsed = 0;
       }
 
-      // A fixed-size array is inline, so it takes all its slots
-      const size = Type.isArray(fieldType)
-        ? Storage.slots(fieldType) * SLOT_SIZE
-        : SLOT_SIZE;
+      // A fixed-size array or a struct is inline, so it takes all its
+      // slots
+      const size =
+        Type.isArray(fieldType) || Type.isStruct(fieldType)
+          ? Storage.slots(fieldType) * SLOT_SIZE
+          : SLOT_SIZE;
       layout.set(fieldName, { byteOffset: currentSlotOffset, size });
 
       // Move to the slot after it

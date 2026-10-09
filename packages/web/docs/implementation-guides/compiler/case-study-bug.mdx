@@ -303,7 +303,8 @@ For structs, BUG generates group pointers with field offsets:
 
 BUG lays storage arrays out as Solidity does. A fixed-size array is
 inline: its elements start at its own slot, and a struct member or the
-next storage variable must leave room for all of its slots. A dynamic
+next storage variable must leave room for all of its slots. A struct
+member that is a struct is inline too, and takes all of its slots. A dynamic
 array keeps its length in its slot, and its elements start at
 `keccak256(slot)`. Either way, elements narrower than 16 bytes share a
 slot, as many as fit, from its low-order end; any other element starts
