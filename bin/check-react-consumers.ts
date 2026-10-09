@@ -17,6 +17,9 @@ const packed = [
 const pairs = [
   { react: "18", types: "18", shiki: "2.5" },
   { react: "19", types: "19", shiki: "3" },
+  // the ranges allow shiki next to grammars and themes of the other major
+  { react: "19", types: "19", shiki: "2.5", sub: "3" },
+  { react: "18", types: "18", shiki: "3", sub: "2.5" },
 ];
 
 const maxBundleKb = 400;
@@ -33,8 +36,8 @@ const tarballs = packed.map((name) => {
   return join(root, out.trim().split("\n").pop()!);
 });
 
-for (const { react, types, shiki } of pairs) {
-  const dir = join(root, `react-${react}`);
+for (const { react, types, shiki, sub = shiki } of pairs) {
+  const dir = join(root, `react-${react}-shiki-${shiki}-sub-${sub}`);
   mkdirSync(dir);
   writeFileSync(
     join(dir, "package.json"),
@@ -73,6 +76,8 @@ export const b = Pointers;
       `@types/react@${types}`,
       `@types/react-dom@${types}`,
       `shiki@${shiki}`,
+      `@shikijs/langs@${sub}`,
+      `@shikijs/themes@${sub}`,
       "typescript",
       "esbuild",
       "@types/node@20",
@@ -107,5 +112,23 @@ export const b = Pointers;
   if (kb > maxBundleKb) {
     throw new Error(`bundle is ${kb} KB gzipped; limit is ${maxBundleKb}`);
   }
-  console.log(`ok: React ${react} + shiki ${shiki}, bundle ${kb} KB gz`);
+  // highlight Solidity the way the package's highlighter does
+  writeFileSync(
+    join(dir, "highlight.mjs"),
+    `import * as Shiki from "shiki/core";
+import { createOnigurumaEngine } from "shiki/engine/oniguruma";
+const h = await Shiki.createHighlighterCore({
+  themes: [import("@shikijs/themes/github-light")],
+  langs: [import("@shikijs/langs/solidity")],
+  engine: createOnigurumaEngine(import("shiki/wasm")),
+});
+const html = h.codeToHtml("contract A { uint x; }", {
+  lang: "solidity",
+  theme: "github-light",
+});
+if (!/<span style="color:#/.test(html)) throw new Error("no styled spans");
+`,
+  );
+  run("node", ["highlight.mjs"], dir);
+  console.log(`ok: React ${react} + shiki ${shiki}/${sub}, bundle ${kb} KB gz`);
 }
