@@ -52,6 +52,10 @@ support. Changes to the specification itself are tracked in the root
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
+- A local defined before a call keeps its pointer after the call.
+  The dominator tree that local-variable tracking uses left out a
+  call's edge to its continuation, so every local defined before a call
+  was listed with no pointer from the call on ([#378]).
 - Reading a `string` or `bytes` from storage as a whole, as in
   `let m: string = motd;`, now copies it to memory, decoded from its
   storage encoding. This also corrects an index (`data[3]`), a slice
@@ -525,4 +529,5 @@ First publication.
 [#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
 [#377]: https://github.com/ethdebug/format/pull/377
+[#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
