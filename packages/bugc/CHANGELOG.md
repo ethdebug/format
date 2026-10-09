@@ -14,28 +14,28 @@ support. Changes to the specification itself are tracked in the root
   in memory assigned to storage (`players[msg.sender] = player;`) is
   copied field by field, each to its bytes in its slot, and a `string`
   or `bytes` field as Solidity encodes it, clearing the data words the
-  old value used past the new one's ([#PR]).
+  old value used past the new one's ([#377]).
 - A struct local's pointer is a group of its fields: each field's bytes
   in its word in memory and, for a `string` or `bytes` field, the
   field's word, then the length and data it refers to. Regions are
   named after the local and the field (`player-score`, `player-name`,
-  `player-name-length`, `player-name-data`) ([#PR]).
+  `player-name-length`, `player-name-data`) ([#377]).
 
 ### Fixed
 
 - Reading a `string` or `bytes` from storage as a whole, as in
   `let m: string = motd;`, now copies it to memory, decoded from its
   storage encoding. Before, the local held the slot's word as if it
-  were a memory address ([#PR]).
+  were a memory address ([#377]).
 - Assigning a struct in memory to storage now writes each of its
   fields. Before, it wrote the struct's memory address to the first
-  slot ([#PR]).
+  slot ([#377]).
 - A struct field of a struct in storage now takes all the slots the
   field's struct needs, as in Solidity. Before, it took one slot, and
-  the fields after it shared the slots of its fields ([#PR]).
+  the fields after it shared the slots of its fields ([#377]).
 - Copying an array between storage and memory, which bugc does not
   support, is now an error. Before, it compiled to a copy of the slot's
-  word ([#PR]).
+  word ([#377]).
 
 ## 0.1.0-preview.2 — 2026-10-07
 
@@ -490,3 +490,4 @@ First publication.
 [#369]: https://github.com/ethdebug/format/pull/369
 [#370]: https://github.com/ethdebug/format/pull/370
 [#371]: https://github.com/ethdebug/format/pull/371
+[#377]: https://github.com/ethdebug/format/pull/377
