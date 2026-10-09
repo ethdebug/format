@@ -170,7 +170,7 @@ export const dynamicBytes = (typeNode: Ast.Type.Elementary.Bytes): Type =>
     : Type.Elementary.bytes();
 
 /** `string`, or `string calldata` */
-export const string = (typeNode: Ast.Type.Elementary.String): Type =>
+export const elementaryString = (typeNode: Ast.Type.Elementary.String): Type =>
   typeNode.location === "calldata"
     ? Type.Elementary.calldataString()
     : Type.Elementary.string();
@@ -241,7 +241,7 @@ export function resolveTypeWithBindings(
       return { type: Type.Elementary.bool(), bindings };
     }
     if (Ast.Type.Elementary.isString(typeNode)) {
-      return { type: string(typeNode), bindings };
+      return { type: elementaryString(typeNode), bindings };
     }
     return {
       type: Type.failure(`Unknown elementary type: ${typeNode.kind}`),
@@ -364,7 +364,7 @@ export function resolveType(
       return Type.Elementary.bool();
     }
     if (Ast.Type.Elementary.isString(typeNode)) {
-      return string(typeNode);
+      return elementaryString(typeNode);
     }
     return Type.failure(`Unknown elementary type: ${typeNode.kind}`);
   }

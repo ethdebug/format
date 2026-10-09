@@ -380,11 +380,11 @@ export const blockChecker: Pick<
         // Determine the variable's type
         let type: Type;
         if (node.type) {
-          // `bytes calldata` is only the whole type
+          // `bytes calldata` and `string calldata` are only the whole
+          // type
           const calldata = calldataTypeNode(node.type);
-          if (calldata && calldata !== node.type) {
-            errors.push(calldataTypeError(calldata));
-          }
+          const misplaced = calldata !== undefined && calldata !== node.type;
+          if (misplaced) errors.push(calldataTypeError(calldata));
 
           // If a type is explicitly declared, use it and record bindings
           const typeResult = resolveTypeWithBindings(
@@ -392,7 +392,10 @@ export const blockChecker: Pick<
             context.structs,
             bindings,
           );
-          type = typeResult.type;
+          // (a misplaced calldata type fails, with no further errors)
+          type = misplaced
+            ? Type.failure("misplaced calldata type")
+            : typeResult.type;
           bindings = typeResult.bindings;
 
           // Check that the initializer is compatible with the declared type

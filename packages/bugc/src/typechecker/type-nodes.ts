@@ -3,7 +3,7 @@ import { Type } from "#types";
 import type { Visitor } from "#ast";
 import type { Context, Report } from "./context.js";
 import { Error as TypeError, ErrorCode, ErrorMessages } from "./errors.js";
-import { dynamicBytes, string } from "./declarations.js";
+import { dynamicBytes, elementaryString } from "./declarations.js";
 
 /**
  * Type checker for type AST nodes.
@@ -53,7 +53,7 @@ export const typeNodeChecker: Pick<Visitor<Report, Context>, "type"> = {
       } else if (Ast.Type.Elementary.isBool(node)) {
         type = Type.Elementary.bool();
       } else if (Ast.Type.Elementary.isString(node)) {
-        type = string(node);
+        type = elementaryString(node);
       } else {
         type = Type.failure(`Unknown elementary type: ${node.kind}`);
       }
