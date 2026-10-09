@@ -6,6 +6,14 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Fixed
+
+- The published type declarations no longer reference Node's `util` types.
+  `Data.inspect` and its `util.inspect.custom` hook used
+  `util.InspectOptionsStylized`, which newer `@types/node` versions no longer
+  export, so consumers that type-checked with `skipLibCheck: false` got errors.
+  The options parameter is now a small local interface.
+
 ## 0.1.0-preview.2 — 2026-10-07
 
 ### Changed
