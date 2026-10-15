@@ -46,8 +46,9 @@ support. Changes to the specification itself are tracked in the root
 - `==` and `!=` on arrays, structs and mappings are now type errors,
   as in Solidity. Before, an array or struct in memory, or a struct
   copied from storage, compared by its address in memory, so equal
-  contents in two places were unequal; an array in storage failed in
-  IR generation ([#397]).
+  contents in two places were unequal; a mapping compared its own
+  slot, so it always equaled itself; an array in storage failed in IR
+  generation ([#397]).
 - A struct member of a struct in storage now takes all the slots its
   struct needs, as in Solidity, and the member after it starts at the
   next free slot. Before, it took one slot, so the members after a
