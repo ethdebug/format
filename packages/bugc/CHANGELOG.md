@@ -59,6 +59,11 @@ support. Changes to the specification itself are tracked in the root
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
+- At optimization level 2 and up, an inlined function's `invoke` stays
+  on its own path. Common subexpression elimination folded the inlined
+  body's first instruction into an equal one before the branch (as a
+  read of `msg.data` in a dispatch), with its invoke, so every run
+  invoked the function and never returned ([#384]).
 - A local defined before a call keeps its pointer after the call.
   The dominator tree that local-variable tracking uses left out a
   call's edge to its continuation, so every local defined before a call
@@ -539,3 +544,4 @@ First publication.
 [#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
 [#383]: https://github.com/ethdebug/format/pull/383
+[#384]: https://github.com/ethdebug/format/pull/384
