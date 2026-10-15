@@ -76,7 +76,9 @@ export namespace Instruction {
     stackLocals?: Array<{
       identifier: string;
       temp: string;
-      size: number;
+      /** The regions in the temp's word: each `length` bytes, `offset`
+       * bytes from its most significant byte */
+      parts: Array<{ name: string; offset: number; length: number }>;
       /** For a reference, the pointers to the data it refers to */
       data?: Format.Pointer[];
     }>;

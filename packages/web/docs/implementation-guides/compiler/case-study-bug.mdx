@@ -210,10 +210,12 @@ join(name);                      // passes the word; copies nothing
 
 A value of bytes in calldata is one word: the offset of the first byte
 in the high 128 bits, and the length in the low 128 bits. A local's
-pointer names that word and then the bytes in calldata. The region
-`text-data` reads exactly the bytes, even when, as above, the offset
-and length are computed while the program runs. A `string calldata`
-local has the same pointer, and the type `{ "kind": "string" }`:
+pointer names each half of that word as its own region (`text-offset`,
+the word's first 16 bytes, and `text-length`, its last 16), and then
+the bytes in calldata. The region `text-data` reads those two regions,
+and so reads exactly the bytes, even when, as above, the offset and
+length are computed while the program runs. A `string calldata` local
+has the same pointer, and the type `{ "kind": "string" }`:
 
 <SchemaExample
   schema="pointer/collection/group"
@@ -222,22 +224,25 @@ local has the same pointer, and the type `{ "kind": "string" }`:
 >
   {`{
   "group": [
-    { "name": "text", "location": "stack", "slot": 2 },
+    {
+      "name": "text-offset",
+      "location": "stack",
+      "slot": 2,
+      "offset": 0,
+      "length": 16
+    },
+    {
+      "name": "text-length",
+      "location": "stack",
+      "slot": 2,
+      "offset": 16,
+      "length": 16
+    },
     {
       "name": "text-data",
       "location": "calldata",
-      "offset": {
-        "~quotient": [
-          { "~read": "text" },
-          "0x100000000000000000000000000000000"
-        ]
-      },
-      "length": {
-        "~remainder": [
-          { "~read": "text" },
-          "0x100000000000000000000000000000000"
-        ]
-      }
+      "offset": { "~read": "text-offset" },
+      "length": { "~read": "text-length" }
     }
   ]
 }`}

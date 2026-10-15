@@ -62,6 +62,13 @@ support. Changes to the specification itself are tracked in the root
 - The `advanced/token-registry.bug` example is no longer marked work
   in progress. It compiles, and runs the same, at every optimization
   level ([#395]).
+- The pointer of a local of bytes or a string in calldata names each
+  half of the local's word as its own region: `x-offset`, the word's
+  high 16 bytes, and `x-length`, its low 16 bytes. The `calldata`
+  region `x-data` reads its offset and length from those regions.
+  Before, the pointer named the whole word `x`, and `x-data` took its
+  offset and length as `~quotient` and `~remainder` of that word by
+  2^128. The bytes the pointer reads are the same ([#398]).
 
 ### Fixed
 
@@ -588,3 +595,4 @@ First publication.
 [#391]: https://github.com/ethdebug/format/pull/391
 [#395]: https://github.com/ethdebug/format/pull/395
 [#397]: https://github.com/ethdebug/format/pull/397
+[#398]: https://github.com/ethdebug/format/pull/398
