@@ -204,14 +204,23 @@ describe("ReturnMergingStep", () => {
   // A call's continuation is entered only from its call, so it is
   // neither removed nor entered by a jump. Each `return;` here is a
   // block of its own; the order puts the continuation after, then
-  // before, the other return
-  const program = (body: string) => `name ReturnAfterCall;
-define {
-  function f(n: uint256) -> uint256 {
+  // before, the other return. The callee returns a value or nothing
+  // (a call with no `dest`)
+  const callees = {
+    value: `function f(n: uint256) -> uint256 {
     if (n == 0) { return 0; }
     r = r + 1;
     return f(n - 1);
+  };`,
+    void: `function f(n: uint256) {
+    if (n == 0) { return; }
+    r = r + 1;
+    f(n - 1);
+  };`,
   };
+  const program = (callee: string, body: string) => `name ReturnAfterCall;
+define {
+  ${callee}
 }
 storage { [0] r: uint256; }
 create {}
@@ -234,45 +243,49 @@ ${body}
   };
 
   for (const [name, body] of Object.entries(variants)) {
-    it(`keeps a call's continuation apart (${name})`, async () => {
-      const source = program(body);
+    for (const [returns, callee] of Object.entries(callees)) {
+      it(`keeps a call's continuation apart (${name}, ${returns})`, async () => {
+        const source = program(callee, body);
 
-      const compiled = await compile({
-        to: "ir",
-        source,
-        optimizer: { level: 3 },
-      });
-      if (!compiled.success) throw new Error("compile failed");
-      const { blocks } = compiled.value.ir.main;
-      const continuations = [...blocks.values()].flatMap((block) =>
-        block.terminator.kind === "call" ? [block.terminator.continuation] : [],
-      );
-      expect(continuations).not.toHaveLength(0);
-      for (const continuation of continuations) {
-        expect(blocks.has(continuation)).toBe(true);
-        for (const block of blocks.values()) {
-          const { terminator } = block;
-          const targets =
-            terminator.kind === "jump"
-              ? [terminator.target]
-              : terminator.kind === "branch"
-                ? [terminator.trueTarget, terminator.falseTarget]
-                : [];
-          expect(targets).not.toContain(continuation);
-        }
-      }
-
-      for (const [calldata, expected] of [
-        ["", 0n],
-        ["0x01", 2n],
-      ] as const) {
-        const result = await executeProgram(source, {
-          calldata,
-          optimizationLevel: 3,
+        const compiled = await compile({
+          to: "ir",
+          source,
+          optimizer: { level: 3 },
         });
-        expect(result.callSuccess).toBe(true);
-        expect(await result.getStorage(0n)).toBe(expected);
-      }
-    });
+        if (!compiled.success) throw new Error("compile failed");
+        const { blocks } = compiled.value.ir.main;
+        const continuations = [...blocks.values()].flatMap((block) =>
+          block.terminator.kind === "call"
+            ? [block.terminator.continuation]
+            : [],
+        );
+        expect(continuations).not.toHaveLength(0);
+        for (const continuation of continuations) {
+          expect(blocks.has(continuation)).toBe(true);
+          for (const block of blocks.values()) {
+            const { terminator } = block;
+            const targets =
+              terminator.kind === "jump"
+                ? [terminator.target]
+                : terminator.kind === "branch"
+                  ? [terminator.trueTarget, terminator.falseTarget]
+                  : [];
+            expect(targets).not.toContain(continuation);
+          }
+        }
+
+        for (const [calldata, expected] of [
+          ["", 0n],
+          ["0x01", 2n],
+        ] as const) {
+          const result = await executeProgram(source, {
+            calldata,
+            optimizationLevel: 3,
+          });
+          expect(result.callSuccess).toBe(true);
+          expect(await result.getStorage(0n)).toBe(expected);
+        }
+      });
+    }
   }
 });
