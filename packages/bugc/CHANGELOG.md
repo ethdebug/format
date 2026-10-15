@@ -53,6 +53,9 @@ support. Changes to the specification itself are tracked in the root
   `struct Outer { x: uint8; inner: Inner; y: uint16; }`, `y` is now in
   slot 3 of an `Outer`, after `inner` in slots 1 and 2. Before, `y` was
   in slot 2 ([#377]).
+- The `advanced/token-registry.bug` example is no longer marked work
+  in progress. It compiles, and runs the same, at every optimization
+  level ([#395]).
 
 ### Fixed
 
@@ -572,3 +575,4 @@ First publication.
 [#384]: https://github.com/ethdebug/format/pull/384
 [#388]: https://github.com/ethdebug/format/pull/388
 [#391]: https://github.com/ethdebug/format/pull/391
+[#395]: https://github.com/ethdebug/format/pull/395

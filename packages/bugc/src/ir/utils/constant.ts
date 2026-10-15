@@ -7,6 +7,10 @@ import { Type } from "../spec/type.js";
  * `string` is its text, in UTF-8, and `bytes` (from a hex literal too
  * long for a word) are the bytes the "0x…" hex names. Code generation
  * stores these bytes, and constant folding hashes them.
+ *
+ * The encoding follows the constant's TYPE, so a fold of a string
+ * constant across `as bytes` must re-encode its value ("0x" + hex of
+ * the UTF-8), not only retype it.
  */
 export function constantBytes(value: string, type: Type): Uint8Array {
   const isString =
