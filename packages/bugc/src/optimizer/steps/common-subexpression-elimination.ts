@@ -42,6 +42,19 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         // (cleared on side effects)
         const expressions = new Map<string, Ir.Instruction>();
         const newInstructions: Ir.Instruction[] = [];
+        // The debug of eliminated instructions whose invoke or return
+        // waits for the next instruction kept on their path
+        let removed: Ir.Instruction.Debug | undefined;
+        const keep = (inst: Ir.Instruction) => {
+          if (removed) {
+            inst.operationDebug = Ir.Utils.withActivationsOf(
+              removed,
+              inst.operationDebug,
+            );
+            removed = undefined;
+          }
+          newInstructions.push(inst);
+        };
 
         for (const inst of block.instructions) {
           // Apply any replacements to this instruction
@@ -87,9 +100,16 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
               "dest" in processedInst &&
               "dest" in existingInst
             ) {
-              // This is a duplicate - combine debug contexts
+              // This is a duplicate - combine debug contexts. The
+              // existing instruction may run on other paths, too (it
+              // dominates this one): an invoke or return of this one
+              // stays on this path, with the next instruction kept
               existingInst.operationDebug = Ir.Utils.combineDebugContexts(
                 existingInst.operationDebug,
+                Ir.Utils.withoutActivationsDebug(processedInst.operationDebug),
+              );
+              removed = Ir.Utils.withActivationsOf(
+                removed,
                 processedInst.operationDebug,
               );
 
@@ -115,19 +135,25 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
                   });
                 }
               }
-              newInstructions.push(processedInst);
+              keep(processedInst);
             }
           } else if (this.hasSideEffects(processedInst)) {
             // Instructions with side effects invalidate our expression
             // tracking
             expressions.clear();
-            newInstructions.push(processedInst);
+            keep(processedInst);
           } else {
-            newInstructions.push(processedInst);
+            keep(processedInst);
           }
         }
 
         block.instructions = newInstructions;
+        if (removed) {
+          block.terminator.operationDebug = Ir.Utils.withActivationsOf(
+            removed,
+            block.terminator.operationDebug,
+          );
+        }
       }
 
       // Now apply replacements to phi nodes and terminators in a second

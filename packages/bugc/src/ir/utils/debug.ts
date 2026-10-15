@@ -540,3 +540,41 @@ export function withActivations(
       : { ...rest, gather: markers }
   ) as Format.Program.Context;
 }
+
+/** A debug without its `invoke` and `return` discriminators */
+export function withoutActivationsDebug(
+  debug: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  const { context: _, ...rest } = debug ?? {};
+  const context = withoutActivations(debug?.context);
+  return { ...rest, ...(context ? { context } : {}) };
+}
+
+/**
+ * The debug of the instruction that runs next on a removed
+ * instruction's path (`onto`), with the removed one's `invoke` and
+ * `return` discriminators moved onto it. An invoke or a return marks
+ * a point on one path: it must not go with a removed instruction, or
+ * onto one that runs elsewhere. Its calls open before `onto`'s own and
+ * close before them; if it returns, `onto` lists the caller's
+ * variables once returned (unless `onto` returns, too).
+ */
+export function withActivationsOf(
+  removed: Ir.Instruction.Debug | undefined,
+  onto: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  const invokes = activationsOf(removed?.context, "invoke");
+  const returns = activationsOf(removed?.context, "return");
+  if (invokes.length === 0 && returns.length === 0) return onto ?? {};
+  const own = onto?.context;
+  const context = withActivations(withoutActivations(own), {
+    invokes: [...invokes, ...activationsOf(own, "invoke")],
+    returns: [...returns, ...activationsOf(own, "return")],
+  });
+  const returned = onto?.returned ?? removed?.returned;
+  return {
+    ...onto,
+    ...(context ? { context } : {}),
+    ...(returns.length > 0 && returned ? { returned } : {}),
+  };
+}
