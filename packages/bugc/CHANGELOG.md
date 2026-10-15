@@ -14,7 +14,7 @@ support. Changes to the specification itself are tracked in the root
   as its word (offset and length) and is not copied to memory, both in
   a real call and when the function is inlined. Its argument must be a
   string or bytes in calldata, as for a `let` of that type. The
-  parameter's pointer is that of a calldata `let` ([#PR]).
+  parameter's pointer is that of a calldata `let` ([#383]).
 - `string calldata`, a string in calldata, as `bytes calldata` is bytes
   in calldata: `let name: string calldata = msg.data[a:b] as string calldata;`
   refers to the calldata and copies nothing. Bytes and a string in
@@ -537,3 +537,4 @@ First publication.
 [#377]: https://github.com/ethdebug/format/pull/377
 [#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
+[#383]: https://github.com/ethdebug/format/pull/383
