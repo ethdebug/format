@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { compile } from "#compiler";
 import type * as Ir from "#ir";
+import { executeProgram } from "#test/evm/behavioral";
 
 describe("CommonSubexpressionEliminationStep", () => {
   // `msg.value` before and after a call that is not inlined (it
@@ -36,6 +37,35 @@ code { r = g(3); }`;
             inst.kind === "env" && inst.op === "msg_value",
         );
       expect(values).toHaveLength(2);
+    });
+  }
+
+  // `msg.sender` twice: the second one is a call's argument, so the
+  // call must take the first one's value in its place
+  const callArgument = `name CallArg;
+define {
+  function f(a: address, n: uint256) -> address {
+    if (n == 0) { return a; }
+    return f(a, n - 1);
+  };
+}
+storage { [0] first: address; [1] passed: address; }
+create {}
+code {
+  first = msg.sender;
+  passed = f(msg.sender, 2);
+}`;
+
+  for (const level of [2, 3] as const) {
+    it(`replaces a call's argument (level ${level})`, async () => {
+      const result = await executeProgram(callArgument, {
+        calldata: "",
+        optimizationLevel: level,
+      });
+      expect(result.callSuccess).toBe(true);
+      const first = await result.getStorage(0n);
+      expect(first).not.toBe(0n);
+      expect(await result.getStorage(1n)).toBe(first);
     });
   }
 });
