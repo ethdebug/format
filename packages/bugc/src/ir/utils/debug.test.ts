@@ -4,6 +4,7 @@ import {
   combineDebugContexts,
   dropInstructions,
   markersOf,
+  withoutActivationsDebug,
   placeActivations,
 } from "./debug.js";
 
@@ -193,5 +194,18 @@ describe("combineDebugContexts", () => {
     });
     expect(names(combined)).toEqual(["invoke f"]);
     expect(combined.callOrigin).toEqual(callOrigin);
+  });
+
+  it("keeps no call origin from a debug its invokes were taken off", () => {
+    // The invoke kept has no call origin: none is paired with it
+    const combined = combineDebugContexts(
+      withoutActivationsDebug({
+        ...debug(invoke("e")),
+        callOrigin: { function: "main", block: "entry", index: 2 },
+      }),
+      debug(invoke("f")),
+    );
+    expect(names(combined)).toEqual(["invoke f"]);
+    expect(combined.callOrigin).toBeUndefined();
   });
 });

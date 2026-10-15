@@ -547,11 +547,14 @@ export function withActivations(
   ) as Format.Program.Context;
 }
 
-/** A debug without its `invoke` and `return` discriminators */
+/**
+ * A debug without its `invoke` and `return` discriminators, nor the
+ * call origin of its invokes
+ */
 export function withoutActivationsDebug(
   debug: Ir.Instruction.Debug | undefined,
 ): Ir.Instruction.Debug {
-  const { context: _, ...rest } = debug ?? {};
+  const { context: _, callOrigin: __, ...rest } = debug ?? {};
   const context = withoutActivations(debug?.context);
   return { ...rest, ...(context ? { context } : {}) };
 }

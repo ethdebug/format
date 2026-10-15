@@ -209,12 +209,13 @@ export class InliningStep extends BaseOptimizationStep {
       call.operationDebug?.context,
       "invoke",
     );
-    const { callOrigin: pendingOrigin, ...callDebug } =
-      Ir.Utils.withoutActivationsDebug(call.operationDebug);
+    const callDebug = Ir.Utils.withoutActivationsDebug(call.operationDebug);
     // Where the call of the outermost function invoked was before
     // optimization: just before the invoke is the caller's code there
     const callOrigin =
-      pendingInvokes.length > 0 ? pendingOrigin : call.operationDebug?.origin;
+      pendingInvokes.length > 0
+        ? call.operationDebug?.callOrigin
+        : call.operationDebug?.origin;
     const invoked = (debug: Ir.Instruction.Debug): Ir.Instruction.Debug => {
       const { callOrigin: _, ...rest } = debug;
       return callOrigin ? { ...rest, callOrigin } : rest;
