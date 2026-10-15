@@ -321,7 +321,7 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
     );
 
     if (values.length === 1 && typeof values[0] === "string") {
-      return new TextEncoder().encode(values[0]);
+      return Ir.Utils.constantBytes(values[0], inst.values[0].type);
     }
 
     const words: Uint8Array[] = [];

@@ -4,6 +4,7 @@ import { Severity } from "#result";
 
 import { Error as IrgenError, assertExhausted } from "#irgen/errors";
 import { fromBugType } from "#irgen/type";
+import { Type } from "#types";
 
 import { Process } from "../process.js";
 import type { Context } from "./context.js";
@@ -137,18 +138,30 @@ const makeBuildBinaryOperator = (
     const resultType = fromBugType(nodeType);
 
     // Evaluate operands
-    const leftVal = yield* buildExpression(expr.operands[0], {
+    let leftVal = yield* buildExpression(expr.operands[0], {
       kind: "rvalue",
     });
-    const rightVal = yield* buildExpression(expr.operands[1], {
+    let rightVal = yield* buildExpression(expr.operands[1], {
       kind: "rvalue",
     });
-
-    // Generate temp for result
-    const tempId = yield* Process.Variables.newTemp();
 
     const op = mapBinaryOp(expr.operator);
     const operationDebug = yield* Process.Debug.forAstNode(expr);
+
+    // `==` and `!=` on dynamic bytes or strings compare their
+    // contents, by comparing the hashes of the data. The operands need
+    // no copy to memory (`emitInMemory`): the type checker rejects
+    // bytes and strings in calldata here, so both are in memory.
+    if (
+      (op === "eq" || op === "ne") &&
+      isDynamicBytes(yield* Process.Types.nodeType(expr.operands[0]))
+    ) {
+      leftVal = yield* emitHash(leftVal, operationDebug);
+      rightVal = yield* emitHash(rightVal, operationDebug);
+    }
+
+    // Generate temp for result
+    const tempId = yield* Process.Variables.newTemp();
 
     // Emit binary operation
     yield* Process.Instructions.emit({
@@ -164,6 +177,29 @@ const makeBuildBinaryOperator = (
       ? yield* wrap(tempId, resultType, operationDebug)
       : Ir.Value.temp(tempId, resultType);
   };
+
+/** Whether a type is dynamic `bytes` or a `string` */
+function isDynamicBytes(type: Type | undefined): boolean {
+  if (!type || !Type.isElementary(type)) return false;
+  return Type.Elementary.isBytes(type)
+    ? Type.Elementary.Bytes.isDynamic(type)
+    : Type.Elementary.isString(type);
+}
+
+/** keccak256 of the data of dynamic bytes or a string in memory */
+function* emitHash(
+  value: Ir.Value,
+  operationDebug: Ir.Instruction.Debug,
+): Process<Ir.Value> {
+  const dest = yield* Process.Variables.newTemp();
+  yield* Process.Instructions.emit({
+    kind: "hash",
+    values: [value],
+    dest,
+    operationDebug,
+  } as Ir.Instruction.Hash);
+  return Ir.Value.temp(dest, Ir.Type.Scalar.bytes32);
+}
 
 /**
  * Whether an operation's result can fall outside its type. A quotient

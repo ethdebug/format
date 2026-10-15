@@ -65,6 +65,14 @@ support. Changes to the specification itself are tracked in the root
   the function has another `return;`. Before, return merging removed
   the call's continuation block, and code generation failed ("Jump
   target ... not found") ([#388]).
+- `==` and `!=` on `bytes` or `string` in memory compare the contents,
+  by the `keccak256` of each operand's data. Before, they compared the
+  two memory addresses, so equal contents in two places were unequal
+  ([#391]).
+- A hex literal longer than 32 bytes hashes and compares by its bytes
+  at every optimization level. Before, constant folding hashed its
+  text. A string literal that starts with "0x" is its text. Before,
+  code generation decoded it as hex ([#391]).
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
@@ -563,3 +571,4 @@ First publication.
 [#383]: https://github.com/ethdebug/format/pull/383
 [#384]: https://github.com/ethdebug/format/pull/384
 [#388]: https://github.com/ethdebug/format/pull/388
+[#391]: https://github.com/ethdebug/format/pull/391
