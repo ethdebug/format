@@ -15,7 +15,17 @@ export class ReturnMergingStep extends BaseOptimizationStep {
       // Group blocks by their return value (or lack thereof)
       const returnGroups = new Map<string, string[]>(); // signature -> block IDs
 
+      // A call's continuation is entered only from its call, with the
+      // callee's return value on the stack, so it is never merged
+      const continuations = new Set<string>();
+      for (const block of func.blocks.values()) {
+        if (block.terminator.kind === "call") {
+          continuations.add(block.terminator.continuation);
+        }
+      }
+
       for (const [blockId, block] of func.blocks) {
+        if (continuations.has(blockId)) continue;
         if (block.terminator.kind === "return") {
           // Create a signature for the return statement
           const signature = this.getReturnSignature(block.terminator.value);

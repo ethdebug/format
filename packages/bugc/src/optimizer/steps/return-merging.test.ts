@@ -4,6 +4,7 @@ import * as Irgen from "#irgen";
 import { parse } from "#parser";
 import { Result } from "#result";
 import * as TypeChecker from "#typechecker";
+import { executeProgram } from "#test/evm/behavioral";
 
 import { ReturnMergingStep } from "./return-merging.js";
 import { OptimizationContextImpl } from "../optimizer.js";
@@ -197,5 +198,34 @@ describe("ReturnMergingStep", () => {
 
     // Should not merge returns with different values
     expect(returnBlocksAfter).toBe(returnBlocksBefore);
+  });
+
+  it("keeps a call's continuation apart", async () => {
+    // The `return;` after the call continues the call; the other
+    // `return;` is entered by a jump
+    const source = `name ReturnAfterCall;
+define {
+  function f(n: uint256) -> uint256 {
+    if (n == 0) { return 0; }
+    r = r + 1;
+    return f(n - 1);
+  };
+}
+storage { [0] r: uint256; }
+create {}
+code {
+  if (msg.data.length == 0) {
+    return;
+  }
+  f(2);
+  return;
+}`;
+
+    const result = await executeProgram(source, {
+      calldata: "0x01",
+      optimizationLevel: 3,
+    });
+    expect(result.callSuccess).toBe(true);
+    expect(await result.getStorage(0n)).toBe(2n);
   });
 });
