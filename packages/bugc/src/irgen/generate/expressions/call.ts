@@ -98,14 +98,20 @@ export const makeBuildCall = (
         return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
       }
 
-      // Evaluate arguments; a parameter's bytes are in memory
+      // Evaluate arguments. A parameter's bytes are in memory, unless
+      // the parameter is bytes or a string in calldata: then its
+      // argument is too, and passes as its word of offset and length.
+      const calleeType = yield* Process.Types.nodeType(expr.callee);
+      const parameters =
+        calleeType && Type.isFunction(calleeType) ? calleeType.parameters : [];
       const argValues: Ir.Value[] = [];
-      for (const arg of expr.arguments) {
+      for (const [index, arg] of expr.arguments.entries()) {
+        const value = yield* buildExpression(arg, { kind: "rvalue" });
+        const parameter = parameters[index];
         argValues.push(
-          yield* emitInMemory(
-            yield* buildExpression(arg, { kind: "rvalue" }),
-            arg,
-          ),
+          parameter && Type.Elementary.isCalldata(parameter)
+            ? value
+            : yield* emitInMemory(value, arg),
         );
       }
 

@@ -716,6 +716,7 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
         }
 
         const funcType = symbol.type;
+        nodeTypes.set(node.callee.id, funcType);
 
         // Check argument count
         if (node.arguments.length !== funcType.parameters.length) {

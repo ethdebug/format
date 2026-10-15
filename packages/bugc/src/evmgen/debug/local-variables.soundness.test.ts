@@ -541,6 +541,59 @@ code {
   };
 }
 
+/**
+ * A `string calldata` parameter refers to the calldata as a
+ * `string calldata` local does. `record` is a leaf, so it is inlined
+ * at O2 and O3; `join` has two returns, so it stays a real call, and
+ * passes its parameter on to `record`.
+ */
+function parameterProgram(text: string, callee: "record" | "join") {
+  return {
+    name: `a string calldata parameter of ${text.length} bytes (${callee})`,
+    source: `name Join;
+define {
+  function record(who: string calldata) -> uint256 {
+    motd = who;
+    return who.length;
+  };
+  function join(player: string calldata) -> uint256 {
+    let k = record(player);
+    if (k > 0) { return k; }
+    return 0;
+  };
+}
+storage { [0] motd: string; [1] r: uint256; }
+code {
+  let offset = msg.data[4:36] as bytes32 as uint256;
+  let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
+  let name: string calldata =
+    msg.data[36 + offset:36 + offset + n] as string calldata;
+  r = ${callee}(name);
+}`,
+    calldata: setMotd(text),
+    locals: {
+      offset: { values: [32n] },
+      n: { values: [BigInt(text.length)] },
+      name: { shape: { kind: "calldata" }, values: [textBytes(text)] },
+      who: {
+        shape: { kind: "calldata" },
+        values: [textBytes(text)],
+        everyLevel: true,
+      },
+      ...(callee === "join"
+        ? {
+            player: {
+              shape: { kind: "calldata" },
+              values: [textBytes(text)],
+              everyLevel: true,
+            },
+            k: { values: [BigInt(text.length)] },
+          }
+        : {}),
+    },
+  } satisfies LocalsProgram;
+}
+
 const programs: LocalsProgram[] = [
   {
     name: "straight line",
@@ -1198,6 +1251,11 @@ code {
   ...annotations.map(setMotdProgram),
   ...["", "a".repeat(31), "b".repeat(32), "c".repeat(33), motd].map(
     namedProgram,
+  ),
+  ...["", "c".repeat(33), motd].flatMap((text) =>
+    (["record", "join"] as const).map((callee) =>
+      parameterProgram(text, callee),
+    ),
   ),
   {
     // A slice longer than a word: its pointer reads every byte
