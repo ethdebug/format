@@ -3,3 +3,4 @@ export * from "./cast.js";
 export * from "./def-sites.js";
 export * from "./debug-info.js";
 export * from "./signed.js";
+export * from "./constant.js";

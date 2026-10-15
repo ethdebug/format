@@ -148,9 +148,10 @@ const makeBuildBinaryOperator = (
     const op = mapBinaryOp(expr.operator);
     const operationDebug = yield* Process.Debug.forAstNode(expr);
 
-    // `==` and `!=` on dynamic bytes or strings (in memory: the type
-    // checker rejects them in calldata) compare their contents, by
-    // comparing the hashes of the data
+    // `==` and `!=` on dynamic bytes or strings compare their
+    // contents, by comparing the hashes of the data. The operands need
+    // no copy to memory (`emitInMemory`): the type checker rejects
+    // bytes and strings in calldata here, so both are in memory.
     if (
       (op === "eq" || op === "ne") &&
       isDynamicBytes(yield* Process.Types.nodeType(expr.operands[0]))

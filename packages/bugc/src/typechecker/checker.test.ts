@@ -161,6 +161,8 @@ describe("checkProgram", () => {
           let b3 = x == "abc";
           let b4 = s != x;
           let b5 = msg.data[0:4] as bytes4 == 0x12345678 as bytes4;
+          let c: bytes calldata = msg.data[0:4];
+          let b6 = (c as bytes) == a;
         }
       `);
 

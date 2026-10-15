@@ -1,4 +1,4 @@
-import type * as Ir from "#ir";
+import * as Ir from "#ir";
 import type { Stack } from "#evm";
 
 import {
@@ -42,27 +42,8 @@ export function generateConst<S extends Stack>(
 
   // References need memory allocation for the data they point to
   if (inst.type.kind === "ref" && inst.type.location === "memory") {
-    let bytes: Uint8Array;
-    let byteLength: bigint;
-
-    // For memory references, we need to check the origin type to understand what data to store
-    // For now, we'll handle hex strings and regular strings
-    if (typeof inst.value === "string" && inst.value.startsWith("0x")) {
-      // Dynamic bytes from hex string - decode the hex
-      const hexStr = inst.value.slice(2); // Remove 0x prefix
-      const hexBytes = [];
-      for (let i = 0; i < hexStr.length; i += 2) {
-        hexBytes.push(parseInt(hexStr.substr(i, 2), 16));
-      }
-      bytes = new Uint8Array(hexBytes);
-      byteLength = BigInt(bytes.length);
-    } else {
-      // String or non-hex bytes - use UTF-8 encoding
-      const strValue = String(inst.value);
-      const encoder = new TextEncoder();
-      bytes = encoder.encode(strValue);
-      byteLength = BigInt(bytes.length);
-    }
+    const bytes = Ir.Utils.constantBytes(String(inst.value), inst.type);
+    const byteLength = BigInt(bytes.length);
 
     // Calculate memory needed: 32 bytes for length + actual data (padded to 32-byte words)
     const dataWords = (byteLength + 31n) / 32n;

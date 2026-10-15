@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 
+import { keccak256 } from "ethereum-cryptography/keccak";
+
 import { executeProgram } from "#test/evm/behavioral";
 
 const levels = [0, 1, 2, 3] as const;
@@ -69,6 +71,61 @@ describe("== and != on bytes and string compare contents", () => {
           expect(await result.getStorage(6n)).toBe(equal);
         });
       }
+    });
+  }
+});
+
+/** A hex literal longer than 32 bytes, as dynamic `bytes` */
+const long = "11".repeat(32) + "22";
+
+/** A string literal that starts as a hex literal does */
+const hexLike = "0x12";
+
+/**
+ * Literals compared with copies from the calldata, and hashed: the
+ * same at every level, whether or not the optimizer folds them
+ */
+const literals = `name Literals;
+storage {
+  [0] longEq: bool; [1] longHash: bytes32;
+  [2] textEq: bool; [3] textHash: bytes32; [4] castHash: bytes32;
+}
+code {
+  let la = msg.data[0:32] as bytes32 as uint256;
+  let lb = msg.data[32:64] as bytes32 as uint256;
+  let a: bytes = msg.data[64:64 + la];
+  let b: bytes = msg.data[64 + la:64 + la + lb];
+  longEq = a == 0x${long};
+  longHash = keccak256(0x${long});
+  textEq = (b as string) == "${hexLike}";
+  textHash = keccak256("${hexLike}");
+  castHash = keccak256("${hexLike}" as bytes);
+}`;
+
+describe("bytes and string literals", () => {
+  const keccak = (data: Uint8Array) =>
+    BigInt("0x" + Buffer.from(keccak256(data)).toString("hex"));
+
+  for (const level of levels) {
+    it(`compare and hash by their bytes at O${level}`, async () => {
+      const a = Buffer.from(long, "hex");
+      const b = Buffer.from(hexLike);
+      const result = await executeProgram(literals, {
+        calldata:
+          word(a.length) +
+          word(b.length) +
+          a.toString("hex") +
+          b.toString("hex"),
+        optimizationLevel: level,
+      });
+      expect(result.callSuccess).toBe(true);
+      expect([
+        await result.getStorage(0n),
+        await result.getStorage(1n),
+        await result.getStorage(2n),
+        await result.getStorage(3n),
+        await result.getStorage(4n),
+      ]).toEqual([1n, keccak(a), 1n, keccak(b), keccak(b)]);
     });
   }
 });
