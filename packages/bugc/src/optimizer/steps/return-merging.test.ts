@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import * as Irgen from "#irgen";
 import { parse } from "#parser";
 import { Result } from "#result";
+import { compile } from "#compiler";
 import * as TypeChecker from "#typechecker";
 import { executeProgram } from "#test/evm/behavioral";
 
@@ -200,10 +201,11 @@ describe("ReturnMergingStep", () => {
     expect(returnBlocksAfter).toBe(returnBlocksBefore);
   });
 
-  it("keeps a call's continuation apart", async () => {
-    // The `return;` after the call continues the call; the other
-    // `return;` is entered by a jump
-    const source = `name ReturnAfterCall;
+  // A call's continuation is entered only from its call, so it is
+  // neither removed nor entered by a jump. Each `return;` here is a
+  // block of its own; the order puts the continuation after, then
+  // before, the other return
+  const program = (body: string) => `name ReturnAfterCall;
 define {
   function f(n: uint256) -> uint256 {
     if (n == 0) { return 0; }
@@ -214,18 +216,63 @@ define {
 storage { [0] r: uint256; }
 create {}
 code {
+${body}
+}`;
+  const variants = {
+    "after the other return": `
   if (msg.data.length == 0) {
     return;
   }
   f(2);
-  return;
-}`;
+  return;`,
+    "before the other return": `
+  if (msg.data.length != 0) {
+    f(2);
+    return;
+  }
+  return;`,
+  };
 
-    const result = await executeProgram(source, {
-      calldata: "0x01",
-      optimizationLevel: 3,
+  for (const [name, body] of Object.entries(variants)) {
+    it(`keeps a call's continuation apart (${name})`, async () => {
+      const source = program(body);
+
+      const compiled = await compile({
+        to: "ir",
+        source,
+        optimizer: { level: 3 },
+      });
+      if (!compiled.success) throw new Error("compile failed");
+      const { blocks } = compiled.value.ir.main;
+      const continuations = [...blocks.values()].flatMap((block) =>
+        block.terminator.kind === "call" ? [block.terminator.continuation] : [],
+      );
+      expect(continuations).not.toHaveLength(0);
+      for (const continuation of continuations) {
+        expect(blocks.has(continuation)).toBe(true);
+        for (const block of blocks.values()) {
+          const { terminator } = block;
+          const targets =
+            terminator.kind === "jump"
+              ? [terminator.target]
+              : terminator.kind === "branch"
+                ? [terminator.trueTarget, terminator.falseTarget]
+                : [];
+          expect(targets).not.toContain(continuation);
+        }
+      }
+
+      for (const [calldata, expected] of [
+        ["", 0n],
+        ["0x01", 2n],
+      ] as const) {
+        const result = await executeProgram(source, {
+          calldata,
+          optimizationLevel: 3,
+        });
+        expect(result.callSuccess).toBe(true);
+        expect(await result.getStorage(0n)).toBe(expected);
+      }
     });
-    expect(result.callSuccess).toBe(true);
-    expect(await result.getStorage(0n)).toBe(2n);
-  });
+  }
 });
