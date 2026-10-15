@@ -16,8 +16,9 @@ export function combineDebugContexts(
   return withPlacement(combineContexts(debugs), debugs[0]);
 }
 
-/** Keep an instruction's inline sites, origin and (if it returns from
- * an inlined function) its debug once returned on a new debug. */
+/** Keep an instruction's inline sites, origin, (if it invokes an
+ * inlined function) its call's origin and (if it returns from one) its
+ * debug once returned on a new debug. */
 function withPlacement(
   debug: Ir.Instruction.Debug,
   from: Ir.Instruction.Debug | undefined,
@@ -26,6 +27,7 @@ function withPlacement(
     ...debug,
     ...(from?.inlineSites ? { inlineSites: from.inlineSites } : {}),
     ...(from?.origin ? { origin: from.origin } : {}),
+    ...(from?.callOrigin ? { callOrigin: from.callOrigin } : {}),
     ...(from?.returned ? { returned: from.returned } : {}),
   };
 }

@@ -209,7 +209,17 @@ export class InliningStep extends BaseOptimizationStep {
       call.operationDebug?.context,
       "invoke",
     );
-    const callDebug = withoutActivationsDebug(call.operationDebug);
+    const { callOrigin: pendingOrigin, ...callDebug } = withoutActivationsDebug(
+      call.operationDebug,
+    );
+    // Where the call of the outermost function invoked was before
+    // optimization: just before the invoke is the caller's code there
+    const callOrigin =
+      pendingInvokes.length > 0 ? pendingOrigin : call.operationDebug?.origin;
+    const invoked = (debug: Ir.Instruction.Debug): Ir.Instruction.Debug => {
+      const { callOrigin: _, ...rest } = debug;
+      return callOrigin ? { ...rest, callOrigin } : rest;
+    };
     const callSiteCode = (callDebug.context as { code?: unknown } | undefined)
       ?.code;
 
@@ -338,11 +348,13 @@ export class InliningStep extends BaseOptimizationStep {
       const first = block.instructions[0];
       const t = block.terminator;
       if (first) {
-        first.operationDebug = withActivationsDebug(
-          callSiteCode === undefined
-            ? first.operationDebug
-            : gatherCallSite(first.operationDebug, callSiteCode),
-          { invokes },
+        first.operationDebug = invoked(
+          withActivationsDebug(
+            callSiteCode === undefined
+              ? first.operationDebug
+              : gatherCallSite(first.operationDebug, callSiteCode),
+            { invokes },
+          ),
         );
         break;
       }
@@ -354,7 +366,9 @@ export class InliningStep extends BaseOptimizationStep {
         entryId = t.target;
         continue;
       }
-      t.operationDebug = withActivationsDebug(t.operationDebug, { invokes });
+      t.operationDebug = invoked(
+        withActivationsDebug(t.operationDebug, { invokes }),
+      );
       break;
     }
 
