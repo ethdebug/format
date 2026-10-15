@@ -99,9 +99,9 @@ describe("Slice type checking", () => {
     });
   });
 
-  test("allows bytes calldata only as the type of a let or a cast", () => {
+  test("allows bytes calldata only as a let's, a parameter's or a cast's type", () => {
     const placement =
-      "`bytes calldata` can only be the type of a `let` or a cast";
+      "`bytes calldata` can only be the type of a `let`, a parameter or a cast";
     const errors = (source: string) => {
       const result = parse(source);
       if (!result.success) throw new Error("Parse failed");
@@ -114,12 +114,13 @@ describe("Slice type checking", () => {
       errors(`
       name Test;
       define {
-        function f(b: bytes calldata) -> uint256 { return b.length; };
+        function f(b: array<bytes calldata>) -> uint256 { return 0; };
+        function g() -> bytes calldata { return msg.data; };
         struct S { b: bytes calldata; };
       }
       code {}
     `),
-    ).toEqual([placement, placement]);
+    ).toEqual([placement, placement, placement]);
 
     expect(
       errors(`
@@ -216,18 +217,63 @@ describe("String calldata type checking", () => {
     });
   });
 
+  test("allows a parameter of bytes or a string in calldata", () => {
+    const result = parse(`
+      name Test;
+      define {
+        function f(s: string calldata, b: bytes calldata) -> uint256 {
+          let t = s;
+          let c = b[0:1];
+          return s.length + b.length + t.length + c.length;
+        };
+        function g(s: string calldata) -> uint256 {
+          return f(s, s as bytes calldata);
+        };
+      }
+      storage { [0] r: uint256; }
+      code {
+        let a = msg.data[4:36];
+        r = g(a as string calldata) + f(a as string calldata, a);
+      }
+    `);
+    if (!result.success) throw new Error("Parse failed");
+    expect(checkProgram(result.value).success).toBe(true);
+  });
+
   test("rejects a string in calldata mixed with bytes or memory", () => {
     const placement =
-      "`string calldata` can only be the type of a `let` or a cast";
+      "`string calldata` can only be the type of a `let`, a parameter or a cast";
     expect(
       typeErrors(`
       name Test;
       define {
-        function f(s: string calldata) -> uint256 { return s.length; };
+        function f() -> string calldata { return msg.data as string calldata; };
       }
       code {}
     `),
     ).toEqual([placement]);
+
+    // A string in memory or bytes in calldata is not a `string
+    // calldata` argument; a string in calldata copies to a `string`
+    // parameter
+    expect(
+      typeErrors(`
+      name Test;
+      define {
+        function g(s: string calldata) -> uint256 { return s.length; };
+        function h(s: string) -> uint256 { return s.length; };
+      }
+      code {
+        let m = "hello";
+        let n = g(m);
+        let c = g(msg.data);
+        let x = h(msg.data as string calldata);
+      }
+    `),
+    ).toEqual([
+      "Argument 1 type mismatch: expected string calldata, got string",
+      "Argument 1 type mismatch: expected string calldata, got bytes calldata",
+    ]);
 
     expect(
       typeErrors(`

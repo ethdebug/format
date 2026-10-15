@@ -149,14 +149,14 @@ let copy: bytes = text;          // a copy in memory
 ```
 
 The type says where the bytes are: `bytes` is always in memory, as in
-a parameter, a return type or a struct field, and `bytes calldata` can
-only be the type of a `let` or of a cast. Calldata is read only:
+a return type or a struct field, and `bytes calldata` can only be the
+type of a `let`, a parameter or a cast. Calldata is read only:
 `text[0] = 1` is a type error, and so is assigning bytes in memory to a
 `bytes calldata` local or casting them to `bytes calldata`. Bytes in
 calldata are copied to memory (with `CALLDATACOPY`) wherever a value
 must be in memory: in a `let` typed `bytes`, an assignment to a `bytes`
-local, a cast to `bytes` or `string`, a function argument or return
-value, and the argument of `keccak256`. Assigning to a `bytes` or
+local, a cast to `bytes` or `string`, an argument to a `bytes`
+parameter, a return value, and the argument of `keccak256`. Assigning to a `bytes` or
 `string` storage variable stores the bytes as Solidity does, through
 such a copy.
 
@@ -173,8 +173,20 @@ motd = name;                     // stored as Solidity stores a string
 
 As a `string` in memory, a `string calldata` has no index or slice,
 and bytes do not assign to it without a cast. It too can only be the
-type of a `let` or of a cast. Bytes or a string in calldata cannot be
-compared with `==` or `!=`, or be a mapping key.
+type of a `let`, a parameter or a cast. Bytes or a string in calldata
+cannot be compared with `==` or `!=`, or be a mapping key.
+
+A parameter of bytes or a string in calldata takes its argument's word,
+with no copy, both in a real call and when the optimizer inlines the
+function:
+
+```bug
+function join(name: string calldata) {
+  players[msg.sender].name = name;
+};
+// ...
+join(name);                      // passes the word; copies nothing
+```
 
 A value of bytes in calldata is one word: the offset of the first byte
 in the high 128 bits, and the length in the low 128 bits. A local's

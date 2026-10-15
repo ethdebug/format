@@ -9,6 +9,12 @@ support. Changes to the specification itself are tracked in the root
 
 ### Added
 
+- A function parameter may be `string calldata` or `bytes calldata`:
+  `function join(name: string calldata) { ... }`. The argument passes
+  as its word (offset and length) and is not copied to memory, both in
+  a real call and when the function is inlined. Its argument must be a
+  string or bytes in calldata, as for a `let` of that type. The
+  parameter's pointer is that of a calldata `let` ([#383]).
 - `string calldata`, a string in calldata, as `bytes calldata` is bytes
   in calldata: `let name: string calldata = msg.data[a:b] as string calldata;`
   refers to the calldata and copies nothing. Bytes and a string in
@@ -17,8 +23,9 @@ support. Changes to the specification itself are tracked in the root
   to a `string` in memory or storage (`let m: string = name;`,
   `name as string`, `players[msg.sender].name = name;`). As `string`
   is, it is not indexed or sliced, and as `bytes calldata` is, it is
-  only the type of a `let` or a cast. A local's pointer is that of
-  bytes in calldata, and its type is `{ "kind": "string" }` ([#379]).
+  only the type of a `let`, a parameter or a cast. A local's pointer is
+  that of bytes in calldata, and its type is `{ "kind": "string" }`
+  ([#379]).
 - A struct copied from storage to memory may have `string` and `bytes`
   fields: each field's word holds the address of its own copy. A struct
   in memory assigned to storage (`players[msg.sender] = player;`) is
@@ -531,3 +538,4 @@ First publication.
 [#377]: https://github.com/ethdebug/format/pull/377
 [#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
+[#383]: https://github.com/ethdebug/format/pull/383

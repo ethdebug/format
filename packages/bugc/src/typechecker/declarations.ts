@@ -104,7 +104,9 @@ function buildFunctionSignature(
   // Resolve parameter types
   const parameterTypes: Type[] = [];
   for (const param of decl.parameters) {
-    checkNoCalldata(param.type);
+    // A parameter may be bytes or a string in calldata, as a whole
+    const calldata = calldataTypeNode(param.type);
+    if (calldata && calldata !== param.type) throw calldataTypeError(calldata);
     const paramType = resolveType(param.type, structTypes);
     parameterTypes.push(paramType);
   }
@@ -142,14 +144,14 @@ export function calldataTypeNode(
 
 /**
  * The error for `bytes calldata` or `string calldata` where it cannot
- * be: it is only the whole type of a `let` or of a cast
+ * be: it is only the whole type of a `let`, a parameter or a cast
  */
 export function calldataTypeError(
   typeNode: Ast.Type.Elementary.Bytes | Ast.Type.Elementary.String,
 ): TypeError {
   const name = Ast.Type.Elementary.isBytes(typeNode) ? "bytes" : "string";
   return new TypeError(
-    `\`${name} calldata\` can only be the type of a \`let\` or a cast`,
+    `\`${name} calldata\` can only be the type of a \`let\`, a parameter or a cast`,
     typeNode.loc || undefined,
     undefined,
     undefined,
