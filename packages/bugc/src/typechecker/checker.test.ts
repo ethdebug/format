@@ -148,6 +148,50 @@ describe("checkProgram", () => {
       expect(Result.hasMessages(result)).toBe(false);
     });
 
+    it("should type check == and != on bytes and strings", () => {
+      const result = check(`
+        name Test;
+        storage { [0] s: string; }
+        code {
+          let a: bytes = msg.data[0:4];
+          let b: bytes = msg.data[4:8];
+          let x = a as string;
+          let b1 = a == b;
+          let b2 = a != b;
+          let b3 = x == "abc";
+          let b4 = s != x;
+          let b5 = msg.data[0:4] as bytes4 == 0x12345678 as bytes4;
+        }
+      `);
+
+      expect(result.success).toBe(true);
+      expect(Result.hasMessages(result)).toBe(false);
+    });
+
+    it("should reject == between bytes, strings and bytesN", () => {
+      const result = check(`
+        name Test;
+        storage {}
+        code {
+          let a: bytes = msg.data[0:4];
+          let x = a as string;
+          let b1 = a == x;
+          let b2 = a == (msg.data[0:4] as bytes4);
+        }
+      `);
+
+      expect(result.success).toBe(false);
+      expect(Result.countErrors(result)).toBe(2);
+      expect(result).toHaveMessage({
+        severity: Severity.Error,
+        message: "Cannot compare bytes with string",
+      });
+      expect(result).toHaveMessage({
+        severity: Severity.Error,
+        message: "Cannot compare bytes with bytes4",
+      });
+    });
+
     it("should type check logical operators", () => {
       const result = check(`
         name Test;
