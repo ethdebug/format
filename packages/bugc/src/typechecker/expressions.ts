@@ -250,15 +250,11 @@ export const expressionChecker: Pick<Visitor<Report, Context>, "expression"> = {
 
           case "==":
           case "!=":
-            // Bytes or a string in calldata is a word of offset and
-            // length, which compares with no other value's
-            if (
-              Type.Elementary.isCalldata(leftType) ||
-              Type.Elementary.isCalldata(rightType)
-            ) {
-              const type = Type.Elementary.isCalldata(leftType)
-                ? leftType
-                : rightType;
+            // Arrays, structs and mappings do not compare, as in
+            // Solidity. Bytes or a string in calldata is a word of
+            // offset and length, which compares with no other value's
+            if (isUncomparable(leftType) || isUncomparable(rightType)) {
+              const type = isUncomparable(leftType) ? leftType : rightType;
               errors.push(
                 new TypeError(
                   `Cannot compare ${Type.format(type)}`,
@@ -1208,6 +1204,20 @@ function isValidCast(fromType: Type, toType: Type): boolean {
 
   // No other casts are allowed
   return false;
+}
+
+/**
+ * Whether `==` and `!=` reject an operand of this type: an array, a
+ * struct, a mapping, or bytes or a string in calldata
+ */
+function isUncomparable(type: Type | undefined): type is Type {
+  return (
+    !!type &&
+    (Type.isArray(type) ||
+      Type.isStruct(type) ||
+      Type.isMapping(type) ||
+      Type.Elementary.isCalldata(type))
+  );
 }
 
 const integerOperators = new Set([

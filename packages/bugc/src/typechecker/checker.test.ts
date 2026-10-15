@@ -194,6 +194,61 @@ describe("checkProgram", () => {
       });
     });
 
+    it("should type check == and != on elementary types", () => {
+      const result = check(`
+        name Test;
+        storage { [0] owner: address; [1] flag: bool; [2] n: uint256; }
+        code {
+          let b1 = owner == msg.sender;
+          let b2 = flag != true;
+          let b3 = n == 1;
+          let b4 = n != n;
+        }
+      `);
+
+      expect(result.success).toBe(true);
+      expect(Result.hasMessages(result)).toBe(false);
+    });
+
+    it("should reject == and != on arrays, structs and mappings", () => {
+      const comparisons: Record<string, [string, string]> = {
+        "a dynamic array in storage": ["nums == nums", "array<uint256>"],
+        "a fixed array in storage": ["fixed != fixed", "array<uint256, 3>"],
+        "an array in memory": ["local == local", "array<uint256>"],
+        "an array and a storage array": ["local != nums", "array<uint256>"],
+        "a struct in storage": ["point == point", "Point"],
+        "a struct and a mapping value": ["point != points[0]", "Point"],
+        "a mapping": ["balances == balances", "mapping<address, uint256>"],
+      };
+
+      for (const [name, [comparison, type]] of Object.entries(comparisons)) {
+        const result = check(`
+          name Test;
+          define {
+            struct Point { x: uint256; y: uint256; };
+          }
+          storage {
+            [0] nums: array<uint256>;
+            [1] fixed: array<uint256, 3>;
+            [4] point: Point;
+            [6] points: mapping<uint256, Point>;
+            [7] balances: mapping<address, uint256>;
+          }
+          code {
+            let local: array<uint256> = [1, 2, 3];
+            let b = ${comparison};
+          }
+        `);
+
+        expect(result.success, name).toBe(false);
+        expect(Result.countErrors(result), name).toBe(1);
+        expect(result).toHaveMessage({
+          severity: Severity.Error,
+          message: `Cannot compare ${type}`,
+        });
+      }
+    });
+
     it("should type check logical operators", () => {
       const result = check(`
         name Test;
