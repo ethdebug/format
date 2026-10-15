@@ -149,6 +149,22 @@ code {
   r = k + x;
 }`;
 
+/** The same, with the second call on a branch */
+const constantBeforeBranch = `name ConstantBeforeBranch;
+define {
+  function f(a: uint256) -> uint256 { return a + 1; };
+  function g(b: uint256) -> uint256 { return b * 2; };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 3; }
+code {
+  let x = s + 1;
+  let h = f(x);
+  x = 7;
+  if (h > 1) { r = g(h); }
+  r = r + x;
+}`;
+
 describe("which locals are listed", () => {
   it("(a) does not list a local before its declaration", async () => {
     const source = `name PreDef;
@@ -403,26 +419,27 @@ code {
     },
   );
 
-  it.each([2, 3] as const)(
-    "(m) lists a local as it is just before an inlined call at O%i",
-    async (level) => {
-      // `g`'s code starts right after `f`'s returns, but `x = 7` comes
-      // between the calls: at `g`'s entry, `x` is 7, which has no
-      // place, so `x` has no pointer (its old place still holds 4);
-      // `h` is located. At O3, `g`'s code follows `f`'s return in one
-      // block, with no entry between them
-      const run = await traceLocals(constantBetweenCalls, level);
+  // At O3, `g`'s code follows `f`'s return in one block in
+  // `constantBetweenCalls`, with no entry between them
+  it.each([
+    [2, "constantBetweenCalls", constantBetweenCalls],
+    [2, "constantBeforeBranch", constantBeforeBranch],
+    [3, "constantBeforeBranch", constantBeforeBranch],
+  ] as const)(
+    "(m) lists a local as it is just before an inlined call at O%i (%s)",
+    async (level, _, source) => {
+      // `x = 7` comes between the calls: at `g`'s entry, `x` is 7,
+      // which has no place, so `x` has no pointer (its old place still
+      // holds 4); `h` is located
+      const run = await traceLocals(source, level);
       const steps = beforeInvokes(run, "g");
       expect(steps.length).toBe(1);
       for (const step of steps) {
-        const context = run.instructionAt(step)?.context;
-        if (level === 3) {
-          expect(activations(context, "return")).toContain("f");
-          continue;
-        }
         expect(step.opcode).toBe("JUMPDEST");
         const pointer = (name: string) =>
-          localsOf(context).find((v) => v.identifier === name)?.pointer;
+          localsOf(run.instructionAt(step)?.context).find(
+            (v) => v.identifier === name,
+          )?.pointer;
         expect(pointer("x"), `x at pc ${step.pc}`).toBeUndefined();
         expect(pointer("h"), `h at pc ${step.pc}`).toBeDefined();
       }
@@ -1169,6 +1186,16 @@ code {
       },
     }),
   ),
+  {
+    name: "a local given a constant before a call on a branch",
+    source: constantBeforeBranch,
+    locals: {
+      x: { values: [4n, { value: 7n, after: "x = 7" }] },
+      h: { values: [5n] },
+      a: { values: [4n] },
+      b: { values: [5n] },
+    },
+  },
   {
     name: "a local given a constant between two calls",
     source: constantBetweenCalls,

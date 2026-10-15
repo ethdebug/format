@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import type * as Ir from "#ir";
-import { dropInstructions, markersOf, placeActivations } from "./debug.js";
+import {
+  combineDebugContexts,
+  dropInstructions,
+  markersOf,
+  placeActivations,
+} from "./debug.js";
 
 const invoke = (identifier: string) => ({ invoke: { identifier } });
 const ret = (identifier: string) => ({ return: { identifier } });
@@ -122,6 +127,20 @@ describe("placeActivations", () => {
     );
     expect(before.before?.callOrigin).toEqual(at("e"));
   });
+
+  it("gives no call origin to invokes split from the first", () => {
+    // `callOrigin` is `f`'s: `g`'s call origin is not known
+    const placed = placeActivations(
+      [invoke("f"), ret("f"), invoke("g")],
+      undefined,
+      { before: plain(), after: plain() },
+      at("f"),
+    );
+    expect(names(placed.before)).toEqual(["invoke f", "return f"]);
+    expect(placed.before?.callOrigin).toEqual(at("f"));
+    expect(names(placed.after)).toEqual(["invoke g"]);
+    expect(placed.after?.callOrigin).toBeUndefined();
+  });
 });
 
 describe("dropInstructions", () => {
@@ -158,5 +177,21 @@ describe("dropInstructions", () => {
     expect(instructions).toHaveLength(1);
     expect(names(instructions[0].operationDebug)).toEqual(["invoke f"]);
     expect(instructions[0].operationDebug.callOrigin).toEqual(callOrigin);
+  });
+});
+
+describe("combineDebugContexts", () => {
+  it("keeps the call origin of the debug that carries the invoke", () => {
+    const callOrigin: Ir.Function.Origin = {
+      function: "main",
+      block: "entry",
+      index: 2,
+    };
+    const combined = combineDebugContexts(plain(), {
+      ...debug(invoke("f")),
+      callOrigin,
+    });
+    expect(names(combined)).toEqual(["invoke f"]);
+    expect(combined.callOrigin).toEqual(callOrigin);
   });
 });

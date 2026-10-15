@@ -12,8 +12,12 @@ export function combineDebugContexts(
 ): Ir.Instruction.Debug {
   // The first debug is the instruction that stays in place (others
   // are folded into it), so the result keeps its inline sites and
-  // origin.
-  return withPlacement(combineContexts(debugs), debugs[0]);
+  // origin; its call origin, unless another's invoke is kept first.
+  const callOrigin = callOriginOf(debugs);
+  return {
+    ...withPlacement(combineContexts(debugs), debugs[0]),
+    ...(callOrigin ? { callOrigin } : {}),
+  };
 }
 
 /** Keep an instruction's inline sites, origin, (if it invokes an
@@ -701,7 +705,13 @@ export function placeActivations(
               : returns(late)
                 ? returned
                 : after.returned,
-            hasInvoke(late) ? callOrigin : after.callOrigin,
+            // `callOrigin` is the first invoke's: with invokes on both
+            // sides, the ones after have none known (and get none)
+            hasInvoke(late)
+              ? hasInvoke(early)
+                ? undefined
+                : callOrigin
+              : after.callOrigin,
           )
         : after,
     dropped: [],
