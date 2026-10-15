@@ -114,7 +114,8 @@ data of each operand. As for a mapping key, this assumes that two
 different contents do not have the same hash. Both operands must have
 the same type, in memory: bytes or a string in calldata do not
 compare, so cast or copy them to memory first. A `bytesN` is a value,
-and compares as a word.
+and compares as a word. Arrays, structs and mappings do not compare,
+as in Solidity: `==` and `!=` on them are type errors.
 
 ```bug
 let a: bytes = msg.data[0:4];
