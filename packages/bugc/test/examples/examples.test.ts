@@ -297,9 +297,10 @@ describe("Example Files", async () => {
               expect(identifiers).toEqual(storageNames);
             }
             // A program lists its locals at every instruction, so a long
-            // one takes a while to validate
+            // one takes a while to validate (advanced/token-registry.bug
+            // takes over 10 seconds on CI)
           },
-          10_000,
+          30_000,
         );
       }
     }

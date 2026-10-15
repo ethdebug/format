@@ -191,6 +191,8 @@ export class ConstantFoldingStep extends BaseOptimizationStep {
     constants: Map<string, bigint | boolean | string>,
   ): Ir.Instruction.Const | undefined {
     const value = this.getConstantValue(inst.value, constants);
+    // A string constant's bytes follow its type (see constantBytes):
+    // to fold one across `as bytes`, re-encode its value as "0x" + hex
     if (typeof value !== "bigint") return undefined;
 
     const steps = Ir.Utils.castSteps(inst.value.type, inst.targetType);
