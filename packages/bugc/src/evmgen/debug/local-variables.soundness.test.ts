@@ -14,7 +14,9 @@ import { Program } from "@ethdebug/format";
 import { executeProgram } from "#test/evm/behavioral";
 import {
   type Level,
+  type Local,
   type LocalsProgram,
+  type LocalsTrace,
   type Shape,
   check,
   localsOf,
@@ -55,6 +57,112 @@ code {
   p.b = p.b + 1;
   ps[msg.sender] = p;
   r = h;
+}`;
+
+/** The same, with the call only on one branch */
+const callInBranch = `name CallInBranch;
+define {
+  struct P { a: uint64; b: uint32; };
+  function f() -> uint256 { return r + 3; };
+}
+storage { [0] r: uint256; [1] ps: mapping<address, P>; [2] c: uint256; }
+create { c = 1; }
+code {
+  let p: P = ps[msg.sender];
+  p.a = p.a + 5;
+  if (c == 1) { r = f(); }
+  p.b = p.b + 1;
+  ps[msg.sender] = p;
+}`;
+
+/** The same, with the call where two branches meet */
+const callAfterBranch = `name CallAfterBranch;
+define {
+  struct P { a: uint64; b: uint32; };
+  function f() -> uint256 { return r + 3; };
+}
+storage {
+  [0] r: uint256; [1] ps: mapping<address, P>; [2] c: uint256;
+  [3] s: uint256;
+}
+create { c = 1; }
+code {
+  let p: P = ps[msg.sender];
+  p.a = p.a + 5;
+  if (c == 1) { s = 1; }
+  let h = f();
+  p.b = p.b + 1;
+  ps[msg.sender] = p;
+  r = h;
+}`;
+
+/** The same, with a constant argument: the callee's first
+ * instruction folds away once inlined */
+const constantArgument = `name ConstantArgument;
+define {
+  struct P { a: uint64; b: uint32; };
+  function f(a: uint256) -> uint256 { return a + 3; };
+}
+storage { [0] r: uint256; [1] ps: mapping<address, P>; }
+create {}
+code {
+  let p: P = ps[msg.sender];
+  p.a = p.a + 5;
+  let h = f(4);
+  if (h == 0) { return; }
+  p.b = p.b + 1;
+  ps[msg.sender] = p;
+  r = h;
+}`;
+
+/** The same, in an inlined function, across a call it inlines */
+const nestedCall = `name NestedCall;
+define {
+  struct P { a: uint64; b: uint32; };
+  function g(q: uint256) -> uint256 { let w = q * 3; return w; };
+  function f(n: uint256) -> uint256 {
+    let p: P = ps[msg.sender];
+    p.a = p.a + 5;
+    let t = g(n);
+    p.b = p.b + 1;
+    ps[msg.sender] = p;
+    return t;
+  };
+}
+storage { [0] r: uint256; [1] ps: mapping<address, P>; }
+create { r = 1; }
+code { r = f(r); }`;
+
+/** A local given a constant between two calls */
+const constantBetweenCalls = `name ConstantBetweenCalls;
+define {
+  function f(a: uint256) -> uint256 { return a + 1; };
+  function g(b: uint256) -> uint256 { return b * 2; };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 3; }
+code {
+  let x = s + 1;
+  let h = f(x);
+  x = 7;
+  let k = g(h);
+  r = k + x;
+}`;
+
+/** The same, with the second call on a branch */
+const constantBeforeBranch = `name ConstantBeforeBranch;
+define {
+  function f(a: uint256) -> uint256 { return a + 1; };
+  function g(b: uint256) -> uint256 { return b * 2; };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 3; }
+code {
+  let x = s + 1;
+  let h = f(x);
+  x = 7;
+  if (h > 1) { r = g(h); }
+  r = r + x;
 }`;
 
 describe("which locals are listed", () => {
@@ -270,6 +378,73 @@ code {
         : []),
     ];
   };
+
+  /** The steps just before each invoke of `callee` */
+  const beforeInvokes = (run: LocalsTrace, callee: string) =>
+    run.steps.flatMap((step, k) =>
+      k > 0 &&
+      activations(run.instructionAt(step)?.context, "invoke").includes(callee)
+        ? [run.steps[k - 1]]
+        : [],
+    );
+
+  it.each([2, 3] as const)(
+    "(l) lists the caller's locals located where inlined code starts at O%i",
+    async (level) => {
+      // The step before the invoke is the JUMPDEST that starts the
+      // inlined code. It changes nothing, so `p` is where it was at the
+      // step before (and holds its value there: see `programs`). At
+      // O3, block merging can leave no entry between them
+      const sources = {
+        // (by the function called)
+        acrossCall: [acrossCall, "f"],
+        callInBranch: [callInBranch, "f"],
+        callAfterBranch: [callAfterBranch, "f"],
+        constantArgument: [constantArgument, "f"],
+        nestedCall: [nestedCall, "g"],
+      };
+      for (const [name, [source, callee]] of Object.entries(sources)) {
+        const run = await traceLocals(source, level);
+        const steps = beforeInvokes(run, callee);
+        expect(steps.length, name).toBe(1);
+        for (const step of steps) {
+          if (step.opcode !== "JUMPDEST" && level === 3) continue;
+          expect(step.opcode, name).toBe("JUMPDEST");
+          const p = localsOf(run.instructionAt(step)?.context).find(
+            (v) => v.identifier === "p",
+          );
+          expect(p?.pointer, `${name}, pc ${step.pc}`).toBeDefined();
+        }
+      }
+    },
+  );
+
+  // At O3, `g`'s code follows `f`'s return in one block in
+  // `constantBetweenCalls`, with no entry between them
+  it.each([
+    [2, "constantBetweenCalls", constantBetweenCalls],
+    [2, "constantBeforeBranch", constantBeforeBranch],
+    [3, "constantBeforeBranch", constantBeforeBranch],
+  ] as const)(
+    "(m) lists a local as it is just before an inlined call at O%i (%s)",
+    async (level, _, source) => {
+      // `x = 7` comes between the calls: at `g`'s entry, `x` is 7,
+      // which has no place, so `x` has no pointer (its old place still
+      // holds 4); `h` is located
+      const run = await traceLocals(source, level);
+      const steps = beforeInvokes(run, "g");
+      expect(steps.length).toBe(1);
+      for (const step of steps) {
+        expect(step.opcode).toBe("JUMPDEST");
+        const pointer = (name: string) =>
+          localsOf(run.instructionAt(step)?.context).find(
+            (v) => v.identifier === name,
+          )?.pointer;
+        expect(pointer("x"), `x at pc ${step.pc}`).toBeUndefined();
+        expect(pointer("h"), `h at pc ${step.pc}`).toBeDefined();
+      }
+    },
+  );
 
   it.each([2, 3] as const)(
     "(h) lists an inlined function's locals only within its body at O%i",
@@ -965,6 +1140,71 @@ code {
         ],
       },
       h: { values: [3n] },
+    },
+  },
+  ...(
+    [
+      ["on one branch", callInBranch, {}],
+      ["after a branch", callAfterBranch, { h: { values: [3n] } }],
+      [
+        "with a constant argument",
+        constantArgument,
+        { h: { values: [7n] }, a: { values: [4n] } },
+      ],
+      [
+        "in an inlined function",
+        nestedCall,
+        {
+          n: { values: [1n] },
+          t: { values: [3n] },
+          q: { values: [1n] },
+          w: { values: [3n] },
+        },
+      ],
+    ] as Array<[string, string, Record<string, Local>]>
+  ).map(
+    ([where, source, others]): LocalsProgram => ({
+      name: `a struct local across a call ${where}`,
+      source,
+      locals: {
+        p: {
+          shape: {
+            kind: "struct",
+            fields: {
+              a: { kind: "scalar", size: 8 },
+              b: { kind: "scalar", size: 4 },
+            },
+          },
+          everyLevel: true,
+          values: [
+            { a: 0n, b: 0n },
+            { value: { a: 5n, b: 0n }, after: "p.a = p.a + 5" },
+            { value: { a: 5n, b: 1n }, after: "p.b = p.b + 1" },
+          ],
+        },
+        ...others,
+      },
+    }),
+  ),
+  {
+    name: "a local given a constant before a call on a branch",
+    source: constantBeforeBranch,
+    locals: {
+      x: { values: [4n, { value: 7n, after: "x = 7" }] },
+      h: { values: [5n] },
+      a: { values: [4n] },
+      b: { values: [5n] },
+    },
+  },
+  {
+    name: "a local given a constant between two calls",
+    source: constantBetweenCalls,
+    locals: {
+      x: { values: [4n, { value: 7n, after: "x = 7" }] },
+      h: { values: [5n] },
+      k: { values: [10n] },
+      a: { values: [4n] },
+      b: { values: [5n] },
     },
   },
   {

@@ -167,6 +167,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
     for (const { from, skipped } of skipping) {
       const markers: Ir.Utils.ActivationMarker[] = [];
       let returned: Ir.Instruction.Debug | undefined;
+      const carriers: (Ir.Instruction.Debug | undefined)[] = [];
       const visited = new Set<string>();
       let current = skipped;
       while (jumpTargets.has(current) && !visited.has(current)) {
@@ -177,6 +178,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
           block.terminator.operationDebug,
         ]) {
           markers.push(...Ir.Utils.markersOf(debug));
+          carriers.push(debug);
           if (Ir.Utils.activationsOf(debug?.context, "return").length > 0) {
             returned = debug?.returned;
           }
@@ -197,10 +199,12 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
         this.edgesInto(func, current, reachable) === 1
           ? (target.entryActivations ?? {})
           : undefined;
-      const placed = Ir.Utils.placeActivations(markers, returned, {
-        before: jump?.operationDebug,
-        after: entry,
-      });
+      const placed = Ir.Utils.placeActivations(
+        markers,
+        returned,
+        { before: jump?.operationDebug, after: entry },
+        Ir.Utils.callOriginOf(carriers),
+      );
       if (jump && placed.before !== jump.operationDebug) {
         source.terminator = { ...jump, operationDebug: placed.before! };
       }

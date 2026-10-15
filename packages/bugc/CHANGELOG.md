@@ -92,6 +92,10 @@ support. Changes to the specification itself are tracked in the root
   merged writes repeated it. A marker with no op on its path to carry
   it is dropped: debug information does not change the code
   ([#384]).
+- At the JUMPDEST where an inlined function's code starts, the caller's
+  locals are listed as they are at the call, with the same pointers.
+  Before, a local with a version the optimizer removed was listed with
+  no pointer at that one step ([#380]).
 - A local defined before a call keeps its pointer after the call.
   The dominator tree that local-variable tracking uses left out a
   call's edge to its continuation, so every local defined before a call
@@ -571,6 +575,7 @@ First publication.
 [#377]: https://github.com/ethdebug/format/pull/377
 [#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
+[#380]: https://github.com/ethdebug/format/pull/380
 [#383]: https://github.com/ethdebug/format/pull/383
 [#384]: https://github.com/ethdebug/format/pull/384
 [#388]: https://github.com/ethdebug/format/pull/388

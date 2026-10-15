@@ -796,8 +796,16 @@ function enrichFunction(
   for (const [blockId, block] of func.blocks) {
     // The block's entry: just before its first instruction (or its
     // terminator), with that instruction's scope and inline site. Just
-    // before an inlined function's invoke, that is the caller's.
+    // before an inlined function's invoke, that is the caller's, at
+    // the call: the instruction's own origin is in the callee, where
+    // the caller's versions are not placed, so the position is the
+    // call's before optimization (`callOrigin`). A call is a
+    // terminator, and its result is defined in its continuation, so
+    // the call's own position is the caller's state as the call
+    // begins, as for the call itself; `stamp` shifts the position
+    // back one, so the origin is given one past it.
     const first = block.instructions[0] ?? block.terminator;
+    const callOrigin = first.operationDebug?.callOrigin;
     const result = spilled.get(blockId);
     const sites = first.operationDebug?.inlineSites ?? [];
     const invokes = Ir.Utils.activationsOf(
@@ -809,6 +817,10 @@ function enrichFunction(
         ? {
             ...first.operationDebug,
             inlineSites: sites.slice(0, -Math.min(invokes, sites.length)),
+            origin: callOrigin && {
+              ...callOrigin,
+              index: callOrigin.index + 1,
+            },
           }
         : first.operationDebug,
       blockId,

@@ -259,3 +259,32 @@ code { r = cap(t); }`,
     expect(jumps).toContainEqual(["inl0$", "inl0$inner$"]);
   });
 });
+
+describe("an inlined function's invoke the optimizer moves", () => {
+  it("keeps where the call was before optimization", async () => {
+    // The callee's first instruction reads msg.sender, which the caller
+    // read already: common subexpression elimination drops it, and the
+    // invoke moves onto the next instruction
+    const module = await optimizedIr(
+      `name MovedInvoke;
+define {
+  function f() -> uint256 { return (msg.sender as uint256) % 7; };
+}
+storage { [0] r: uint256; [1] s: mapping<address, uint256>; }
+create {}
+code { r = s[msg.sender]; r = r + f(); }`,
+      2,
+    );
+    const carriers = [...module.main.blocks.values()]
+      .flatMap((block) => [...block.instructions, block.terminator])
+      .filter(
+        (op) =>
+          Ir.Utils.activationsOf(op.operationDebug?.context, "invoke").length >
+          0,
+      );
+    expect(carriers).toHaveLength(1);
+    const [carrier] = carriers;
+    expect("op" in carrier && carrier.op).not.toBe("msg_sender");
+    expect(carrier.operationDebug.callOrigin?.function).toBe("main");
+  });
+});

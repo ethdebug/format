@@ -258,6 +258,9 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     const markers = writes.flatMap(({ operationDebug }) =>
       Ir.Utils.markersOf(operationDebug),
     );
+    const callOrigin = Ir.Utils.callOriginOf(
+      writes.map(({ operationDebug }) => operationDebug),
+    );
     const returned = [...writes]
       .reverse()
       .find(
@@ -361,18 +364,23 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     const returns = markers.filter((marker) => "return" in marker);
     const placed = ordered
       ? {
-          before: Ir.Utils.placeActivations(invokes, undefined, {
-            after: first.operationDebug,
-          }).after,
+          before: Ir.Utils.placeActivations(
+            invokes,
+            undefined,
+            { after: first.operationDebug },
+            callOrigin,
+          ).after,
           after: Ir.Utils.placeActivations(returns, returned, {
             before: mergedWrite.operationDebug,
           }).before,
           dropped: [],
         }
-      : Ir.Utils.placeActivations(markers, returned, {
-          before: first.operationDebug,
-          after: mergedWrite.operationDebug,
-        });
+      : Ir.Utils.placeActivations(
+          markers,
+          returned,
+          { before: first.operationDebug, after: mergedWrite.operationDebug },
+          callOrigin,
+        );
     first.operationDebug = placed.before!;
     mergedWrite.operationDebug = placed.after!;
     recordDropped(context, this.name, placed.dropped);

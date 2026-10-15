@@ -64,6 +64,12 @@ export namespace Instruction {
     /** Where the instruction was before optimization */
     origin?: Function.Origin;
     /**
+     * For the op that invokes an inlined function: where the call was
+     * before optimization. Just before the invoke, the caller's
+     * variables are as they were there, at the call.
+     */
+    callOrigin?: Function.Origin;
+    /**
      * Listed locals whose value may be on the stack: code generation
      * gives each a stack pointer where the stack holds its temp.
      */
