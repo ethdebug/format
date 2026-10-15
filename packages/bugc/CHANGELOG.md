@@ -56,6 +56,15 @@ support. Changes to the specification itself are tracked in the root
 
 ### Fixed
 
+- At optimization level 2 and up, a call's argument may repeat an
+  earlier computation (as `f(msg.sender)` after a use of
+  `msg.sender`). Before, common subexpression elimination removed the
+  repeat but left the call using it, and code generation failed
+  ("Cannot load value") ([#388]).
+- At optimization level 3, a call followed by `return;` compiles when
+  the function has another `return;`. Before, return merging removed
+  the call's continuation block, and code generation failed ("Jump
+  target ... not found") ([#388]).
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
@@ -553,3 +562,4 @@ First publication.
 [#379]: https://github.com/ethdebug/format/pull/379
 [#383]: https://github.com/ethdebug/format/pull/383
 [#384]: https://github.com/ethdebug/format/pull/384
+[#388]: https://github.com/ethdebug/format/pull/388

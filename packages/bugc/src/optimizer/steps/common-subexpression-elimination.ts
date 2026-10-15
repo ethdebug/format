@@ -179,6 +179,11 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
             block.terminator.value,
             globalReplacements,
           );
+        } else if (block.terminator.kind === "call") {
+          block.terminator.arguments = block.terminator.arguments.map(
+            (argument) =>
+              this.applyValueReplacement(argument, globalReplacements),
+          );
         }
       }
     });
