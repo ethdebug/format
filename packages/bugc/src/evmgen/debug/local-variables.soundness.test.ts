@@ -542,22 +542,28 @@ code {
 }
 
 /**
- * A `string calldata` parameter refers to the calldata as a
- * `string calldata` local does. `record` is a leaf, so it is inlined
- * at O2 and O3; `join` has two returns, so it stays a real call, and
- * passes its parameter on to `record`.
+ * A `string calldata` or `bytes calldata` parameter refers to the
+ * calldata as a local of its type does. `record` is a leaf, so it is
+ * inlined at O2 and O3; `join` has two returns, so it stays a real
+ * call, and passes its parameter on to `record`.
  */
-function parameterProgram(text: string, callee: "record" | "join") {
+function parameterProgram(
+  text: string,
+  callee: "record" | "join",
+  type: "string" | "bytes" = "string",
+) {
+  const pass = (name: string) =>
+    type === "bytes" ? `${name} as bytes calldata` : name;
   return {
-    name: `a string calldata parameter of ${text.length} bytes (${callee})`,
+    name: `a ${type} calldata parameter of ${text.length} bytes (${callee})`,
     source: `name Join;
 define {
-  function record(who: string calldata) -> uint256 {
-    motd = who;
+  function record(who: ${type} calldata) -> uint256 {
+    motd = who as string;
     return who.length;
   };
   function join(player: string calldata) -> uint256 {
-    let k = record(player);
+    let k = record(${pass("player")});
     if (k > 0) { return k; }
     return 0;
   };
@@ -568,7 +574,7 @@ code {
   let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
   let name: string calldata =
     msg.data[36 + offset:36 + offset + n] as string calldata;
-  r = ${callee}(name);
+  r = ${callee}(${callee === "record" ? pass("name") : "name"});
 }`,
     calldata: setMotd(text),
     locals: {
@@ -1253,8 +1259,10 @@ code {
     namedProgram,
   ),
   ...["", "c".repeat(33), motd].flatMap((text) =>
-    (["record", "join"] as const).map((callee) =>
-      parameterProgram(text, callee),
+    (["record", "join"] as const).flatMap((callee) =>
+      (["string", "bytes"] as const).map((type) =>
+        parameterProgram(text, callee, type),
+      ),
     ),
   ),
   {

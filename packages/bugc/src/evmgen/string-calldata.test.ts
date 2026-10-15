@@ -202,3 +202,77 @@ describe.each(levels)("calldata parameters at O%i", (level) => {
     });
   }
 });
+
+/**
+ * Flows from a calldata parameter in its function: a copy to a
+ * `string` local, `keccak256`, a `string` return value, an argument to
+ * a `string` parameter, and a tail-recursive function's parameter
+ */
+const flowsSource = `name Flows;
+define {
+  function copied(p: string calldata) -> uint256 {
+    let t: string = p;
+    first = t;
+    return t.length;
+  };
+  function hashed(p: string calldata) -> bytes32 { return keccak256(p); };
+  function returned(p: string calldata) -> string { return p; };
+  function stored(m: string) -> uint256 { second = m; return m.length; };
+  function passed(p: string calldata) -> uint256 { return stored(p); };
+  function sum(p: bytes calldata, i: uint256, total: uint256) -> uint256 {
+    if (i == p.length) { return total; }
+    return sum(p, i + 1, total + p[i]);
+  };
+}
+storage {
+  [0] first: string; [1] second: string; [2] third: string;
+  [3] h: bytes32; [4] copiedLength: uint256; [5] passedLength: uint256;
+  [6] total: uint256;
+}
+code {
+  let offset = msg.data[4:36] as bytes32 as uint256;
+  let n = msg.data[4 + offset:36 + offset] as bytes32 as uint256;
+  let name: string calldata =
+    msg.data[36 + offset:36 + offset + n] as string calldata;
+  copiedLength = copied(name);
+  h = hashed(name);
+  third = returned(name);
+  passedLength = passed(name);
+  total = sum(name as bytes calldata, 0, 0);
+}`;
+
+describe.each(levels)("flows from a calldata parameter at O%i", (level) => {
+  it("make sum a tail call loop at O2 and O3", async () => {
+    const result = await compile({
+      to: "ir",
+      source: flowsSource,
+      optimizer: { level },
+    });
+    if (!result.success) throw new Error("compile failed");
+    const sum = result.value.ir.functions.get("sum")!;
+    const tailCall = [...sum.blocks.values()].some(
+      ({ terminator }) => terminator.kind === "jump" && terminator.tailCall,
+    );
+    expect(tailCall).toBe(level >= 2);
+  });
+
+  it.each(lengths)("copy, hash, return and pass %i bytes", async (length) => {
+    const name = text(length);
+    const result = await executeProgram(flowsSource, {
+      calldata: setName(name),
+      optimizationLevel: level,
+    });
+    expect(result.callSuccess).toBe(true);
+    await expectEncoded(result, 0n, name);
+    await expectEncoded(result, 1n, name);
+    await expectEncoded(result, 2n, name);
+    expect(await result.getStorage(3n)).toBe(
+      BigInt("0x" + Buffer.from(keccak256(Buffer.from(name))).toString("hex")),
+    );
+    expect(await result.getStorage(4n)).toBe(BigInt(length));
+    expect(await result.getStorage(5n)).toBe(BigInt(length));
+    expect(await result.getStorage(6n)).toBe(
+      [...Buffer.from(name)].reduce((a, b) => a + BigInt(b), 0n),
+    );
+  });
+});

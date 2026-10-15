@@ -102,8 +102,17 @@ export const makeBuildCall = (
       // the parameter is bytes or a string in calldata: then its
       // argument is too, and passes as its word of offset and length.
       const calleeType = yield* Process.Types.nodeType(expr.callee);
-      const parameters =
-        calleeType && Type.isFunction(calleeType) ? calleeType.parameters : [];
+      if (!calleeType || !Type.isFunction(calleeType)) {
+        yield* Process.Errors.report(
+          new IrgenError(
+            `No function type for ${functionName}`,
+            expr.loc ?? undefined,
+            Severity.Error,
+          ),
+        );
+        return Ir.Value.constant(0n, Ir.Type.Scalar.uint256);
+      }
+      const { parameters } = calleeType;
       const argValues: Ir.Value[] = [];
       for (const [index, arg] of expr.arguments.entries()) {
         const value = yield* buildExpression(arg, { kind: "rvalue" });
