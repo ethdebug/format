@@ -42,19 +42,7 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         // (cleared on side effects)
         const expressions = new Map<string, Ir.Instruction>();
         const newInstructions: Ir.Instruction[] = [];
-        // The debug of eliminated instructions whose invoke or return
-        // waits for the next instruction kept on their path
-        let removed: Ir.Instruction.Debug | undefined;
-        const keep = (inst: Ir.Instruction) => {
-          if (removed) {
-            inst.operationDebug = Ir.Utils.withActivationsOf(
-              removed,
-              inst.operationDebug,
-            );
-            removed = undefined;
-          }
-          newInstructions.push(inst);
-        };
+        const eliminated = new Set<Ir.Instruction>();
 
         for (const inst of block.instructions) {
           // Apply any replacements to this instruction
@@ -102,15 +90,11 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
             ) {
               // This is a duplicate - combine debug contexts. The
               // existing instruction may run on other paths, too (it
-              // dominates this one): an invoke or return of this one
-              // stays on this path, with the next instruction kept
+              // dominates this one), so this one's invoke or return
+              // stays on this path (see below)
               existingInst.operationDebug = Ir.Utils.combineDebugContexts(
                 existingInst.operationDebug,
                 Ir.Utils.withoutActivationsDebug(processedInst.operationDebug),
-              );
-              removed = Ir.Utils.withActivationsOf(
-                removed,
-                processedInst.operationDebug,
               );
 
               // Map this temp to the existing one
@@ -124,6 +108,8 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
                 reason: `Eliminated duplicate computation: ${exprKey}`,
               });
               // Don't emit this instruction
+              eliminated.add(processedInst);
+              newInstructions.push(processedInst);
             } else {
               // First time seeing this expression
               if ("dest" in processedInst && exprKey) {
@@ -135,25 +121,20 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
                   });
                 }
               }
-              keep(processedInst);
+              newInstructions.push(processedInst);
             }
           } else if (this.hasSideEffects(processedInst)) {
             // Instructions with side effects invalidate our expression
             // tracking
             expressions.clear();
-            keep(processedInst);
+            newInstructions.push(processedInst);
           } else {
-            keep(processedInst);
+            newInstructions.push(processedInst);
           }
         }
 
         block.instructions = newInstructions;
-        if (removed) {
-          block.terminator.operationDebug = Ir.Utils.withActivationsOf(
-            removed,
-            block.terminator.operationDebug,
-          );
-        }
+        block.instructions = Ir.Utils.dropInstructions(block, eliminated);
       }
 
       // Now apply replacements to phi nodes and terminators in a second

@@ -3,9 +3,11 @@
  * return contexts, each `return` closes the innermost open `invoke`
  * of the same function, and no call is open when the run ends.
  *
- * An invoke on an instruction that runs off the call's path (one the
- * optimizer shares between paths, or hoists above the branch) opens
- * a call that never returns.
+ * An optimizer pass that removes or merges the instruction (or the
+ * jump) that carries an invoke or a return must leave the marker on
+ * that call's path, in order: on an instruction that also runs off the
+ * path (one shared with another path), it opens a call that never
+ * returns; lost with the instruction, it leaves the other unmatched.
  */
 import { describe, it, expect } from "vitest";
 import { Program } from "@ethdebug/format";
@@ -64,7 +66,8 @@ async function runCalls(source: string, level: Level, calldata = "") {
 const selector = (n: number) => n.toString(16).padStart(8, "0");
 
 // Two functions run by a dispatch, each on its own path. Both start
-// by reading the call's data, as the dispatch does before it branches.
+// by reading the call's data, as the dispatch does before it branches:
+// that read goes, and with it the instruction that carried the invoke.
 const dispatch = `name Dispatch;
 define {
   function a() { r = msg.data[4:36] as bytes32 as uint256; };
@@ -89,6 +92,145 @@ describe("every invoke is matched by its return", () => {
       it(`dispatch, selector ${call}, at O${level}`, async () => {
         const data = selector(call) + "0".repeat(63) + "7";
         const { calls, open } = await runCalls(dispatch, level, data);
+        expect(calls).toEqual(called);
+        expect(open).toEqual([]);
+      });
+    }
+  }
+
+  // Each program, and the calls its run enters
+  const programs: { name: string; source: string; calls: string[] }[] = [
+    {
+      // The body's last instruction goes (the caller read msg.sender
+      // already): its return moves back onto the body's write
+      name: "a body whose last instruction goes",
+      source: `name MovedReturn;
+define {
+  function f(n: uint256) -> address { r = n; return msg.sender; };
+  function g(n: uint256) { s = n + r; };
+}
+storage { [0] r: uint256; [1] s: uint256; [2] w: address; }
+create { r = 0; }
+code { let a = msg.sender; w = f(3); g(4); w = a; }`,
+      calls: ["f", "g"],
+    },
+    {
+      // The body's one instruction goes, and its block is left empty
+      name: "a body that goes whole",
+      source: `name Emptied;
+define { function who() -> address { return msg.sender; }; }
+storage { [0] w: address; [1] v: address; [2] u: address; }
+create { w = msg.sender; }
+code { let a = msg.sender; w = who(); v = who(); u = a; }`,
+      calls: ["who", "who"],
+    },
+    {
+      // At O3, f's body (one instruction, which goes) and g's share a
+      // block: f's call must not end after g's begins
+      name: "calls in sequence",
+      source: `name Sequence;
+define {
+  function f(n: uint256) -> uint256 { return n + 1; };
+  function g(m: uint256) { s = m; };
+}
+storage { [0] r: uint256; [1] s: uint256; [2] u: uint256; [3] a: uint256; }
+create { a = 4; }
+code { let b = a; if (b > 0) { let x = b + 1; g(f(b)); u = x; } }`,
+      calls: ["f", "g"],
+    },
+    {
+      name: "nested calls",
+      source: `name Nested;
+define {
+  function inner() -> uint256 {
+    return msg.data[4:36] as bytes32 as uint256;
+  };
+  function outer() -> uint256 { return inner() + 1; };
+}
+storage { [0] r: uint256; }
+create { r = 0; }
+code { if (msg.data[0:4] as bytes4 == 0x00000001) { r = outer(); } }`,
+      calls: ["outer", "inner"],
+    },
+    {
+      name: "a call in a loop",
+      source: `name Loop;
+define { function who() -> address { r = r + 1; return msg.sender; }; }
+storage { [0] r: uint256; [1] w: address; }
+create { r = 0; }
+code {
+  let a = msg.sender;
+  for (let i = 0; i < 3; i = i + 1) { w = who(); }
+  w = a;
+}`,
+      calls: ["who", "who", "who"],
+    },
+    {
+      // The body's last instruction is dead (its result is unused)
+      name: "a call whose result is unused",
+      source: `name Unused;
+define { function g() -> uint256 { r = r + 1; return msg.value; }; }
+storage { [0] r: uint256; }
+create { r = 0; }
+code { g(); }`,
+      calls: ["g"],
+    },
+    {
+      // At O3, the body's two writes merge into one
+      name: "a body whose writes merge",
+      source: `name Merged;
+define {
+  struct P { a: uint64; b: uint64; };
+  function set() { p.a = 1; p.b = 2; };
+}
+storage { [0] p: P; [1] r: uint256; }
+create { r = 0; }
+code { set(); r = 9; }`,
+      calls: ["set"],
+    },
+    {
+      // Issue #382: the body's entry block is empty, and it jumps to a
+      // loop header
+      name: "a body that starts with a loop",
+      source: `name LoopFirst;
+define {
+  function f(n: uint256) -> uint256 {
+    for (let i = n; i > 5; i = i - 1) {
+      r = r + 1;
+    }
+    return n + 1;
+  };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 9; }
+code { let v = s; r = f(v) + v; }`,
+      calls: ["f"],
+    },
+    {
+      // Issue #382: the loop's exit block is empty
+      name: "a body that ends with a loop",
+      source: `name LoopLast;
+define {
+  function f(n: uint256) -> uint256 {
+    let acc = 0;
+    for (let i = 0; i < n; i = i + 1) {
+      acc = acc + i;
+    }
+    return acc;
+  };
+}
+storage { [0] r: uint256; [1] s: uint256; }
+create { s = 3; }
+code { r = f(s); }`,
+      calls: ["f"],
+    },
+  ];
+
+  for (const level of levels) {
+    for (const { name, source, calls: called } of programs) {
+      it(`${name}, at O${level}`, async () => {
+        const data = selector(1) + "0".repeat(63) + "7";
+        const { calls, open } = await runCalls(source, level, data);
         expect(calls).toEqual(called);
         expect(open).toEqual([]);
       });

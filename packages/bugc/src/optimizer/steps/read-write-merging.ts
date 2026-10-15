@@ -253,6 +253,27 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
       return writes;
     }
 
+    // The writes' invokes and returns go on the first and the last
+    // instruction of the merge, as on one instruction: they must read
+    // as invokes, then returns
+    const markers = writes.map(({ operationDebug }) => ({
+      invokes: Ir.Utils.activationsOf(operationDebug?.context, "invoke"),
+      returns: Ir.Utils.activationsOf(operationDebug?.context, "return"),
+      returned: operationDebug?.returned,
+    }));
+    const firstReturn = markers.findIndex(({ returns }) => returns.length);
+    if (
+      firstReturn >= 0 &&
+      markers.slice(firstReturn + 1).some(({ invokes }) => invokes.length)
+    ) {
+      return writes;
+    }
+    const invokes = markers.flatMap(({ invokes }) => invokes);
+    const returns = markers.flatMap(({ returns }) => returns);
+    const returned = markers
+      .filter(({ returns }) => returns.length)
+      .at(-1)?.returned;
+
     // Generate instructions to combine the values
     const instructions: Ir.Instruction[] = [];
     let tempCounter = this.nextTempCounter;
@@ -286,7 +307,7 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
       // Track debug contexts as we process writes
       combinedDebug = Ir.Utils.combineDebugContexts(
         combinedDebug,
-        info.write.operationDebug,
+        Ir.Utils.withoutActivationsDebug(info.write.operationDebug),
       );
 
       // Mask the value to its length, so that a sign-extended
@@ -334,6 +355,23 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
     };
 
     instructions.push(mergedWrite);
+
+    const first = instructions[0];
+    first.operationDebug = {
+      ...first.operationDebug,
+      context: Ir.Utils.withActivations(first.operationDebug.context, {
+        invokes,
+      }),
+    };
+    if (returns.length > 0) {
+      mergedWrite.operationDebug = {
+        ...mergedWrite.operationDebug,
+        context: Ir.Utils.withActivations(mergedWrite.operationDebug.context, {
+          returns,
+        }),
+        ...(returned ? { returned } : {}),
+      };
+    }
 
     // Update the temp counter for next time
     this.nextTempCounter = tempCounter;

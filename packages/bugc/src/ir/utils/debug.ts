@@ -551,30 +551,142 @@ export function withoutActivationsDebug(
 }
 
 /**
- * The debug of the instruction that runs next on a removed
- * instruction's path (`onto`), with the removed one's `invoke` and
- * `return` discriminators moved onto it. An invoke or a return marks
- * a point on one path: it must not go with a removed instruction, or
- * onto one that runs elsewhere. Its calls open before `onto`'s own and
- * close before them; if it returns, `onto` lists the caller's
- * variables once returned (unless `onto` returns, too).
+ * Where a removed instruction's (or jump's) `invoke` and `return`
+ * discriminators go: onto a neighbour on its own path, the one that
+ * ran just `before` it or the one that runs just `after` it.
+ *
+ * An invoke or a return marks a point on one path: it must not go
+ * with the removed instruction, or onto one that runs elsewhere. A
+ * debug lists its invokes, then its returns, so the markers move only
+ * where that order holds: before's markers, then the removed one's, or
+ * the removed one's, then after's. Returns go before (the last
+ * instruction kept in the body ends it) and invokes after (the first
+ * one starts it), where they can.
+ *
+ * If neither neighbour can take them, the calls that open and close
+ * on the removed instruction (their bodies optimized away) go with
+ * it; otherwise, undefined: the instruction stays.
  */
-export function withActivationsOf(
+export function moveActivations(
   removed: Ir.Instruction.Debug | undefined,
-  onto: Ir.Instruction.Debug | undefined,
-): Ir.Instruction.Debug {
+  {
+    before,
+    after,
+  }: { before?: Ir.Instruction.Debug; after?: Ir.Instruction.Debug },
+): { before?: Ir.Instruction.Debug; after?: Ir.Instruction.Debug } | undefined {
   const invokes = activationsOf(removed?.context, "invoke");
   const returns = activationsOf(removed?.context, "return");
-  if (invokes.length === 0 && returns.length === 0) return onto ?? {};
-  const own = onto?.context;
-  const context = withActivations(withoutActivations(own), {
-    invokes: [...invokes, ...activationsOf(own, "invoke")],
-    returns: [...returns, ...activationsOf(own, "return")],
-  });
-  const returned = onto?.returned ?? removed?.returned;
-  return {
-    ...onto,
-    ...(context ? { context } : {}),
-    ...(returns.length > 0 && returned ? { returned } : {}),
+  if (invokes.length === 0 && returns.length === 0) return { before, after };
+
+  const onto = (
+    debug: Ir.Instruction.Debug,
+    { first }: { first: boolean },
+  ): Ir.Instruction.Debug | undefined => {
+    const own = {
+      invokes: activationsOf(debug.context, "invoke"),
+      returns: activationsOf(debug.context, "return"),
+    };
+    // The markers in order must read as invokes, then returns
+    const [earlier, later] = first
+      ? [{ invokes, returns }, own]
+      : [own, { invokes, returns }];
+    if (earlier.returns.length > 0 && later.invokes.length > 0) {
+      return undefined;
+    }
+    const context = withActivations(withoutActivations(debug.context), {
+      invokes: [...earlier.invokes, ...later.invokes],
+      returns: [...earlier.returns, ...later.returns],
+    });
+    // The instruction that returns last lists the caller's variables
+    const returned =
+      (later.returns.length > 0 ? (first ? debug : removed) : undefined)
+        ?.returned ??
+      (earlier.returns.length > 0 ? (first ? removed : debug) : undefined)
+        ?.returned;
+    const { context: _, returned: __, ...rest } = debug;
+    return {
+      ...rest,
+      ...(context ? { context } : {}),
+      ...(returned ? { returned } : {}),
+    };
   };
+
+  const toBefore = before && onto(before, { first: false });
+  const toAfter = after && onto(after, { first: true });
+  const preferBefore = returns.length > invokes.length;
+  if (toBefore && (preferBefore || !toAfter))
+    return { before: toBefore, after };
+  if (toAfter) return { before, after: toAfter };
+  // A call wholly on the removed instruction (its body is gone) goes
+  // with it
+  if (invokes.length === returns.length) return { before, after };
+  return undefined;
+}
+
+/**
+ * A block's instructions but those in `drop`, with each dropped one's
+ * `invoke` and `return` moved onto a neighbour on its path (see
+ * `moveActivations`): an instruction kept in the block, or the block's
+ * jump. A dropped instruction whose markers no neighbour can take is
+ * kept. The kept instructions and the jump get new debugs.
+ */
+export function dropInstructions(
+  block: Ir.Block,
+  drop: Set<Ir.Instruction>,
+): Ir.Instruction[] {
+  const kept: Ir.Instruction[] = [];
+  // A dropped instruction whose markers wait for the next one kept
+  let pending: Ir.Instruction | undefined;
+  const settle = (after: Ir.Instruction.Debug | undefined) => {
+    if (!pending) return after;
+    const last = kept.at(-1);
+    const moved = moveActivations(pending.operationDebug, {
+      before: last?.operationDebug,
+      after,
+    });
+    if (!moved) {
+      kept.push(pending);
+      pending = undefined;
+      return after;
+    }
+    if (last && moved.before !== last.operationDebug) {
+      kept[kept.length - 1] = { ...last, operationDebug: moved.before! };
+    }
+    pending = undefined;
+    return moved.after;
+  };
+
+  for (const inst of block.instructions) {
+    if (!drop.has(inst)) {
+      const debug = settle(inst.operationDebug);
+      kept.push(
+        debug === inst.operationDebug
+          ? inst
+          : ({ ...inst, operationDebug: debug } as Ir.Instruction),
+      );
+      continue;
+    }
+    if (!carriesActivations(inst.operationDebug)) continue;
+    settle(undefined);
+    pending = inst;
+  }
+
+  const { terminator } = block;
+  const jump =
+    terminator.kind === "jump" && !terminator.tailCall ? terminator : undefined;
+  const debug = settle(jump?.operationDebug);
+  if (jump && debug !== jump.operationDebug) {
+    block.terminator = { ...jump, operationDebug: debug ?? {} };
+  }
+  return kept;
+}
+
+/** Whether a debug has an `invoke` or a `return` discriminator */
+export function carriesActivations(
+  debug: Ir.Instruction.Debug | undefined,
+): boolean {
+  return (
+    activationsOf(debug?.context, "invoke").length > 0 ||
+    activationsOf(debug?.context, "return").length > 0
+  );
 }

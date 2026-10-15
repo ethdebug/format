@@ -59,11 +59,18 @@ support. Changes to the specification itself are tracked in the root
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
-- At optimization level 2 and up, an inlined function's `invoke` stays
-  on its own path. Common subexpression elimination folded the inlined
-  body's first instruction into an equal one before the branch (as a
-  read of `msg.data` in a dispatch), with its invoke, so every run
-  invoked the function and never returned ([#384]).
+- At optimization level 2 and up, every inlined call's `invoke` and
+  `return` stay on that call's path, in order. A pass that removes or
+  merges the instruction (or jump) that carries one now moves it onto
+  a neighbour on the same path: the invoke onto the next instruction,
+  the return onto the one before. Before, common subexpression
+  elimination put an invoke on an equal instruction that also runs on
+  other paths (as a read of `msg.data` before a dispatch's branches),
+  so every run invoked the function and never returned. Dead code
+  elimination, block merging and jump optimization lost the marker
+  with what they removed, and merged writes repeated it. Jump
+  optimization keeps an empty block whose jump carries a marker it
+  cannot move ([#384]).
 - A local defined before a call keeps its pointer after the call.
   The dominator tree that local-variable tracking uses left out a
   call's edge to its continuation, so every local defined before a call

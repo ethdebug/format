@@ -211,11 +211,13 @@ export function generate<S extends Stack>(
       if (func && block.terminator.kind === "jump") {
         const target = func.blocks.get(block.terminator.target);
         if (target && target.phis.length > 0) {
+          // The copies run before the jump: an invoke or return the
+          // jump carries rides the jump alone
           result = result.then(
             generatePhis(
               target.phis,
               block.id,
-              block.terminator.operationDebug,
+              Ir.Utils.withoutActivationsDebug(block.terminator.operationDebug),
             ),
           );
         }

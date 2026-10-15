@@ -65,12 +65,12 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
         }
 
         // Remove dead instructions
-        const newInstructions: Ir.Instruction[] = [];
+        const dead = new Set<Ir.Instruction>();
 
         for (const inst of block.instructions) {
-          if (this.hasSideEffects(inst)) {
-            newInstructions.push(inst); // Keep instructions with side effects
-          } else if (
+          // Instructions with side effects are kept
+          if (
+            !this.hasSideEffects(inst) &&
             "dest" in inst &&
             inst.dest &&
             !usedValues.has(inst.dest)
@@ -83,12 +83,13 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
               result: [],
               reason: `Removed unused instruction: ${inst.kind} -> ${inst.dest}`,
             });
-          } else {
-            newInstructions.push(inst);
+            dead.add(inst);
           }
         }
 
-        block.instructions = newInstructions;
+        // An invoke or return of a dead instruction moves onto a
+        // neighbour on its path
+        block.instructions = Ir.Utils.dropInstructions(block, dead);
       }
     });
 

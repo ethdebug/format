@@ -19,7 +19,8 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
         if (
           block.instructions.length === 0 &&
           block.phis.length === 0 &&
-          block.terminator.kind === "jump"
+          block.terminator.kind === "jump" &&
+          this.passActivations(func, blockId)
         ) {
           jumpTargets.set(blockId, block.terminator.target);
         }
@@ -137,6 +138,56 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
     });
 
     return optimized;
+  }
+
+  /**
+   * Whether a jump-only block may be skipped with respect to the
+   * `invoke` or `return` its jump carries (an inlined body's, with no
+   * instruction to carry it): only if each block that reaches it does
+   * so by a plain jump, which runs only on that path, and takes the
+   * markers. The block is kept otherwise. A jump-only block takes
+   * none, as it may be skipped too: this one stays, for now.
+   */
+  private passActivations(func: Ir.Function, blockId: string): boolean {
+    const block = func.blocks.get(blockId)!;
+    const debug = block.terminator.operationDebug;
+    if (!Ir.Utils.carriesActivations(debug)) return true;
+    if (blockId === func.entry) return false;
+
+    const jumps: Ir.Block[] = [];
+    for (const [id, from] of func.blocks) {
+      const t = from.terminator;
+      const reaches =
+        (t.kind === "jump" && t.target === blockId) ||
+        (t.kind === "branch" &&
+          (t.trueTarget === blockId || t.falseTarget === blockId)) ||
+        (t.kind === "call" && t.continuation === blockId);
+      if (!reaches) continue;
+      if (t.kind !== "jump" || t.tailCall) return false;
+      if (
+        id !== func.entry &&
+        from.instructions.length === 0 &&
+        from.phis.length === 0
+      ) {
+        return false;
+      }
+      jumps.push(from);
+    }
+    const moved = jumps.map(
+      (from) =>
+        Ir.Utils.moveActivations(debug, {
+          before: from.terminator.operationDebug,
+        })?.before,
+    );
+    if (jumps.length === 0 || moved.some((m) => !m)) return false;
+    jumps.forEach((from, i) => {
+      from.terminator = { ...from.terminator, operationDebug: moved[i]! };
+    });
+    block.terminator = {
+      ...block.terminator,
+      operationDebug: Ir.Utils.withoutActivationsDebug(debug),
+    };
+    return true;
   }
 
   private resolveJumpChain(

@@ -31,8 +31,13 @@ export class ConstantPropagationStep extends BaseOptimizationStep {
             inst.type.kind !== "ref"
           ) {
             constants.set(inst.dest, inst.value);
+            // Its uses may run elsewhere: its invoke or return stays
+            // with it
             if (inst.operationDebug) {
-              constantDebug.set(inst.dest, inst.operationDebug);
+              constantDebug.set(
+                inst.dest,
+                Ir.Utils.withoutActivationsDebug(inst.operationDebug),
+              );
             }
           } else {
             // Try to propagate constants into instruction operands

@@ -33,6 +33,12 @@ export class BlockMergingStep extends BaseOptimizationStep {
 
         if (!sourceBlock || !targetBlock) continue;
 
+        // The jump between them goes: its invoke or return moves onto
+        // the instruction before it or the one after it (or the jump
+        // the merged block ends with). The blocks stay apart if
+        // neither can take them.
+        if (!moveJumpActivations(targetBlock, sourceBlock)) continue;
+
         // Merge phi nodes from source to target
         if (sourceBlock.phis && targetBlock.phis) {
           targetBlock.phis.push(...sourceBlock.phis);
@@ -96,6 +102,41 @@ export class BlockMergingStep extends BaseOptimizationStep {
 
     return optimized;
   }
+}
+
+/**
+ * Move the `invoke` or `return` of the jump from `from` to `to` onto a
+ * neighbour (see `Ir.Utils.moveActivations`). False if none takes them.
+ */
+function moveJumpActivations(from: Ir.Block, to: Ir.Block): boolean {
+  const debug = from.terminator.operationDebug;
+  if (!Ir.Utils.carriesActivations(debug)) return true;
+  const last = from.instructions.at(-1);
+  const first = to.instructions[0];
+  const jump =
+    !first && to.terminator.kind === "jump" && !to.terminator.tailCall
+      ? to.terminator
+      : undefined;
+  const moved = Ir.Utils.moveActivations(debug, {
+    before: last?.operationDebug,
+    after: (first ?? jump)?.operationDebug,
+  });
+  if (!moved) return false;
+  if (last && moved.before) {
+    from.instructions[from.instructions.length - 1] = {
+      ...last,
+      operationDebug: moved.before,
+    } as Ir.Instruction;
+  }
+  if (first && moved.after) {
+    to.instructions[0] = {
+      ...first,
+      operationDebug: moved.after,
+    } as Ir.Instruction;
+  } else if (jump && moved.after) {
+    to.terminator = { ...jump, operationDebug: moved.after };
+  }
+  return true;
 }
 
 function renameKey<V>(map: Map<string, V>, from: string, to: string): void {
