@@ -209,9 +209,8 @@ export class InliningStep extends BaseOptimizationStep {
       call.operationDebug?.context,
       "invoke",
     );
-    const { callOrigin: pendingOrigin, ...callDebug } = withoutActivationsDebug(
-      call.operationDebug,
-    );
+    const { callOrigin: pendingOrigin, ...callDebug } =
+      Ir.Utils.withoutActivationsDebug(call.operationDebug);
     // Where the call of the outermost function invoked was before
     // optimization: just before the invoke is the caller's code there
     const callOrigin =
@@ -238,7 +237,9 @@ export class InliningStep extends BaseOptimizationStep {
     // returned: the caller's, at the call or past those returns
     let after = callDebug;
     if (pendingReturns.length > 0) {
-      after = withoutActivationsDebug(continuation!.terminator.operationDebug);
+      after = Ir.Utils.withoutActivationsDebug(
+        continuation!.terminator.operationDebug,
+      );
       continuation!.terminator.operationDebug = after;
     }
     const invokes = [...pendingInvokes, inlineInvoke];
@@ -744,15 +745,6 @@ function withActivationsDebug(
 ): Ir.Instruction.Debug {
   const context = Ir.Utils.withActivations(debug.context, activations);
   return { ...debug, ...(context ? { context } : {}) };
-}
-
-/** A debug without activation discriminators */
-function withoutActivationsDebug(
-  debug: Ir.Instruction.Debug | undefined,
-): Ir.Instruction.Debug {
-  const { context: _, ...rest } = debug ?? {};
-  const context = Ir.Utils.withoutActivations(debug?.context);
-  return { ...rest, ...(context ? { context } : {}) };
 }
 
 /**

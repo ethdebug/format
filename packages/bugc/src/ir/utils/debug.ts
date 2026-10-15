@@ -579,21 +579,43 @@ function inOrder(markers: ActivationMarker[]): boolean {
   );
 }
 
-/** A debug whose markers are these (in order: see `inOrder`) */
+/**
+ * The call origin of the first of these debugs to carry an invoke:
+ * that of the outermost invoke among them, as they run in order
+ */
+export function callOriginOf(
+  debugs: (Ir.Instruction.Debug | undefined)[],
+): Ir.Function.Origin | undefined {
+  return debugs.find(
+    (debug) => activationsOf(debug?.context, "invoke").length > 0,
+  )?.callOrigin;
+}
+
+/** Whether markers include an invoke */
+const hasInvoke = (markers: ActivationMarker[]) =>
+  markers.some((m) => "invoke" in m);
+
+/**
+ * A debug whose markers are these (in order: see `inOrder`), with the
+ * debug once returned of their returns and the call origin of their
+ * first invoke
+ */
 function withMarkers(
   debug: Ir.Instruction.Debug,
   markers: ActivationMarker[],
   returned: Ir.Instruction.Debug | undefined,
+  callOrigin: Ir.Function.Origin | undefined,
 ): Ir.Instruction.Debug {
   const context = withActivations(withoutActivations(debug.context), {
     invokes: markers.flatMap((m) => ("invoke" in m ? [m.invoke] : [])),
     returns: markers.flatMap((m) => ("return" in m ? [m.return] : [])),
   });
-  const { context: _, returned: __, ...rest } = debug;
+  const { context: _, returned: __, callOrigin: ___, ...rest } = debug;
   return {
     ...rest,
     ...(context ? { context } : {}),
     ...(returned ? { returned } : {}),
+    ...(callOrigin ? { callOrigin } : {}),
   };
 }
 
@@ -629,6 +651,8 @@ export function placeActivations(
     before,
     after,
   }: { before?: Ir.Instruction.Debug; after?: Ir.Instruction.Debug },
+  // The call origin of the markers' first invoke (see `callOriginOf`)
+  callOrigin?: Ir.Function.Origin,
 ): Placement {
   if (markers.length === 0) return { before, after, dropped: [] };
   const own = { before: markersOf(before), after: markersOf(after) };
@@ -662,6 +686,9 @@ export function placeActivations(
             before,
             [...own.before, ...early],
             returns(early) ? (returned ?? before.returned) : before.returned,
+            hasInvoke(own.before) || !hasInvoke(early)
+              ? before.callOrigin
+              : callOrigin,
           )
         : before,
     after:
@@ -674,6 +701,7 @@ export function placeActivations(
               : returns(late)
                 ? returned
                 : after.returned,
+            hasInvoke(late) ? callOrigin : after.callOrigin,
           )
         : after,
     dropped: [],
@@ -707,6 +735,7 @@ export function dropInstructions(
   // The markers of the dropped instructions since the last one kept
   let pending: ActivationMarker[] = [];
   let pendingReturned: Ir.Instruction.Debug | undefined;
+  let pendingCallOrigin: Ir.Function.Origin | undefined;
 
   const settle = (after: Ir.Instruction.Debug | undefined) => {
     if (pending.length === 0) return after;
@@ -716,13 +745,16 @@ export function dropInstructions(
       : isEntry
         ? undefined
         : (block.entryActivations ?? {});
-    const placed = placeActivations(pending, pendingReturned, {
-      before,
-      after,
-    });
+    const placed = placeActivations(
+      pending,
+      pendingReturned,
+      { before, after },
+      pendingCallOrigin,
+    );
     dropped.push(...placed.dropped);
     pending = [];
     pendingReturned = undefined;
+    pendingCallOrigin = undefined;
     if (placed.before !== before) {
       if (last) {
         const next = { ...last, operationDebug: placed.before! };
@@ -740,6 +772,9 @@ export function dropInstructions(
 
   for (const inst of block.instructions) {
     if (drop.has(inst)) {
+      if (!hasInvoke(pending)) {
+        pendingCallOrigin = callOriginOf([inst.operationDebug]);
+      }
       pending.push(...markersOf(inst.operationDebug));
       if (activationsOf(inst.operationDebug.context, "return").length > 0) {
         pendingReturned = inst.operationDebug.returned;

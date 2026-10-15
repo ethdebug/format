@@ -143,10 +143,12 @@ function moveJumpActivations(
       ? undefined
       : (from.entryActivations ?? {});
   const after = (first ?? toJump)?.operationDebug;
-  const placed = Ir.Utils.placeActivations(markers, returned, {
-    before,
-    after,
-  });
+  const placed = Ir.Utils.placeActivations(
+    markers,
+    returned,
+    { before, after },
+    Ir.Utils.callOriginOf([jump, entry]),
+  );
   if (placed.before !== before) {
     if (last) {
       from.instructions[from.instructions.length - 1] = {

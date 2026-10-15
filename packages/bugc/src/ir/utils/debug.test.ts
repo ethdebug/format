@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type * as Ir from "#ir";
-import { markersOf, placeActivations } from "./debug.js";
+import { dropInstructions, markersOf, placeActivations } from "./debug.js";
 
 const invoke = (identifier: string) => ({ invoke: { identifier } });
 const ret = (identifier: string) => ({ return: { identifier } });
@@ -85,5 +85,78 @@ describe("placeActivations", () => {
       before: debug(invoke("f")),
     });
     expect(placed.before?.returned).toBe(returned);
+  });
+
+  const at = (block: string): Ir.Function.Origin => ({
+    function: "main",
+    block,
+    index: 0,
+  });
+
+  it("carries `callOrigin` with a moved invoke", () => {
+    const placed = placeActivations(
+      [invoke("f")],
+      undefined,
+      { before: plain(), after: { ...plain(), callOrigin: at("other") } },
+      at("call"),
+    );
+    expect(placed.after?.callOrigin).toEqual(at("call"));
+    expect(placed.before?.callOrigin).toBeUndefined();
+  });
+
+  it("keeps the call origin of the outermost invoke", () => {
+    // Moved after, an invoke comes before the op's own: it is outermost
+    const after = placeActivations(
+      [invoke("f")],
+      undefined,
+      { after: { ...debug(invoke("g")), callOrigin: at("g") } },
+      at("f"),
+    );
+    expect(after.after?.callOrigin).toEqual(at("f"));
+    // Moved before, it comes after the op's own
+    const before = placeActivations(
+      [invoke("f")],
+      undefined,
+      { before: { ...debug(invoke("e")), callOrigin: at("e") } },
+      at("f"),
+    );
+    expect(before.before?.callOrigin).toEqual(at("e"));
+  });
+});
+
+describe("dropInstructions", () => {
+  it("carries a dropped instruction's invoke with its `callOrigin`", () => {
+    const callOrigin: Ir.Function.Origin = {
+      function: "main",
+      block: "entry",
+      index: 3,
+    };
+    const dropped = {
+      kind: "env",
+      op: "msg_sender",
+      dest: "t1",
+      operationDebug: { ...debug(invoke("f")), callOrigin },
+    } as unknown as Ir.Instruction;
+    const kept = {
+      kind: "env",
+      op: "msg_value",
+      dest: "t2",
+      operationDebug: plain(),
+    } as unknown as Ir.Instruction;
+    const block = {
+      id: "inl0$entry",
+      phis: [],
+      instructions: [dropped, kept],
+      terminator: { kind: "jump", target: "next", operationDebug: {} },
+      predecessors: new Set(),
+      debug: {},
+    } as unknown as Ir.Block;
+
+    const { instructions } = dropInstructions(block, new Set([dropped]), {
+      isEntry: false,
+    });
+    expect(instructions).toHaveLength(1);
+    expect(names(instructions[0].operationDebug)).toEqual(["invoke f"]);
+    expect(instructions[0].operationDebug.callOrigin).toEqual(callOrigin);
   });
 });
