@@ -1,6 +1,7 @@
 import * as Ir from "#ir";
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -27,6 +28,8 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
 
       // Track jump redirections for phi updates
       const redirections = new Map<string, Map<string, string>>();
+      // Each redirected edge: from the block, to the first block skipped
+      const skipping: { from: string; skipped: string }[] = [];
 
       // Update all references to skip intermediate jumps
       for (const [blockId, block] of func.blocks) {
@@ -51,6 +54,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
               reason: `Optimized jump chain: ${originalTarget} -> ${finalTarget}`,
             });
             block.terminator.target = finalTarget;
+            skipping.push({ from: blockId, skipped: originalTarget });
           }
         } else if (block.terminator.kind === "branch") {
           // A branch must not skip ahead into a block that has phis:
@@ -84,6 +88,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
               reason: `Optimized true branch jump chain: ${originalTrue} -> ${trueFinal}`,
             });
             block.terminator.trueTarget = trueFinal;
+            skipping.push({ from: blockId, skipped: originalTrue });
           }
           if (falseFinal !== originalFalse) {
             // Track this redirection
@@ -100,6 +105,7 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
               reason: `Optimized false branch jump chain: ${originalFalse} -> ${falseFinal}`,
             });
             block.terminator.falseTarget = falseFinal;
+            skipping.push({ from: blockId, skipped: originalFalse });
           }
         }
       }
@@ -107,6 +113,11 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
       // Update phi nodes for redirected jumps. A skipped block goes
       // away only if nothing reaches it any more.
       const reachable = this.findReachableBlocks(func);
+      recordDropped(
+        context,
+        this.name,
+        this.placeSkippedActivations(func, skipping, jumpTargets, reachable),
+      );
       this.updatePhisForRedirections(
         func,
         redirections,
@@ -137,6 +148,88 @@ export class JumpOptimizationStep extends BaseOptimizationStep {
     });
 
     return optimized;
+  }
+
+  /**
+   * Put the invokes and returns of the blocks each redirected edge
+   * skips (their entries and jumps: an inlined body's, with no
+   * instruction to carry them) onto that edge: the jump it starts from,
+   * or the entry of the block it reaches, if nothing else reaches that
+   * block. The markers neither can take.
+   */
+  private placeSkippedActivations(
+    func: Ir.Function,
+    skipping: { from: string; skipped: string }[],
+    jumpTargets: Map<string, string>,
+    reachable: Set<string>,
+  ): Ir.Utils.ActivationMarker[] {
+    const dropped: Ir.Utils.ActivationMarker[] = [];
+    for (const { from, skipped } of skipping) {
+      const markers: Ir.Utils.ActivationMarker[] = [];
+      let returned: Ir.Instruction.Debug | undefined;
+      const visited = new Set<string>();
+      let current = skipped;
+      while (jumpTargets.has(current) && !visited.has(current)) {
+        visited.add(current);
+        const block = func.blocks.get(current)!;
+        for (const debug of [
+          block.entryActivations,
+          block.terminator.operationDebug,
+        ]) {
+          markers.push(...Ir.Utils.markersOf(debug));
+          if (Ir.Utils.activationsOf(debug?.context, "return").length > 0) {
+            returned = debug?.returned;
+          }
+        }
+        current = jumpTargets.get(current)!;
+      }
+      if (markers.length === 0) continue;
+
+      const source = func.blocks.get(from)!;
+      const jump =
+        source.terminator.kind === "jump" && !source.terminator.tailCall
+          ? source.terminator
+          : undefined;
+      const target = func.blocks.get(current);
+      const entry =
+        target &&
+        current !== func.entry &&
+        this.edgesInto(func, current, reachable) === 1
+          ? (target.entryActivations ?? {})
+          : undefined;
+      const placed = Ir.Utils.placeActivations(markers, returned, {
+        before: jump?.operationDebug,
+        after: entry,
+      });
+      if (jump && placed.before !== jump.operationDebug) {
+        source.terminator = { ...jump, operationDebug: placed.before! };
+      }
+      if (target && entry && placed.after !== entry) {
+        target.entryActivations = placed.after;
+      }
+      dropped.push(...placed.dropped);
+    }
+    return dropped;
+  }
+
+  /** How many edges from reachable blocks reach a block */
+  private edgesInto(
+    func: Ir.Function,
+    blockId: string,
+    reachable: Set<string>,
+  ): number {
+    let count = 0;
+    for (const id of reachable) {
+      const t = func.blocks.get(id)?.terminator;
+      if (!t) continue;
+      if (t.kind === "jump" && t.target === blockId) count++;
+      if (t.kind === "branch") {
+        if (t.trueTarget === blockId) count++;
+        if (t.falseTarget === blockId) count++;
+      }
+      if (t.kind === "call" && t.continuation === blockId) count++;
+    }
+    return count;
   }
 
   private resolveJumpChain(

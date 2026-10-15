@@ -92,8 +92,14 @@ export function generate<S extends Stack>(
           }
         }
 
-        // A block of an inlined body is entered inside that body
-        const entryDebug = withEntryInline(block);
+        // A block of an inlined body is entered inside that body. Its
+        // entry also carries the invokes and returns the optimizer put
+        // there (of a jump or instructions it removed).
+        const entryMarkers = block.entryActivations;
+        const entryDebug = withEntryActivations(
+          withEntryInline(block),
+          entryMarkers,
+        );
 
         if (callSiteCode) {
           const entry = entryDebug;
@@ -107,6 +113,19 @@ export function generate<S extends Stack>(
           result = result.then(JUMPDEST({ debug: continuationDebug }));
         } else {
           result = result.then(JUMPDEST({ debug: entryDebug }));
+        }
+        const entryReturned = entryMarkers?.returned;
+        if (
+          entryReturned &&
+          carriesActivation(entryMarkers?.context, "return")
+        ) {
+          result = result.then((s) => ({
+            ...s,
+            instructions: [
+              ...s.instructions.slice(0, -1),
+              withReturned(s.instructions.at(-1)!, entryReturned, s.stack),
+            ],
+          }));
         }
 
         // Annotate TOS with dest variable if this is a continuation with return value.
@@ -211,11 +230,13 @@ export function generate<S extends Stack>(
       if (func && block.terminator.kind === "jump") {
         const target = func.blocks.get(block.terminator.target);
         if (target && target.phis.length > 0) {
+          // The copies run before the jump: an invoke or return the
+          // jump carries rides the jump alone
           result = result.then(
             generatePhis(
               target.phis,
               block.id,
-              block.terminator.operationDebug,
+              Ir.Utils.withoutActivationsDebug(block.terminator.operationDebug),
             ),
           );
         }
@@ -252,17 +273,27 @@ export function generate<S extends Stack>(
         (carriesActivation(termCtx, "invoke") ||
           carriesActivation(termCtx, "return"))
       ) {
+        const returned = carriesActivation(termCtx, "return")
+          ? term.operationDebug.returned
+          : undefined;
         result = result.peek((state, builder) => {
           const start = state.instructions.length;
-          return builder.then(terminate).then((s) => ({
-            ...s,
-            instructions: bracketActivation(
-              s.instructions,
-              start,
-              termCtx,
-              s.instructions.length - (term.kind === "call" ? 1 : 0),
-            ),
-          }));
+          return builder.then(terminate).then((s) => {
+            const end = s.instructions.length - (term.kind === "call" ? 1 : 0);
+            const instructions = [
+              ...bracketActivation(s.instructions, start, termCtx, end),
+            ];
+            // The op that returns from an inlined function lists the
+            // caller's variables
+            if (returned && end > start) {
+              instructions[end - 1] = withReturned(
+                instructions[end - 1],
+                returned,
+                s.stack,
+              );
+            }
+            return { ...s, instructions };
+          });
         });
       } else {
         result = result.then(terminate);
@@ -271,6 +302,19 @@ export function generate<S extends Stack>(
       return result;
     })
     .done();
+}
+
+/** A block's entry debug, with the markers the optimizer put there */
+function withEntryActivations(
+  debug: Ir.Block.Debug | undefined,
+  markers: Ir.Block.Debug | undefined,
+): Ir.Block.Debug | undefined {
+  if (!markers) return debug;
+  const context = Ir.Utils.withActivations(debug?.context, {
+    invokes: Ir.Utils.activationsOf(markers.context, "invoke"),
+    returns: Ir.Utils.activationsOf(markers.context, "return"),
+  });
+  return { ...debug, ...(context ? { context } : {}) };
 }
 
 /**

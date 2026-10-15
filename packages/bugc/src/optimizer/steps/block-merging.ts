@@ -1,6 +1,7 @@
 import * as Ir from "#ir";
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -32,6 +33,16 @@ export class BlockMergingStep extends BaseOptimizationStep {
         const targetBlock = func.blocks.get(mergeInto);
 
         if (!sourceBlock || !targetBlock) continue;
+
+        // The jump between them goes, and the merged block's entry:
+        // their invokes and returns move onto a neighbour on the path
+        recordDropped(
+          context,
+          this.name,
+          moveJumpActivations(targetBlock, sourceBlock, {
+            isEntry: mergeInto === func.entry,
+          }),
+        );
 
         // Merge phi nodes from source to target
         if (sourceBlock.phis && targetBlock.phis) {
@@ -96,6 +107,67 @@ export class BlockMergingStep extends BaseOptimizationStep {
 
     return optimized;
   }
+}
+
+/**
+ * Put the invokes and returns of the jump from `from` to `to`, and of
+ * `to`'s entry, onto a neighbour on their path (see
+ * `Ir.Utils.placeActivations`): `from`'s last instruction (or its
+ * entry), or `to`'s first instruction (or its jump). The markers no
+ * neighbour can take.
+ */
+function moveJumpActivations(
+  from: Ir.Block,
+  to: Ir.Block,
+  { isEntry }: { isEntry: boolean },
+): Ir.Utils.ActivationMarker[] {
+  const jump = from.terminator.operationDebug;
+  const entry = to.entryActivations;
+  delete to.entryActivations;
+  const markers = [...Ir.Utils.markersOf(jump), ...Ir.Utils.markersOf(entry)];
+  if (markers.length === 0) return [];
+  const returned =
+    Ir.Utils.activationsOf(entry?.context, "return").length > 0
+      ? entry?.returned
+      : jump.returned;
+
+  const last = from.instructions.at(-1);
+  const first = to.instructions[0];
+  const toJump =
+    !first && to.terminator.kind === "jump" && !to.terminator.tailCall
+      ? to.terminator
+      : undefined;
+  const before = last
+    ? last.operationDebug
+    : isEntry
+      ? undefined
+      : (from.entryActivations ?? {});
+  const after = (first ?? toJump)?.operationDebug;
+  const placed = Ir.Utils.placeActivations(markers, returned, {
+    before,
+    after,
+  });
+  if (placed.before !== before) {
+    if (last) {
+      from.instructions[from.instructions.length - 1] = {
+        ...last,
+        operationDebug: placed.before!,
+      } as Ir.Instruction;
+    } else {
+      from.entryActivations = placed.before;
+    }
+  }
+  if (placed.after !== after) {
+    if (first) {
+      to.instructions[0] = {
+        ...first,
+        operationDebug: placed.after!,
+      } as Ir.Instruction;
+    } else if (toJump) {
+      to.terminator = { ...toJump, operationDebug: placed.after! };
+    }
+  }
+  return placed.dropped;
 }
 
 function renameKey<V>(map: Map<string, V>, from: string, to: string): void {

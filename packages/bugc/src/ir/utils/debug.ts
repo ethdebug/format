@@ -540,3 +540,235 @@ export function withActivations(
       : { ...rest, gather: markers }
   ) as Format.Program.Context;
 }
+
+/** A debug without its `invoke` and `return` discriminators */
+export function withoutActivationsDebug(
+  debug: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  const { context: _, ...rest } = debug ?? {};
+  const context = withoutActivations(debug?.context);
+  return { ...rest, ...(context ? { context } : {}) };
+}
+
+/**
+ * An `invoke` or a `return`, as one of the markers a debug carries
+ * (see `withActivations`)
+ */
+export type ActivationMarker = { invoke: unknown } | { return: unknown };
+
+/** A debug's markers, in the order they happen: invokes, then returns */
+export function markersOf(
+  debug: Ir.Instruction.Debug | undefined,
+): ActivationMarker[] {
+  return [
+    ...activationsOf(debug?.context, "invoke").map((invoke) => ({ invoke })),
+    ...activationsOf(debug?.context, "return").map((value) => ({
+      return: value,
+    })),
+  ];
+}
+
+/** Whether markers can ride one op: no invoke after a return */
+function inOrder(markers: ActivationMarker[]): boolean {
+  const firstReturn = markers.findIndex((marker) => "return" in marker);
+  return (
+    firstReturn < 0 ||
+    markers.slice(firstReturn).every((marker) => "return" in marker)
+  );
+}
+
+/** A debug whose markers are these (in order: see `inOrder`) */
+function withMarkers(
+  debug: Ir.Instruction.Debug,
+  markers: ActivationMarker[],
+  returned: Ir.Instruction.Debug | undefined,
+): Ir.Instruction.Debug {
+  const context = withActivations(withoutActivations(debug.context), {
+    invokes: markers.flatMap((m) => ("invoke" in m ? [m.invoke] : [])),
+    returns: markers.flatMap((m) => ("return" in m ? [m.return] : [])),
+  });
+  const { context: _, returned: __, ...rest } = debug;
+  return {
+    ...rest,
+    ...(context ? { context } : {}),
+    ...(returned ? { returned } : {}),
+  };
+}
+
+/** Where `placeActivations` put the markers */
+export interface Placement {
+  before?: Ir.Instruction.Debug;
+  after?: Ir.Instruction.Debug;
+  /** The markers that no neighbour could take */
+  dropped: ActivationMarker[];
+}
+
+/**
+ * Put the `invoke` and `return` markers of something removed (an
+ * instruction, a jump, a block's entry) onto a neighbour on its own
+ * path: what ran just `before` it, or what runs just `after` it.
+ *
+ * An invoke or a return marks a point on one path: it must not go
+ * with what is removed, or onto an op that runs on other paths. An op
+ * lists its invokes, then its returns, so the markers split between
+ * the two neighbours where each still reads that way: before's own,
+ * then the first part; the rest, then after's own. Of those splits,
+ * the one that moves the fewest invokes earlier and returns later:
+ * the first op kept in a body starts it, and the last one ends it.
+ *
+ * If no split fits, the markers are dropped (and listed as such): the
+ * code stays as the optimizer makes it. Debug information never
+ * changes the code.
+ */
+export function placeActivations(
+  markers: ActivationMarker[],
+  returned: Ir.Instruction.Debug | undefined,
+  {
+    before,
+    after,
+  }: { before?: Ir.Instruction.Debug; after?: Ir.Instruction.Debug },
+): Placement {
+  if (markers.length === 0) return { before, after, dropped: [] };
+  const own = { before: markersOf(before), after: markersOf(after) };
+  let best: { at: number; cost: number } | undefined;
+  for (let at = 0; at <= markers.length; at++) {
+    const early = markers.slice(0, at);
+    const late = markers.slice(at);
+    if ((early.length > 0 && !before) || (late.length > 0 && !after)) {
+      continue;
+    }
+    if (
+      !inOrder([...own.before, ...early]) ||
+      !inOrder([...late, ...own.after])
+    ) {
+      continue;
+    }
+    const cost =
+      early.filter((m) => "invoke" in m).length +
+      late.filter((m) => "return" in m).length;
+    if (!best || cost < best.cost) best = { at, cost };
+  }
+  if (!best) return { before, after, dropped: markers };
+
+  const early = markers.slice(0, best.at);
+  const late = markers.slice(best.at);
+  const returns = (ms: ActivationMarker[]) => ms.some((m) => "return" in m);
+  return {
+    before:
+      before && early.length > 0
+        ? withMarkers(
+            before,
+            [...own.before, ...early],
+            returns(early) ? (returned ?? before.returned) : before.returned,
+          )
+        : before,
+    after:
+      after && late.length > 0
+        ? withMarkers(
+            after,
+            [...late, ...own.after],
+            returns(own.after)
+              ? after.returned
+              : returns(late)
+                ? returned
+                : after.returned,
+          )
+        : after,
+    dropped: [],
+  };
+}
+
+/** What `dropInstructions` did */
+export interface Dropped {
+  instructions: Ir.Instruction[];
+  /** Each kept instruction given a new debug, by the one it replaces */
+  replaced: Map<Ir.Instruction, Ir.Instruction>;
+  /** The markers that no neighbour could take */
+  dropped: ActivationMarker[];
+}
+
+/**
+ * A block's instructions but those in `drop`, with their `invoke` and
+ * `return` markers put on a neighbour on their path (see
+ * `placeActivations`): the instruction kept before them, or the
+ * block's entry (its JUMPDEST; not the function's entry block); the
+ * instruction kept after them, or the block's jump.
+ */
+export function dropInstructions(
+  block: Ir.Block,
+  drop: Set<Ir.Instruction>,
+  { isEntry }: { isEntry: boolean },
+): Dropped {
+  const instructions: Ir.Instruction[] = [];
+  const replaced = new Map<Ir.Instruction, Ir.Instruction>();
+  const dropped: ActivationMarker[] = [];
+  // The markers of the dropped instructions since the last one kept
+  let pending: ActivationMarker[] = [];
+  let pendingReturned: Ir.Instruction.Debug | undefined;
+
+  const settle = (after: Ir.Instruction.Debug | undefined) => {
+    if (pending.length === 0) return after;
+    const last = instructions.at(-1);
+    const before = last
+      ? last.operationDebug
+      : isEntry
+        ? undefined
+        : (block.entryActivations ?? {});
+    const placed = placeActivations(pending, pendingReturned, {
+      before,
+      after,
+    });
+    dropped.push(...placed.dropped);
+    pending = [];
+    pendingReturned = undefined;
+    if (placed.before !== before) {
+      if (last) {
+        const next = { ...last, operationDebug: placed.before! };
+        replaced.set(replacedFrom(last), next as Ir.Instruction);
+        instructions[instructions.length - 1] = next as Ir.Instruction;
+      } else {
+        block.entryActivations = placed.before;
+      }
+    }
+    return placed.after;
+  };
+  // The original of an instruction already replaced here
+  const replacedFrom = (inst: Ir.Instruction) =>
+    [...replaced].find(([, to]) => to === inst)?.[0] ?? inst;
+
+  for (const inst of block.instructions) {
+    if (drop.has(inst)) {
+      pending.push(...markersOf(inst.operationDebug));
+      if (activationsOf(inst.operationDebug.context, "return").length > 0) {
+        pendingReturned = inst.operationDebug.returned;
+      }
+      continue;
+    }
+    const debug = settle(inst.operationDebug);
+    if (debug === inst.operationDebug) {
+      instructions.push(inst);
+    } else {
+      const next = { ...inst, operationDebug: debug! } as Ir.Instruction;
+      replaced.set(inst, next);
+      instructions.push(next);
+    }
+  }
+
+  const { terminator } = block;
+  const jump =
+    terminator.kind === "jump" && !terminator.tailCall ? terminator : undefined;
+  const debug = settle(jump?.operationDebug);
+  if (jump && debug !== jump.operationDebug) {
+    block.terminator = { ...jump, operationDebug: debug! };
+  }
+  return { instructions, replaced, dropped };
+}
+
+/** A context listing markers, as a transformation records them */
+export function markersContext(
+  markers: ActivationMarker[],
+): Format.Program.Context {
+  return (
+    markers.length === 1 ? markers[0] : { gather: markers }
+  ) as Format.Program.Context;
+}

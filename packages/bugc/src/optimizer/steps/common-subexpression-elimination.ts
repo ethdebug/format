@@ -2,6 +2,7 @@ import * as Ir from "#ir";
 
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -42,6 +43,7 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         // (cleared on side effects)
         const expressions = new Map<string, Ir.Instruction>();
         const newInstructions: Ir.Instruction[] = [];
+        const eliminated = new Set<Ir.Instruction>();
 
         for (const inst of block.instructions) {
           // Apply any replacements to this instruction
@@ -87,10 +89,13 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
               "dest" in processedInst &&
               "dest" in existingInst
             ) {
-              // This is a duplicate - combine debug contexts
+              // This is a duplicate - combine debug contexts. The
+              // existing instruction may run on other paths, too (it
+              // dominates this one), so this one's invoke or return
+              // stays on this path (see below)
               existingInst.operationDebug = Ir.Utils.combineDebugContexts(
                 existingInst.operationDebug,
-                processedInst.operationDebug,
+                Ir.Utils.withoutActivationsDebug(processedInst.operationDebug),
               );
 
               // Map this temp to the existing one
@@ -104,6 +109,8 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
                 reason: `Eliminated duplicate computation: ${exprKey}`,
               });
               // Don't emit this instruction
+              eliminated.add(processedInst);
+              newInstructions.push(processedInst);
             } else {
               // First time seeing this expression
               if ("dest" in processedInst && exprKey) {
@@ -128,6 +135,18 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         }
 
         block.instructions = newInstructions;
+        const { instructions, replaced, dropped } = Ir.Utils.dropInstructions(
+          block,
+          eliminated,
+          { isEntry: blockId === func.entry },
+        );
+        block.instructions = instructions;
+        // Instructions kept here may be an expression's, for later blocks
+        for (const entry of pureExpressions.values()) {
+          entry.instruction =
+            replaced.get(entry.instruction) ?? entry.instruction;
+        }
+        recordDropped(context, this.name, dropped);
       }
 
       // Now apply replacements to phi nodes and terminators in a second

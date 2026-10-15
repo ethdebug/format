@@ -59,6 +59,19 @@ support. Changes to the specification itself are tracked in the root
 - `push` of bytes in calldata onto an `array<bytes>` in storage now
   stores the bytes. Before, it stored the calldata reference's word
   (offset and length) ([#379]).
+- At optimization level 2 and up, every inlined call's `invoke` and
+  `return` stay on that call's path, in order. A pass that removes or
+  merges what carries one (an instruction, a jump, an empty block) now
+  moves it onto a neighbour on the same path: an invoke onto the next
+  op, a return onto the one before, or a block's entry (its
+  `JUMPDEST`). Before, common subexpression elimination put an invoke
+  on an equal instruction that also runs on other paths (as a read of
+  `msg.data` before a dispatch's branches), so every run invoked the
+  function and never returned. Dead code elimination, block merging
+  and jump optimization lost the marker with what they removed, and
+  merged writes repeated it. A marker with no op on its path to carry
+  it is dropped: debug information does not change the code
+  ([#384]).
 - A local defined before a call keeps its pointer after the call.
   The dominator tree that local-variable tracking uses left out a
   call's edge to its continuation, so every local defined before a call
@@ -539,3 +552,4 @@ First publication.
 [#378]: https://github.com/ethdebug/format/pull/378
 [#379]: https://github.com/ethdebug/format/pull/379
 [#383]: https://github.com/ethdebug/format/pull/383
+[#384]: https://github.com/ethdebug/format/pull/384

@@ -153,6 +153,19 @@ export class InliningStep extends BaseOptimizationStep {
     const inlineSites = (debug: Ir.Instruction.Debug | undefined) =>
       inlineSitesFor(prefix, debug);
 
+    // A return the optimizer moved onto a jump or a block's entry
+    // brings its debug once returned: inlined here, too
+    const withInlinedReturned = (debug: Ir.Instruction.Debug) =>
+      debug.returned
+        ? {
+            ...debug,
+            returned: {
+              ...debug.returned,
+              inlineSites: inlineSites(debug.returned),
+            },
+          }
+        : debug;
+
     const remapValue = (v: Ir.Value): Ir.Value => {
       if (v.kind !== "temp") return v;
       const sub = paramSubst.get(v.id);
@@ -274,7 +287,9 @@ export class InliningStep extends BaseOptimizationStep {
         // between its blocks) is part of the body, too
         terminator = remapTerminator(t, remapValue, blockRename);
         terminator.operationDebug = {
-          ...Ir.Utils.addTransform(terminator.operationDebug, "inline"),
+          ...withInlinedReturned(
+            Ir.Utils.addTransform(terminator.operationDebug, "inline"),
+          ),
           inlineSites: inlineSites(t.operationDebug),
           ...(t.operationDebug?.origin
             ? { origin: t.operationDebug.origin }
@@ -288,6 +303,11 @@ export class InliningStep extends BaseOptimizationStep {
         terminator,
         predecessors: new Set(),
         debug: origBlock.debug,
+        ...(origBlock.entryActivations
+          ? {
+              entryActivations: withInlinedReturned(origBlock.entryActivations),
+            }
+          : {}),
       });
     }
 

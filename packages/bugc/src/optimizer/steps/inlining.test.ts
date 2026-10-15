@@ -13,6 +13,8 @@ import { describe, it, expect } from "vitest";
 import { compile } from "#compiler";
 import * as Ir from "#ir";
 import { executeProgram } from "#test/evm/behavioral";
+import { OptimizationContextImpl } from "../optimizer.js";
+import { InliningStep } from "./inlining.js";
 import type * as Format from "@ethdebug/format";
 import { Program } from "@ethdebug/format";
 
@@ -212,5 +214,48 @@ code { r = count(0, 5); }`;
       // And no inline markers: succ was not inlined.
       expect(await inlineMarks(source, 2)).toBe(0);
     });
+  });
+});
+
+describe("markers the optimizer moved onto a callee's jumps and entries", () => {
+  it("inline their debug once returned, as an instruction's", async () => {
+    const module = await optimizedIr(
+      `name Moved;
+define {
+  function cap(x: uint256) -> uint256 {
+    let b = x * 2;
+    if (b > 100) { b = 100; }
+    return b;
+  };
+}
+storage { [0] r: uint256; [1] t: uint256; }
+create { t = 70; }
+code { r = cap(t); }`,
+      0,
+    );
+    const callee = module.functions.get("cap")!;
+    const [id, block] = [...callee.blocks].find(([id]) => id !== callee.entry)!;
+    const returned = { inlineSites: ["inner$"] };
+    block.entryActivations = { returned };
+    const jump = [...callee.blocks.values()].find(
+      (b) => b.terminator.kind === "jump",
+    )!;
+    jump.terminator.operationDebug = {
+      ...jump.terminator.operationDebug,
+      returned,
+    };
+
+    const inlined = new InliningStep().run(
+      module,
+      new OptimizationContextImpl(),
+    );
+    const blocks = [...inlined.main.blocks.values()];
+    const entry = blocks.find((b) => b.id.endsWith(`$${id}`))!.entryActivations;
+    expect(entry?.returned?.inlineSites).toEqual(["inl0$", "inl0$inner$"]);
+    const jumps = blocks
+      .filter((b) => b.id.startsWith("inl0$"))
+      .map((b) => b.terminator.operationDebug.returned?.inlineSites)
+      .filter((sites) => sites);
+    expect(jumps).toContainEqual(["inl0$", "inl0$inner$"]);
   });
 });

@@ -1,6 +1,7 @@
 import * as Ir from "#ir";
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -45,7 +46,7 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
       }
 
       // Remove dead instructions
-      for (const block of func.blocks.values()) {
+      for (const [blockId, block] of func.blocks) {
         // Remove dead phi nodes
         if (block.phis) {
           const newPhis = block.phis.filter((phi) => {
@@ -65,12 +66,12 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
         }
 
         // Remove dead instructions
-        const newInstructions: Ir.Instruction[] = [];
+        const dead = new Set<Ir.Instruction>();
 
         for (const inst of block.instructions) {
-          if (this.hasSideEffects(inst)) {
-            newInstructions.push(inst); // Keep instructions with side effects
-          } else if (
+          // Instructions with side effects are kept
+          if (
+            !this.hasSideEffects(inst) &&
             "dest" in inst &&
             inst.dest &&
             !usedValues.has(inst.dest)
@@ -83,12 +84,19 @@ export class DeadCodeEliminationStep extends BaseOptimizationStep {
               result: [],
               reason: `Removed unused instruction: ${inst.kind} -> ${inst.dest}`,
             });
-          } else {
-            newInstructions.push(inst);
+            dead.add(inst);
           }
         }
 
-        block.instructions = newInstructions;
+        // An invoke or return of a dead instruction moves onto a
+        // neighbour on its path
+        const { instructions, dropped } = Ir.Utils.dropInstructions(
+          block,
+          dead,
+          { isEntry: blockId === func.entry },
+        );
+        block.instructions = instructions;
+        recordDropped(context, this.name, dropped);
       }
     });
 
