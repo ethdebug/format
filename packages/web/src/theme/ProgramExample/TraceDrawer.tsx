@@ -28,6 +28,7 @@ import {
   createTrace,
   type TraceStep as EvmStep,
 } from "@ethdebug/evm";
+import type { Pointer } from "@ethdebug/format";
 import { dereference, Data, type Machine } from "@ethdebug/pointers";
 import { storageByStep } from "./storageByStep";
 import {
@@ -65,6 +66,8 @@ interface CompileResult {
   success: boolean;
   error?: string;
   bytecode?: BytecodeOutput;
+  /** The pointer templates the debug info's pointers refer to */
+  templates?: Pointer.Templates;
 }
 
 /** bugc optimizer levels the tracer can compile at. */
@@ -322,6 +325,7 @@ function TraceDrawerContent(): JSX.Element {
   // stepIndex is the step whose observed state its argument
   // pointers describe (the callee entry's postcondition).
   const argCacheRef = useRef<Map<number, ResolvedArg[]>>(new Map());
+  const templates = compileResult?.templates;
 
   const [resolvedArgs, setResolvedArgs] = useState<Map<number, ResolvedArg[]>>(
     new Map(),
@@ -364,7 +368,7 @@ function TraceDrawerContent(): JSX.Element {
 
       const resolvePromises = ptrs.map(async (ptr, i) => {
         try {
-          const value = await resolvePointer(ptr, state);
+          const value = await resolvePointer(ptr, state, templates);
           args[i] = { ...args[i], value };
         } catch (err) {
           args[i] = {
@@ -391,7 +395,7 @@ function TraceDrawerContent(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [callStack, trace, storages]);
+  }, [callStack, trace, storages, templates]);
 
   // Resolve the current instruction's variable values by
   // dereferencing each variable's pointer against the step
@@ -415,7 +419,10 @@ function TraceDrawerContent(): JSX.Element {
       currentVariables.map(async (v) => {
         if (!v.pointer) return;
         try {
-          next.set(v.identifier, await resolvePointer(v.pointer, state));
+          next.set(
+            v.identifier,
+            await resolvePointer(v.pointer, state, templates),
+          );
         } catch {
           // leave unresolved
         }
@@ -427,7 +434,7 @@ function TraceDrawerContent(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [currentVariables, currentStep, trace, storage]);
+  }, [currentVariables, currentStep, trace, storage, templates]);
 
   // Gas remaining at the current step plus the delta consumed
   // reaching it (when the executor reports gas).
@@ -479,7 +486,11 @@ function TraceDrawerContent(): JSX.Element {
           createInstructions: result.value.bytecode.createInstructions,
         };
 
-        setCompileResult({ success: true, bytecode });
+        setCompileResult({
+          success: true,
+          bytecode,
+          templates: result.value.bytecode.resources.pointers,
+        });
       } catch (e) {
         setCompileResult({
           success: false,
@@ -1435,10 +1446,11 @@ function traceStepToState(
 async function resolvePointer(
   pointer: unknown,
   state: Machine.State,
+  templates: Pointer.Templates = {},
 ): Promise<string> {
   const cursor = await dereference(
     pointer as Parameters<typeof dereference>[0],
-    { state, templates: {} },
+    { state, templates },
   );
   const view = await cursor.view(state);
 

@@ -21,6 +21,8 @@ export type Level = 0 | 1 | 2 | 3;
 
 export interface LocalsTrace {
   program: Format.Program;
+  /** The pointer templates the program's pointers refer to */
+  templates: Format.Pointer.Templates;
   executor: Executor;
   trace: Trace;
   steps: readonly TraceStep[];
@@ -61,6 +63,7 @@ export async function traceLocals(
   );
   return {
     program,
+    templates: bytecode.resources.pointers,
     executor,
     trace,
     steps: trace.steps,
@@ -228,8 +231,9 @@ export async function check(
 
     for (const entry of localsOf(context)) {
       const pointer = entry.pointer as Record<string, unknown> | undefined;
-      // A storage variable (a local's pointer is never into storage)
-      if (!pointer || JSON.stringify(pointer).includes('"storage"')) continue;
+      // A storage variable (a local's pointer is never into storage, nor
+      // refers to a storage template)
+      if (!pointer || /"storage(-|")/.test(JSON.stringify(pointer))) continue;
       const name = entry.identifier as string;
       const key = keyOf(entry);
       const where = `after ${steps[k].opcode} at pc ${steps[k].pc}`;
@@ -319,7 +323,10 @@ function stringify(value: unknown): string {
 async function regionsAt(pointer: unknown, run: LocalsTrace, index: number) {
   const state = run.stateAt(index);
   const { memory, calldata } = run.trace.stateAt(index);
-  const cursor = await dereference(pointer as Format.Pointer, { state });
+  const cursor = await dereference(pointer as Format.Pointer, {
+    state,
+    templates: run.templates,
+  });
   const view = await cursor.view(state);
   const regions = [...view.regions];
   let next = 0;

@@ -76,11 +76,12 @@ export namespace Instruction {
     stackLocals?: Array<{
       identifier: string;
       temp: string;
-      /** The regions in the temp's word: each `length` bytes, `offset`
-       * bytes from its most significant byte */
-      parts: Array<{ name: string; offset: number; length: number }>;
-      /** For a reference, the pointers to the data it refers to */
-      data?: Format.Pointer[];
+      /** What the temp's word holds: a value of `size` bytes,
+       * right-aligned, or the offset and length of bytes in calldata */
+      word: { kind: "value" | "calldata"; size: number };
+      /** For a reference in memory, the pointer to the data it refers
+       * to */
+      data?: Format.Pointer;
     }>;
   }
 

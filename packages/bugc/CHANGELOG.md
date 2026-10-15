@@ -69,6 +69,24 @@ support. Changes to the specification itself are tracked in the root
   Before, the pointer named the whole word `x`, and `x-data` took its
   offset and length as `~quotient` and `~remainder` of that word by
   2^128. The bytes the pointer reads are the same ([#398]).
+- A pointer shape that repeats is now a pointer template, defined
+  once, and a variable's pointer refers to it by name:
+  `{ "define": { ... }, "in": { "template": ..., "yields": { ... } } }`.
+  The bytecode output has a new field, `resources`: an
+  `ethdebug/format/info/resources` object whose `pointers` holds the
+  templates. Dereference a pointer with them:
+  `dereference(pointer, { state, templates: resources.pointers })`.
+  The templates are `frame-local` (a local in the call frame);
+  `frame-calldata-local`, `memory-calldata-local` and
+  `stack-calldata-local` (bytes or a string in calldata, by where the
+  local's word is); `memory-bytes` and `memory-<type>` (the data of a
+  string, bytes, array or struct in memory); `storage-bytes` (a string
+  or bytes in storage); and `storage-<type>` (an array, struct or
+  mapping in storage, with a mapping's entry templates in it). Region
+  names do not change, and each pointer reads the same bytes as
+  before. A storage variable of a value type, and a local in a stack
+  slot or at a static memory offset, keep their inline pointers. The
+  programs are about half as large ([#399]).
 
 ### Fixed
 
@@ -606,4 +624,5 @@ First publication.
 [#395]: https://github.com/ethdebug/format/pull/395
 [#397]: https://github.com/ethdebug/format/pull/397
 [#398]: https://github.com/ethdebug/format/pull/398
+[#399]: https://github.com/ethdebug/format/pull/399
 [#400]: https://github.com/ethdebug/format/pull/400

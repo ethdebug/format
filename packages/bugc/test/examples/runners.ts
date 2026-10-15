@@ -16,6 +16,13 @@ import type { VariablesTest } from "./annotations.js";
 import type { SourceMapping } from "./source-map.js";
 import { findInstructionsAtLine } from "./source-map.js";
 
+/** Compiled bytecode, and the templates its pointers refer to */
+interface Bytecode {
+  runtime: Uint8Array;
+  create?: Uint8Array;
+  resources: { pointers: Format.Pointer.Templates };
+}
+
 export interface TestResult {
   passed: boolean;
   message?: string;
@@ -31,7 +38,7 @@ function toHex(bytes: Uint8Array): string {
  * Run a variables test: check pointer structure and/or dereferenced values.
  */
 export async function runVariablesTest(
-  bytecode: { runtime: Uint8Array; create?: Uint8Array },
+  bytecode: Bytecode,
   instructions: Evm.Instruction[],
   sourceMapping: SourceMapping,
   test: VariablesTest,
@@ -133,7 +140,7 @@ export async function runVariablesTest(
  * Deploy contract and check a scalar value (first region).
  */
 async function checkScalarValue(
-  bytecode: { runtime: Uint8Array; create?: Uint8Array },
+  bytecode: Bytecode,
   pointer: Format.Pointer,
   name: string,
   expectedValue: string | number | bigint,
@@ -163,7 +170,10 @@ async function checkScalarValue(
 
     // Dereference the pointer
     const state = createMachineState(await executor.currentState());
-    const cursor = await dereference(pointer, { state });
+    const cursor = await dereference(pointer, {
+      state,
+      templates: bytecode.resources.pointers,
+    });
     const view = await cursor.view(state);
 
     if (view.regions.length === 0) {
@@ -202,7 +212,7 @@ async function checkScalarValue(
  * values is an object like { length: 3, element: [100, 200, 300] }
  */
 async function checkRegionValues(
-  bytecode: { runtime: Uint8Array; create?: Uint8Array },
+  bytecode: Bytecode,
   pointer: Format.Pointer,
   varName: string,
   expectedValues: Record<
@@ -235,7 +245,10 @@ async function checkRegionValues(
 
     // Dereference the pointer
     const state = createMachineState(await executor.currentState());
-    const cursor = await dereference(pointer, { state });
+    const cursor = await dereference(pointer, {
+      state,
+      templates: bytecode.resources.pointers,
+    });
     const view = await cursor.view(state);
 
     // Check each expected region

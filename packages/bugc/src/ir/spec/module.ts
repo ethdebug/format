@@ -21,4 +21,6 @@ export interface Module {
   loc?: Ast.SourceLocation;
   /** Program-level debug context (storage variables, etc.) */
   debugContext?: Format.Program.Context;
+  /** The pointer templates its debug contexts' pointers refer to */
+  pointerTemplates?: Format.Pointer.Templates;
 }

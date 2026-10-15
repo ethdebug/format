@@ -92,7 +92,12 @@ export function* buildModule(
 
   // Build program-level debug context with storage variables
   const state: State = yield { type: "peek" };
-  const variables = collectVariablesWithLocations(state, module_.sourceId);
+  const pointerTemplates = {};
+  const variables = collectVariablesWithLocations(
+    state,
+    module_.sourceId,
+    pointerTemplates,
+  );
   const debugContext =
     variables.length > 0
       ? { variables: variables.map(toVariableContextEntry) }
@@ -105,6 +110,7 @@ export function* buildModule(
     functions: module_.functions,
     main: module_.main || createEmptyFunction("main"),
     debugContext,
+    pointerTemplates,
   };
 
   if (module_.create) {

@@ -1684,13 +1684,23 @@ describe.each(levels)("a calldata reference's word at O%i", (level) => {
       const context = run.instructionAt(run.steps[k])?.context;
       for (const entry of localsOf(context)) {
         const pointer = entry.pointer as Format.Pointer | undefined;
-        const json = JSON.stringify(pointer);
-        if (!pointer || !json.includes('"calldata"')) continue;
-        expect(json).not.toMatch(/~quotient|~remainder/);
-
         const name = entry.identifier as string;
+        if (!pointer) continue;
         const state = run.stateAt(k + 1);
-        const view = await (await dereference(pointer, { state })).view(state);
+        const { templates } = run;
+        const view = await (
+          await dereference(pointer, { state, templates })
+        ).view(state);
+        const data = view.regions.named(`${name}-data`);
+        if (data[0]?.location !== "calldata") continue;
+        // (the pointer, and the templates it refers to)
+        const referred = [
+          ...JSON.stringify(pointer).matchAll(/"template":"([^"]+)"/g),
+        ].map(([, template]) => templates[template]);
+        expect(JSON.stringify([pointer, referred])).not.toMatch(
+          /~quotient|~remainder/,
+        );
+
         const [offset, length] = ["offset", "length"].map((part) => {
           const regions = view.regions.named(`${name}-${part}`);
           expect(regions).toHaveLength(1);

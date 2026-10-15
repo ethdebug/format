@@ -9,6 +9,13 @@ import type { State } from "../generate/state.js";
 import { generatePointer, type VariableLocation } from "./pointers.js";
 import { Storage, Type } from "#types";
 import { convertBugType } from "./types.js";
+import {
+  type Templates,
+  define,
+  prefixed,
+  referTo,
+  typeName,
+} from "./templates.js";
 
 /**
  * Information about a variable available for debug contexts
@@ -70,10 +77,13 @@ function plus(
  * A mapping's entries depend on a key, so each mapping in the pointer
  * gets a template for its entry (see `generateMappingPointer`). The
  * templates go in one `templates` collection around the whole pointer.
+ * A string's pointer refers to a shared template, defined in `shared`
+ * (see `generateStorageBytesPointer`).
  */
 export function generateStoragePointer(
   baseSlot: Format.Pointer.Expression,
   bugType: Type,
+  shared: Templates,
   byteOffset: number = 0,
   prefix: string = "",
   depth: number = 0,
@@ -84,6 +94,7 @@ export function generateStoragePointer(
     const pointer = generateStoragePointer(
       baseSlot,
       bugType,
+      shared,
       byteOffset,
       prefix,
       depth,
@@ -108,6 +119,7 @@ export function generateStoragePointer(
       const fieldPointer = generateStoragePointer(
         fieldSlot,
         fieldType,
+        shared,
         fieldOffset,
         `${prefix}${fieldName}-`,
         depth,
@@ -169,6 +181,7 @@ export function generateStoragePointer(
           ],
         },
         element,
+        shared,
         0,
         prefix,
         depth + 1,
@@ -206,7 +219,7 @@ export function generateStoragePointer(
   }
 
   if (Type.isMapping(bugType)) {
-    return generateMappingPointer(baseSlot, bugType, prefix, entries);
+    return generateMappingPointer(baseSlot, bugType, prefix, shared, entries);
   }
 
   if (
@@ -214,7 +227,7 @@ export function generateStoragePointer(
     (Type.Elementary.isBytes(bugType) &&
       Type.Elementary.Bytes.isDynamic(bugType))
   ) {
-    return generateStorageBytesPointer(baseSlot, prefix);
+    return generateStorageBytesPointer(baseSlot, prefix, shared);
   }
 
   // For elementary types, generate pointer with offset and length
@@ -264,12 +277,18 @@ function generateMappingPointer(
   slot: Format.Pointer.Expression,
   mapping: Type.Mapping,
   prefix: string,
+  shared: Templates,
   { templates, scope }: Entries,
 ): Format.Pointer {
-  const value = generateStoragePointer("slot", mapping.value, 0, "value-", 0, {
-    templates,
-    scope: `${scope}${prefix}`,
-  });
+  const value = generateStoragePointer(
+    "slot",
+    mapping.value,
+    shared,
+    0,
+    "value-",
+    0,
+    { templates, scope: `${scope}${prefix}` },
+  );
   if (value) {
     templates[`${scope}${prefix}entry`] = {
       expect: ["slot", "key"],
@@ -289,50 +308,50 @@ function generateMappingPointer(
 }
 
 /**
- * A pointer for a storage string or dynamic `bytes`, by Solidity's
+ * The template for a storage string or dynamic `bytes`, by Solidity's
  * encoding, in the shape solc gives its `t_string_storage` template.
- * The slot's low byte is even for a short value (up to 31 bytes): the
- * slot holds the data, left-aligned, and length * 2 in that byte. Else
- * the slot holds length * 2 + 1, and the data starts at
- * keccak256(slot), in one region across as many slots as it needs.
+ * It expects `slot`. The slot's low byte is even for a short value (up
+ * to 31 bytes): the slot holds the data, left-aligned, and length * 2
+ * in that byte. Else the slot holds length * 2 + 1, and the data starts
+ * at keccak256(slot), in one region across as many slots as it needs.
  */
-function generateStorageBytesPointer(
-  slot: Format.Pointer.Expression,
-  prefix: string,
-): Format.Pointer {
-  const flag = `${prefix}length-flag`;
-  const longLength = `${prefix}long-length`;
-  const data = `${prefix}data`;
-  return {
+const storageBytes: Format.Pointer.Template = {
+  expect: ["slot"],
+  for: {
     group: [
       {
-        name: flag,
+        name: "length-flag",
         location: "storage",
-        slot,
+        slot: "slot",
         offset: { "~difference": ["~wordsize", 1] },
         length: 1,
       },
       {
-        if: { "~remainder": [{ "~sum": [{ "~read": flag }, 1] }, 2] },
+        if: { "~remainder": [{ "~sum": [{ "~read": "length-flag" }, 1] }, 2] },
         then: {
-          define: { length: { "~quotient": [{ "~read": flag }, 2] } },
-          in: { name: data, location: "storage", slot, length: "length" },
+          define: { length: { "~quotient": [{ "~read": "length-flag" }, 2] } },
+          in: {
+            name: "data",
+            location: "storage",
+            slot: "slot",
+            length: "length",
+          },
         },
         else: {
           group: [
-            { name: longLength, location: "storage", slot },
+            { name: "long-length", location: "storage", slot: "slot" },
             {
               define: {
                 length: {
                   "~quotient": [
-                    { "~difference": [{ "~read": longLength }, 1] },
+                    { "~difference": [{ "~read": "long-length" }, 1] },
                     2,
                   ],
                 },
-                start: { "~keccak256": [{ "~wordsized": slot }] },
+                start: { "~keccak256": [{ "~wordsized": "slot" }] },
               },
               in: {
-                name: data,
+                name: "data",
                 location: "storage",
                 slot: "start",
                 length: "length",
@@ -342,7 +361,47 @@ function generateStorageBytesPointer(
         },
       },
     ],
-  };
+  },
+};
+
+/**
+ * A pointer for a storage string or dynamic `bytes` at `slot`: a
+ * reference to the `storage-bytes` template, its regions named
+ * `<prefix>length-flag`, `<prefix>long-length` and `<prefix>data`.
+ */
+function generateStorageBytesPointer(
+  slot: Format.Pointer.Expression,
+  prefix: string,
+  shared: Templates,
+): Format.Pointer {
+  define(shared, "storage-bytes", () => storageBytes);
+  return referTo(
+    "storage-bytes",
+    { slot },
+    prefixed(["length-flag", "long-length", "data"], prefix),
+  );
+}
+
+/**
+ * The pointer for a storage variable of type `bugType` at `slot`. A
+ * value type's (a single region, a packed field) is given inline, a
+ * string's or dynamic `bytes`'s refers to the `storage-bytes`
+ * template. Any other type's refers to a template for the type,
+ * `storage-<type>`, which expects `slot` and is defined in `shared`.
+ */
+export function generateStorageVariablePointer(
+  slot: Format.Pointer.Expression,
+  bugType: Type,
+  shared: Templates,
+): Format.Pointer | undefined {
+  if (Type.isElementary(bugType)) {
+    return generateStoragePointer(slot, bugType, shared);
+  }
+  const name = define(shared, `storage-${typeName(bugType)}`, () => {
+    const pointer = generateStoragePointer("slot", bugType, shared);
+    return pointer && { expect: ["slot"], for: pointer };
+  });
+  return name === undefined ? undefined : referTo(name, { slot });
 }
 
 /**
@@ -355,10 +414,13 @@ function generateStorageBytesPointer(
  *
  * SSA temps are NOT included because they don't have concrete runtime
  * locations until EVM code generation.
+ *
+ * The templates the pointers refer to are defined in `templates`.
  */
 export function collectVariablesWithLocations(
   state: State,
   sourceId: string,
+  templates: Templates = {},
 ): VariableInfo[] {
   const variables: VariableInfo[] = [];
 
@@ -389,7 +451,11 @@ export function collectVariablesWithLocations(
     }
 
     // Generate sophisticated pointer based on type
-    const pointer = generateStoragePointer(storageDecl.slot, bugType);
+    const pointer = generateStorageVariablePointer(
+      storageDecl.slot,
+      bugType,
+      templates,
+    );
     if (!pointer) continue;
 
     // Convert Bug type to ethdebug format type

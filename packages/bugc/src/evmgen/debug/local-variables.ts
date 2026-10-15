@@ -30,9 +30,13 @@
  *
  * A reference-typed local (memory array, string, dynamic bytes) is
  * held as an address word; its pointer names that word, then the data
- * it refers to (`dataPointers`). A local of bytes in calldata is held
+ * it refers to (`memoryData`). A local of bytes in calldata is held
  * as a word with their offset and length; its pointer names that
- * word, then those bytes (`calldataPointer`).
+ * word, then those bytes (`wordPointer`).
+ *
+ * Pointer shapes that repeat are templates (`wordTemplates`,
+ * `memoryData`), defined once in the module's `pointerTemplates`; a
+ * local's pointer refers to them.
  *
  * The memory pointer encodes bugc's frame convention: the frame base
  * lives in memory at `FRAME_POINTER` (0x80); a frame-homed local is at
@@ -49,247 +53,369 @@ import { Type as BugType } from "#types";
 import { Memory } from "#evmgen/analysis";
 import { convertToEthDebugType } from "../../irgen/debug/types.js";
 import { fromBugType } from "../../irgen/type.js";
+import {
+  type Templates,
+  prefixed,
+  define,
+  referTo,
+  regionNames,
+  typeName,
+} from "../../irgen/debug/templates.js";
 
 type VariableEntry = Format.Program.Context.Variables["variables"][number];
 
-/** The frame pointer's region; not a BUG identifier, so no local's */
-const FRAME = "-frame";
 type StackLocal = NonNullable<Ir.Instruction.Debug["stackLocals"]>[number];
+
+/** What a local's word holds (see `wordPointer`) */
+type Word = StackLocal["word"];
+
+/** Where a local's word is: at a static memory offset, at an offset in
+ * the function's frame, or in a stack slot */
+type Home = { memory: number } | { frame: number } | { stack: number };
 
 type DefSite = Ir.Utils.DefSite;
 
-/** A region in a local's word (see `memoryPointer`) */
-type Part = StackLocal["parts"][number];
+/** The frame pointer's region; not a BUG identifier, so no local's */
+const FRAME = "-frame";
 
-/** A scalar of `size` bytes, or a whole word, as one part */
-function wholePart(name: string, size = 32): Part[] {
-  return [{ name, offset: 32 - size, length: size }];
+const frame: Format.Pointer = {
+  name: FRAME,
+  location: "memory",
+  offset: Memory.regions.FRAME_POINTER,
+  length: 32,
+};
+
+/** `mem[FRAME_POINTER] + offset + within`, in a frame template */
+function inFrame(within: number): Format.Pointer.Expression {
+  return {
+    "~sum": [{ "~read": FRAME }, "offset", ...(within > 0 ? [within] : [])],
+  };
 }
 
 /**
- * A value is homed by a full-word `MSTORE` of its stack word, which
- * writes the word big-endian. bugc keeps every scalar right-aligned on
- * the stack (`bytesN` included), so a scalar of `size` bytes is the
- * word's low-order `size` bytes: `32 - size` bytes into the word,
- * `size` bytes long. The same holds for a stack slot (segment offsets
- * count from the word's most significant byte).
- *
- * A word may hold more than one part (bytes in calldata: their offset
- * and length); each part is a region of its own.
+ * The regions of a word that refers to bytes in calldata, each part
+ * placed by `at` (given its offset in the word, and its length): the
+ * bytes' offset in the word's high 16 bytes (`offset`), their length
+ * in its low 16 bytes (`length`), then the bytes themselves (`data`).
  */
-function memoryPointer(
-  parts: Part[],
-  allocation: Memory.Allocation,
-  frameSize: number | undefined,
-): Format.Pointer {
-  const word = Number(allocation.offset);
+function calldataWord(
+  at: (within: number, length: number) => Format.Pointer.Region,
+): Format.Pointer[] {
+  return [
+    { ...at(0, 16), name: "offset" },
+    { ...at(16, 16), name: "length" },
+    {
+      name: "data",
+      location: "calldata",
+      offset: { "~read": "offset" },
+      length: { "~read": "length" },
+    },
+  ];
+}
 
-  if (frameSize === undefined) {
-    // No call frame (main/create): static memory offset.
-    const regions = parts.map(
-      ({ name, offset, length }): Format.Pointer => ({
-        name,
+/**
+ * The templates for a local's word, by where it is (see `wordPointer`).
+ * The memory pointer encodes bugc's frame convention (see above).
+ */
+const wordTemplates: Record<string, Format.Pointer.Template> = {
+  "frame-local": {
+    expect: ["offset", "length"],
+    for: {
+      group: [
+        frame,
+        {
+          name: "local",
+          location: "memory",
+          offset: inFrame(0),
+          length: "length",
+        },
+      ],
+    },
+  },
+  "frame-calldata-local": {
+    expect: ["offset"],
+    for: {
+      group: [
+        frame,
+        ...calldataWord((within, length) => ({
+          location: "memory",
+          offset: inFrame(within),
+          length,
+        })),
+      ],
+    },
+  },
+  "memory-calldata-local": {
+    expect: ["offset"],
+    for: {
+      group: calldataWord((within, length) => ({
         location: "memory",
-        offset: word + offset,
+        offset: within > 0 ? { "~sum": ["offset", within] } : "offset",
         length,
-      }),
-    );
-    return regions.length === 1 ? regions[0] : { group: regions };
+      })),
+    },
+  },
+  "stack-calldata-local": {
+    expect: ["slot"],
+    for: {
+      group: calldataWord((within, length) => ({
+        location: "stack",
+        slot: "slot",
+        offset: within,
+        length,
+      })),
+    },
+  },
+};
+
+/** A reference to the word template `name`, defined in `templates` */
+function word(
+  templates: Templates | undefined,
+  name: string,
+  bindings: Record<string, Format.Pointer.Expression>,
+  yields: Record<string, string>,
+): Format.Pointer {
+  if (templates) define(templates, name, () => wordTemplates[name]);
+  return referTo(name, bindings, yields);
+}
+
+/**
+ * The pointer to a local's word, named after the local. A scalar's
+ * word holds its value: a value is homed by a full-word `MSTORE` of
+ * its stack word, which writes the word big-endian, and bugc keeps
+ * every scalar right-aligned on the stack (`bytesN` included), so a
+ * scalar of `size` bytes is the word's low-order `size` bytes: `32 -
+ * size` bytes into the word. The same holds for a stack slot (segment
+ * offsets count from the word's most significant byte). A reference
+ * to bytes in calldata holds their offset and length, each a region
+ * of its own, `x-offset` and `x-length`, and the pointer gives the
+ * bytes, `x-data`.
+ *
+ * A word in the frame, and a reference to calldata anywhere, is a
+ * reference to a template defined in `templates` (if given); any other
+ * word is a single region.
+ */
+function wordPointer(
+  name: string,
+  { kind, size }: Word,
+  home: Home,
+  templates?: Templates,
+): Format.Pointer {
+  if (kind === "calldata") {
+    const yields = prefixed(["offset", "length", "data"], `${name}-`);
+    if ("stack" in home) {
+      return word(
+        templates,
+        "stack-calldata-local",
+        { slot: home.stack },
+        yields,
+      );
+    }
+    return "frame" in home
+      ? word(templates, "frame-calldata-local", { offset: home.frame }, yields)
+      : word(
+          templates,
+          "memory-calldata-local",
+          { offset: home.memory },
+          yields,
+        );
   }
 
-  // Frame-relative: mem[ mem[FRAME_POINTER] + delta ].
-  return {
-    group: [
-      {
-        name: FRAME,
-        location: "memory",
-        offset: Memory.regions.FRAME_POINTER,
-        length: 32,
-      },
-      ...parts.map(
-        ({ name, offset, length }): Format.Pointer => ({
-          name,
-          location: "memory",
-          offset: { "~sum": [{ "~read": FRAME }, word + offset] },
-          length,
-        }),
-      ),
-    ],
-  };
-}
-
-function stackPointer(parts: Part[], slot: number): Format.Pointer {
-  const regions = parts.map(
-    ({ name, offset, length }): Format.Pointer => ({
+  const offset = 32 - size;
+  if ("stack" in home) {
+    return {
       name,
       location: "stack",
-      slot,
-      ...(length < 32 ? { offset, length } : {}),
-    }),
+      slot: home.stack,
+      ...(size < 32 ? { offset, length: size } : {}),
+    };
+  }
+  if ("memory" in home) {
+    return {
+      name,
+      location: "memory",
+      offset: home.memory + offset,
+      length: size,
+    };
+  }
+  return word(
+    templates,
+    "frame-local",
+    { offset: home.frame + offset, length: size },
+    { local: name },
   );
-  return regions.length === 1 ? regions[0] : { group: regions };
+}
+
+/** True for a pointer to a word in the frame (see `wordPointer`) */
+function isFrameRelative(pointer: Format.Pointer): boolean {
+  if ("group" in pointer) return isFrameRelative(pointer.group[0]);
+  if ("define" in pointer) return isFrameRelative(pointer.in);
+  return "template" in pointer && pointer.template.startsWith("frame-");
 }
 
 /**
- * Pointers to the data a reference at `base` refers to, by bugc's
- * memory layout, or undefined if the layout is not described here.
+ * The template for the data a reference in memory refers to, by bugc's
+ * memory layout, defined in `templates`; or undefined if the layout is
+ * not described here. It expects `base`, the data's address.
  *
- * - `string` and dynamic `bytes`: a length word at `base`, then that
- *   many bytes of data.
- * - dynamic array: a length word at `base`, then one word per element
- *   (`base + 32 + 32 * i`). A scalar element is right-aligned in its
- *   word; a reference element's word holds the address of its data,
- *   described the same way.
- *
- * - struct: one word per field, in order, from `base`. A scalar field
- *   is right-aligned in its word; a reference field's word holds the
+ * - `string` and dynamic `bytes` (`memory-bytes`): a length word at
+ *   `base`, then that many bytes of data.
+ * - dynamic array (`memory-array-<element>`): a length word at `base`,
+ *   then one word per element (`base + 32 + 32 * i`). A scalar element
+ *   is right-aligned in its word; a reference element's word holds the
  *   address of its data, described the same way.
+ * - struct (`memory-<name>`): one word per field, in order, from
+ *   `base`. A scalar field is right-aligned in its word; a reference
+ *   field's word holds the address of its data, described the same
+ *   way.
  *
- * Regions are named after the local: `x-length`, `x-data`,
- * `x-element`, `x-<field>`, and for a nested reference
- * `x-element-length`, `x-<field>-data` and so on. Fixed-size arrays
- * are left out: bugc cannot build one in memory yet (array literals
- * are dynamic).
+ * Regions are named `length`, `data`, `element`, `<field>`, and for a
+ * nested reference `element-length`, `<field>-data` and so on.
+ * Fixed-size arrays are left out: bugc cannot build one in memory yet
+ * (array literals are dynamic).
  */
-function dataPointers(
-  base: Format.Pointer.Expression,
+function memoryData(
   type: Ir.Type.Origin,
-  name: string,
-  depth: number = 0,
-): Format.Pointer[] | undefined {
+  templates: Templates,
+): string | undefined {
   if (type === "synthetic") return undefined;
-  const length: Format.Pointer = {
-    name: `${name}-length`,
-    location: "memory",
-    offset: base,
-    length: 32,
-  };
-
   if (
     BugType.isElementary(type) &&
     (BugType.Elementary.isString(type) ||
       (BugType.Elementary.isBytes(type) && type.size === undefined))
   ) {
-    return [
-      length,
-      {
-        name: `${name}-data`,
-        location: "memory",
-        offset: { "~sum": [base, 32] },
-        length: { "~read": `${name}-length` },
+    return define(templates, "memory-bytes", () => ({
+      expect: ["base"],
+      for: {
+        group: [
+          lengthWord,
+          {
+            name: "data",
+            location: "memory",
+            offset: { "~sum": ["base", 32] },
+            length: { "~read": "length" },
+          },
+        ],
       },
-    ];
+    }));
   }
+  if (
+    !BugType.isStruct(type) &&
+    !(BugType.isArray(type) && type.size === undefined)
+  ) {
+    return undefined;
+  }
+  return define(templates, `memory-${typeName(type)}`, () => {
+    const pointer = BugType.isStruct(type)
+      ? structLayout(type, templates)
+      : arrayLayout(type, templates);
+    return pointer && { expect: ["base"], for: pointer };
+  });
+}
 
-  if (BugType.isStruct(type)) {
-    const fields: Format.Pointer[] = [];
-    let index = 0;
-    for (const [field, fieldType] of type.fields) {
-      const region = `${name}-${field}`;
-      const word = 32 * index++;
-      const offset = (within: number): Format.Pointer.Expression =>
-        word + within === 0 ? base : { "~sum": [base, word + within] };
-      const irType = fromBugType(fieldType);
-      if (Ir.Type.isScalar(irType)) {
-        fields.push({
-          name: region,
-          location: "memory",
-          offset: offset(32 - irType.size),
-          length: irType.size,
-        });
-        continue;
-      }
-      const nested = dataPointers(
-        { "~read": region },
-        fieldType,
-        region,
-        depth,
-      );
-      if (!nested) return undefined;
-      fields.push(
-        { name: region, location: "memory", offset: offset(0), length: 32 },
-        ...nested,
-      );
+/** The length word at `base` (of bytes, a string, or an array) */
+const lengthWord: Format.Pointer = {
+  name: "length",
+  location: "memory",
+  offset: "base",
+  length: 32,
+};
+
+/** A struct in memory at `base` (see `memoryData`) */
+function structLayout(
+  type: BugType.Struct,
+  templates: Templates,
+): Format.Pointer | undefined {
+  const fields: Format.Pointer[] = [];
+  let index = 0;
+  for (const [field, fieldType] of type.fields) {
+    const start = 32 * index++;
+    const offset = (within: number): Format.Pointer.Expression =>
+      start + within === 0 ? "base" : { "~sum": ["base", start + within] };
+    const irType = fromBugType(fieldType);
+    if (Ir.Type.isScalar(irType)) {
+      fields.push({
+        name: field,
+        location: "memory",
+        offset: offset(32 - irType.size),
+        length: irType.size,
+      });
+      continue;
     }
-    return fields;
+    const nested = memoryData(fieldType, templates);
+    if (!nested) return undefined;
+    fields.push(
+      { name: field, location: "memory", offset: offset(0), length: 32 },
+      dataPointer(field, nested, templates),
+    );
   }
+  return { group: fields };
+}
 
-  if (!BugType.isArray(type) || type.size !== undefined) return undefined;
-
-  const index = `i${depth}`;
-  const element = `${name}-element`;
+/** A dynamic array in memory at `base` (see `memoryData`) */
+function arrayLayout(
+  type: BugType.Array,
+  templates: Templates,
+): Format.Pointer | undefined {
   const wordOffset = (within: number): Format.Pointer.Expression => ({
-    "~sum": [base, 32 + within, { "~product": [index, 32] }],
+    "~sum": ["base", 32 + within, { "~product": ["i", 32] }],
   });
   const elementType = fromBugType(type.element);
   let is: Format.Pointer;
   if (Ir.Type.isScalar(elementType)) {
     const size = elementType.size;
     is = {
-      name: element,
+      name: "element",
       location: "memory",
       offset: wordOffset(32 - size),
       length: size,
     };
   } else {
-    const nested = dataPointers(
-      { "~read": element },
-      type.element,
-      element,
-      depth + 1,
-    );
+    const nested = memoryData(type.element, templates);
     if (!nested) return undefined;
     is = {
       group: [
         {
-          name: element,
+          name: "element",
           location: "memory",
           offset: wordOffset(0),
           length: 32,
         },
-        ...nested,
+        dataPointer("element", nested, templates),
       ],
     };
   }
-
-  return [
-    length,
-    { list: { count: { "~read": `${name}-length` }, each: index, is } },
-  ];
+  return {
+    group: [
+      lengthWord,
+      { list: { count: { "~read": "length" }, each: "i", is } },
+    ],
+  };
 }
 
 /**
- * The parts of a local's word that refers to bytes in calldata: their
- * offset in its high 16 bytes, their length in its low 16 bytes. The
- * regions are named `x-offset` and `x-length`.
+ * A pointer to the data that the reference in region `name` refers to:
+ * a reference to its template (see `memoryData`), with its regions
+ * named after the reference (`x-length`, `x-data`, `x-element`, ...)
  */
-function calldataParts(name: string): Part[] {
-  return [
-    { name: `${name}-offset`, offset: 0, length: 16 },
-    { name: `${name}-length`, offset: 16, length: 16 },
-  ];
-}
-
-/** A pointer to the bytes in calldata, named `x-data`, that the parts
- * of a local's word (`calldataParts`) give */
-function calldataPointer(name: string): Format.Pointer {
-  return {
-    name: `${name}-data`,
-    location: "calldata",
-    offset: { "~read": `${name}-offset` },
-    length: { "~read": `${name}-length` },
-  };
+function dataPointer(
+  name: string,
+  template: string,
+  templates: Templates,
+): Format.Pointer {
+  return referTo(
+    template,
+    { base: { "~read": name } },
+    prefixed(regionNames(templates[template].for, templates), `${name}-`),
+  );
 }
 
 /** A pointer to a local's word plus, for a reference, its data. */
 function withData(
   word: Format.Pointer,
-  data: Format.Pointer[] | undefined,
+  data: Format.Pointer | undefined,
 ): Format.Pointer {
-  if (!data) return word;
-  return "group" in word
-    ? { group: [...word.group, ...data] }
-    : { group: [word, ...data] };
+  return data ? { group: [word, data] } : word;
 }
 
 /**
@@ -463,7 +589,10 @@ export function withStackLocals<I extends { debug?: Ir.Instruction.Debug }>(
     if (slot < 0) return entry;
     return {
       ...entry,
-      pointer: withData(stackPointer(local.parts, slot), local.data),
+      pointer: withData(
+        wordPointer(local.identifier, local.word, { stack: slot }),
+        local.data,
+      ),
     };
   });
   return {
@@ -519,9 +648,7 @@ export function withoutFrameLocals(
   if (!context || !Array.isArray(context.variables)) return debug;
 
   const isLocal = (entry: VariableEntry) =>
-    !entry.pointer ||
-    ("group" in entry.pointer &&
-      (entry.pointer.group[0] as { name?: string }).name === FRAME);
+    !entry.pointer || isFrameRelative(entry.pointer);
   const variables = (context.variables as VariableEntry[]).filter(
     (entry) => !isLocal(entry),
   );
@@ -615,6 +742,8 @@ interface FunctionInfo {
   allocations: Record<string, Memory.Allocation>;
   frameSize: number | undefined;
   sourceId: string;
+  /** Where the templates its pointers refer to are defined */
+  templates: Templates;
 }
 
 /** A position, after optimization and (if known) before it */
@@ -715,29 +844,35 @@ function snapshotAt(
     // A scalar's word holds its value; a reference's word holds the
     // address of its data.
     const { name } = declaration;
-    let parts = wholePart(name);
-    let data: Format.Pointer[] | undefined;
+    let word: Word = { kind: "value", size: 32 };
+    let data: Format.Pointer | undefined;
     if (Ir.Type.isScalar(type)) {
-      parts = wholePart(name, type.size);
+      word = { kind: "value", size: type.size };
     } else if (type.kind === "ref" && type.location === "calldata") {
-      parts = calldataParts(name);
-      data = [calldataPointer(name)];
+      word = { kind: "calldata", size: 32 };
     } else {
       if (type.kind !== "ref" || type.location !== "memory") continue;
-      data = dataPointers({ "~read": name }, type.origin, name);
-      if (!data) continue;
+      const template = memoryData(type.origin, info.templates);
+      if (!template) continue;
+      data = dataPointer(name, template, info.templates);
     }
     const allocation = info.allocations[located.temp];
     if (allocation) {
+      const offset = Number(allocation.offset);
+      const home =
+        info.frameSize === undefined ? { memory: offset } : { frame: offset };
       entry.pointer = withData(
-        memoryPointer(parts, allocation, info.frameSize),
+        wordPointer(name, word, home, info.templates),
         data,
       );
     } else {
+      // Its pointer is given during code generation (`withStackLocals`),
+      // and refers to the templates defined here
+      wordPointer(name, word, { stack: 0 }, info.templates);
       stackLocals.push({
         identifier: name,
         temp: located.temp,
-        parts,
+        word,
         ...(data ? { data } : {}),
       });
     }
@@ -754,6 +889,7 @@ function enrichFunction(
   module: Ir.Module,
   memory: Memory.Function.Info,
   sourceId: string,
+  templates: Templates,
 ): void {
   if (!func.ssaVariables || func.ssaVariables.size === 0) return;
 
@@ -774,6 +910,7 @@ function enrichFunction(
     allocations: memory.allocations,
     frameSize: memory.frameSize,
     sourceId,
+    templates,
   };
   const homed = new Set(
     [...tempOf.values()].filter((t) => info.allocations[t] !== undefined),
@@ -908,13 +1045,16 @@ function enrichFunction(
 
 /**
  * Enrich a module's instructions with per-instruction local-variable
- * snapshots. Mutates in place; safe before generation.
+ * snapshots, and add the templates their pointers refer to to its
+ * `pointerTemplates`. Mutates in place; safe before generation.
  */
 export function enrich(
   module: Ir.Module,
   memory: Memory.Module.Info,
 ): Ir.Module {
   const sourceId = module.sourceId;
+  const templates = { ...module.pointerTemplates };
+  module.pointerTemplates = templates;
 
   const targets: { func: Ir.Function; mem?: Memory.Function.Info }[] = [
     { func: module.main, mem: memory.main },
@@ -927,7 +1067,7 @@ export function enrich(
 
   for (const { func, mem } of targets) {
     if (!mem) continue;
-    enrichFunction(func, module, mem, sourceId);
+    enrichFunction(func, module, mem, sourceId, templates);
   }
 
   return module;

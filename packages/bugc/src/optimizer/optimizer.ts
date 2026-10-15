@@ -210,6 +210,9 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
       // Keep the program-level context (storage variables); dropping it
       // here erased those variables from optimization level 1 upward.
       ...(module.debugContext ? { debugContext: module.debugContext } : {}),
+      ...(module.pointerTemplates
+        ? { pointerTemplates: module.pointerTemplates }
+        : {}),
     };
   }
 
