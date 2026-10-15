@@ -380,7 +380,7 @@ async function readScalar(
  * follows the length word, as long as the length says. A struct has no
  * length word: each field is in its word from the base. Bytes in
  * calldata are the calldata from the offset in the word's high 16
- * bytes, as long as its low 16 bytes say.
+ * bytes, as long as its low 16 bytes say: each half a region.
  */
 async function readReference(
   pointer: unknown,
@@ -390,14 +390,15 @@ async function readReference(
   index: number,
 ): Promise<RefValue> {
   const regions = await regionsAt(pointer, run, index);
-  regions.seek(name);
 
   if (shape.kind === "calldata") {
-    const word = (await regions.read(name)).asUint();
-    const offset = word >> 128n;
-    const length = word & ((1n << 128n) - 1n);
+    regions.seek(`${name}-offset`);
+    const offset = (await regions.read(`${name}-offset`)).asUint();
+    const length = (await regions.read(`${name}-length`)).asUint();
     return (await regions.read(`${name}-data`, offset, length)).toHex();
   }
+
+  regions.seek(name);
 
   /** A scalar's value, or a reference's, whose word is at `word` */
   const decodeWord = async (

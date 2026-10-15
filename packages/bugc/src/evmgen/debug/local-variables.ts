@@ -58,6 +58,14 @@ type StackLocal = NonNullable<Ir.Instruction.Debug["stackLocals"]>[number];
 
 type DefSite = Ir.Utils.DefSite;
 
+/** A region in a local's word (see `memoryPointer`) */
+type Part = StackLocal["parts"][number];
+
+/** A scalar of `size` bytes, or a whole word, as one part */
+function wholePart(name: string, size = 32): Part[] {
+  return [{ name, offset: 32 - size, length: size }];
+}
+
 /**
  * A value is homed by a full-word `MSTORE` of its stack word, which
  * writes the word big-endian. bugc keeps every scalar right-aligned on
@@ -65,18 +73,28 @@ type DefSite = Ir.Utils.DefSite;
  * word's low-order `size` bytes: `32 - size` bytes into the word,
  * `size` bytes long. The same holds for a stack slot (segment offsets
  * count from the word's most significant byte).
+ *
+ * A word may hold more than one part (bytes in calldata: their offset
+ * and length); each part is a region of its own.
  */
 function memoryPointer(
-  identifier: string,
-  size: number,
+  parts: Part[],
   allocation: Memory.Allocation,
   frameSize: number | undefined,
 ): Format.Pointer {
-  const offset = Number(allocation.offset) + 32 - size;
+  const word = Number(allocation.offset);
 
   if (frameSize === undefined) {
     // No call frame (main/create): static memory offset.
-    return { name: identifier, location: "memory", offset, length: size };
+    const regions = parts.map(
+      ({ name, offset, length }): Format.Pointer => ({
+        name,
+        location: "memory",
+        offset: word + offset,
+        length,
+      }),
+    );
+    return regions.length === 1 ? regions[0] : { group: regions };
   }
 
   // Frame-relative: mem[ mem[FRAME_POINTER] + delta ].
@@ -88,27 +106,28 @@ function memoryPointer(
         offset: Memory.regions.FRAME_POINTER,
         length: 32,
       },
-      {
-        name: identifier,
-        location: "memory",
-        offset: { "~sum": [{ "~read": FRAME }, offset] },
-        length: size,
-      },
+      ...parts.map(
+        ({ name, offset, length }): Format.Pointer => ({
+          name,
+          location: "memory",
+          offset: { "~sum": [{ "~read": FRAME }, word + offset] },
+          length,
+        }),
+      ),
     ],
   };
 }
 
-function stackPointer(
-  identifier: string,
-  slot: number,
-  size: number,
-): Format.Pointer {
-  return {
-    name: identifier,
-    location: "stack",
-    slot,
-    ...(size < 32 ? { offset: 32 - size, length: size } : {}),
-  };
+function stackPointer(parts: Part[], slot: number): Format.Pointer {
+  const regions = parts.map(
+    ({ name, offset, length }): Format.Pointer => ({
+      name,
+      location: "stack",
+      slot,
+      ...(length < 32 ? { offset, length } : {}),
+    }),
+  );
+  return regions.length === 1 ? regions[0] : { group: regions };
 }
 
 /**
@@ -240,17 +259,25 @@ function dataPointers(
 }
 
 /**
- * A pointer to the bytes in calldata a local's word refers to: the
- * word holds their offset in its high 128 bits and their length in its
- * low 128 bits. The region is named `x-data`.
+ * The parts of a local's word that refers to bytes in calldata: their
+ * offset in its high 16 bytes, their length in its low 16 bytes. The
+ * regions are named `x-offset` and `x-length`.
  */
+function calldataParts(name: string): Part[] {
+  return [
+    { name: `${name}-offset`, offset: 0, length: 16 },
+    { name: `${name}-length`, offset: 16, length: 16 },
+  ];
+}
+
+/** A pointer to the bytes in calldata, named `x-data`, that the parts
+ * of a local's word (`calldataParts`) give */
 function calldataPointer(name: string): Format.Pointer {
-  const half = `0x1${"0".repeat(32)}`; // 2^128
   return {
     name: `${name}-data`,
     location: "calldata",
-    offset: { "~quotient": [{ "~read": name }, half] },
-    length: { "~remainder": [{ "~read": name }, half] },
+    offset: { "~read": `${name}-offset` },
+    length: { "~read": `${name}-length` },
   };
 }
 
@@ -436,10 +463,7 @@ export function withStackLocals<I extends { debug?: Ir.Instruction.Debug }>(
     if (slot < 0) return entry;
     return {
       ...entry,
-      pointer: withData(
-        stackPointer(local.identifier, slot, local.size),
-        local.data,
-      ),
+      pointer: withData(stackPointer(local.parts, slot), local.data),
     };
   });
   return {
@@ -691,11 +715,12 @@ function snapshotAt(
     // A scalar's word holds its value; a reference's word holds the
     // address of its data.
     const { name } = declaration;
-    let size = 32;
+    let parts = wholePart(name);
     let data: Format.Pointer[] | undefined;
     if (Ir.Type.isScalar(type)) {
-      size = type.size;
+      parts = wholePart(name, type.size);
     } else if (type.kind === "ref" && type.location === "calldata") {
+      parts = calldataParts(name);
       data = [calldataPointer(name)];
     } else {
       if (type.kind !== "ref" || type.location !== "memory") continue;
@@ -705,14 +730,14 @@ function snapshotAt(
     const allocation = info.allocations[located.temp];
     if (allocation) {
       entry.pointer = withData(
-        memoryPointer(name, size, allocation, info.frameSize),
+        memoryPointer(parts, allocation, info.frameSize),
         data,
       );
     } else {
       stackLocals.push({
         identifier: name,
         temp: located.temp,
-        size,
+        parts,
         ...(data ? { data } : {}),
       });
     }

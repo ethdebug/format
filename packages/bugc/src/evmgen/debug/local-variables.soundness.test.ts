@@ -11,6 +11,8 @@
 import { describe, it, expect } from "vitest";
 
 import { Program } from "@ethdebug/format";
+import type * as Format from "@ethdebug/format";
+import { dereference } from "@ethdebug/pointers";
 import { executeProgram } from "#test/evm/behavioral";
 import {
   type Level,
@@ -1643,6 +1645,57 @@ code {
     expect(strings.map((entry) => entry.pointer)).toEqual(
       bytes.map((entry) => entry.pointer),
     );
+  });
+});
+
+describe.each(levels)("a calldata reference's word at O%i", (level) => {
+  // Its word holds the bytes' offset in its high 16 bytes and their
+  // length in its low 16 bytes: each half is a region of its own, which
+  // the bytes' region reads, with no arithmetic on the whole word
+  it.each([
+    setMotdProgram(""),
+    namedProgram(motd),
+    parameterProgram(motd, "record"),
+    // On the stack, at every level
+    parameterProgram(motd, "record", "bytes"),
+    parameterProgram(motd, "join"),
+  ])("$name", async ({ source, calldata }) => {
+    const run = await traceLocals(source, level, calldata);
+    let checked = 0;
+    for (let k = 0; k + 1 < run.steps.length; k++) {
+      const context = run.instructionAt(run.steps[k])?.context;
+      for (const entry of localsOf(context)) {
+        const pointer = entry.pointer as Format.Pointer | undefined;
+        const json = JSON.stringify(pointer);
+        if (!pointer || !json.includes('"calldata"')) continue;
+        expect(json).not.toMatch(/~quotient|~remainder/);
+
+        const name = entry.identifier as string;
+        const state = run.stateAt(k + 1);
+        const view = await (await dereference(pointer, { state })).view(state);
+        const [offset, length] = ["offset", "length"].map((part) => {
+          const regions = view.regions.named(`${name}-${part}`);
+          expect(regions).toHaveLength(1);
+          return regions[0];
+        });
+        expect(length.location).toEqual(offset.location);
+        expect(offset.length?.asUint()).toEqual(16n);
+        expect(length.length?.asUint()).toEqual(16n);
+        if (offset.location === "stack" && length.location === "stack") {
+          expect(length.slot.asUint()).toEqual(offset.slot.asUint());
+          expect(offset.offset?.asUint()).toEqual(0n);
+          expect(length.offset?.asUint()).toEqual(16n);
+        } else {
+          expect(offset.location).toEqual("memory");
+          expect(length.offset!.asUint()).toEqual(
+            offset.offset!.asUint() + 16n,
+          );
+        }
+        expect(view.regions.named(name)).toHaveLength(0);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
 
