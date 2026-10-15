@@ -1,6 +1,7 @@
 import * as Ir from "#ir";
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -253,26 +254,16 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
       return writes;
     }
 
-    // The writes' invokes and returns go on the first and the last
-    // instruction of the merge, as on one instruction: they must read
-    // as invokes, then returns
-    const markers = writes.map(({ operationDebug }) => ({
-      invokes: Ir.Utils.activationsOf(operationDebug?.context, "invoke"),
-      returns: Ir.Utils.activationsOf(operationDebug?.context, "return"),
-      returned: operationDebug?.returned,
-    }));
-    const firstReturn = markers.findIndex(({ returns }) => returns.length);
-    if (
-      firstReturn >= 0 &&
-      markers.slice(firstReturn + 1).some(({ invokes }) => invokes.length)
-    ) {
-      return writes;
-    }
-    const invokes = markers.flatMap(({ invokes }) => invokes);
-    const returns = markers.flatMap(({ returns }) => returns);
-    const returned = markers
-      .filter(({ returns }) => returns.length)
-      .at(-1)?.returned;
+    // The writes' invokes and returns, in order
+    const markers = writes.flatMap(({ operationDebug }) =>
+      Ir.Utils.markersOf(operationDebug),
+    );
+    const returned = [...writes]
+      .reverse()
+      .find(
+        ({ operationDebug }) =>
+          Ir.Utils.activationsOf(operationDebug?.context, "return").length > 0,
+      )?.operationDebug.returned;
 
     // Generate instructions to combine the values
     const instructions: Ir.Instruction[] = [];
@@ -356,22 +347,35 @@ export class ReadWriteMergingStep extends BaseOptimizationStep {
 
     instructions.push(mergedWrite);
 
+    // The merge runs as the writes did, so their invokes go on its
+    // first instruction and their returns on its last, as for one
+    // instruction. If a return comes before an invoke, they split
+    // between the two (see `Ir.Utils.placeActivations`).
     const first = instructions[0];
-    first.operationDebug = {
-      ...first.operationDebug,
-      context: Ir.Utils.withActivations(first.operationDebug.context, {
-        invokes,
-      }),
-    };
-    if (returns.length > 0) {
-      mergedWrite.operationDebug = {
-        ...mergedWrite.operationDebug,
-        context: Ir.Utils.withActivations(mergedWrite.operationDebug.context, {
-          returns,
-        }),
-        ...(returned ? { returned } : {}),
-      };
-    }
+    const ordered = markers.every(
+      (marker, i) =>
+        !("invoke" in marker) ||
+        !markers.slice(0, i).some((earlier) => "return" in earlier),
+    );
+    const invokes = markers.filter((marker) => "invoke" in marker);
+    const returns = markers.filter((marker) => "return" in marker);
+    const placed = ordered
+      ? {
+          before: Ir.Utils.placeActivations(invokes, undefined, {
+            after: first.operationDebug,
+          }).after,
+          after: Ir.Utils.placeActivations(returns, returned, {
+            before: mergedWrite.operationDebug,
+          }).before,
+          dropped: [],
+        }
+      : Ir.Utils.placeActivations(markers, returned, {
+          before: first.operationDebug,
+          after: mergedWrite.operationDebug,
+        });
+    first.operationDebug = placed.before!;
+    mergedWrite.operationDebug = placed.after!;
+    recordDropped(context, this.name, placed.dropped);
 
     // Update the temp counter for next time
     this.nextTempCounter = tempCounter;

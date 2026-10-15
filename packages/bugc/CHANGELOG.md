@@ -61,16 +61,17 @@ support. Changes to the specification itself are tracked in the root
   (offset and length) ([#379]).
 - At optimization level 2 and up, every inlined call's `invoke` and
   `return` stay on that call's path, in order. A pass that removes or
-  merges the instruction (or jump) that carries one now moves it onto
-  a neighbour on the same path: the invoke onto the next instruction,
-  the return onto the one before. Before, common subexpression
-  elimination put an invoke on an equal instruction that also runs on
-  other paths (as a read of `msg.data` before a dispatch's branches),
-  so every run invoked the function and never returned. Dead code
-  elimination, block merging and jump optimization lost the marker
-  with what they removed, and merged writes repeated it. Jump
-  optimization keeps an empty block whose jump carries a marker it
-  cannot move ([#384]).
+  merges what carries one (an instruction, a jump, an empty block) now
+  moves it onto a neighbour on the same path: an invoke onto the next
+  op, a return onto the one before, or a block's entry (its
+  `JUMPDEST`). Before, common subexpression elimination put an invoke
+  on an equal instruction that also runs on other paths (as a read of
+  `msg.data` before a dispatch's branches), so every run invoked the
+  function and never returned. Dead code elimination, block merging
+  and jump optimization lost the marker with what they removed, and
+  merged writes repeated it. A marker with no op on its path to carry
+  it is dropped: debug information does not change the code
+  ([#384]).
 - A local defined before a call keeps its pointer after the call.
   The dominator tree that local-variable tracking uses left out a
   call's edge to its continuation, so every local defined before a call

@@ -2,6 +2,7 @@ import * as Ir from "#ir";
 
 import {
   BaseOptimizationStep,
+  recordDropped,
   type OptimizationContext,
 } from "../optimizer.js";
 
@@ -134,7 +135,18 @@ export class CommonSubexpressionEliminationStep extends BaseOptimizationStep {
         }
 
         block.instructions = newInstructions;
-        block.instructions = Ir.Utils.dropInstructions(block, eliminated);
+        const { instructions, replaced, dropped } = Ir.Utils.dropInstructions(
+          block,
+          eliminated,
+          { isEntry: blockId === func.entry },
+        );
+        block.instructions = instructions;
+        // Instructions kept here may be an expression's, for later blocks
+        for (const entry of pureExpressions.values()) {
+          entry.instruction =
+            replaced.get(entry.instruction) ?? entry.instruction;
+        }
+        recordDropped(context, this.name, dropped);
       }
 
       // Now apply replacements to phi nodes and terminators in a second

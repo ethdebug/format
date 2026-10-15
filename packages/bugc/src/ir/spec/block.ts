@@ -22,6 +22,12 @@ export interface Block {
   debug: Block.Debug;
   /** Debug for the block's entry (its JUMPDEST), set by code generation */
   entryDebug?: Block.Debug;
+  /**
+   * Invoke and return markers for the block's entry (its JUMPDEST):
+   * those of a jump or an instruction the optimizer removed, with no
+   * op closer on their path to carry them
+   */
+  entryActivations?: Block.Debug;
 }
 
 export namespace Block {

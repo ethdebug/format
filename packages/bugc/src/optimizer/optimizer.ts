@@ -225,6 +225,9 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
         terminator: { ...block.terminator },
         predecessors: new Set(block.predecessors),
         debug: block.debug,
+        ...(block.entryActivations
+          ? { entryActivations: block.entryActivations }
+          : {}),
       });
     }
 
@@ -281,4 +284,23 @@ export abstract class BaseOptimizationStep implements OptimizationStep {
 
     return result;
   }
+}
+
+/**
+ * Record the invoke and return markers a pass dropped: no op on their
+ * path could carry them, and debug information never changes the code
+ */
+export function recordDropped(
+  context: OptimizationContext,
+  pass: string,
+  dropped: Ir.Utils.ActivationMarker[],
+): void {
+  if (dropped.length === 0) return;
+  context.trackTransformation({
+    type: "delete",
+    pass,
+    original: [Ir.Utils.markersContext(dropped)],
+    result: [],
+    reason: "Dropped invoke/return markers with no op on their path",
+  });
 }

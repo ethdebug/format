@@ -288,6 +288,9 @@ export class InliningStep extends BaseOptimizationStep {
         terminator,
         predecessors: new Set(),
         debug: origBlock.debug,
+        ...(origBlock.entryActivations
+          ? { entryActivations: origBlock.entryActivations }
+          : {}),
       });
     }
 
