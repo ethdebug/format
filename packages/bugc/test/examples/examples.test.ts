@@ -61,6 +61,7 @@ interface CompiledBytecode {
   createInstructions?: Instruction[];
   runtimeProgram: Format.Program;
   createProgram?: Format.Program;
+  resources: { pointers: Format.Pointer.Templates };
 }
 
 interface ExampleInfo {
@@ -280,7 +281,15 @@ describe("Example Files", async () => {
               expect.fail(`Compilation failed at O${level}`);
             }
 
-            const { runtimeProgram, createProgram } = result.value.bytecode;
+            const { runtimeProgram, createProgram, resources } =
+              result.value.bytecode;
+            // (as written out, as JSON)
+            expect(
+              await invalidLocations(
+                "schema:ethdebug/format/info/resources",
+                JSON.parse(JSON.stringify(resources)),
+              ),
+            ).toEqual([]);
             const storageNames = (result.value.ast.storage ?? []).map(
               ({ name }) => name,
             );

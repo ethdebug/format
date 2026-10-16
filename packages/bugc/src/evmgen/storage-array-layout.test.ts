@@ -155,7 +155,7 @@ describe("storage array pointers", () => {
   for (const [name, { source, pointers }] of Object.entries(cases)) {
     if (!pointers) continue;
     it(name, async () => {
-      const { program, executor } = await traceLocals(
+      const { program, templates, executor } = await traceLocals(
         `name Layout;\n${source}`,
       );
       // the storage after the transaction
@@ -164,7 +164,10 @@ describe("storage array pointers", () => {
         const variable = (
           program.context as Format.Program.Context.Variables
         ).variables.find((v) => v.identifier === identifier)!;
-        const cursor = await dereference(variable.pointer!, { state });
+        const cursor = await dereference(variable.pointer!, {
+          state,
+          templates,
+        });
         const view = await cursor.view(state);
         for (const [regionName, values] of Object.entries(regions)) {
           const read = await Promise.all(

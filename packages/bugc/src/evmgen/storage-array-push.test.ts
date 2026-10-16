@@ -129,7 +129,7 @@ describe("push on a storage array", () => {
   }
 
   it("gives the pushed elements to the array's pointer", async () => {
-    const { program, executor } = await traceLocals(
+    const { program, templates, executor } = await traceLocals(
       `name Push;\nstorage { [0] h: array<uint16>; }
 code { h.push(5); h.push(7); h.push(9); }`,
     );
@@ -138,7 +138,7 @@ code { h.push(5); h.push(7); h.push(9); }`,
     const variable = (
       program.context as Format.Program.Context.Variables
     ).variables.find((v) => v.identifier === "h")!;
-    const cursor = await dereference(variable.pointer!, { state });
+    const cursor = await dereference(variable.pointer!, { state, templates });
     const view = await cursor.view(state);
     const read = await Promise.all(
       view.regions

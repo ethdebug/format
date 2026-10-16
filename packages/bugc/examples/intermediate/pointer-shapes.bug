@@ -1,0 +1,61 @@
+name PointerShapes;
+
+// Pointer shapes that refer to shared templates: a dynamic storage
+// array of structs, a mapping inside a struct, struct fields named
+// like a template's own regions (`length`, `data`), and locals in a
+// function's frame that are a string in memory and bytes in calldata
+
+define {
+  struct Blob {
+    length: uint64;
+    data: bytes;
+  };
+
+  struct Entry {
+    length: uint256;
+    data: string;
+    tags: mapping<uint256, uint8>;
+  };
+
+  function record(note: string calldata, raw: bytes calldata) -> uint256 {
+    let copy: string = note;
+    entries.push();
+    blobs.push();
+    entries[0].length = note.length;
+    entries[0].data = copy;
+    entries[0].tags[7] = 3;
+    blobs[0].length = raw.length as uint64;
+    blobs[0].data = raw;
+    let blob: Blob = blobs[0];
+    return blob.length as uint256;
+  };
+}
+
+storage {
+  [0] entries: array<Entry>;
+  [1] blobs: array<Blob>;
+  [2] byOwner: mapping<address, Entry>;
+  [3] total: uint256;
+}
+
+code {
+  let len = msg.data[0:32] as bytes32 as uint256;
+  let note: string calldata = msg.data[32:32 + len] as string calldata;
+  let raw: bytes calldata = msg.data[32:32 + len] as bytes calldata;
+  total = record(note, raw);
+  /*@test recorded
+  call-data: "000000000000000000000000000000000000000000000000000000000000002d61206e6f7465206c6f6e676572207468616e207468697274792d74776f2062797465732c20746f207370696c6c"
+  variables:
+    total:
+      value: 45
+    entries:
+      values:
+        array-length: 1
+        length: 45
+        data-data: "0x61206e6f7465206c6f6e676572207468616e207468697274792d74776f2062797465732c20746f207370696c6c"
+    blobs:
+      values:
+        length: 45
+        data-data: "0x61206e6f7465206c6f6e676572207468616e207468697274792d74776f2062797465732c20746f207370696c6c"
+  */
+}

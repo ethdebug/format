@@ -28,6 +28,8 @@ Load compiled program data containing:
 - Instruction list with contexts
 - Source materials
 - Type definitions
+- Pointer templates (the `pointers` of the compilation's info resources),
+  which pointers can refer to by name
 
 ## 3. Pointer resolver
 
@@ -37,7 +39,10 @@ Use `@ethdebug/pointers` to resolve variable locations:
 import { dereference } from "@ethdebug/pointers";
 
 // For each variable in scope
-const cursor = await dereference(variable.pointer, { state: machineState });
+const cursor = await dereference(variable.pointer, {
+  state: machineState,
+  templates: resources.pointers,
+});
 const view = await cursor.view(machineState);
 const value = await view.read(view.regions[0]);
 ```

@@ -53,18 +53,27 @@ code {
 
 /**
  * The pointer to an entry of a mapping, from the entry template that a
- * pointer defines (with the mapping's slot and the key)
+ * pointer defines (with the mapping's slot and the key). A mapping
+ * variable's pointer refers to its type's template, which defines it.
  */
 function entryOf(
   pointer: Format.Pointer,
+  templates: Format.Pointer.Templates,
   template: string,
   define: Record<string, Format.Pointer.Expression>,
 ): Format.Pointer {
-  if (!Format.Pointer.Collection.isTemplates(pointer)) {
+  const reference = Format.Pointer.Collection.isScope(pointer)
+    ? pointer.in
+    : pointer;
+  if (!Format.Pointer.Collection.isReference(reference)) {
+    throw new Error("pointer refers to no template");
+  }
+  const { for: body } = templates[reference.template];
+  if (!Format.Pointer.Collection.isTemplates(body)) {
     throw new Error("pointer defines no templates");
   }
   return {
-    templates: pointer.templates,
+    templates: body.templates,
     in: { define, in: { template } },
   };
 }
@@ -73,9 +82,10 @@ function entryOf(
 async function readRegions(
   pointer: Format.Pointer,
   state: ReturnType<typeof createMachineState>,
+  templates: Format.Pointer.Templates,
   name: string,
 ): Promise<string[]> {
-  const cursor = await dereference(pointer, { state });
+  const cursor = await dereference(pointer, { state, templates });
   const view = await cursor.view(state);
   return Promise.all(
     view.regions
@@ -99,37 +109,39 @@ describe("storage string and bytes pointers", () => {
         const string = bytesToHex(new TextEncoder().encode(text(length)));
         const bytes = bytesToHex(hexToBytes(hex(length)));
 
-        expect(await readRegions(pointerOf("s"), state, "data")).toEqual([
-          string,
-        ]);
-        expect(await readRegions(pointerOf("b"), state, "data")).toEqual([
-          bytes,
-        ]);
-        expect(await readRegions(pointerOf("p"), state, "id")).toEqual([
-          "0".repeat(63) + "1",
-        ]);
-        expect(await readRegions(pointerOf("p"), state, "name-data")).toEqual([
-          string,
-        ]);
-        expect(await readRegions(pointerOf("p"), state, "tag-data")).toEqual([
-          bytes,
-        ]);
-        expect(await readRegions(pointerOf("a"), state, "data")).toEqual([
-          "",
-          string,
-        ]);
+        expect(
+          await readRegions(pointerOf("s"), state, run.templates, "data"),
+        ).toEqual([string]);
+        expect(
+          await readRegions(pointerOf("b"), state, run.templates, "data"),
+        ).toEqual([bytes]);
+        expect(
+          await readRegions(pointerOf("p"), state, run.templates, "id"),
+        ).toEqual(["0".repeat(63) + "1"]);
+        expect(
+          await readRegions(pointerOf("p"), state, run.templates, "name-data"),
+        ).toEqual([string]);
+        expect(
+          await readRegions(pointerOf("p"), state, run.templates, "tag-data"),
+        ).toEqual([bytes]);
+        expect(
+          await readRegions(pointerOf("a"), state, run.templates, "data"),
+        ).toEqual(["", string]);
 
         // A mapping's entry `u[7]` comes from its entry template
-        const entry = entryOf(pointerOf("u"), "entry", { slot: 7, key: 7 });
-        expect(await readRegions(entry, state, "value-id")).toEqual([
-          "0".repeat(63) + "2",
-        ]);
-        expect(await readRegions(entry, state, "value-name-data")).toEqual([
-          string,
-        ]);
-        expect(await readRegions(entry, state, "value-tag-data")).toEqual([
-          bytes,
-        ]);
+        const entry = entryOf(pointerOf("u"), run.templates, "entry", {
+          slot: 7,
+          key: 7,
+        });
+        expect(
+          await readRegions(entry, state, run.templates, "value-id"),
+        ).toEqual(["0".repeat(63) + "2"]);
+        expect(
+          await readRegions(entry, state, run.templates, "value-name-data"),
+        ).toEqual([string]);
+        expect(
+          await readRegions(entry, state, run.templates, "value-tag-data"),
+        ).toEqual([bytes]);
       });
     }
   }
@@ -180,6 +192,7 @@ code {
       });
       if (!result.success) throw new Error("compile failed");
       const { bytecode } = result.value;
+      const templates = bytecode.resources.pointers;
       const executor = new Executor();
       await executor.deploy(bytesToHex(bytecode.create ?? bytecode.runtime));
       for (const { key, name } of players) {
@@ -196,36 +209,81 @@ code {
 
       for (const { key, name } of players) {
         const text = new TextEncoder().encode(name);
-        const player = entryOf(pointerOf("players"), "entry", {
+        const player = entryOf(pointerOf("players"), templates, "entry", {
           slot: 4,
           key,
         });
-        expect(await readRegions(player, state, "value-score")).toEqual([
-          word(text.length).slice(-16),
-        ]);
-        expect(await readRegions(player, state, "value-combo")).toEqual([
-          "00000003",
-        ]);
-        expect(await readRegions(player, state, "value-name-data")).toEqual([
-          bytesToHex(text),
-        ]);
+        expect(
+          await readRegions(player, state, templates, "value-score"),
+        ).toEqual([word(text.length).slice(-16)]);
+        expect(
+          await readRegions(player, state, templates, "value-combo"),
+        ).toEqual(["00000003"]);
+        expect(
+          await readRegions(player, state, templates, "value-name-data"),
+        ).toEqual([bytesToHex(text)]);
 
-        const plays = entryOf(pointerOf("plays"), "entry", { slot: 5, key });
-        expect(await readRegions(plays, state, "value")).toEqual([word(1)]);
+        const plays = entryOf(pointerOf("plays"), templates, "entry", {
+          slot: 5,
+          key,
+        });
+        expect(await readRegions(plays, state, templates, "value")).toEqual([
+          word(1),
+        ]);
 
         // `grid[key]` is a mapping: its slot is the inner mapping's,
         // and the inner template gives `grid[key][len]`
-        const grid = entryOf(pointerOf("grid"), "entry", { slot: 6, key });
-        const cursor = await dereference(grid, { state });
+        const grid = entryOf(pointerOf("grid"), templates, "entry", {
+          slot: 6,
+          key,
+        });
+        const cursor = await dereference(grid, { state, templates });
         const [inner] = (await cursor.view(state)).regions;
         expect(inner.name).toEqual("value");
         if (!("slot" in inner)) throw new Error("not a storage region");
-        const cell = entryOf(pointerOf("grid"), "value-entry", {
+        const cell = entryOf(pointerOf("grid"), templates, "value-entry", {
           slot: inner.slot.toHex(),
           key: text.length,
         });
-        expect(await readRegions(cell, state, "value")).toEqual(["07"]);
+        expect(await readRegions(cell, state, templates, "value")).toEqual([
+          "07",
+        ]);
       }
+    });
+  }
+});
+
+/**
+ * Each type has its own template: two array types whose words are the
+ * same, in another order, must not share one (the second would read the
+ * first's layout).
+ */
+describe("storage templates of nested array types", () => {
+  const program = `name Nested;
+storage { [0] a: array<array<uint256>, 3>; [3] b: array<array<uint256, 3>>; }
+code { a[1].push(5); a[1].push(6); }`;
+
+  for (const level of levels) {
+    it(`reads each by its own template (level ${level})`, async () => {
+      const run = await traceLocals(program, level);
+      const state = createMachineState(await run.executor.currentState());
+      const pointerOf = (identifier: string) =>
+        (
+          run.program.context as Format.Program.Context.Variables
+        ).variables.find((v) => v.identifier === identifier)!.pointer!;
+      const templateOf = (pointer: Format.Pointer) =>
+        JSON.stringify(pointer).match(/"template":"([^"]+)"/)?.[1];
+
+      expect(templateOf(pointerOf("a"))).not.toEqual(
+        templateOf(pointerOf("b")),
+      );
+      const word = (value: number) => value.toString(16).padStart(64, "0");
+      const read = (identifier: string, name: string) =>
+        readRegions(pointerOf(identifier), state, run.templates, name);
+      expect(await read("a", "array-length")).toEqual([0, 2, 0].map(word));
+      expect(await read("a", "element")).toEqual([5, 6].map(word));
+      expect(await read("b", "array-length")).toEqual([word(0)]);
+      expect(await read("b", "element")).toEqual([]);
     });
   }
 });

@@ -130,7 +130,10 @@ describe("packed storage struct field pointers", () => {
       expect(variable?.pointer).toBeDefined();
 
       const state = createMachineState(await executor.currentState());
-      const cursor = await dereference(variable!.pointer!, { state });
+      const cursor = await dereference(variable!.pointer!, {
+        state,
+        templates: compiled.value.bytecode.resources.pointers,
+      });
       const view = await cursor.view(state);
       const read = async (name: string) =>
         (await view.read(view.regions.lookup[name])).asUint();

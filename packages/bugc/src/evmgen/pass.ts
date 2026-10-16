@@ -29,6 +29,19 @@ export interface EvmGenerationOutput {
   runtimeProgram: Format.Program;
   /** Create program with debug info (ethdebug/format, optional) */
   createProgram?: Format.Program;
+  /**
+   * The compilation's info resources (ethdebug/format/info/resources):
+   * the pointer templates that the programs' pointers refer to, by
+   * name. A debugger dereferences those pointers with these templates.
+   */
+  resources: Resources;
+}
+
+/** An ethdebug/format/info/resources object, as bugc gives it */
+export interface Resources {
+  ethdebug: Format.Data.Stamp & { schema: "ethdebug/format/info/resources" };
+  types: Record<string, Format.Type>;
+  pointers: Format.Pointer.Templates;
 }
 
 /**
@@ -106,6 +119,10 @@ const pass: Pass<{
             createInstructions: result.createInstructions,
             runtimeProgram,
             createProgram,
+            resources: Format.Data.stamp("ethdebug/format/info/resources", {
+              types: {},
+              pointers: ir.pointerTemplates ?? {},
+            }),
           },
         },
         result.warnings,

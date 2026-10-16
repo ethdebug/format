@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import type { Program, Materials } from "@ethdebug/format";
+import type { Program, Materials, Pointer } from "@ethdebug/format";
 import {
   TraceProvider,
   TraceControls,
@@ -30,6 +30,9 @@ export interface TraceViewerProps {
   trace: TraceStep[];
   /** The program definition */
   program: Program;
+  /** The pointer templates its pointers refer to (the `pointers` of
+   * the compilation's info resources) */
+  templates?: Pointer.Templates;
   /** Source materials for highlighting */
   sources?: Materials.Source[];
   /** Initial step index */
@@ -48,6 +51,7 @@ export interface TraceViewerProps {
 export function TraceViewer({
   trace,
   program,
+  templates,
   sources = [],
   initialStepIndex = 0,
   showVariables = true,
@@ -59,6 +63,7 @@ export function TraceViewer({
       <TraceProvider
         trace={trace}
         program={program}
+        templates={templates}
         initialStepIndex={initialStepIndex}
       >
         <TraceViewerContent

@@ -55,16 +55,19 @@ function localEntries(
   return byId;
 }
 
-/** True if a pointer is a frame-relative group (name "-frame" + ~read). */
+/**
+ * True if a pointer is frame-relative: a reference to a frame template
+ * (whose regions read the frame pointer, "-frame"), at an offset.
+ */
 function isFrameRelative(pointer: unknown): boolean {
   if (!pointer || typeof pointer !== "object") return false;
-  const group = (pointer as { group?: unknown[] }).group;
-  if (!Array.isArray(group) || group.length < 2) return false;
-  const frame = group[0] as Record<string, unknown>;
-  const data = group[1] as Record<string, unknown>;
-  if (frame.name !== "-frame" || frame.location !== "memory") return false;
-  const offset = data.offset as Record<string, unknown> | undefined;
-  return !!offset && Array.isArray(offset["~sum"]);
+  const { define, in: in_ } = pointer as {
+    define?: { offset?: unknown };
+    in?: { template?: string };
+  };
+  return (
+    typeof define?.offset === "number" && !!in_?.template?.startsWith("frame-")
+  );
 }
 
 describe("local-variable debug emission (memory-homed, O0)", () => {
