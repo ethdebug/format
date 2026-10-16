@@ -43,6 +43,17 @@ function codeOffset(context: unknown): number | undefined {
     ?.code?.range?.offset;
 }
 
+/** The range of an instruction's `code`, if it has one */
+function codeRange(
+  context: unknown,
+): { offset: number; length: number } | undefined {
+  return (
+    context as
+      | { code?: { range?: { offset: number; length: number } } }
+      | undefined
+  )?.code?.range;
+}
+
 /** A struct local, a call, then the local again */
 const acrossCall = `name AcrossCall;
 define {
@@ -184,9 +195,11 @@ code { r = f(3); }`;
     const declared = source.indexOf("let x");
     const rows = await listed(source);
     for (const { instruction, names } of rows) {
-      const offset = codeOffset(instruction.context);
-      if (offset !== undefined && offset < declared) {
-        expect(names, `x listed at offset ${offset}`).not.toContain("x");
+      // code whose whole range is before the declaration (a range
+      // that holds it, as the function's, may list `x`)
+      const range = codeRange(instruction.context);
+      if (range && range.offset + range.length <= declared) {
+        expect(names, `x listed at offset ${range.offset}`).not.toContain("x");
       }
     }
     expect(rows.some(({ names }) => names.includes("x"))).toBe(true);

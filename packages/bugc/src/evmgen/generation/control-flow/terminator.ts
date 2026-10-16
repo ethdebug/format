@@ -29,6 +29,31 @@ function codeContext(
   return undefined;
 }
 
+/** Whether a context gives a source range, in a gather or a pick too */
+function hasCode(context: Format.Program.Context | undefined): boolean {
+  if (!context || typeof context !== "object") return false;
+  if ("code" in context) return true;
+  if ("gather" in context) return context.gather.some(hasCode);
+  if ("pick" in context) return context.pick.some(hasCode);
+  return false;
+}
+
+/**
+ * A debug with the function's source range (its declaration), if it
+ * gives none of its own
+ */
+function withFunctionRange(
+  debug: Ir.Block.Debug,
+  func: Ir.Function | undefined,
+): Ir.Block.Debug {
+  if (hasCode(debug.context) || !func?.sourceId || !func.loc) return debug;
+  const code = { source: { id: func.sourceId }, range: func.loc };
+  return {
+    ...debug,
+    context: { ...debug.context, code } as Format.Program.Context,
+  };
+}
+
 /**
  * Extract the in-scope `variables` list from an instruction/terminator
  * debug, if present, so a call's caller JUMP still lists the locals
@@ -68,12 +93,14 @@ export function generateTerminator<S extends Stack>(
       // Note: For returns with a value, we assume the return value is already
       // on TOS from the previous instruction in the block. This avoids an
       // unnecessary DUP that would leave an extra value on the stack.
+      // A return the source does not write (the end of a body) has
+      // no source range of its own: it gets the function's
+      const debug = withFunctionRange(term.operationDebug, func);
       if (isUserFunction) {
         // Internal function return epilogue.
         // Uses the same imperative pattern as
         // generateCallTerminator — returns
         // Transition<S, Stack> to erase output type.
-        const debug = term.operationDebug;
         return generateReturnEpilogue(term.value, debug, func);
       }
 
@@ -89,23 +116,25 @@ export function generateTerminator<S extends Stack>(
             if (allocation === undefined) {
               const offset = state.memory.nextStaticOffset;
               return builder
-                .then(loadValue(value))
-                .then(PUSHn(BigInt(offset)), { as: "offset" })
-                .then(MSTORE())
-                .then(PUSHn(32n), { as: "size" })
-                .then(PUSHn(BigInt(offset)), { as: "offset" })
-                .then(RETURN());
+                .then(loadValue(value, { debug }))
+                .then(PUSHn(BigInt(offset), { debug }), { as: "offset" })
+                .then(MSTORE({ debug }))
+                .then(PUSHn(32n, { debug }), { as: "size" })
+                .then(PUSHn(BigInt(offset), { debug }), { as: "offset" })
+                .then(RETURN({ debug }));
             } else {
               const offset = allocation.offset;
               return builder
-                .then(PUSHn(32n), { as: "size" })
-                .then(PUSHn(BigInt(offset)), { as: "offset" })
-                .then(RETURN());
+                .then(PUSHn(32n, { debug }), { as: "size" })
+                .then(PUSHn(BigInt(offset), { debug }), { as: "offset" })
+                .then(RETURN({ debug }));
             }
           })
           .done();
       } else {
-        return isLastBlock ? (state) => state : pipe<S>().then(STOP()).done();
+        return isLastBlock
+          ? (state) => state
+          : pipe<S>().then(STOP({ debug })).done();
       }
     }
 
