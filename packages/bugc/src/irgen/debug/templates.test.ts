@@ -1,13 +1,20 @@
 /**
- * A pointer that refers to shared templates must read what it would
- * read with each template written out in place. For every example, at
- * every level, every listed variable's pointer is read at every step of
- * a run, both ways: with the compilation's templates, and inline (each
- * reference replaced by its template's pointer, regions renamed as the
- * reference's `yields` says). The two must give the same regions with
- * the same bytes.
+ * A pointer that refers to shared templates must read what bugc's
+ * pointers read before they referred to templates. Every listed
+ * variable's pointer is read at every step of a run of an example:
+ *
+ * - For every example, at every level, both ways: with the
+ *   compilation's templates, and inline (each reference replaced by its
+ *   template's pointer, regions renamed as the reference's `yields`
+ *   says). The two must give the same regions with the same bytes.
+ * - For some examples, at O0 and O2, the reads must be those of bugc
+ *   before templates (origin/main at 9c8d7ccb1, all inline pointers):
+ *   `templates.golden.json` holds the number of reads and a digest of
+ *   them. `UPDATE_TEMPLATES_GOLDEN=1` writes it again from the
+ *   compiler at hand, so it is written with a compiler from before.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
+import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { glob } from "glob";
@@ -115,52 +122,133 @@ async function read(
   }
 }
 
-describe("pointers that refer to templates read as written out", async () => {
+/** The calldata to run an example with: none, and its tests' */
+function calldataOf(source: string): string[] {
+  return [
+    ...new Set([
+      "",
+      ...parseTestBlocks(source).flatMap(({ parsed }) =>
+        parsed.callData ? [parsed.callData] : [],
+      ),
+    ]),
+  ];
+}
+
+/**
+ * Visit each listed variable's pointer, at the state after each step of
+ * a run of `source` with each of its calldata (contexts are
+ * postconditions), then each storage variable's, with the storage after
+ * the call. Visits are in order, labeled with the run and step.
+ */
+async function eachPointer(
+  source: string,
+  level: (typeof levels)[number],
+  visit: (
+    label: string,
+    pointer: Format.Pointer,
+    state: Machine.State,
+    templates: Templates,
+  ) => Promise<void>,
+): Promise<void> {
+  for (const calldata of calldataOf(source)) {
+    const run = await traceLocals(source, level, calldata);
+    // (bugc gave no templates before)
+    const templates = run.templates ?? {};
+    for (let k = 0; k + 1 < run.steps.length; k++) {
+      const context = run.instructionAt(run.steps[k])?.context;
+      const entries = localsOf(context).filter(({ pointer }) => pointer);
+      if (entries.length === 0) continue;
+      const state = run.stateAt(k + 1);
+      for (const { identifier, pointer } of entries) {
+        const label = `${calldata.slice(0, 8)} ${k} ${identifier}`;
+        await visit(label, pointer as Format.Pointer, state, templates);
+      }
+    }
+    const state = createMachineState(await run.executor.currentState());
+    for (const { identifier, pointer } of localsOf(run.program.context)) {
+      if (!pointer) continue;
+      const label = `${calldata.slice(0, 8)} end ${identifier}`;
+      await visit(label, pointer as Format.Pointer, state, templates);
+    }
+  }
+}
+
+async function examples(): Promise<Array<[string, string]>> {
   const files = await glob("**/*.bug", { cwd: EXAMPLES_DIR });
+  const sources: Array<[string, string]> = [];
   for (const file of files.sort()) {
     const source = await fs.readFile(path.join(EXAMPLES_DIR, file), "utf-8");
-    if (/\/\/ @(wip|skip|expect-)/.test(source)) continue;
-    const calldatas = [
-      ...new Set([
-        "",
-        ...parseTestBlocks(source).flatMap(({ parsed }) =>
-          parsed.callData ? [parsed.callData] : [],
-        ),
-      ]),
-    ];
+    if (!/\/\/ @(wip|skip|expect-)/.test(source)) sources.push([file, source]);
+  }
+  return sources;
+}
 
+describe("pointers that refer to templates read as written out", async () => {
+  for (const [file, source] of await examples()) {
     for (const level of levels) {
       it(`${file} at O${level}`, async () => {
-        for (const calldata of calldatas) {
-          const run = await traceLocals(source, level, calldata);
-          const { templates } = run;
-          const same = async (
-            pointer: Format.Pointer,
-            state: Machine.State,
-          ) => {
-            expect(await read(pointer, state, templates)).toEqual(
-              await read(inline(pointer, templates), state, {}),
-            );
-          };
-
-          for (let k = 0; k + 1 < run.steps.length; k++) {
-            const context = run.instructionAt(run.steps[k])?.context;
-            const pointers = localsOf(context).flatMap(({ pointer }) =>
-              pointer ? [pointer as Format.Pointer] : [],
-            );
-            if (pointers.length === 0) continue;
-            // (contexts are postconditions)
-            const state = run.stateAt(k + 1);
-            for (const pointer of pointers) await same(pointer, state);
-          }
-
-          // the storage variables, with all the storage after the call
-          const state = createMachineState(await run.executor.currentState());
-          for (const { pointer } of localsOf(run.program.context)) {
-            if (pointer) await same(pointer as Format.Pointer, state);
-          }
-        }
+        let pointers = 0;
+        let reads = 0;
+        await eachPointer(source, level, async (_, pointer, state, t) => {
+          const read_ = await read(pointer, state, t);
+          expect(read_).toEqual(await read(inline(pointer, t), state, {}));
+          pointers++;
+          if (Array.isArray(read_)) reads++;
+        });
+        // (not all failing alike)
+        if (pointers > 0) expect(reads).toBeGreaterThan(0);
       }, 60_000);
+    }
+  }
+});
+
+const GOLDEN = path.join(__dirname, "templates.golden.json");
+const goldenExamples = [
+  "advanced/nested-arrays.bug",
+  "advanced/nested-structs.bug",
+  "advanced/token-registry.bug",
+  "basic/functions.bug",
+  "intermediate/mappings.bug",
+  "intermediate/memory-arrays.bug",
+  "intermediate/pointer-shapes.bug",
+  "intermediate/strings.bug",
+];
+
+describe("pointers read as they did before templates", async () => {
+  const update = !!process.env.UPDATE_TEMPLATES_GOLDEN;
+  const golden: Record<string, { reads: number; digest: string }> = update
+    ? {}
+    : JSON.parse(await fs.readFile(GOLDEN, "utf-8"));
+  if (update) {
+    afterAll(() =>
+      fs.writeFile(GOLDEN, JSON.stringify(golden, null, 2) + "\n"),
+    );
+  }
+
+  for (const file of goldenExamples) {
+    for (const level of [0, 2] as const) {
+      const key = `${file} at O${level}`;
+      it(
+        key,
+        async () => {
+          const source = await fs.readFile(
+            path.join(EXAMPLES_DIR, file),
+            "utf-8",
+          );
+          const hash = createHash("sha256");
+          let reads = 0;
+          await eachPointer(source, level, async (label, pointer, state, t) => {
+            const read_ = await read(pointer, state, t);
+            hash.update(JSON.stringify([label, read_]) + "\n");
+            if (Array.isArray(read_)) reads++;
+          });
+          const actual = { reads, digest: hash.digest("hex") };
+          expect(reads).toBeGreaterThan(0);
+          if (update) golden[key] = actual;
+          else expect(actual).toEqual(golden[key]);
+        },
+        60_000,
+      );
     }
   }
 });

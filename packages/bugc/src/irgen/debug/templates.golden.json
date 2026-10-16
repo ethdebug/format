@@ -1,0 +1,66 @@
+{
+  "advanced/nested-arrays.bug at O0": {
+    "reads": 571,
+    "digest": "4ec3e3a37c971656218b53321691f84d963075cf6b503053932c425250c14c27"
+  },
+  "advanced/nested-arrays.bug at O2": {
+    "reads": 392,
+    "digest": "9e36b17023c5f85a534188d78fcfe7e57e137b5f2e26ffabf6a59d881c7840a9"
+  },
+  "advanced/nested-structs.bug at O0": {
+    "reads": 61,
+    "digest": "a04f810aeb08ab9e3f9e5f0056ebc6a0bcd50ed52d99bf7281ca63b60f7c53dc"
+  },
+  "advanced/nested-structs.bug at O2": {
+    "reads": 38,
+    "digest": "c1bc27083ae0ff87be015c5afbc67c9ebfb38ec6691301a3828097504d1449d7"
+  },
+  "advanced/token-registry.bug at O0": {
+    "reads": 150,
+    "digest": "98d06f5fe6dfbb9d58cde4c0d0539ad383819672b291bfaea0f2802bb6963f1c"
+  },
+  "advanced/token-registry.bug at O2": {
+    "reads": 156,
+    "digest": "4c5bc026e29fcc42f34df492846a242f9f46d91846660a38e9b883ba56108793"
+  },
+  "basic/functions.bug at O0": {
+    "reads": 821,
+    "digest": "336b3b9a140a08e9314630a3cd17b91cc8e086cfc9738575628c829e715453cc"
+  },
+  "basic/functions.bug at O2": {
+    "reads": 146,
+    "digest": "f7677cbb9aa7cf6119a6f015056b1b903114706c85be6f4b7321ad78603c2f63"
+  },
+  "intermediate/mappings.bug at O0": {
+    "reads": 439,
+    "digest": "93dc2f8d15d7499b832253cec263149836b5b17985b7197c1361bd8ad9c6974b"
+  },
+  "intermediate/mappings.bug at O2": {
+    "reads": 188,
+    "digest": "c538ebd3daf832a1200e5861d0d856324c1e1325f585d7a46595f5967d187bd0"
+  },
+  "intermediate/memory-arrays.bug at O0": {
+    "reads": 23,
+    "digest": "a47973739f3e06057e87b87287e94c5bb80b0af2fb118681364a6e43eee5d679"
+  },
+  "intermediate/memory-arrays.bug at O2": {
+    "reads": 11,
+    "digest": "a65147f06d247180df9b07f7d6091f309c49e9bafb542b41b0e9760b3dc65aa8"
+  },
+  "intermediate/pointer-shapes.bug at O0": {
+    "reads": 9450,
+    "digest": "ad31f8a041360eca8424cd6ce211be103360102eb1f471c047f84f834ff5f3f4"
+  },
+  "intermediate/pointer-shapes.bug at O2": {
+    "reads": 6331,
+    "digest": "7477d2810c3df1dead6397d6ffcb29be4f47af6c25d9a29c9180ea2cf404cc53"
+  },
+  "intermediate/strings.bug at O0": {
+    "reads": 74,
+    "digest": "567a1663aa4c23d39c491a51e822be394e4aa6d52a12653c85642ecbee48d19a"
+  },
+  "intermediate/strings.bug at O2": {
+    "reads": 68,
+    "digest": "afe096adad34620894c92cdb7dcfc2579506552eaa05fe8fac6c09a4739ce518"
+  }
+}

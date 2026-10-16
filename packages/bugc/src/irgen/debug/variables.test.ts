@@ -252,3 +252,38 @@ code {
     });
   }
 });
+
+/**
+ * Each type has its own template: two array types whose words are the
+ * same, in another order, must not share one (the second would read the
+ * first's layout).
+ */
+describe("storage templates of nested array types", () => {
+  const program = `name Nested;
+storage { [0] a: array<array<uint256>, 3>; [3] b: array<array<uint256, 3>>; }
+code { a[1].push(5); a[1].push(6); }`;
+
+  for (const level of levels) {
+    it(`reads each by its own template (level ${level})`, async () => {
+      const run = await traceLocals(program, level);
+      const state = createMachineState(await run.executor.currentState());
+      const pointerOf = (identifier: string) =>
+        (
+          run.program.context as Format.Program.Context.Variables
+        ).variables.find((v) => v.identifier === identifier)!.pointer!;
+      const templateOf = (pointer: Format.Pointer) =>
+        JSON.stringify(pointer).match(/"template":"([^"]+)"/)?.[1];
+
+      expect(templateOf(pointerOf("a"))).not.toEqual(
+        templateOf(pointerOf("b")),
+      );
+      const word = (value: number) => value.toString(16).padStart(64, "0");
+      const read = (identifier: string, name: string) =>
+        readRegions(pointerOf(identifier), state, run.templates, name);
+      expect(await read("a", "array-length")).toEqual([0, 2, 0].map(word));
+      expect(await read("a", "element")).toEqual([5, 6].map(word));
+      expect(await read("b", "array-length")).toEqual([word(0)]);
+      expect(await read("b", "element")).toEqual([]);
+    });
+  }
+});

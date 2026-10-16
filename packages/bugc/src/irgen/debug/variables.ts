@@ -397,10 +397,15 @@ export function generateStorageVariablePointer(
   if (Type.isElementary(bugType)) {
     return generateStoragePointer(slot, bugType, shared);
   }
-  const name = define(shared, `storage-${typeName(bugType)}`, () => {
-    const pointer = generateStoragePointer("slot", bugType, shared);
-    return pointer && { expect: ["slot"], for: pointer };
-  });
+  const name = define(
+    shared,
+    `storage-${typeName(bugType)}`,
+    () => {
+      const pointer = generateStoragePointer("slot", bugType, shared);
+      return pointer && { expect: ["slot"], for: pointer };
+    },
+    Type.format(bugType),
+  );
   return name === undefined ? undefined : referTo(name, { slot });
 }
 

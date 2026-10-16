@@ -86,7 +86,8 @@ support. Changes to the specification itself are tracked in the root
   names do not change, and each pointer reads the same bytes as
   before. A storage variable of a value type, and a local in a stack
   slot or at a static memory offset, keep their inline pointers. The
-  programs are about half as large ([#399]).
+  programs are about half as large. The new example
+  `intermediate/pointer-shapes.bug` has these shapes ([#399]).
 
 ### Fixed
 

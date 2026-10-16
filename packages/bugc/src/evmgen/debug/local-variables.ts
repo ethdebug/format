@@ -246,11 +246,14 @@ function wordPointer(
   );
 }
 
+/** The word templates whose regions read the frame pointer */
+const frameTemplates = new Set(["frame-local", "frame-calldata-local"]);
+
 /** True for a pointer to a word in the frame (see `wordPointer`) */
 function isFrameRelative(pointer: Format.Pointer): boolean {
   if ("group" in pointer) return isFrameRelative(pointer.group[0]);
   if ("define" in pointer) return isFrameRelative(pointer.in);
-  return "template" in pointer && pointer.template.startsWith("frame-");
+  return "template" in pointer && frameTemplates.has(pointer.template);
 }
 
 /**
@@ -305,12 +308,17 @@ function memoryData(
   ) {
     return undefined;
   }
-  return define(templates, `memory-${typeName(type)}`, () => {
-    const pointer = BugType.isStruct(type)
-      ? structLayout(type, templates)
-      : arrayLayout(type, templates);
-    return pointer && { expect: ["base"], for: pointer };
-  });
+  return define(
+    templates,
+    `memory-${typeName(type)}`,
+    () => {
+      const pointer = BugType.isStruct(type)
+        ? structLayout(type, templates)
+        : arrayLayout(type, templates);
+      return pointer && { expect: ["base"], for: pointer };
+    },
+    BugType.format(type),
+  );
 }
 
 /** The length word at `base` (of bytes, a string, or an array) */

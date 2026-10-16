@@ -16,21 +16,37 @@ import { Type } from "#types";
 export type Templates = Format.Pointer.Templates;
 
 /**
- * Template `name` in `templates`: defined, if it is not there yet, as
- * `make` gives it (undefined: none). Its name, if defined.
+ * Template `name` in `templates`, for `what` (a type, as BUG writes
+ * it, or the name itself): defined, if it is not there yet, as `make`
+ * gives it (undefined: none). Its name, if defined. A name defined for
+ * something else is an error: a reference to it would read another
+ * layout.
  */
 export function define(
   templates: Templates,
   name: string,
   make: () => Format.Pointer.Template | undefined,
+  what: string = name,
 ): string | undefined {
+  const defined = definedFor.get(templates) ?? new Map<string, string>();
+  definedFor.set(templates, defined);
+  const other = defined.get(name);
+  if (other !== undefined && other !== what) {
+    throw new Error(
+      `Pointer template ${name} is defined for ${other}, not ${what}`,
+    );
+  }
   if (!(name in templates)) {
     const template = make();
     if (!template) return undefined;
     templates[name] = template;
   }
+  defined.set(name, what);
   return name;
 }
+
+/** What each template in a collection is defined for (see `define`) */
+const definedFor = new WeakMap<Templates, Map<string, string>>();
 
 /**
  * A reference to template `name`: with `define` binding its variables
@@ -105,12 +121,25 @@ export function prefixed(
 }
 
 /**
- * A type's name as part of a template name: as BUG writes it, with its
- * other characters as dashes (`mapping<address, Player>` is
- * `mapping-address-Player`)
+ * A type's name as part of a template name, distinct for each type:
+ * its words as BUG writes them, in order, joined with dashes, without
+ * the brackets. `array` and `mapping` always take the same number of
+ * types (an array's size, a number, is a word of its own), so the
+ * words say how the type nests: `array<array<uint256>, 3>` is
+ * `array-3-array-uint256`, `array<array<uint256, 3>>` is
+ * `array-array-3-uint256`, and `mapping<address, Player>` is
+ * `mapping-address-Player`.
  */
 export function typeName(type: Type): string {
-  return Type.format(type)
-    .replace(/[^a-zA-Z0-9$_-]+/g, "-")
-    .replace(/-+$/, "");
+  if (Type.isArray(type)) {
+    return [
+      "array",
+      ...(type.size === undefined ? [] : [type.size]),
+      typeName(type.element),
+    ].join("-");
+  }
+  if (Type.isMapping(type)) {
+    return `mapping-${typeName(type.key)}-${typeName(type.value)}`;
+  }
+  return Type.format(type).replace(/[^a-zA-Z0-9$_-]+/g, "-");
 }
