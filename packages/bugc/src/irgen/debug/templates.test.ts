@@ -13,7 +13,7 @@
  *   them. `UPDATE_TEMPLATES_GOLDEN=1` writes it again from the
  *   compiler at hand, so it is written with a compiler from before.
  */
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, afterEach } from "vitest";
 import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
@@ -159,6 +159,8 @@ async function eachPointer(
       const entries = localsOf(context).filter(({ pointer }) => pointer);
       if (entries.length === 0) continue;
       const state = run.stateAt(k + 1);
+      // (give the event loop a turn; see `afterEach` below)
+      await new Promise<void>((resolve) => setImmediate(resolve));
       for (const { identifier, pointer } of entries) {
         const label = `${calldata.slice(0, 8)} ${k} ${identifier}`;
         await visit(label, pointer as Format.Pointer, state, templates);
@@ -172,6 +174,12 @@ async function eachPointer(
     }
   }
 }
+
+// A long run of reads never turns the event loop, so the worker cannot
+// read vitest's replies to its progress reports, and once that lasts a
+// minute, vitest fails the run with 'Timeout calling "onTaskUpdate"'
+// (as in test/examples/examples.test.ts).
+afterEach(() => new Promise<void>((resolve) => setImmediate(resolve)));
 
 async function examples(): Promise<Array<[string, string]>> {
   const files = await glob("**/*.bug", { cwd: EXAMPLES_DIR });
