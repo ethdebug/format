@@ -61,9 +61,12 @@ function generatePrologue<S extends Stack>(
     // Until the prologue has stored the arguments in the frame, the
     // parameters are listed without a pointer (the invoke's
     // `arguments` point at them on the stack)
+    // The entry's source range is the function's declaration, the
+    // one its invoke names
     const variables = preludeVariables(func);
     const entryDebug = {
       context: {
+        ...(declaration ? { code: declaration } : {}),
         ...entryInvoke,
         ...(variables.length > 0 ? { variables } : {}),
       } as Format.Program.Context,
@@ -364,7 +367,7 @@ export function generate(
         }
       }
 
-      return Block.generate(
+      const generated = Block.generate(
         block,
         predecessor,
         isLastBlock,
@@ -373,6 +376,9 @@ export function generate(
         func,
         options.functions,
       )(entry);
+      return isFirstBlock
+        ? generated
+        : withLabelRange(generated, state.instructions.length, func);
     },
     stateAfterPrologue,
   );
@@ -405,6 +411,79 @@ export function generate(
     patches: finalState.patches, // Return patches for module-level patching
     blockOffsets: finalState.blockOffsets,
   };
+}
+
+/**
+ * A block's entry JUMPDEST, at `index`, with a source range when it has
+ * none of its own: that of what runs next, the instruction after it.
+ * Only when that instruction is in the same inlined bodies and starts
+ * and ends no call, so its range is the label's, too. A label with
+ * nothing after it (a block that holds only a return the code leaves
+ * out) gets the function's range, as that return would.
+ */
+function withLabelRange<S extends Stack>(
+  state: State<S>,
+  index: number,
+  func: Ir.Function,
+): State<S> {
+  const label = state.instructions[index];
+  if (label?.mnemonic !== "JUMPDEST") return state;
+  const context = (label.debug?.context ?? {}) as Format.Program.Context;
+  if ("code" in context || "gather" in context) return state;
+
+  const next = state.instructions[index + 1]?.debug?.context;
+  const range = next
+    ? inlines(next) === inlines(context)
+      ? rangeOf(next)
+      : undefined
+    : func.sourceId && func.loc
+      ? { code: { source: { id: func.sourceId }, range: func.loc } }
+      : undefined;
+  if (!range) return state;
+
+  const instructions = [...state.instructions];
+  instructions[index] = {
+    ...label,
+    debug: {
+      ...label.debug,
+      context: { ...context, ...range } as Format.Program.Context,
+    },
+  };
+  return { ...state, instructions };
+}
+
+/** How many `inline` transforms a context has at its top */
+function inlines(context: Format.Program.Context): number {
+  return "transform" in context
+    ? context.transform.filter((id) => id === "inline").length
+    : 0;
+}
+
+/**
+ * A context's source ranges, without the rest, when it has nothing
+ * but ranges, variables and transforms other than `inline` (below its
+ * top)
+ */
+function rangeOf(
+  context: Format.Program.Context,
+  top = true,
+): Format.Program.Context.Code | Format.Program.Context.Gather | undefined {
+  const {
+    variables: _,
+    transform: __,
+    ...rest
+  } = context as Record<string, unknown>;
+  if (!top && inlines(context) > 0) return undefined;
+  if (Format.Program.Context.isCode(rest) && Object.keys(rest).length === 1) {
+    return { code: rest.code };
+  }
+  if (Format.Program.Context.isGather(rest) && Object.keys(rest).length === 1) {
+    const gather = rest.gather.map((c) => rangeOf(c, false));
+    return gather.every((c) => c !== undefined)
+      ? { gather: gather as Format.Program.Context[] }
+      : undefined;
+  }
+  return undefined;
 }
 
 /**

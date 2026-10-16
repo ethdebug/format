@@ -131,6 +131,16 @@ support. Changes to the specification itself are tracked in the root
   way. Before, these compiled to a copy of the slot's word, or wrote
   the memory address to the slot. An array literal assigned to a storage array variable
   (`items = [1, 2];`) still compiles ([#377]).
+- Each instruction the compiler adds now has a source range. A called
+  function's entry JUMPDEST has the function's declaration, as its
+  `invoke` names. The end of a function body that has no `return`
+  (the frame teardown and its exit JUMP, or the `STOP` of `code`) has
+  the function's range. The instructions that return a value from
+  `code` have the `return`'s range. A block's JUMPDEST has the range
+  of the instruction after it. Before, these had none, so a debugger
+  stopped there showed no source. Two exceptions remain: the end of the
+  create program, which copies and returns the runtime code, and a
+  JUMPDEST just before an inlined call ([#400]).
 
 ## 0.1.0-preview.2 — 2026-10-07
 
@@ -596,3 +606,4 @@ First publication.
 [#395]: https://github.com/ethdebug/format/pull/395
 [#397]: https://github.com/ethdebug/format/pull/397
 [#398]: https://github.com/ethdebug/format/pull/398
+[#400]: https://github.com/ethdebug/format/pull/400
