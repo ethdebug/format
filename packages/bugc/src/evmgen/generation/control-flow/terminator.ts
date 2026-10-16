@@ -30,7 +30,7 @@ function codeContext(
 }
 
 /** Whether a context gives a source range, in a gather or a pick too */
-function hasCode(context: Format.Program.Context | undefined): boolean {
+export function hasCode(context: Format.Program.Context | undefined): boolean {
   if (!context || typeof context !== "object") return false;
   if ("code" in context) return true;
   if ("gather" in context) return context.gather.some(hasCode);

@@ -43,17 +43,6 @@ function codeOffset(context: unknown): number | undefined {
     ?.code?.range?.offset;
 }
 
-/** The range of an instruction's `code`, if it has one */
-function codeRange(
-  context: unknown,
-): { offset: number; length: number } | undefined {
-  return (
-    context as
-      | { code?: { range?: { offset: number; length: number } } }
-      | undefined
-  )?.code?.range;
-}
-
 /** A struct local, a call, then the local again */
 const acrossCall = `name AcrossCall;
 define {
@@ -193,15 +182,31 @@ storage { [0] r: uint256; }
 create {}
 code { r = f(3); }`;
     const declared = source.indexOf("let x");
+    const func = source.indexOf("function f");
     const rows = await listed(source);
-    for (const { instruction, names } of rows) {
-      // code whose whole range is before the declaration (a range
-      // that holds it, as the function's, may list `x`)
-      const range = codeRange(instruction.context);
-      if (range && range.offset + range.length <= declared) {
-        expect(names, `x listed at offset ${range.offset}`).not.toContain("x");
-      }
-    }
+    // The end of the body (a return the source does not write) has the
+    // function's range, which starts before `x` is declared; after the
+    // body's first instruction at or after the declaration, it may
+    // list `x`. The entry and the prologue, before it, may not.
+    const end = source.indexOf("};", func);
+    const body = rows.findIndex(({ instruction }) => {
+      const offset = codeOffset(instruction.context) ?? -1;
+      return offset >= declared && offset < end;
+    });
+    expect(body).toBeGreaterThan(0);
+    // the entry and the prologue are checked
+    expect(
+      rows.some(
+        ({ instruction }, index) =>
+          index < body && codeOffset(instruction.context) === func,
+      ),
+    ).toBe(true);
+    rows.forEach(({ instruction, names }, index) => {
+      const offset = codeOffset(instruction.context);
+      if (offset === undefined || offset >= declared) return;
+      if (offset === func && index > body) return;
+      expect(names, `x listed at offset ${offset}`).not.toContain("x");
+    });
     expect(rows.some(({ names }) => names.includes("x"))).toBe(true);
   });
 

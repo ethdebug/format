@@ -9,23 +9,30 @@ import type * as Format from "@ethdebug/format";
 import { Program } from "@ethdebug/format";
 import { compile } from "#compiler";
 import { exampleSources } from "../examples/index.js";
+import { hasCode } from "./generation/control-flow/terminator.js";
 
 const { Context } = Program;
 
-/** Whether a context gives a source range, in a gather or a pick too */
-function hasCode(context: Format.Program.Context | undefined): boolean {
-  if (!context) return false;
-  if (Context.isCode(context)) return true;
-  if (Context.isGather(context)) return context.gather.some(hasCode);
-  if (Context.isPick(context)) return context.pick.some(hasCode);
-  return false;
+/** Whether a context starts an inlined call */
+function invokesInline(context: Format.Program.Context | undefined): boolean {
+  return !!context && invokes(context) && inlined(context);
 }
 
-/** Whether a context starts a call, in a gather too */
-function hasInvoke(context: Format.Program.Context | undefined): boolean {
-  if (!context) return false;
-  if (Context.isInvoke(context)) return true;
-  return Context.isGather(context) && context.gather.some(hasInvoke);
+/** Whether a context starts a call with no jump target (in a gather
+ * too), as an inlined call's invoke has none */
+function invokes(context: Format.Program.Context): boolean {
+  return (
+    (Context.isInvoke(context) && !("target" in context.invoke)) ||
+    (Context.isGather(context) && context.gather.some(invokes))
+  );
+}
+
+/** Whether a context is in an inlined body (in a gather too) */
+function inlined(context: Format.Program.Context): boolean {
+  return (
+    (Context.isTransform(context) && context.transform.includes("inline")) ||
+    (Context.isGather(context) && context.gather.some(inlined))
+  );
 }
 
 /** Why an instruction has no source range, if it may have none */
@@ -43,7 +50,7 @@ function exception(
   // call site, which the call's first instruction does not always give
   if (
     operation?.mnemonic === "JUMPDEST" &&
-    hasInvoke(instructions[index + 1]?.context)
+    invokesInline(instructions[index + 1]?.context)
   ) {
     return "before an inlined call";
   }
@@ -104,6 +111,64 @@ code { r = f(0); }`;
           Format.Program.Context.Invoke;
         expect(code).toEqual((invoke as { declaration?: unknown }).declaration);
       }
+    }
+  });
+
+  it("give a block's JUMPDEST the range of what runs next", async () => {
+    const source = `name Labels;
+storage { [0] r: uint256; }
+create {}
+code {
+  let n = r;
+  if (n > 3) { r = n - 1; } else { r = n + 2; }
+  for (let i = 0; i < n; i = i + 1) { r = r + i; }
+}`;
+    const result = await compile({
+      to: "bytecode",
+      source,
+      optimizer: { level: 0 },
+    });
+    if (!result.success) throw new Error("compilation failed");
+    const { instructions } = result.value.bytecode.runtimeProgram;
+    const labels = instructions.flatMap(({ operation, context }, index) =>
+      operation?.mnemonic === "JUMPDEST" ? [{ context, index }] : [],
+    );
+    expect(labels.length).toBeGreaterThan(2);
+    for (const { context, index } of labels) {
+      const next = instructions[index + 1].context;
+      expect(hasCode(context)).toBe(true);
+      expect((context as Format.Program.Context.Code).code).toEqual(
+        (next as Format.Program.Context.Code).code,
+      );
+    }
+  });
+
+  it("give the end of a body with no return the function's", async () => {
+    const source = `name End;
+define {
+  function g(n: uint256) { r = n; };
+}
+storage { [0] r: uint256; }
+create {}
+code { g(3); g(4); }`;
+    for (const level of [0, 1] as const) {
+      const result = await compile({
+        to: "bytecode",
+        source,
+        optimizer: { level },
+      });
+      if (!result.success) throw new Error("compilation failed");
+      const exits = result.value.bytecode.runtimeProgram.instructions.filter(
+        ({ operation, context }) =>
+          operation?.mnemonic === "JUMP" &&
+          context &&
+          Context.isReturn(context),
+      );
+      expect(exits.length).toBe(1);
+      const { code, return: info } = exits[0]
+        .context as Format.Program.Context.Code & Format.Program.Context.Return;
+      expect(info.declaration).toBeDefined();
+      expect(code).toEqual(info.declaration);
     }
   });
 });
