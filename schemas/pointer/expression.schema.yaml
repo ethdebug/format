@@ -310,8 +310,9 @@ $defs:
         as `<expression>` but with a number of bytes removed from the left
         (most significant) side until the bytes width equals `<N>`.
 
-      (These cases match the behavior that Solidity uses for resizing its
-      `bytesN`/`uintN` types.)
+      (These cases match how Solidity converts between `uintN` types.
+      Solidity converts between `bytesN` types the other way: it pads and
+      truncates on the right.)
     type: object
     oneOf:
       - title: Resize to literal number of bytes
