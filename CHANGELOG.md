@@ -53,6 +53,17 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Changed
+
+- The description of the resize forms (`~sized<N>`, `~wordsized`) said that
+  their left-side padding and truncation match how Solidity resizes both
+  `bytesN` and `uintN`. That holds only for `uintN`. Solidity pads and
+  truncates `bytesN` on the right. The description now says so ([#402]).
+  - Schemas: **ethdebug/format/pointer/expression**
+  - Producers: no change needed. The resize forms work as before. Note that
+    they cannot give a `bytesN` value its Solidity padding.
+  - Consumers: no change needed. The evaluation rules did not change.
+
 ## 0.1.0-draft.2 — 2026-10-07
 
 ### Changed
@@ -720,3 +731,4 @@ First published version of the specification.
 [#318]: https://github.com/ethdebug/format/pull/318
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
+[#402]: https://github.com/ethdebug/format/pull/402
