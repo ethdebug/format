@@ -60,8 +60,8 @@ The sections do not signal obligations; the prefixes do.
   `bytesN` and `uintN`. That holds only for `uintN`. Solidity pads and
   truncates `bytesN` on the right. The description now says so ([#402]).
   - Schemas: **ethdebug/format/pointer/expression**
-  - Producers: no change needed. The resize forms work as before. Note that
-    they cannot give a `bytesN` value its Solidity padding.
+  - Producers: no change needed. The resize forms work as before. To pad a
+    `bytesN` value on the right, concatenate it with zero bytes (`~concat`).
   - Consumers: no change needed. The evaluation rules did not change.
 
 ## 0.1.0-draft.2 — 2026-10-07
