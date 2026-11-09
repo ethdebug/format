@@ -17,16 +17,18 @@ description: |
   The two sorts are produced by different forms:
 
   - **Integers** are produced by a JSON-number literal, the `~wordsize`
-    constant, a variable or lookup (`.offset` / `.length` / `.slot`) that
-    denotes an index or count, an arithmetic operation (`~sum`,
-    `~difference`, `~product`, `~quotient`, `~remainder`), and a
-    hexadecimal literal that has an **odd** number of digits (which has no
-    whole-byte width — see `Literal`).
+    constant, a lookup (`.offset` / `.length` / `.slot`), an arithmetic
+    operation (`~sum`, `~difference`, `~product`, `~quotient`,
+    `~remainder`), and a hexadecimal literal that has an **odd** number of
+    digits (which has no whole-byte width — see `Literal`).
   - **Bytes** are produced by a hexadecimal literal with an **even** number
     of digits (its width is the number of bytes written), `~read` (its
     width is the length of the region read), the resize forms
     `~sizedN` / `~wordsized` (whose width is `N` / the word size),
     `~keccak256` (width 32), and `~concat` (width the sum of its operands').
+  - A **variable** has the sort of its value. A list's `each` variable is
+    an **integer** (the index). A variable from a scope's `define` has the
+    sort of the expression that defines it, and bytes keep their width.
 
   ## Coercion and the width-bearing requirement
 
@@ -87,7 +89,9 @@ $defs:
     description: |
       A string that matches an identifier used in an earlier declaration of
       a scalar variable. This expression evaluates to the value of that
-      variable.
+      variable, with that value's sort: an integer for a list's `each`
+      index, and the sort of the defining expression for a variable from a
+      scope's `define`.
     $ref: "schema:ethdebug/format/pointer/identifier"
 
   Arithmetic:
