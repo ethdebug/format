@@ -55,6 +55,24 @@ The sections do not signal obligations; the prefixes do.
 
 ### Changed
 
+- The pointer expression schema did not say what sort a variable has. It
+  listed variables under integers only when they "denote an index or count".
+  The schemas now say that a list's `each` variable is an integer, that a
+  variable from a scope's `define` has the sort of the expression that
+  defines it (so a bytes variable keeps its width), and that a template's
+  `expect`ed variable takes the sort of the variable in scope where the
+  template is referenced ([#404]).
+  - Schemas: **ethdebug/format/pointer/expression**,
+    **ethdebug/format/pointer/collection/scope**,
+    **ethdebug/format/pointer/collection/list**,
+    **ethdebug/format/pointer/template**
+  - Producers: optional: a variable defined by a bytes expression may be used
+    where bytes are required, such as an operand of `~concat` or
+    `~keccak256`, without a resize.
+  - Consumers: required: a variable has the sort of the expression that
+    defines it ("Each variable has the sort of the expression that defines
+    it"). A consumer that evaluated every variable as an integer must keep a
+    bytes variable's width.
 - The description of the resize forms (`~sized<N>`, `~wordsized`) said that
   their left-side padding and truncation match how Solidity resizes both
   `bytesN` and `uintN`. That holds only for `uintN`. Solidity pads and
@@ -732,3 +750,4 @@ First published version of the specification.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
 [#402]: https://github.com/ethdebug/format/pull/402
+[#404]: https://github.com/ethdebug/format/pull/404
