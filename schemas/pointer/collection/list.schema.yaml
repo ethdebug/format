@@ -16,7 +16,7 @@ properties:
       each:
         description: |
           An identifier name whose value as an expression resolves to the index
-          in the list
+          in the list. Its value is an integer.
         $ref: "schema:ethdebug/format/pointer/identifier"
       is:
         description: |

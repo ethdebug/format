@@ -13,6 +13,10 @@ properties:
     description: |
       An array of variable identifiers used in the definition of the
       pointer template.
+
+      A template does not give these variables values. Each one takes the
+      value, and so the sort, of the variable with that identifier in scope
+      where the template is referenced.
     type: array
     items:
       $ref: "schema:ethdebug/format/pointer/identifier"

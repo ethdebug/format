@@ -10,6 +10,12 @@ description: |
   expression by identifier. Variables are specified **in order**, so that
   later appearing variables may reference earlier ones in the same object.
 
+  Each variable has the sort of the expression that defines it (see
+  **ethdebug/format/pointer/expression**). A variable defined by an integer
+  expression is an integer. A variable defined by a bytes expression is
+  bytes and keeps its width, so it may be used where bytes are required,
+  such as an operand of `~concat` or `~keccak256`.
+
   The variables are visible only within `in`. Pointers outside this scope
   do not see them: later members of an enclosing group, for example, see
   only the variables of their own enclosing scopes. A variable defined here
@@ -45,3 +51,17 @@ examples:
       location: memory
       offset: example-offset
       length: example-length
+
+  - # example: a variable with a bytes value keeps its width, so it can be
+    # hashed directly. this is the storage slot of `m["abc"]` for a Solidity
+    # `mapping(string => uint256) m` at slot 0: the key's raw bytes followed
+    # by the word-sized slot.
+    define:
+      key: "0x616263"
+    in:
+      name: entry
+      location: storage
+      slot:
+        ~keccak256:
+          - key
+          - ~wordsized: 0
