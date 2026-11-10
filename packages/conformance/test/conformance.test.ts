@@ -139,36 +139,6 @@ function resourcesWithVersion(version: string) {
   };
 }
 
-// Expected failure (#311): solc does not emit the stamp on its resources
-// object yet. Until it does, the solc tests add the stamp to a copy of the
-// artifact before they validate it, so the rest of resources is still
-// checked. The check below fails once solc emits the stamp; then remove
-// this function and validate the artifact as it is.
-function withSolcResourcesStamp(artifact: EthdebugArtifact): EthdebugArtifact {
-  expect(
-    artifact.resources?.ethdebug,
-    "solc now emits the stamp on its resources object; " +
-      "remove withSolcResourcesStamp",
-  ).toBeUndefined();
-  if (!artifact.resources) {
-    return artifact;
-  }
-
-  const programVersion = artifact.programs.find(
-    ({ program }) => program.ethdebug,
-  )?.program.ethdebug?.version;
-  return {
-    ...artifact,
-    resources: {
-      ...artifact.resources,
-      ethdebug: {
-        schema: "ethdebug/format/info/resources",
-        version: programVersion ?? version,
-      },
-    },
-  };
-}
-
 // Expected failure (#324): solc still writes the format's pointer
 // vocabulary with the old `$` sigil (`$sum`, `$wordsize`, `$this`, ...),
 // and the schemas now require `~`. Until solc emits `~`, the solc tests
@@ -274,7 +244,7 @@ describe("@ethdebug/conformance", () => {
       });
 
       const result = await validateStaticConformance(
-        withSolcTildeVocabulary(withSolcResourcesStamp(artifact)),
+        withSolcTildeVocabulary(artifact),
       );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
@@ -327,7 +297,7 @@ describe("@ethdebug/conformance", () => {
         ],
       });
       const result = await validateStaticConformance(
-        withSolcTildeVocabulary(withSolcResourcesStamp(artifact)),
+        withSolcTildeVocabulary(artifact),
       );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
