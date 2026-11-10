@@ -211,6 +211,15 @@ examples:
                 length: ~wordsize
 
               - define:
+                  "total-slots":
+                    # account for both zero and nonzero slot remainders by
+                    # adding ~wordsize-1 to the length before dividing. this
+                    # uses "string-length", defined below: the members of a
+                    # define may appear in any order
+                    ~quotient:
+                      - ~sum: ["string-length", { ~difference: [~wordsize, 1] }]
+                      - ~wordsize
+
                   "string-length":
                     ~quotient:
                       - ~difference:
@@ -221,13 +230,6 @@ examples:
                   "start-slot":
                     ~keccak256:
                       - ~wordsized: "string-storage-contract-variable-slot"
-
-                  "total-slots":
-                    # account for both zero and nonzero slot remainders by adding
-                    # ~wordsize-1 to the length before dividing
-                    ~quotient:
-                      - ~sum: ["string-length", { ~difference: [~wordsize, 1] }]
-                      - ~wordsize
                 in:
                   list:
                     count: "total-slots"
