@@ -139,65 +139,6 @@ function resourcesWithVersion(version: string) {
   };
 }
 
-// Expected failure (#324): solc still writes the format's pointer
-// vocabulary with the old `$` sigil (`$sum`, `$wordsize`, `$this`, ...),
-// and the schemas now require `~`. Until solc emits `~`, the solc tests
-// translate a copy of solc's programs and resources before they validate
-// them, so the rest of the output is still checked. SolDB reads solc's
-// original output and does not see the copy. The check below fails once
-// solc emits a `~` term; then remove this function and validate the
-// artifact as it is.
-const termOperators =
-  "sum|difference|product|quotient|remainder|read|keccak256|concat|" +
-  "wordsized|sized[1-9][0-9]*";
-const termConstants = "wordsize|this";
-const solcDollarOperator = new RegExp(`^\\$(${termOperators})$`);
-const solcDollarConstant = new RegExp(`^\\$(${termConstants})$`);
-const tildeTerm = new RegExp(`^~(${termOperators}|${termConstants})$`);
-
-function withSolcTildeVocabulary(artifact: EthdebugArtifact): EthdebugArtifact {
-  const translate = (value: unknown): unknown => {
-    if (typeof value === "string") {
-      expect(
-        tildeTerm.test(value),
-        `solc now emits the ~ term ${value}; remove withSolcTildeVocabulary`,
-      ).toBe(false);
-      return solcDollarConstant.test(value) ? `~${value.slice(1)}` : value;
-    }
-    if (Array.isArray(value)) {
-      return value.map(translate);
-    }
-    if (value && typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, entry]) => {
-          expect(
-            tildeTerm.test(key),
-            `solc now emits the ~ term ${key}; remove withSolcTildeVocabulary`,
-          ).toBe(false);
-          const translated = solcDollarOperator.test(key)
-            ? `~${key.slice(1)}`
-            : key;
-          return [translated, translate(entry)];
-        }),
-      );
-    }
-    return value;
-  };
-
-  return {
-    ...artifact,
-    programs: artifact.programs.map((program) => ({
-      ...program,
-      program: translate(
-        program.program,
-      ) as EthdebugArtifact["programs"][0]["program"],
-    })),
-    ...(artifact.resources && {
-      resources: translate(artifact.resources) as EthdebugArtifact["resources"],
-    }),
-  };
-}
-
 // Expected failure (#406): SolDB drops the `ethdebug` stamp from the
 // resources object it reads. Until SolDB keeps it, the SolDB tests compare
 // its resources with a copy of solc's resources without the stamp, so the
@@ -261,9 +202,7 @@ describe("@ethdebug/conformance", () => {
         sourcePath: path.join(root, "test/fixtures/solc/Counter.sol"),
       });
 
-      const result = await validateStaticConformance(
-        withSolcTildeVocabulary(artifact),
-      );
+      const result = await validateStaticConformance(artifact);
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
       expect(
@@ -316,9 +255,7 @@ describe("@ethdebug/conformance", () => {
           path.join(sourceDir, "Math.sol"),
         ],
       });
-      const result = await validateStaticConformance(
-        withSolcTildeVocabulary(artifact),
-      );
+      const result = await validateStaticConformance(artifact);
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
 
@@ -407,42 +344,6 @@ describe("@ethdebug/conformance", () => {
       }
     },
   );
-
-  it("translates a copy of solc's $ vocabulary to ~", () => {
-    const pointer = {
-      location: "memory",
-      offset: { $sum: [{ ".offset": "$this" }, "$wordsize"] },
-      length: { $sized2: { $read: "$x" } },
-    };
-    const artifact = validArtifact({
-      compilation: undefined,
-      resources: { ...validResources(), pointers: { P: { for: pointer } } },
-    });
-
-    const translated = withSolcTildeVocabulary(artifact);
-
-    expect(translated.resources?.pointers.P).toHaveProperty("for", {
-      location: "memory",
-      offset: { "~sum": [{ ".offset": "~this" }, "~wordsize"] },
-      length: { "~sized2": { "~read": "$x" } },
-    });
-    expect(artifact.resources?.pointers.P).toHaveProperty("for", pointer);
-    expect(pointer.offset).toHaveProperty("$sum");
-  });
-
-  it("stops translating once solc emits ~", () => {
-    const artifact = validArtifact({
-      compilation: undefined,
-      resources: {
-        ...validResources(),
-        pointers: { P: { for: { location: "stack", slot: { "~sum": [] } } } },
-      },
-    });
-
-    expect(() => withSolcTildeVocabulary(artifact)).toThrow(
-      /remove withSolcTildeVocabulary/,
-    );
-  });
 
   it("rejects malformed ETHDebug programs through JSON-Schema validation", async () => {
     const artifact = validArtifact({
