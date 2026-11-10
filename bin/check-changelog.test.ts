@@ -78,6 +78,15 @@ describe("needsChangelog", () => {
       ).toBe(false);
     });
 
+    it("ignores a test file's snapshots", () => {
+      expect(
+        needsChangelog(
+          ["packages/bugc/src/evmgen/__snapshots__/pairing.test.ts.snap"],
+          ["packages/bugc"],
+        ),
+      ).toBe(false);
+    });
+
     it("ignores an examples test suite", () => {
       expect(
         needsChangelog(

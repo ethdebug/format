@@ -10,9 +10,9 @@ function touchesSchemas(changedPaths: string[]): boolean {
   return changedPaths.some((path) => path.startsWith("schemas/"));
 }
 
-// colocated test files carry no consumer-visible change, and this also
-// covers the *.examples.test.ts suites
-const testFile = /\.test\.tsx?$/;
+// colocated test files and their snapshots carry no consumer-visible
+// change, and this also covers the *.examples.test.ts suites
+const testFile = /\.test\.tsx?(\.snap)?$/;
 
 function touchesPackage(changedPaths: string[], prefix: string): boolean {
   return changedPaths.some(
