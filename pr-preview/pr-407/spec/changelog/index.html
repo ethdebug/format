@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-407/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-407/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-407/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-407/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-407/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-407/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-407/assets/css/styles.c5630360.css">
-<script src="/format/pr-preview/pr-407/assets/js/runtime~main.360b3569.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-407/assets/js/main.d0189b21.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-407/assets/js/runtime~main.71e37925.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-407/assets/js/main.25227fb1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -61,10 +61,29 @@ The sections do not signal obligations; the prefixes do.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Direct link to Unreleased" title="Direct link to Unreleased" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="changed">Changed<a href="#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed" translate="no">​</a></h3>
 <ul>
-<li class="">The description of the resize forms (<code>~sized&lt;N&gt;</code>, <code>~wordsized</code>) said that
+<li class="">
+<p>Variables now have a stated sort. A list&#x27;s <code>each</code> variable is an integer.
+A <code>define</code> variable has the sort of its expression, so a bytes variable
+keeps its width. A template&#x27;s <code>expect</code>ed variable takes the sort of the
+variable in scope at the reference (<a href="https://github.com/ethdebug/format/pull/404" target="_blank" rel="noopener noreferrer" class="">#404<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong>,
+<strong>ethdebug/format/pointer/collection/scope</strong>,
+<strong>ethdebug/format/pointer/collection/list</strong>,
+<strong>ethdebug/format/pointer/template</strong></li>
+<li class="">Producers: optional: a bytes variable may be an operand of <code>~concat</code> or
+<code>~keccak256</code> without a resize.</li>
+<li class="">Consumers: required: a variable has the sort of its defining expression.
+The previous text did not say so. A consumer that read every variable as
+an integer must keep a bytes variable&#x27;s width. One that already kept the
+sort (as <code>@ethdebug/pointers</code> does) needs no change.</li>
+</ul>
+</li>
+<li class="">
+<p>The description of the resize forms (<code>~sized&lt;N&gt;</code>, <code>~wordsized</code>) said that
 their left-side padding and truncation match how Solidity resizes both
 <code>bytesN</code> and <code>uintN</code>. That holds only for <code>uintN</code>. Solidity pads and
-truncates <code>bytesN</code> on the right. The description now says so (<a href="https://github.com/ethdebug/format/pull/402" target="_blank" rel="noopener noreferrer" class="">#402<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).<!-- -->
+truncates <code>bytesN</code> on the right. The description now says so (<a href="https://github.com/ethdebug/format/pull/402" target="_blank" rel="noopener noreferrer" class="">#402<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong></li>
 <li class="">Producers: no change needed. The resize forms work as before. To pad a
@@ -777,7 +796,7 @@ every valid compilation.</li>
 <p>A compilation&#x27;s <code>id</code> is described as its identifier rather than as optional,
 and its uniqueness requirement returns to <strong>should</strong> after <a href="https://github.com/ethdebug/format/pull/123" target="_blank" rel="noopener noreferrer" class="">#123<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> had raised
 it to <strong>must</strong>. The <code>required</code> list is not actually changed here; <a href="https://github.com/ethdebug/format/pull/138" target="_blank" rel="noopener noreferrer" class="">#138<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> does
-that. (<a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->  ﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+that. (<a href="https://github.com/ethdebug/format/pull/131" target="_blank" rel="noopener noreferrer" class="">#131<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/materials/compilation</strong></li>
 <li class="">Producers: no change needed. Uniqueness of <code>id</code> is <strong>should</strong> at 0.1.0-0 and
