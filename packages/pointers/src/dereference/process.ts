@@ -138,19 +138,51 @@ async function* processScope(
 ): Process {
   const { define: variableExpressions, in: in_ } = collection;
 
-  const allVariables: Record<string, Value> = Object.assign(
-    Object.create(null),
-    options.variables,
-  );
-  const newVariables: { [identifier: string]: Value } = {};
-  for (const [identifier, expression] of Object.entries(variableExpressions)) {
-    const value = await evaluate(expression, {
-      ...options,
-      variables: allVariables,
+  const newVariables: { [identifier: string]: Value } = Object.create(null);
+  const isMember = (name: PropertyKey): name is string =>
+    Object.prototype.hasOwnProperty.call(variableExpressions, name);
+
+  // the variables one member sees: a name of another member means that
+  // member, so it must be evaluated first; any other name, the member's
+  // own included, means a variable of the enclosing scope
+  const variablesFor = (identifier: string) =>
+    new Proxy(options.variables, {
+      get(target, name) {
+        if (name === identifier || !isMember(name)) {
+          return target[name as string];
+        }
+        if (name in newVariables) {
+          return newVariables[name];
+        }
+        throw new Error(`Variable not evaluated yet: ${name}`);
+      },
     });
 
-    allVariables[identifier] = value;
-    newVariables[identifier] = value;
+  // evaluate members in dependency order, independent of member order.
+  // retry a member that uses one not evaluated yet; when every remaining
+  // member has failed since the last success, they form a cycle
+  const queue = Object.keys(variableExpressions);
+  let failures = 0;
+  while (queue.length > 0) {
+    const identifier = queue.shift()!;
+    try {
+      newVariables[identifier] = await evaluate(
+        variableExpressions[identifier],
+        { ...options, variables: variablesFor(identifier) },
+      );
+      failures = 0;
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.startsWith("Variable not evaluated yet: ")
+      ) {
+        throw error;
+      }
+      if (++failures > queue.length) {
+        throw new Error(`Circular reference detected: ${identifier}`);
+      }
+      queue.push(identifier);
+    }
   }
 
   // variables defined here are visible only within `in`
