@@ -227,10 +227,12 @@ Finally, the last kind of collection defined by this schema is for defining
 a scope of variables by identifier by specifying the expression values for
 each of those variables.
 
-Since this schema takes advantage of how JSON objects are ordered lists of
-key/value pairs, variables specified later may reference variables specified
-earlier. The only trickiness in implementing `processScope` is ensuring that
-variable values are available immediately.
+JSON objects are unordered, so the members of a `define` may use each other
+in any order. `processScope` evaluates each member after the members it uses.
+Like the fields of a region that refer to each other with `~this`, it queues
+the members and retries one that uses a member not evaluated yet. Each member
+sees the other members by name, but its own name means the variable of the
+enclosing scope. If every remaining member fails in turn, they form a cycle.
 
 <CodeListing
   packageName="@ethdebug/pointers"
