@@ -49,3 +49,21 @@ To run the full Solidity -> SolDB resources path, set `ETHDEBUG_CONFORMANCE_SOLC
 and `ETHDEBUG_CONFORMANCE_SOLDB`. If `anvil` and `cast` are on `PATH`, the
 SolDB breakpoint test runs as well; the executable paths can be overridden with
 `ETHDEBUG_CONFORMANCE_ANVIL` and `ETHDEBUG_CONFORMANCE_CAST`.
+
+## Expected failures
+
+When the format and a tool disagree, the tests do not wait for the tool. This
+applies whichever side moved: a format change that a tool does not follow yet,
+or a tool that does not follow the format. Each such divergence, per tool, goes
+through these steps:
+
+1. Open one tracking issue on ethdebug/format. It says what the tool does and
+   where in the tool's code.
+2. Add a shim and a tripwire to the test. The shim makes the test pass now. The
+   tripwire fails once the tool conforms, and its message names the shim and
+   the issue. When the format change causes the divergence, the shim lands in
+   the same PR as the format change, so main stays green.
+3. When the tripwire fires, one PR removes the shim and the tripwire and closes
+   the issue.
+
+Prefer a shim in the test to a pinned tool version.
