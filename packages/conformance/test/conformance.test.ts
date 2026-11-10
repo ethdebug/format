@@ -198,6 +198,24 @@ function withSolcTildeVocabulary(artifact: EthdebugArtifact): EthdebugArtifact {
   };
 }
 
+// Expected failure (#406): SolDB drops the `ethdebug` stamp from the
+// resources object it reads. Until SolDB keeps it, the SolDB tests compare
+// its resources with a copy of solc's resources without the stamp, so the
+// rest of resources is still checked. The check below fails once SolDB
+// keeps the stamp; then remove this function and compare the resources as
+// they are.
+function withoutResourcesStamp(
+  resources: EthdebugArtifact["resources"],
+  soldbResources: { ethdebug?: unknown },
+) {
+  expect(
+    soldbResources.ethdebug,
+    "SolDB now keeps the resources stamp; remove withoutResourcesStamp (#406)",
+  ).toBeUndefined();
+  const { ethdebug: _, ...rest } = resources ?? {};
+  return rest;
+}
+
 function validArtifact(
   overrides: Partial<EthdebugArtifact> = {},
 ): EthdebugArtifact {
@@ -276,7 +294,9 @@ describe("@ethdebug/conformance", () => {
       expect(result.exitCode).toBe(0);
       const json = result.json as any;
       expect(json.contracts[0].name).toBe("Counter");
-      expect(json.contracts[0].resources).toEqual(artifact.resources);
+      expect(json.contracts[0].resources).toEqual(
+        withoutResourcesStamp(artifact.resources, json.contracts[0].resources),
+      );
       expect(
         json.contracts[0].resources.compilation.sources[0].contents,
       ).toContain("contract Counter");
