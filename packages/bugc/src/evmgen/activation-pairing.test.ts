@@ -275,28 +275,27 @@ describe("every invoke is matched by its return", () => {
 // (or dropped) rather than kept by keeping code. A change to the code
 // generation that is meant changes them, too (`vitest -u`).
 describe("the code does not depend on the markers", () => {
-  it("is the same for every example and program here", async () => {
-    const sources = {
-      ...exampleSources,
-      ...Object.fromEntries(programs.map(({ name, source }) => [name, source])),
-      dispatch,
-    };
-    const digests: Record<string, string> = {};
-    for (const [name, source] of Object.entries(sources)) {
-      for (const level of levels) {
+  const sources = {
+    ...exampleSources,
+    ...Object.fromEntries(programs.map(({ name, source }) => [name, source])),
+    dispatch,
+  };
+  for (const [name, source] of Object.entries(sources)) {
+    for (const level of levels) {
+      it(`${name} at O${level}`, async () => {
         const result = await compile({
           to: "bytecode",
           source,
           optimizer: { level },
         });
-        digests[`${name} at O${level}`] = result.success
+        const digest = result.success
           ? createHash("sha256")
               .update(result.value.bytecode.runtime)
               .update(result.value.bytecode.create ?? new Uint8Array())
               .digest("hex")
           : "does not compile";
-      }
+        expect(digest).toMatchSnapshot();
+      });
     }
-    expect(digests).toMatchSnapshot();
-  });
+  }
 });
