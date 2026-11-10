@@ -1,5 +1,5 @@
 import { vitest, expect, describe, it, beforeEach } from "vitest";
-import { Pointer } from "@ethdebug/format";
+import { Pointer, schemas } from "@ethdebug/format";
 import { Machine } from "#machine";
 import { Data } from "#data";
 import { dereference } from "./index.js";
@@ -334,6 +334,83 @@ describe("dereference", () => {
     expect(regions.map(({ name }) => name)).toEqual(["a", "b"]);
     expect(regions[0]).toMatchObject({ slot: Data.fromNumber(1) });
     expect(regions[1]).toMatchObject({ slot: Data.fromNumber(2) });
+  });
+
+  describe("define member order", () => {
+    // the region of a scope whose `in` is at storage slot "result"
+    const regionOf = async (
+      define: Pointer.Collection.Scope["define"],
+      outer?: Pointer.Collection.Scope["define"],
+    ) => {
+      const scope: Pointer = {
+        define,
+        in: { location: "storage", slot: "result" },
+      };
+      const pointer: Pointer = outer ? { define: outer, in: scope } : scope;
+      const { regions } = await (await dereference(pointer)).view(state);
+      return regions[0];
+    };
+
+    it("evaluates members after the members they use", async () => {
+      expect(
+        await regionOf({ result: { "~sum": ["a", 1] }, a: 5 }),
+      ).toMatchObject({ slot: Data.fromNumber(6) });
+    });
+
+    it("evaluates a longer chain in any order", async () => {
+      expect(
+        await regionOf({
+          result: { "~sum": ["c", 1] },
+          c: { "~product": ["b", { "~sum": ["a", 1] }] },
+          b: { "~sum": ["a", 2] },
+          a: 1,
+        }),
+      ).toMatchObject({ slot: Data.fromNumber(7) });
+    });
+
+    it("binds a member's own name to the enclosing scope", async () => {
+      expect(
+        await regionOf({ result: { "~sum": ["result", 1] } }, { result: 4 }),
+      ).toMatchObject({ slot: Data.fromNumber(5) });
+    });
+
+    it("hides an outer variable from the other members", async () => {
+      expect(
+        await regionOf({ result: { "~sum": ["a", 1] }, a: 5 }, { a: 100 }),
+      ).toMatchObject({ slot: Data.fromNumber(6) });
+    });
+
+    it("resolves the scope schema's out-of-order example", async () => {
+      const { examples } = schemas[
+        "schema:ethdebug/format/pointer/collection/scope"
+      ] as { examples: Pointer[] };
+      const example = examples.find((pointer) =>
+        JSON.stringify(pointer).includes('"end"'),
+      )!;
+      const { regions } = await (await dereference(example)).view(state);
+      expect(regions[0]).toMatchObject({
+        offset: Data.fromNumber(96),
+        length: Data.fromNumber(32),
+      });
+    });
+
+    it("throws on a cycle between members", async () => {
+      await expect(regionOf({ result: "a", a: "b", b: "a" })).rejects.toThrow(
+        "Circular reference detected",
+      );
+    });
+
+    it("throws on a cycle even when outer variables match", async () => {
+      await expect(
+        regionOf({ result: "a", a: "b", b: "a" }, { a: 1, b: 2 }),
+      ).rejects.toThrow("Circular reference detected");
+    });
+
+    it("still throws on an unknown variable", async () => {
+      await expect(regionOf({ result: "a", b: 1 })).rejects.toThrow(
+        "Unknown variable with identifier a",
+      );
+    });
   });
 
   it("scopes variables defined inside referenced templates", async () => {

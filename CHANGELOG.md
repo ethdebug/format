@@ -55,6 +55,20 @@ The sections do not signal obligations; the prefixes do.
 
 ### Changed
 
+- The members of a `define` no longer depend on their order, since JSON
+  objects are unordered. A member may use any other member of the same
+  `define`. Inside its own expression, its own name means the variable of the
+  enclosing scope. A cycle of members makes the pointer invalid ([#408]).
+  - Schemas: **ethdebug/format/pointer/collection/scope**
+  - Producers: required: a name of a later member of the same `define` now
+    means that member, not the enclosing scope's variable with that name. Data
+    that used such a name for the outer variable must put the member in a
+    nested scope. Data that uses only earlier members, a member's own name, or
+    other outer names resolves as before.
+  - Consumers: required: "A consumer evaluates each member after the members
+    it uses. If members depend on each other in a cycle, the pointer is
+    invalid."
+
 - Variables now have a stated sort. A list's `each` variable is an integer.
   A `define` variable has the sort of its expression, so a bytes variable
   keeps its width. A template's `expect`ed variable takes the sort of the
@@ -748,3 +762,4 @@ First published version of the specification.
 [#325]: https://github.com/ethdebug/format/pull/325
 [#402]: https://github.com/ethdebug/format/pull/402
 [#404]: https://github.com/ethdebug/format/pull/404
+[#408]: https://github.com/ethdebug/format/pull/408
