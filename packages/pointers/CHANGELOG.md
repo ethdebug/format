@@ -11,7 +11,7 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 - `dereference` evaluates the members of a scope's `define` in dependency
   order, not member order. A member sees the other members by name, and its
   own name means the variable of the enclosing scope. A cycle of members throws
-  "Circular reference detected".
+  "Circular reference detected" ([#408]).
 
 ### Fixed
 
@@ -154,3 +154,4 @@ First publication.
 [#317]: https://github.com/ethdebug/format/pull/317
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
+[#408]: https://github.com/ethdebug/format/pull/408

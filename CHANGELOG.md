@@ -58,7 +58,7 @@ The sections do not signal obligations; the prefixes do.
 - The members of a `define` no longer depend on their order, since JSON
   objects are unordered. A member may use any other member of the same
   `define`. Inside its own expression, its own name means the variable of the
-  enclosing scope. A cycle of members makes the pointer invalid.
+  enclosing scope. A cycle of members makes the pointer invalid ([#408]).
   - Schemas: **ethdebug/format/pointer/collection/scope**
   - Producers: required: a name of a later member of the same `define` now
     means that member, not the enclosing scope's variable with that name. Data
@@ -762,3 +762,4 @@ First published version of the specification.
 [#325]: https://github.com/ethdebug/format/pull/325
 [#402]: https://github.com/ethdebug/format/pull/402
 [#404]: https://github.com/ethdebug/format/pull/404
+[#408]: https://github.com/ethdebug/format/pull/408
