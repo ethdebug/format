@@ -53,6 +53,21 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- A region with `"location": "virtual"` holds the bytes of a computed value,
+  e.g., a variable the optimizer removed. It uses the new `fragment`
+  addressing scheme: a width-bearing `expression` supplies the bytes, and
+  optional `offset` and `length` select a range of them ([#411]).
+  - Schemas: **ethdebug/format/pointer/region/virtual**,
+    **ethdebug/format/pointer/scheme/fragment**,
+    **ethdebug/format/pointer/region**
+  - Producers: optional: a pointer may describe a value that no data location
+    stores as a virtual region.
+  - Consumers: required: a region may have `"location": "virtual"`. Its bytes
+    are the fragment of its `expression`'s value, which a consumer must
+    evaluate. A fragment outside the value's bytes is invalid.
+
 ### Changed
 
 - The members of a `define` no longer depend on their order, since JSON
@@ -763,3 +778,4 @@ First published version of the specification.
 [#402]: https://github.com/ethdebug/format/pull/402
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411

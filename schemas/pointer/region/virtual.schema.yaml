@@ -1,0 +1,46 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/region/virtual"
+
+title: ethdebug/format/pointer/region/virtual
+description: |
+  A schema for representing a region of data that is not stored in any EVM
+  data location, but is computed from the machine state: the bytes of an
+  expression's value.
+
+  A compiler may use a virtual region for a value that has no place in the
+  machine state of its own, e.g., a variable the optimizer removed whose
+  value can still be computed from other values that remain.
+
+  This schema is constructed by extending the base region schema
+  and the schema for the fragment addressing scheme.
+type: object
+allOf:
+  - title: '{ "location": "virtual" }' # note: whitespace chars are \255 (nbsp)
+    properties:
+      location:
+        const: virtual
+
+    required:
+      - location
+  - $ref: "schema:ethdebug/format/pointer/region/base"
+  - $ref: "schema:ethdebug/format/pointer/scheme/fragment"
+
+unevaluatedProperties: false
+
+examples:
+  # `x = a + 1` after the optimizer removed `x`, where a region named `a`
+  # comes before this one
+  - name: x
+    location: virtual
+    expression:
+      ~wordsized:
+        ~sum:
+          - ~read: a
+          - 1
+  # the first 4 bytes of a hash
+  - name: tag
+    location: virtual
+    expression:
+      ~keccak256:
+        - ~read: a
+    length: 4

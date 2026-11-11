@@ -6,6 +6,13 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `dereference` and `read` support virtual regions. A concrete virtual
+  region keeps the bytes of its `expression` and has `offset` and `length`
+  filled in with their defaults. An expression with no width, or a fragment
+  outside the value, throws ([#411]).
+
 ### Changed
 
 - `dereference` evaluates the members of a scope's `define` in dependency
@@ -155,3 +162,4 @@ First publication.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411
