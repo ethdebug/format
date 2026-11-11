@@ -6,6 +6,13 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `dereference` and `read` support virtual regions. A concrete virtual
+  region keeps the bytes of its `expression` and has `offset` and `length`
+  filled in with their defaults. An expression with no width, or a fragment
+  outside the value, throws.
+
 ### Changed
 
 - `dereference` evaluates the members of a scope's `define` in dependency
