@@ -74,7 +74,7 @@ The sections do not signal obligations; the prefixes do.
   regions inside it in the result of the pointer, and a named list also scopes
   each element by its index. This tells apart regions with the same name, such
   as those of two references to one template, without `yields`. Expressions do
-  not see collection names.
+  not see collection names ([#412]).
   - Schemas: **ethdebug/format/pointer/collection**,
     **ethdebug/format/pointer/collection/group**,
     **ethdebug/format/pointer/collection/list**,
@@ -826,5 +826,6 @@ First published version of the specification.
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
 [#411]: https://github.com/ethdebug/format/pull/411
+[#412]: https://github.com/ethdebug/format/pull/412
 [#413]: https://github.com/ethdebug/format/pull/413
 [#420]: https://github.com/ethdebug/format/pull/420
