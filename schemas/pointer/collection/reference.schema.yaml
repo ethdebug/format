@@ -8,6 +8,9 @@ description: |
 type: object
 
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   template:
     title: Template identifier
     $ref: "schema:ethdebug/format/pointer/identifier"
@@ -36,3 +39,9 @@ examples:
     yields:
       data: "name-data"
       length: "name-length"
+
+  - # example: a named reference. the template's regions have the path
+    # ["owner"], so they keep their names but stay apart from the regions
+    # of other uses of the same template
+    name: "owner"
+    template: "string-storage-pointer"

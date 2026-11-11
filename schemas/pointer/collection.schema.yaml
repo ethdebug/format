@@ -4,6 +4,36 @@ $id: "schema:ethdebug/format/pointer/collection"
 title: ethdebug/format/pointer/collection
 description: |
   A representation of a collection of pointers to data in the EVM
+
+  Any collection may have a `name`. A collection's name scopes the regions
+  inside it. This lets a consumer tell apart regions that have the same
+  name, such as the regions of two uses of one template. A named list also
+  scopes each of its elements apart, by the index of the element, so that
+  a consumer can group the regions of one element.
+
+  Thus each region in the result of a pointer has a path of scopes: the
+  names of the named collections that contain the region, outermost first,
+  with the element index after the name of each named list. The region's
+  own name is not part of its path. A collection without a name adds
+  nothing to the path.
+
+  Collection names affect only this result. Expressions do not see them:
+  `~read`, `.offset`, `.length` and `.slot` refer to regions by region name
+  only, and a collection name is never a region name. The scopes do not
+  change which region a region name refers to. A consumer that ignores
+  collection names gets the same regions, with the same names.
+
+  The `yields` of a reference renames regions only. It does not rename
+  the collections inside the template.
+
+$defs:
+  Name:
+    title: Collection name
+    description: |
+      A name that scopes the regions inside this collection in the result
+      of the pointer. See **ethdebug/format/pointer/collection**.
+    $ref: "schema:ethdebug/format/pointer/identifier"
+
 type: object
 allOf:
   - oneOf:

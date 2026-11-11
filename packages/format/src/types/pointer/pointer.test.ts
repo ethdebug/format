@@ -173,6 +173,22 @@ testSchemaGuards("ethdebug/format/pointer", [
     guard: Pointer.Collection.isList,
   },
   {
+    schema: "schema:ethdebug/format/pointer/collection/conditional",
+    guard: Pointer.Collection.isConditional,
+  },
+  {
+    schema: "schema:ethdebug/format/pointer/collection/scope",
+    guard: Pointer.Collection.isScope,
+  },
+  {
+    schema: "schema:ethdebug/format/pointer/collection/reference",
+    guard: Pointer.Collection.isReference,
+  },
+  {
+    schema: "schema:ethdebug/format/pointer/collection/templates",
+    guard: Pointer.Collection.isTemplates,
+  },
+  {
     schema: "schema:ethdebug/format/pointer",
     guard: isPointer,
   },
@@ -181,3 +197,22 @@ testSchemaGuards("ethdebug/format/pointer", [
     guard: Pointer.isTemplate,
   },
 ] as const);
+
+describe("collection names", () => {
+  const collections = [
+    { group: [{ location: "stack", slot: 0 }] },
+    { list: { count: 1, each: "i", is: { location: "stack", slot: "i" } } },
+    { if: 1, then: { location: "stack", slot: 0 } },
+    { define: { a: 0 }, in: { location: "stack", slot: "a" } },
+    { template: "t" },
+    { templates: {}, in: { location: "stack", slot: 0 } },
+  ];
+
+  it.each(collections)("accepts an identifier name on %j", (collection) => {
+    expect(Pointer.isCollection({ name: "c", ...collection })).toBe(true);
+  });
+
+  it.each(collections)("rejects a non-identifier name on %j", (collection) => {
+    expect(Pointer.isCollection({ name: "0c", ...collection })).toBe(false);
+  });
+});

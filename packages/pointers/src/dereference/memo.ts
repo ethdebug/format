@@ -13,7 +13,9 @@ export type Memo =
   | Memo.PushRegionRenames
   | Memo.PopRegionRenames
   | Memo.PushTemplates
-  | Memo.PopTemplates;
+  | Memo.PopTemplates
+  | Memo.PushPath
+  | Memo.PopPath;
 
 export namespace Memo {
   /**
@@ -162,5 +164,36 @@ export namespace Memo {
    */
   export const popTemplates = (): PopTemplates => ({
     kind: "pop-templates",
+  });
+
+  /**
+   * A request to push a segment onto the path that output regions carry:
+   * a collection name, or the index of an element of a named list
+   */
+  export interface PushPath {
+    kind: "push-path";
+    segment: string | number;
+  }
+
+  /**
+   * Initialize a PushPath memo
+   */
+  export const pushPath = (segment: string | number): PushPath => ({
+    kind: "push-path",
+    segment,
+  });
+
+  /**
+   * A request to pop the last segment from the path
+   */
+  export interface PopPath {
+    kind: "pop-path";
+  }
+
+  /**
+   * Initialize a PopPath memo
+   */
+  export const popPath = (): PopPath => ({
+    kind: "pop-path",
   });
 }
