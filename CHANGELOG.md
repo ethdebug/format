@@ -58,7 +58,7 @@ The sections do not signal obligations; the prefixes do.
 - A region with `"location": "virtual"` holds the bytes of a computed value,
   e.g., a variable the optimizer removed. It uses the new `fragment`
   addressing scheme: a width-bearing `expression` supplies the bytes, and
-  optional `offset` and `length` select a range of them.
+  optional `offset` and `length` select a range of them ([#411]).
   - Schemas: **ethdebug/format/pointer/region/virtual**,
     **ethdebug/format/pointer/scheme/fragment**,
     **ethdebug/format/pointer/region**
@@ -778,3 +778,4 @@ First published version of the specification.
 [#402]: https://github.com/ethdebug/format/pull/402
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411
