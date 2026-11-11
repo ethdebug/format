@@ -14,7 +14,7 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   `Pointer.Region.isVirtual` and `Pointer.Scheme.isFragment` ([#411]).
 - `Pointer.Collection.Base`, the optional `name` of every kind of
   collection, with its guard `Pointer.Collection.isBase`. Each collection
-  guard accepts a `name` that is an identifier.
+  guard accepts a `name` that is an identifier ([#412]).
 
 ### Changed
 
@@ -167,6 +167,7 @@ First publication.
 [#325]: https://github.com/ethdebug/format/pull/325
 [#373]: https://github.com/ethdebug/format/pull/373
 [#411]: https://github.com/ethdebug/format/pull/411
+[#412]: https://github.com/ethdebug/format/pull/412
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e
