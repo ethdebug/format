@@ -68,6 +68,25 @@ The sections do not signal obligations; the prefixes do.
     are the fragment of its `expression`'s value, which a consumer must
     evaluate. A fragment outside the value's bytes is invalid.
 
+- Any pointer collection may have a `name`. A collection's name scopes the
+  regions inside it in the result of the pointer, and a named list also scopes
+  each element by its index. This tells apart regions with the same name, such
+  as those of two references to one template, without `yields`. Expressions do
+  not see collection names.
+  - Schemas: **ethdebug/format/pointer/collection**,
+    **ethdebug/format/pointer/collection/group**,
+    **ethdebug/format/pointer/collection/list**,
+    **ethdebug/format/pointer/collection/conditional**,
+    **ethdebug/format/pointer/collection/scope**,
+    **ethdebug/format/pointer/collection/reference**,
+    **ethdebug/format/pointer/collection/templates**
+  - Producers: optional: a pointer may name its collections to scope their
+    regions.
+  - Consumers: required: accept a `name` on any collection. The collection
+    schemas are closed objects (`additionalProperties: false`), so the previous
+    version's schemas reject it. A consumer may ignore the name: the regions
+    and their names do not change.
+
 ### Changed
 
 - The members of a `define` no longer depend on their order, since JSON
