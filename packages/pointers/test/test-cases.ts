@@ -238,6 +238,43 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
 };
 
 /**
+ * the computed values example: `x` (`a + 1`) and `tag` (the first 4 bytes
+ * of the hash of `a`) exist only as virtual regions computed from `a`
+ */
+const virtualRegionsTest: ObserveTraceTest<{ x: number; tag: string }> = {
+  pointer: findExamplePointer("virtual-operand"),
+  compileOptions: singleSourceCompilation({
+    path: "VirtualRegions.sol",
+    contractName: "VirtualRegions",
+    content: `contract VirtualRegions {
+      uint256 a;
+
+      constructor() {
+        a = 2;
+      }
+    }
+    `,
+  }),
+
+  expectedValues: [
+    { x: 1, tag: "0x290decd9" },
+    { x: 3, tag: "0x405787fa" },
+  ],
+
+  async observe({ regions, read }) {
+    const x = Number((await read(regions.lookup["x"])).asUint());
+
+    const tag = (await read(regions.lookup["tag"])).toHex();
+
+    return { x, tag };
+  },
+
+  equals(a, b) {
+    return a.x === b.x && a.tag === b.tag;
+  },
+};
+
+/**
  * collection of descriptions of tests that compile+deploy Solidity code,
  * then step through the machine trace of that code's execution, watching
  * and recording a pointer's value over the course of that trace.
@@ -251,4 +288,5 @@ export const observeTraceTests = {
   "string storage": stringStorageTest,
   "string storage (multi-slot)": multiSlotStringStorageTest,
   "uint256[] memory": uint256ArrayMemoryTest,
+  "virtual regions": virtualRegionsTest,
 };

@@ -1,6 +1,6 @@
 import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
-import type { Data } from "#data";
+import { Data } from "#data";
 import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 
 /**
@@ -86,10 +86,59 @@ export async function evaluateRegion<R extends Pointer.Region>(
     }
   }
 
+  if (Pointer.Region.isVirtual(region)) {
+    const fragment = await evaluateFragment(
+      region,
+      evaluatedProperties,
+      options,
+    );
+    return fragment as Cursor.Region<R>;
+  }
+
   return {
     ...region,
     ...evaluatedProperties,
   } as Cursor.Region<R>;
+}
+
+/**
+ * Evaluate a virtual region's `expression` to the bytes it addresses into,
+ * and fill in the default `offset` and `length` so that later regions may
+ * look them up
+ */
+async function evaluateFragment(
+  region: Pointer.Region.Virtual,
+  { offset, length }: { offset?: Data; length?: Data },
+  options: EvaluateOptions,
+): Promise<Cursor.Region<Pointer.Region.Virtual>> {
+  const value = await evaluate(region.expression, options);
+  if (Value.isInteger(value)) {
+    throw new Error(
+      [
+        `Expression of virtual region (${JSON.stringify(region.expression)}) `,
+        `evaluates to the integer ${value.value}, which has no byte `,
+        `width; give it a width with ~wordsized or ~sizedN`,
+      ].join(""),
+    );
+  }
+
+  const width = BigInt(value.data.length);
+  const start = offset?.asUint() ?? 0n;
+  const end = length ? start + length.asUint() : width;
+  if (start > width || end > width) {
+    const fields = length ? `${start}, length ${length.asUint()}` : start;
+    throw new Error(
+      `Fragment of virtual region (offset ${fields}) extends outside ` +
+        `the ${width} bytes of its expression's value`,
+    );
+  }
+
+  return {
+    ...region,
+    expression: value.data,
+    offset: Data.fromUint(start),
+    length: Data.fromUint(end - start),
+  };
 }
 
 /**

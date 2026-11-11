@@ -161,6 +161,10 @@ testSchemaGuards("ethdebug/format/pointer", [
     guard: Pointer.Region.isCode,
   },
   {
+    schema: "schema:ethdebug/format/pointer/region/virtual",
+    guard: Pointer.Region.isVirtual,
+  },
+  {
     schema: "schema:ethdebug/format/pointer/collection/group",
     guard: Pointer.Collection.isGroup,
   },

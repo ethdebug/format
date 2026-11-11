@@ -893,6 +893,110 @@ describe("dereference", () => {
     expect(regions.lookup["my-slot-value"]).toBeDefined();
   });
 
+  describe("virtual regions", () => {
+    // `a` is on the stack, which reads as 0x11223344
+    const a: Pointer.Region = { name: "a", location: "stack", slot: 2 };
+
+    const view = async (...group: Pointer[]) =>
+      await (await dereference({ group: [a, ...group] })).view(state);
+
+    const x: Pointer.Region = {
+      name: "x",
+      location: "virtual",
+      expression: { "~wordsized": { "~sum": [{ "~read": "a" }, 1] } },
+    };
+
+    it("defaults to the whole value of the expression", async () => {
+      const { regions, read } = await view(x);
+      const value = Data.fromNumber(0x11223345).resizeTo(32);
+
+      expect(regions.lookup["x"]).toEqual({
+        name: "x",
+        location: "virtual",
+        expression: value,
+        offset: Data.fromUint(0n),
+        length: Data.fromNumber(32),
+      });
+      expect(await read(regions.lookup["x"])).toEqual(value);
+    });
+
+    it("reads the fragment at an explicit offset and length", async () => {
+      const { regions, read } = await view(
+        { ...x, offset: 29, length: 2 },
+        {
+          name: "rest",
+          location: "virtual",
+          expression: "0xdeadbeef",
+          offset: 1,
+        },
+      );
+
+      expect(await read(regions.lookup["x"])).toEqual(Data.fromHex("0x2233"));
+      expect(await read(regions.lookup["rest"])).toEqual(
+        Data.fromHex("0xadbeef"),
+      );
+      expect(regions.lookup["rest"].length).toEqual(Data.fromNumber(3));
+    });
+
+    it("allows lookups of offset and length from a later region", async () => {
+      const { regions } = await view(
+        {
+          name: "tag",
+          location: "virtual",
+          expression: "0xdeadbeef",
+          offset: 1,
+        },
+        {
+          location: "memory",
+          offset: { ".offset": "tag" },
+          length: { ".length": "tag" },
+        },
+      );
+
+      expect(regions[2]).toEqual({
+        location: "memory",
+        offset: Data.fromNumber(1),
+        length: Data.fromNumber(3),
+      });
+    });
+
+    it("allows reading a virtual region in another expression", async () => {
+      const { regions, read } = await view(x, {
+        name: "y",
+        location: "virtual",
+        expression: { "~concat": ["0x00", { "~read": "x" }] },
+        length: 2,
+      });
+
+      expect(await read(regions.lookup["y"])).toEqual(Data.fromHex("0x0000"));
+      expect(regions.lookup["y"]).toHaveProperty("expression.length", 33);
+    });
+
+    it("rejects a lookup of slot", async () => {
+      await expect(
+        view(x, { location: "storage", slot: { ".slot": "x" } }),
+      ).rejects.toThrow("Region named x does not have slot needed by lookup");
+    });
+
+    it("rejects an expression with no width", async () => {
+      await expect(
+        view({ location: "virtual", expression: { "~sum": [1, 2] } }),
+      ).rejects.toThrow("evaluates to the integer 3, which has no byte width");
+    });
+
+    it("rejects a fragment outside the value", async () => {
+      for (const fragment of [
+        { offset: 5 },
+        { offset: 2, length: 3 },
+        { length: 5 },
+      ]) {
+        await expect(
+          view({ location: "virtual", expression: "0xdeadbeef", ...fragment }),
+        ).rejects.toThrow("extends outside the 4 bytes");
+      }
+    });
+  });
+
   describe("names that start with $", () => {
     it("resolves a region named $this, not the current region", async () => {
       const pointer: Pointer = {
