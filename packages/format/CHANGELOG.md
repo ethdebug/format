@@ -6,6 +6,13 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- The **ethdebug/format/pointer/region/virtual** and
+  **ethdebug/format/pointer/scheme/fragment** schemas, with the types
+  `Pointer.Region.Virtual` and `Pointer.Scheme.Fragment` and their guards
+  `Pointer.Region.isVirtual` and `Pointer.Scheme.isFragment`.
+
 ### Changed
 
 - `schemas` parses each schema from YAML on first access instead of at
