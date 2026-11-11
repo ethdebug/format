@@ -79,7 +79,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
         ...options,
         regions: {
           ...options.regions,
-          "~this": partialRegion,
+          "~this": partialRegion as Cursor.Region,
         },
       });
 

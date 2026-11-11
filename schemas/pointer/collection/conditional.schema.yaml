@@ -8,6 +8,9 @@ description: |
 type: object
 
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   if:
     $ref: "schema:ethdebug/format/pointer/expression"
   then:

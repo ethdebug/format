@@ -38,6 +38,9 @@ export async function* generateRegions(
   // Stack of template definitions for inline templates
   const templatesStack: Array<Pointer.Templates> = [];
 
+  // Names of the enclosing named collections (and named list indexes)
+  const path: Cursor.Path = [];
+
   const stack: Memo[] = [Memo.dereferencePointer(pointer)];
   while (stack.length > 0) {
     const memo: Memo = stack.pop() as Memo;
@@ -70,6 +73,10 @@ export async function* generateRegions(
             if (name !== region.name) {
               region = { ...region, name };
             }
+          }
+
+          if (path.length > 0) {
+            region = { ...region, path: [...path] };
           }
 
           yield region;
@@ -119,6 +126,14 @@ export async function* generateRegions(
       }
       case "pop-templates": {
         templatesStack.pop();
+        break;
+      }
+      case "push-path": {
+        path.push(memo.segment);
+        break;
+      }
+      case "pop-path": {
+        path.pop();
         break;
       }
     }

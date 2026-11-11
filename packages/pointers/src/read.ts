@@ -1,4 +1,3 @@
-import { Pointer } from "@ethdebug/format";
 import { type Machine, Raw } from "@ethdebug/common";
 import type { Cursor } from "#cursor";
 
@@ -156,23 +155,18 @@ function slotAfter(slot: Raw, carry: bigint): Raw {
   );
 }
 
-type DataProperties<R extends Pointer.Region> = {
-  [K in keyof Cursor.Region<R> &
-    ("slot" | "offset" | "length")]: Cursor.Region<R>[K];
-};
-
-type PickDataPropertiesAsUints<
-  R extends Pointer.Region,
-  U extends keyof DataProperties<R>,
+type DataPropertiesAsUints<
+  T extends Cursor.Region,
+  U extends keyof T & ("slot" | "offset" | "length"),
 > = {
-  [K in U]: undefined extends Cursor.Region<R>[K] ? bigint | undefined : bigint;
+  [K in U]: undefined extends T[K] ? bigint | undefined : bigint;
 };
 
 function withPropertiesAsUints<
-  R extends Pointer.Region,
-  U extends keyof DataProperties<R>,
->(uintKeys: U[], region: Cursor.Region<R>): PickDataPropertiesAsUints<R, U> {
-  const result: Partial<PickDataPropertiesAsUints<R, U>> = {};
+  T extends Cursor.Region,
+  U extends keyof T & ("slot" | "offset" | "length"),
+>(uintKeys: U[], region: T): DataPropertiesAsUints<T, U> {
+  const result: Partial<DataPropertiesAsUints<T, U>> = {};
   for (const key of uintKeys) {
     const data: Raw | undefined = region[key] as Raw | undefined;
     if (typeof data !== "undefined") {
@@ -180,5 +174,5 @@ function withPropertiesAsUints<
     }
   }
 
-  return result as PickDataPropertiesAsUints<R, U>;
+  return result as DataPropertiesAsUints<T, U>;
 }

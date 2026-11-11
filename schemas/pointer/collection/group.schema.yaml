@@ -6,6 +6,9 @@ description: |
   A composite collection of pointers
 type: object
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   group:
     type: array
     items:
@@ -24,3 +27,13 @@ examples:
         offset:
           ~read: "data-pointer"
         length: 32
+
+  - # example: a named group. its regions have the path ["record"]
+    name: "record"
+    group:
+      - name: "x"
+        location: storage
+        slot: 0
+      - name: "y"
+        location: storage
+        slot: 1
