@@ -38,7 +38,20 @@ export async function* processPointer(
   }
 
   const collection = pointer;
+  const memos = yield* processCollection(collection, options);
 
+  // a collection's name scopes the regions inside it in the output
+  if (typeof collection.name === "string") {
+    return [Memo.pushPath(collection.name), ...memos, Memo.popPath()];
+  }
+
+  return memos;
+}
+
+async function* processCollection(
+  collection: Pointer.Collection,
+  options: ProcessOptions,
+): Process {
   if (Pointer.Collection.isGroup(collection)) {
     return yield* processGroup(collection, options);
   }
@@ -63,7 +76,7 @@ export async function* processPointer(
     return yield* processTemplates(collection, options);
   }
 
-  console.error("%s", JSON.stringify(pointer, undefined, 2));
+  console.error("%s", JSON.stringify(collection, undefined, 2));
   throw new Error("Unexpected unknown kind of pointer");
 }
 
@@ -97,7 +110,7 @@ async function* processList(
   collection: Pointer.Collection.List,
   options: ProcessOptions,
 ): Process {
-  const { list } = collection;
+  const { name, list } = collection;
   const { count: countExpression, each, is } = list;
 
   const count = Value.toInteger(await evaluate(countExpression, options));
@@ -110,7 +123,16 @@ async function* processList(
       }),
     );
 
-    memos.push(Memo.dereferencePointer(is));
+    // a named list scopes each element apart by its index
+    if (typeof name === "string") {
+      memos.push(
+        Memo.pushPath(Number(index)),
+        Memo.dereferencePointer(is),
+        Memo.popPath(),
+      );
+    } else {
+      memos.push(Memo.dereferencePointer(is));
+    }
   }
 
   return memos;

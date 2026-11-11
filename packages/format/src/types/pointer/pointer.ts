@@ -140,19 +140,33 @@ export namespace Pointer {
     ].some((guard) => guard(value));
 
   export namespace Collection {
-    export interface Group {
+    /**
+     * Any collection may have a name, which scopes the regions inside it
+     * in the result of the pointer
+     */
+    export interface Base {
+      name?: Identifier;
+    }
+    export const isBase = (value: unknown): value is Base =>
+      !!value &&
+      typeof value === "object" &&
+      (!("name" in value) || isIdentifier(value.name));
+
+    const hasOnlyKeys = (value: object, keys: string[]) =>
+      Object.keys(value).every((key) => key === "name" || keys.includes(key));
+
+    export interface Group extends Base {
       group: Pointer[];
     }
     export const isGroup = (value: unknown): value is Group =>
-      !!value &&
-      typeof value === "object" &&
-      Object.keys(value).length === 1 &&
+      isBase(value) &&
+      hasOnlyKeys(value, ["group"]) &&
       "group" in value &&
       Array.isArray(value.group) &&
       value.group.length >= 1 &&
       value.group.every(isPointer);
 
-    export interface List {
+    export interface List extends Base {
       list: {
         count: Expression;
         each: Identifier;
@@ -160,9 +174,8 @@ export namespace Pointer {
       };
     }
     export const isList = (value: unknown): value is List =>
-      !!value &&
-      typeof value === "object" &&
-      Object.keys(value).length === 1 &&
+      isBase(value) &&
+      hasOnlyKeys(value, ["list"]) &&
       "list" in value &&
       !!value.list &&
       typeof value.list === "object" &&
@@ -174,21 +187,20 @@ export namespace Pointer {
       "is" in value.list &&
       isPointer(value.list.is);
 
-    export interface Conditional {
+    export interface Conditional extends Base {
       if: Expression;
       then: Pointer;
       else?: Pointer;
     }
     export const isConditional = (value: unknown): value is Conditional =>
-      !!value &&
-      typeof value === "object" &&
+      isBase(value) &&
       "if" in value &&
       isExpression(value.if) &&
       "then" in value &&
       isPointer(value.then) &&
       (!("else" in value) || isPointer(value.else));
 
-    export interface Scope {
+    export interface Scope extends Base {
       define: {
         [identifier: string]: Expression;
       };
@@ -196,8 +208,7 @@ export namespace Pointer {
     }
 
     export const isScope = (value: unknown): value is Scope =>
-      !!value &&
-      typeof value === "object" &&
+      isBase(value) &&
       "define" in value &&
       typeof value.define === "object" &&
       !!value.define &&
@@ -205,14 +216,13 @@ export namespace Pointer {
       "in" in value &&
       isPointer(value.in);
 
-    export interface Reference {
+    export interface Reference extends Base {
       template: string;
       yields?: Record<string, string>;
     }
 
     export const isReference = (value: unknown): value is Reference =>
-      !!value &&
-      typeof value === "object" &&
+      isBase(value) &&
       "template" in value &&
       typeof value.template === "string" &&
       !!value.template &&
@@ -223,7 +233,7 @@ export namespace Pointer {
             ([k, v]) => isIdentifier(k) && isIdentifier(v),
           )));
 
-    export interface Templates {
+    export interface Templates extends Base {
       templates: {
         [identifier: string]: Pointer.Template;
       };
@@ -231,8 +241,7 @@ export namespace Pointer {
     }
 
     export const isTemplates = (value: unknown): value is Templates =>
-      !!value &&
-      typeof value === "object" &&
+      isBase(value) &&
       "templates" in value &&
       typeof value.templates === "object" &&
       !!value.templates &&

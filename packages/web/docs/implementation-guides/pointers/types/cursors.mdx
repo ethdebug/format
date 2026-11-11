@@ -46,6 +46,12 @@ can reference internal variables and other regions, a `Cursor.Region`
 represents the runtime result of evaluating all these expressions: a
 specific range of bytes in a specific data location.
 
+A `Cursor.Region` also has a `path` when named collections contain it: the
+names of those collections, outermost first. A named list adds its name and
+then the index of the element, so a list named `items` whose `is` is a group
+named `elem` gives the paths `["items", 0, "elem"]`, `["items", 1, "elem"]`,
+and so on. Regions that no named collection contains have no `path`.
+
 The full listing of `namespace Cursor` follows:
 
 <CodeListing

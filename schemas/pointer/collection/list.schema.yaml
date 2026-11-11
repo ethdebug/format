@@ -6,6 +6,9 @@ description: |
   An ordered list of pointers, indexed starting at zero.
 type: object
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   list:
     type: object
     properties:
@@ -41,3 +44,16 @@ examples:
         location: memory
         offset: "index"
         length: 1
+
+  - # example: a named list. each element's regions have the path
+    # ["items", index], e.g. ["items", 0] for the first "item" region
+    name: "items"
+    list:
+      count: 3
+      each: "index"
+      is:
+        name: "item"
+        location: memory
+        offset:
+          ~product: ["index", ~wordsize]
+        length: ~wordsize

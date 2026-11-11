@@ -275,6 +275,68 @@ const virtualRegionsTest: ObserveTraceTest<{ x: number; tag: string }> = {
 };
 
 /**
+ * the `struct Line { Point a; Point b; }` example uses one template for
+ * both members, so both give regions named "x" and "y"; each region's
+ * path tells which member it belongs to
+ */
+const namedReferencesTest: ObserveTraceTest<{
+  a: { x: number; y: number };
+  b: { x: number; y: number };
+}> = {
+  pointer: findExamplePointer("line-storage-contract-variable-slot"),
+  compileOptions: singleSourceCompilation({
+    path: "LineStorage.sol",
+    contractName: "LineStorage",
+    content: `contract LineStorage {
+      Line line;
+
+      constructor() {
+        line = Line({ a: Point({ x: 1, y: 2 }), b: Point({ x: 3, y: 4 }) });
+        line.b.x = 5;
+      }
+    }
+
+    struct Point {
+      uint8 x;
+      uint8 y;
+    }
+
+    struct Line {
+      Point a;
+      Point b;
+    }
+    `,
+  }),
+
+  expectedValues: [
+    { a: { x: 0, y: 0 }, b: { x: 0, y: 0 } },
+    { a: { x: 1, y: 2 }, b: { x: 3, y: 4 } },
+    { a: { x: 1, y: 2 }, b: { x: 5, y: 4 } },
+  ],
+
+  async observe({ regions, read }) {
+    const field = async (member: string, name: string) => {
+      const region = regions.find(
+        (region) =>
+          region.name === name &&
+          region.path?.length === 1 &&
+          region.path[0] === member,
+      )!;
+      return Number((await read(region)).asUint());
+    };
+
+    return {
+      a: { x: await field("a", "x"), y: await field("a", "y") },
+      b: { x: await field("b", "x"), y: await field("b", "y") },
+    };
+  },
+
+  equals(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  },
+};
+
+/**
  * collection of descriptions of tests that compile+deploy Solidity code,
  * then step through the machine trace of that code's execution, watching
  * and recording a pointer's value over the course of that trace.
@@ -289,4 +351,5 @@ export const observeTraceTests = {
   "string storage (multi-slot)": multiSlotStringStorageTest,
   "uint256[] memory": uint256ArrayMemoryTest,
   "virtual regions": virtualRegionsTest,
+  "struct storage (named references)": namedReferencesTest,
 };
