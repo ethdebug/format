@@ -74,3 +74,13 @@ implementation can infer that there must be a circular reference.
   sourcePath="src/dereference/region.ts"
   extract={(sourceFile) => sourceFile.getFunction("evaluateRegion")}
 />
+
+A virtual region also has an `expression`. The implementation evaluates it
+last, keeps its bytes as the concrete region's `expression`, and fills in the
+default `offset` and `length`, so that later regions can look them up:
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="src/dereference/region.ts"
+  extract={(sourceFile) => sourceFile.getFunction("evaluateFragment")}
+/>

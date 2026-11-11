@@ -92,6 +92,7 @@ const pointerSchemaIndex: SchemaIndex = {
     "returndata",
     "transient",
     "code",
+    "virtual",
   ]
     .map((location) => ({
       [`schema:ethdebug/format/pointer/region/${location}`]: {
@@ -100,7 +101,7 @@ const pointerSchemaIndex: SchemaIndex = {
     }))
     .reduce((a, b) => ({ ...a, ...b }), {}),
 
-  ...["slice", "segment"]
+  ...["slice", "segment", "fragment"]
     .map((scheme) => ({
       [`schema:ethdebug/format/pointer/scheme/${scheme}`]: {
         href: `/spec/pointer/region/scheme/${scheme}`,

@@ -1,0 +1,66 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/pointer/scheme/fragment"
+
+title: ethdebug/format/pointer/scheme/fragment
+description: |
+  An addressing scheme for pointing to a range of bytes inside the value of
+  an expression.
+
+  The other addressing schemes address bytes in a byte space that the data
+  location already has. This scheme supplies the byte space itself: the
+  bytes of the value that `expression` evaluates to. It then addresses a
+  range of bytes in that value by `offset` and `length`, as the slice
+  scheme does.
+
+  A fragment that extends outside the value's bytes (i.e., where `offset`
+  plus `length` exceeds the value's width) is invalid.
+
+type: object
+
+properties:
+  expression:
+    description: |
+      The expression whose value supplies the bytes for this fragment.
+
+      This expression **must** be width-bearing (bytes), the same rule as
+      for the operands of `~concat` and `~keccak256`. A bare integer (a JSON
+      number, an odd-digit hex literal, `~wordsize`, an arithmetic result,
+      or a lookup) is **not** valid here: give it a width first with
+      `~sizedN` or `~wordsized`.
+
+      This expression is evaluated against the same machine state as the
+      other regions of the pointer. It may refer only to regions that come
+      before this region.
+    $ref: "schema:ethdebug/format/pointer/expression"
+  offset:
+    description: |
+      The index of the byte (starting from zero) in the value's bytes where
+      the fragment begins.
+
+      This field is **optional**. If unspecified, it has the default value
+      of `0`, indicating that the fragment begins at the first byte of the
+      value.
+    $ref: "schema:ethdebug/format/pointer/expression"
+    default: 0
+  length:
+    description: |
+      The length of the fragment in number of bytes.
+
+      This field is **optional**. If unspecified, its default value
+      indicates that the fragment ends at the end of the value: the value's
+      width minus `offset`.
+    $ref: "schema:ethdebug/format/pointer/expression"
+
+required:
+  - expression
+
+examples:
+  - expression:
+      ~wordsized: 1
+  - expression:
+      ~keccak256:
+        - ~wordsized: 0
+    length: 4
+  - expression: "0xdeadbeef"
+    offset: 2
+    length: 2

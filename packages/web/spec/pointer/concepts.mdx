@@ -277,11 +277,15 @@ abstractions, but instead it defines the concept of an **addressing scheme**.
 Each location-specific region schema is defined as an extension of the schema
 for a particular addressing scheme.
 
-This format currently defines two such addressing schemes:
+This format currently defines three such addressing schemes:
 **ethdebug/format/pointer/scheme/slice** and
 **ethdebug/format/pointer/scheme/segment**, for addressing ranges within a
 single continuous byte array and addressing a slot or collection of slots
-in a word-arranged locaton (respectively).
+in a word-arranged locaton (respectively), and
+**ethdebug/format/pointer/scheme/fragment**, which supplies its own byte
+space (the value of an expression) and addresses a range within it. The
+`virtual` location uses the fragment scheme for values that are computed
+instead of stored.
 
 Within a slot, the segment scheme numbers bytes from the most significant
 byte: byte `0` is the first byte of the slot's big-endian word.

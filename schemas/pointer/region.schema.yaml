@@ -76,6 +76,15 @@ allOf:
     then:
       $ref: "schema:ethdebug/format/pointer/region/code"
 
+  - if:
+      required:
+        - location
+      properties:
+        location:
+          const: virtual
+    then:
+      $ref: "schema:ethdebug/format/pointer/region/virtual"
+
 $defs:
   Location:
     type: string
@@ -87,6 +96,7 @@ $defs:
       - returndata
       - transient
       - code
+      - virtual
 
 unevaluatedProperties: false
 

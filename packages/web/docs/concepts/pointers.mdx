@@ -186,6 +186,24 @@ optional offset and length for packed values:
 }`}
 </SchemaExample>
 
+**Fragment-based regions** (virtual) hold the bytes of a computed value,
+for data that no EVM location stores (e.g., a variable the optimizer removed).
+Optional offset and length select part of the value:
+
+<SchemaExample
+  schema="pointer/region/virtual"
+  href="/spec/pointer/region/location/virtual"
+  title="First 4 bytes of a hash"
+>
+  {`{
+  "location": "virtual",
+  "expression": {
+    "~keccak256": [{ "~wordsized": 1 }]
+  },
+  "length": 4
+}`}
+</SchemaExample>
+
 Regions can be **named** for reference elsewhere in the pointer:
 
 <SchemaExample
