@@ -39,8 +39,8 @@ this function's `while()` loop operates on the stack, memos for saving new
 named regions or updating variable values may appear and then get handled
 appropriately.
 
-For reference, see the `memo.ts` module for type definitions for each of the
-three types of memo and their corresponding helper constructor functions.
+For reference, see the `memo.ts` module for type definitions for each
+kind of memo and its corresponding helper constructor function.
 
 <details>
 <summary>See the `memo.ts` module</summary>
@@ -239,3 +239,13 @@ enclosing scope. If every remaining member fails in turn, they form a cycle.
   sourcePath="src/dereference/process.ts"
   extract={(sourceFile) => sourceFile.getFunction("processScope")}
 />
+
+### Collection names
+
+`processPointer()` handles a collection's `name` for every kind of collection
+at once: it surrounds the collection's memos with a `PushPath` memo for the
+name and a `PopPath` memo after them. `generateRegions()` keeps the current
+path and copies it onto each region it yields, when the path is not empty.
+A named list also surrounds each element with a `PushPath` memo for the
+element's index (see `processList()` above). Paths never reach the saved
+regions or variables, so expressions do not see collection names.
