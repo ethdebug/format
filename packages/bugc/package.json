@@ -209,6 +209,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@ethdebug/common": "^0.1.0-preview.2",
     "@ethdebug/evm": "^0.1.0-preview.2",
     "@ethdebug/pointers": "^0.1.0-preview.2",
     "@hyperjump/browser": "^1.2.0",

@@ -12,7 +12,8 @@ import React, {
   useRef,
 } from "react";
 import type { Pointer, Program } from "@ethdebug/format";
-import { dereference, Data } from "@ethdebug/pointers";
+import { Raw } from "@ethdebug/common";
+import { dereference } from "@ethdebug/pointers";
 import {
   type TraceStep,
   type CallInfo,
@@ -239,7 +240,7 @@ async function resolveVariableValue(
   const view = await cursor.view(state);
 
   // Collect values from all regions
-  const values: Data[] = [];
+  const values: Raw[] = [];
   for (const region of view.regions) {
     const data = await view.read(region);
     values.push(data);
@@ -251,11 +252,11 @@ async function resolveVariableValue(
 
   // Single region: return its hex value
   if (values.length === 1) {
-    return values[0].toHex();
+    return Raw.toHex(values[0]);
   }
 
   // Multiple regions: concatenate hex values
-  return values.map((d) => d.toHex()).join(", ");
+  return values.map((d) => Raw.toHex(d)).join(", ");
 }
 
 /**

@@ -13,7 +13,8 @@ import {
   type Trace,
   type TraceStep,
 } from "@ethdebug/evm";
-import { dereference, type Machine } from "@ethdebug/pointers";
+import { type Machine, Raw } from "@ethdebug/common";
+import { dereference } from "@ethdebug/pointers";
 import { bytesToHex } from "ethereum-cryptography/utils";
 import type * as Format from "@ethdebug/format";
 
@@ -347,8 +348,8 @@ async function regionsAt(pointer: unknown, run: LocalsTrace, index: number) {
       const data = await view.read(region);
       if (region.location === "memory" || region.location === "calldata") {
         const bytes = region.location === "memory" ? memory : calldata;
-        const start = region.offset!.asUint();
-        const length = region.length!.asUint();
+        const start = Raw.asUint(region.offset!);
+        const length = Raw.asUint(region.length!);
         if (offset !== undefined && start !== offset) {
           throw new Error(`${name} at ${start}, expected ${offset}`);
         }
@@ -357,7 +358,7 @@ async function regionsAt(pointer: unknown, run: LocalsTrace, index: number) {
         }
         const actual = new Uint8Array(Number(length));
         actual.set(bytes.slice(Number(start), Number(start + length)));
-        if (data.toHex() !== "0x" + bytesToHex(actual)) {
+        if (Raw.toHex(data) !== "0x" + bytesToHex(actual)) {
           throw new Error(
             `${name} does not read ${region.location} at ${start}`,
           );
@@ -377,7 +378,7 @@ async function readScalar(
 ): Promise<string> {
   const regions = await regionsAt(pointer, run, index);
   regions.seek(name);
-  return (await regions.read(name)).toHex();
+  return Raw.toHex(await regions.read(name));
 }
 
 /**
@@ -400,9 +401,9 @@ async function readReference(
 
   if (shape.kind === "calldata") {
     regions.seek(`${name}-offset`);
-    const offset = (await regions.read(`${name}-offset`)).asUint();
-    const length = (await regions.read(`${name}-length`)).asUint();
-    return (await regions.read(`${name}-data`, offset, length)).toHex();
+    const offset = Raw.asUint(await regions.read(`${name}-offset`));
+    const length = Raw.asUint(await regions.read(`${name}-length`));
+    return Raw.toHex(await regions.read(`${name}-data`, offset, length));
   }
 
   regions.seek(name);
@@ -415,9 +416,9 @@ async function readReference(
   ): Promise<RefValue> => {
     if (shape.kind === "scalar") {
       const size = BigInt(shape.size);
-      return (await regions.read(prefix, word + 32n - size, size)).asUint();
+      return Raw.asUint(await regions.read(prefix, word + 32n - size, size));
     }
-    const address = (await regions.read(prefix, word, 32n)).asUint();
+    const address = Raw.asUint(await regions.read(prefix, word, 32n));
     return decode(shape, prefix, address);
   };
 
@@ -435,9 +436,13 @@ async function readReference(
       }
       return value;
     }
-    const length = (await regions.read(`${prefix}-length`, base, 32n)).asUint();
+    const length = Raw.asUint(
+      await regions.read(`${prefix}-length`, base, 32n),
+    );
     if (shape.kind !== "array") {
-      return (await regions.read(`${prefix}-data`, base + 32n, length)).toHex();
+      return Raw.toHex(
+        await regions.read(`${prefix}-data`, base + 32n, length),
+      );
     }
     const values: RefValue[] = [];
     for (let i = 0n; i < length; i++) {
@@ -447,6 +452,6 @@ async function readReference(
     return values;
   };
 
-  const base = (await regions.read(name)).asUint();
+  const base = Raw.asUint(await regions.read(name));
   return decode(shape, name, base);
 }

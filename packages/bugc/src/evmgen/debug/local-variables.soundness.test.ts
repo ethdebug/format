@@ -12,6 +12,7 @@ import { describe, it, expect } from "vitest";
 
 import { Program } from "@ethdebug/format";
 import type * as Format from "@ethdebug/format";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import { executeProgram } from "#test/evm/behavioral";
 import {
@@ -1707,16 +1708,16 @@ describe.each(levels)("a calldata reference's word at O%i", (level) => {
           return regions[0];
         });
         expect(length.location).toEqual(offset.location);
-        expect(offset.length?.asUint()).toEqual(16n);
-        expect(length.length?.asUint()).toEqual(16n);
+        expect(offset.length && Raw.asUint(offset.length)).toEqual(16n);
+        expect(length.length && Raw.asUint(length.length)).toEqual(16n);
         if (offset.location === "stack" && length.location === "stack") {
-          expect(length.slot.asUint()).toEqual(offset.slot.asUint());
-          expect(offset.offset?.asUint()).toEqual(0n);
-          expect(length.offset?.asUint()).toEqual(16n);
+          expect(Raw.asUint(length.slot)).toEqual(Raw.asUint(offset.slot));
+          expect(offset.offset && Raw.asUint(offset.offset)).toEqual(0n);
+          expect(length.offset && Raw.asUint(length.offset)).toEqual(16n);
         } else {
           expect(offset.location).toEqual("memory");
-          expect(length.offset!.asUint()).toEqual(
-            offset.offset!.asUint() + 16n,
+          expect(Raw.asUint(length.offset!)).toEqual(
+            Raw.asUint(offset.offset!) + 16n,
           );
         }
         expect(view.regions.named(name)).toHaveLength(0);

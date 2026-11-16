@@ -6,7 +6,7 @@
  * `StepState` at any of its steps.
  */
 
-import type { Machine } from "@ethdebug/pointers";
+import type { Machine } from "@ethdebug/common";
 import type { Executor, ExecutionOptions } from "#executor";
 import { createMachineState } from "#machine";
 

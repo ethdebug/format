@@ -9,6 +9,10 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Changed
 
+- **Breaking:** the package exports the `Raw` and `Machine` types from
+  `@ethdebug/common` in place of `Data` and `Machine` from
+  `@ethdebug/pointers`. `createMockState`, `formatData` and
+  `formatDataShort` take and give `Raw` values.
 - The `react` and `react-dom` peer ranges now include React 19
   (`^18.0.0 || ^19.0.0`) ([#374]). The components' return types now
   read `React.JSX.Element`, which both React 18 and 19 types define;

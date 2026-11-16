@@ -21,7 +21,7 @@ import {
   generateAddress2,
   bigIntToBytes,
 } from "@ethereumjs/util";
-import { keccak256 } from "ethereum-cryptography/keccak";
+import { keccak256 } from "@ethdebug/common";
 import { hexToBytes, bytesToHex } from "ethereum-cryptography/utils";
 
 import { recorder } from "#trace";

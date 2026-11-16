@@ -29,7 +29,8 @@ import {
   type TraceStep as EvmStep,
 } from "@ethdebug/evm";
 import type { Pointer } from "@ethdebug/format";
-import { dereference, Data, type Machine } from "@ethdebug/pointers";
+import { type Machine, Raw } from "@ethdebug/common";
+import { dereference } from "@ethdebug/pointers";
 import { storageByStep } from "./storageByStep";
 import {
   buildCallStack,
@@ -1348,15 +1349,15 @@ function traceStepToState(
   storage: Record<string, string>,
 ): Machine.State {
   const stackEntries = step.stack.map((v) =>
-    Data.fromUint(v).padUntilAtLeast(32),
+    Raw.padUntilAtLeast(Raw.fromUint(v), 32),
   );
 
-  const memoryData = Data.fromBytes(step.memory);
+  const memoryData = step.memory;
 
-  const storageMap = new Map<string, Data>();
+  const storageMap = new Map<string, Raw>();
   for (const [slot, value] of Object.entries(storage)) {
-    const key = Data.fromHex(slot).padUntilAtLeast(32).toHex();
-    storageMap.set(key, Data.fromHex(value).padUntilAtLeast(32));
+    const key = Raw.toHex(Raw.padUntilAtLeast(Raw.fromHex(slot), 32));
+    storageMap.set(key, Raw.padUntilAtLeast(Raw.fromHex(value), 32));
   }
 
   const stack: Machine.State.Stack = {
@@ -1371,13 +1372,11 @@ function traceStepToState(
       const entry = stackEntries[index];
       if (!slice) return entry;
       const { offset, length } = slice;
-      return Data.fromBytes(
-        entry.slice(Number(offset), Number(offset + length)),
-      );
+      return entry.slice(Number(offset), Number(offset + length));
     },
   };
 
-  const makeBytesReader = (data: Data): Machine.State.Bytes => ({
+  const makeBytesReader = (data: Raw): Machine.State.Bytes => ({
     get length() {
       return Promise.resolve(BigInt(data.length));
     },
@@ -1391,32 +1390,28 @@ function traceStepToState(
         if (available > 0 && start < data.length) {
           result.set(data.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(data.slice(start, end));
+      return data.slice(start, end);
     },
   });
 
   const storageReader: Machine.State.Words = {
     async read({ slot, slice }) {
-      const key = slot.padUntilAtLeast(32).toHex();
-      const value = storageMap.get(key) || Data.zero().padUntilAtLeast(32);
+      const key = Raw.toHex(Raw.padUntilAtLeast(slot, 32));
+      const value = storageMap.get(key) || Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) return value;
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 
   const emptyWords: Machine.State.Words = {
     async read({ slice }) {
-      const value = Data.zero().padUntilAtLeast(32);
+      const value = Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) return value;
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 
@@ -1433,9 +1428,9 @@ function traceStepToState(
     stack,
     memory: makeBytesReader(memoryData),
     storage: storageReader,
-    calldata: makeBytesReader(Data.zero()),
-    returndata: makeBytesReader(Data.zero()),
-    code: makeBytesReader(Data.zero()),
+    calldata: makeBytesReader(Raw.zero()),
+    returndata: makeBytesReader(Raw.zero()),
+    code: makeBytesReader(Raw.zero()),
     transient: emptyWords,
   };
 }
@@ -1454,14 +1449,14 @@ async function resolvePointer(
   );
   const view = await cursor.view(state);
 
-  const values: Data[] = [];
+  const values: Raw[] = [];
   for (const region of view.regions) {
     values.push(await view.read(region));
   }
 
   if (values.length === 0) return "0x";
-  if (values.length === 1) return values[0].toHex();
-  return values.map((d) => d.toHex()).join(", ");
+  if (values.length === 1) return Raw.toHex(values[0]);
+  return values.map((d) => Raw.toHex(d)).join(", ");
 }
 
 interface ResolvedArg {

@@ -41,6 +41,11 @@ specification itself are tracked in the root
 
 ### Changed
 
+- **Breaking:** the `Machine` interfaces that `createMachine` and
+  `createMachineState` implement now come from `@ethdebug/common`, and
+  their reads give a `Raw` (a `Uint8Array`) from that package instead of
+  `Data` from `@ethdebug/pointers`. Use `Raw.asUint(value)` and
+  `Raw.toHex(value)` where you used `value.asUint()` and `value.toHex()`.
 - **Breaking:** a `TraceStep` is the event only: `pc`, `opcode`, `op`
   (the opcode byte), `gasRemaining`, `gasCost`, `depth`, `address` and
   `codeAddress`. Its stack and memory moved to `Trace.stateAt` ([#375]).

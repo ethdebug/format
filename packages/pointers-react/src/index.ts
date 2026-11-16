@@ -40,7 +40,8 @@ export {
 
 // Re-export types from dependencies for convenience
 export type { Pointer } from "@ethdebug/format";
-export type { Cursor, Machine, Data } from "@ethdebug/pointers";
+export type { Machine, Raw } from "@ethdebug/common";
+export type { Cursor } from "@ethdebug/pointers";
 
 // CSS - the package ships stylesheets under dist/src/components/.
 // Import variables.css first (the component stylesheets use its
