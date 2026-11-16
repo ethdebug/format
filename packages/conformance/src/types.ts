@@ -21,7 +21,7 @@ export interface EthdebugArtifact {
   compilation?: Materials.Compilation;
   resources?: {
     ethdebug?: Data.Stamp;
-    compilation: Materials.Compilation;
+    compilation?: Materials.Compilation;
     types: Record<string, unknown>;
     pointers: Record<string, unknown>;
   };
