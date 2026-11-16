@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Making regions concrete | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Making regions concrete | ethdebug format"><meta data-rh="true" name="description" content="There are two main aspects involved when converting from a Pointer.Region,"><meta data-rh="true" property="og:description" content="There are two main aspects involved when converting from a Pointer.Region,"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-413/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Implementation guides","item":"https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/"},{"@type":"ListItem","position":2,"name":"Dereferencing pointers","item":"https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/"},{"@type":"ListItem","position":3,"name":"The dereference function","item":"https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/"},{"@type":"ListItem","position":4,"name":"Making regions concrete","item":"https://ethdebug.github.io/format/pr-preview/pr-413/docs/implementation-guides/pointers/dereference-logic/making-regions-concrete"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-413/assets/css/styles.73b0190e.css">
-<script src="/format/pr-preview/pr-413/assets/js/runtime~main.9cafca62.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-413/assets/js/main.5c113903.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-413/assets/js/runtime~main.ac19c906.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-413/assets/js/main.7dbed5f0.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -15,7 +15,7 @@
 <p>There are two main aspects involved when converting from a <code>Pointer.Region</code>,
 which is full of properties whose values are the dynamic <code>Pointer.Expression</code>
 objects, into a <code>Cursor.Region</code>, whose expression properties have been replaced
-with actual bytes <code>Data</code>:</p>
+with actual bytes (<code>Raw</code> values):</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="fixing-stack-located-regions-slot-offset">Fixing stack-located regions&#x27; <code>slot</code> offset<a href="#fixing-stack-located-regions-slot-offset" class="hash-link" aria-label="Direct link to fixing-stack-located-regions-slot-offset" title="Direct link to fixing-stack-located-regions-slot-offset" translate="no">​</a></h2>
 <p>Since stack pointers are expected to be declared at one time yet evaluated
 later, the relative offset that stack pointers use must be adjusted based on
@@ -25,7 +25,7 @@ the initial stack length vs. the current stack length.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="evaluating-region-property-expressions">Evaluating region property expressions<a href="#evaluating-region-property-expressions" class="hash-link" aria-label="Direct link to Evaluating region property expressions" title="Direct link to Evaluating region property expressions" translate="no">​</a></h2>
 <p>The more substantial aspect of making a region concrete, however, is the
 process by which this implementation evaluates each of the <code>Pointer.Region</code>&#x27;s
-expression properties and converts them into their <code>Data</code> values.</p>
+expression properties and converts them into their <code>Raw</code> byte values.</p>
 <p>This process would be very straightforward, except that pointer expressions
 may reference the region in which they are specified by use of the special
 region identifier <code>&quot;~this&quot;</code>.</p>
