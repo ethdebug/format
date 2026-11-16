@@ -3,7 +3,8 @@ import {
   findExamplePointer,
   type ObserveTraceOptions,
 } from "./index.js";
-import { type Cursor, Data } from "../src/index.js";
+import { Raw } from "@ethdebug/common";
+import type { Cursor } from "../src/index.js";
 
 export interface ObserveTraceTest<V> extends ObserveTraceOptions<V> {
   expectedValues: V[];
@@ -61,11 +62,11 @@ const structStorageTest: ObserveTraceTest<{
   ],
 
   async observe({ regions, read }) {
-    const x = Number((await read(regions.lookup["x"])).asUint());
+    const x = Number(Raw.asUint(await read(regions.lookup["x"])));
 
-    const y = Number((await read(regions.lookup["y"])).asUint());
+    const y = Number(Raw.asUint(await read(regions.lookup["y"])));
 
-    const salt = (await read(regions.lookup["salt"])).toHex();
+    const salt = Raw.toHex(await read(regions.lookup["salt"]));
 
     return { x, y, salt };
   },
@@ -110,7 +111,7 @@ const stringStorageTest: ObserveTraceTest<string> = {
     const strings = regions.named("string");
 
     // read each region and concatenate all the bytes
-    const stringData: Data = Data.zero().concat(
+    const stringData: Raw = Raw.concat(
       ...(await Promise.all(strings.map(read))),
     );
 
@@ -141,8 +142,8 @@ const multiSlotStringStorageTest: ObserveTraceTest<string> = {
   // solc marks long strings by an odd length word; the example does not
   // model the short form, whose length word would decode as a huge length
   async shouldObserve(state) {
-    const lengthData = await state.storage.read({ slot: Data.zero() });
-    const lengthWord = lengthData.asUint();
+    const lengthData = await state.storage.read({ slot: Raw.zero() });
+    const lengthWord = Raw.asUint(lengthData);
 
     return lengthWord === 0n || lengthWord % 2n === 1n;
   },
@@ -191,7 +192,7 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
       items.map(async (item) => {
         const data = await read(item);
 
-        return Number(data.asUint());
+        return Number(Raw.asUint(data));
       }),
     );
   },
@@ -227,13 +228,13 @@ const uint256ArrayMemoryTest: ObserveTraceTest<number[]> = {
 
     const arrayCount = await state.memory.read({
       slice: {
-        offset: arrayOffset.asUint(),
+        offset: Raw.asUint(arrayOffset),
         length: 32n,
       },
     });
 
     // the example code only appends three times
-    return arrayCount.asUint() < 4n;
+    return Raw.asUint(arrayCount) < 4n;
   },
 };
 

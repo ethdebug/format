@@ -2,8 +2,7 @@ import { expect, describe, it } from "vitest";
 
 import { Pointer, schemaIds, schemas } from "@ethdebug/format";
 
-import type { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw } from "@ethdebug/common";
 import type { Cursor } from "#cursor";
 import { evaluate, Value, type EvaluateOptions } from "./evaluate.js";
 
@@ -35,12 +34,12 @@ function stubValue(expression: Pointer.Expression): Value {
     Pointer.Expression.isRead(expression) ||
     isWidthSensitive(expression)
   ) {
-    return Value.bytes(Data.fromNumber(0).resizeTo(32));
+    return Value.bytes(Raw.resizeTo(Raw.fromNumber(0), 32));
   }
 
   if (typeof expression === "string" && expression.startsWith("0x")) {
     return (expression.length - 2) % 2 === 0
-      ? Value.bytes(Data.fromHex(expression))
+      ? Value.bytes(Raw.fromHex(expression))
       : Value.integer(BigInt(expression));
   }
 
@@ -88,7 +87,7 @@ const zeros = async ({
   slice: { length },
 }: {
   slice: Machine.State.Slice;
-}): Promise<Data> => Data.fromBytes(new Uint8Array(Number(length)));
+}): Promise<Raw> => new Uint8Array(Number(length));
 
 const state = {
   memory: { read: zeros },
@@ -99,8 +98,8 @@ const regions = new Proxy({} as { [identifier: string]: Cursor.Region }, {
   get: (_target, name): Cursor.Region => ({
     name: String(name),
     location: "memory",
-    offset: Data.fromNumber(0),
-    length: Data.fromNumber(32),
+    offset: Raw.fromNumber(0),
+    length: Raw.fromNumber(32),
   }),
 });
 

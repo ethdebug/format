@@ -1,4 +1,4 @@
-import type { Machine } from "#machine";
+import type { Machine } from "@ethdebug/common";
 import type { Cursor } from "#cursor";
 import { read } from "#read";
 

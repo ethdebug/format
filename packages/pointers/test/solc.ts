@@ -1,4 +1,4 @@
-import { Data } from "../src/data.js";
+import { Raw } from "@ethdebug/common";
 import type * as Solc from "solc";
 
 let solc: typeof Solc | undefined;
@@ -32,7 +32,7 @@ export interface CompileOptions {
 export async function compileCreateBytecode({
   sources,
   target,
-}: CompileOptions): Promise<Data> {
+}: CompileOptions): Promise<Raw> {
   if (!solc) {
     throw new Error("Unable to load solc");
   }
@@ -67,7 +67,7 @@ export async function compileCreateBytecode({
     evm: { bytecode: createBytecode },
   } = output.contracts[target.path][target.contractName];
 
-  return Data.fromHex(`0x${createBytecode.object}`);
+  return Raw.fromHex(`0x${createBytecode.object}`);
 }
 
 /**

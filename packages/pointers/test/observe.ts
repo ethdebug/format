@@ -1,6 +1,7 @@
 import type { Pointer } from "@ethdebug/format";
 
-import { type Machine, type Cursor, dereference } from "../src/index.js";
+import type { Machine } from "@ethdebug/common";
+import { type Cursor, dereference } from "../src/index.js";
 
 import { loadGanache, machineForProvider } from "./ganache.js";
 import { compileCreateBytecode, type CompileOptions } from "./solc.js";

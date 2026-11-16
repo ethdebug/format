@@ -3,8 +3,7 @@ import { expect, describe, it } from "vitest";
 import type { Pointer } from "@ethdebug/format";
 import { schemas } from "@ethdebug/format";
 
-import type { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw } from "@ethdebug/common";
 import { dereference } from "./dereference/index.js";
 
 const { examples } = schemas[
@@ -31,23 +30,18 @@ const state = {
       slot,
       slice,
     }: {
-      slot: Data;
+      slot: Raw;
       slice?: Machine.State.Slice;
     }) => {
-      expect(slot).toEqual(Data.fromNumber(2));
-      return Data.fromBytes(
-        slice
-          ? word.slice(
-              Number(slice.offset),
-              Number(slice.offset + slice.length),
-            )
-          : word,
-      );
+      expect(slot).toEqual(Raw.fromNumber(2));
+      return slice
+        ? word.slice(Number(slice.offset), Number(slice.offset + slice.length))
+        : word;
     },
   },
 } as unknown as Machine.State;
 
-async function resolve(example: Record<string, unknown>): Promise<Data> {
+async function resolve(example: Record<string, unknown>): Promise<Raw> {
   const pointer = { location: "storage", ...example } as Pointer;
   const cursor = await dereference(pointer);
   const { regions, read } = await cursor.view(state);
@@ -71,10 +65,10 @@ describe("segment schema examples (packed)", () => {
   it("count offsets from the most significant byte", async () => {
     const [literalAddress, literalCount] = packed;
 
-    expect(await resolve(literalAddress)).toEqual(Data.fromBytes(address));
-    expect(await resolve(literalCount)).toEqual(Data.fromBytes(count));
+    expect(await resolve(literalAddress)).toEqual(address);
+    expect(await resolve(literalCount)).toEqual(count);
     expect(await resolve({ slot: 2, offset: 0, length: 1 })).toEqual(
-      Data.fromBytes(new Uint8Array([0x00])),
+      new Uint8Array([0x00]),
     );
   });
 

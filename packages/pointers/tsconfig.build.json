@@ -10,5 +10,8 @@
     "test/**",
     "bin/**"
   ],
-  "references": [{ "path": "../format/tsconfig.build.json" }]
+  "references": [
+    { "path": "../common/tsconfig.build.json" },
+    { "path": "../format/tsconfig.build.json" }
+  ]
 }
