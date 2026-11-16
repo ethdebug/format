@@ -110,6 +110,48 @@ examples:
               template: "packed-field"
               yields: { "field": "salt" }
 
+  - # example `struct Line { Point a; Point b; }` in storage, where
+    # `struct Point { uint8 x; uint8 y; }`
+    #
+    # both members use the "point" template, so both give regions named
+    # "x" and "y". the names of the two references tell them apart without
+    # `yields`: a's regions have the path ["a"] and b's regions have the
+    # path ["b"].
+    templates:
+      point:
+        expect: ["point-slot"]
+        for:
+          group:
+            # x is the low-order byte of the slot; y is the next byte
+            - name: "x"
+              location: storage
+              slot: "point-slot"
+              offset: 31
+              length: 1
+            - name: "y"
+              location: storage
+              slot: "point-slot"
+              offset: 30
+              length: 1
+    in:
+      define:
+        "line-storage-contract-variable-slot": 0
+      in:
+        group:
+          # each struct member starts a new slot
+          - define:
+              "point-slot": "line-storage-contract-variable-slot"
+            in:
+              name: "a"
+              template: "point"
+
+          - define:
+              "point-slot":
+                ~sum: ["line-storage-contract-variable-slot", 1]
+            in:
+              name: "b"
+              template: "point"
+
   - # example `(struct Record { uint256 x; uint256 y; })[] memory`
     group:
       # declare the first sub-pointer to be the "array-start" region of data

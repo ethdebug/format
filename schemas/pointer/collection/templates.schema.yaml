@@ -11,6 +11,9 @@ description: |
 type: object
 
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   templates:
     title: Mapping of template names to template definitions
     type: object

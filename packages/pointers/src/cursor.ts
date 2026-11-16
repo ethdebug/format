@@ -41,7 +41,19 @@ export namespace Cursor {
           ? Data | undefined
           : R[K]
       : R[K];
+  } & {
+    /**
+     * The names of the named collections that contain this region,
+     * outermost first. A named list adds its name and then the index of
+     * the element. Absent when no named collection contains the region.
+     */
+    path?: Cursor.Path;
   };
+
+  /**
+   * A list of collection names and named list element indexes
+   */
+  export type Path = (string | number)[];
 
   /**
    * A collection of concrete regions.

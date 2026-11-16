@@ -1064,4 +1064,160 @@ describe("dereference", () => {
       );
     });
   });
+
+  describe("collection names", () => {
+    const slot = (value: Pointer.Expression) =>
+      ({ location: "stack", slot: value }) as const;
+
+    // the name and path of each output region
+    const pathsOf = async (pointer: Pointer) => {
+      const { regions } = await (await dereference(pointer)).view(state);
+      return regions.map(({ name, path }) => ({ name, path }));
+    };
+
+    it("adds the name of a group to the path of its regions", async () => {
+      expect(
+        await pathsOf({
+          name: "g",
+          group: [
+            { name: "a", ...slot(0) },
+            { name: "b", ...slot(1) },
+          ],
+        }),
+      ).toEqual([
+        { name: "a", path: ["g"] },
+        { name: "b", path: ["g"] },
+      ]);
+    });
+
+    it("adds nested names outermost first", async () => {
+      expect(
+        await pathsOf({
+          name: "outer",
+          group: [
+            { name: "a", ...slot(0) },
+            { name: "inner", group: [{ name: "b", ...slot(1) }] },
+          ],
+        }),
+      ).toEqual([
+        { name: "a", path: ["outer"] },
+        { name: "b", path: ["outer", "inner"] },
+      ]);
+    });
+
+    it("adds the element index after the name of a list", async () => {
+      expect(
+        await pathsOf({
+          name: "items",
+          list: {
+            count: 2,
+            each: "i",
+            is: { name: "elem", group: [{ name: "a", ...slot("i") }] },
+          },
+        }),
+      ).toEqual([
+        { name: "a", path: ["items", 0, "elem"] },
+        { name: "a", path: ["items", 1, "elem"] },
+      ]);
+    });
+
+    it("adds the element index when the list's `is` has no name", async () => {
+      expect(
+        await pathsOf({
+          name: "items",
+          list: { count: 2, each: "i", is: { name: "a", ...slot("i") } },
+        }),
+      ).toEqual([
+        { name: "a", path: ["items", 0] },
+        { name: "a", path: ["items", 1] },
+      ]);
+    });
+
+    it("adds nothing for an unnamed list", async () => {
+      expect(
+        await pathsOf({
+          list: { count: 2, each: "i", is: { name: "a", ...slot("i") } },
+        }),
+      ).toEqual([
+        { name: "a", path: undefined },
+        { name: "a", path: undefined },
+      ]);
+    });
+
+    it("adds the names of a conditional, a scope and templates", async () => {
+      expect(
+        await pathsOf({
+          name: "t",
+          templates: {},
+          in: {
+            name: "s",
+            define: { v: 0 },
+            in: { name: "c", if: 1, then: { name: "a", ...slot("v") } },
+          },
+        }),
+      ).toEqual([{ name: "a", path: ["t", "s", "c"] }]);
+    });
+
+    it("tells apart two uses of one template by named references", async () => {
+      const { examples } = schemas["schema:ethdebug/format/pointer"] as {
+        examples: Pointer[];
+      };
+      const example = examples.find((pointer) =>
+        JSON.stringify(pointer).includes("line-storage-contract-variable-slot"),
+      )!;
+
+      const { regions } = await (await dereference(example)).view(state);
+
+      expect([...regions]).toMatchObject([
+        { name: "x", path: ["a"], slot: Data.fromNumber(0) },
+        { name: "y", path: ["a"], slot: Data.fromNumber(0) },
+        { name: "x", path: ["b"], slot: Data.fromNumber(1) },
+        { name: "y", path: ["b"], slot: Data.fromNumber(1) },
+      ]);
+
+      // region-name lookup ignores paths: the last "x" is b's
+      expect(regions.named("x")).toHaveLength(2);
+      expect(regions.lookup["x"]).toMatchObject({ slot: Data.fromNumber(1) });
+    });
+
+    it("does not rename collection names with yields", async () => {
+      const templates: Pointer.Templates = {
+        t: { expect: [], for: { name: "inner", group: [slot(0)] } },
+      };
+      const cursor = await dereference(
+        { name: "ref", template: "t", yields: { inner: "renamed" } },
+        { templates },
+      );
+      const { regions } = await cursor.view(state);
+      expect(regions[0].path).toEqual(["ref", "inner"]);
+    });
+
+    it("hides collection names from expressions", async () => {
+      const cursor = await dereference({
+        group: [
+          { name: "g", group: [{ name: "a", ...slot(0) }] },
+          { location: "memory", offset: { "~read": "g" }, length: 1 },
+        ],
+      });
+      await expect(cursor.view(state)).rejects.toThrow("Region not found: g");
+    });
+
+    it("leaves region-name references within a named collection", async () => {
+      const { regions } = await (
+        await dereference({
+          name: "g",
+          group: [
+            { name: "a", location: "memory", offset: 0x40, length: 0x20 },
+            {
+              name: "b",
+              location: "memory",
+              offset: { ".offset": "a" },
+              length: 1,
+            },
+          ],
+        })
+      ).view(state);
+      expect(regions.lookup["b"].offset).toEqual(Data.fromNumber(0x40));
+    });
+  });
 });

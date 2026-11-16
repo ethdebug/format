@@ -136,6 +136,30 @@ Pointers within collections can include a `name` property. Named regions are
 tracked during resolution and can be referenced using the `.slot`, `.offset`,
 and `.length` syntax in expressions.
 
+## Collection names
+
+Any collection can also have a `name`. A collection's name scopes the regions
+inside it in the result of the pointer. This tells apart regions that have the
+same name, such as the regions of two references to one template:
+
+```yaml
+group:
+  - define: { "point-slot": 0 }
+    in: { name: "a", template: "point" }
+  - define: { "point-slot": 1 }
+    in: { name: "b", template: "point" }
+```
+
+Both references give regions named `x` and `y`. The regions of the first
+reference are in the scope `a`, and the regions of the second are in the
+scope `b`. A named list also scopes each element by its index, so the regions
+of one element stay together.
+
+Collection names affect only the result. Expressions do not see them: `~read`,
+`.offset`, `.length` and `.slot` refer to region names only. A consumer that
+ignores collection names gets the same regions, with the same names. The
+`yields` of a reference renames regions only, never collections.
+
 ## Learn more
 
 - [Regions](./regions) for simple pointer definitions
