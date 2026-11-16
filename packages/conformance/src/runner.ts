@@ -74,7 +74,7 @@ function sourceIds(artifact: EthdebugArtifact): Set<Materials.Id> {
   for (const source of artifact.compilation?.sources ?? []) {
     ids.add(source.id);
   }
-  for (const source of artifact.resources?.compilation.sources ?? []) {
+  for (const source of artifact.resources?.compilation?.sources ?? []) {
     ids.add(source.id);
   }
   return ids;
@@ -180,7 +180,7 @@ export async function validateStaticConformance(
   }
 
   if (
-    artifact.resources &&
+    artifact.resources?.compilation &&
     !Materials.isCompilation(artifact.resources.compilation)
   ) {
     issues.push(

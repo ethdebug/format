@@ -233,8 +233,11 @@ describe("@ethdebug/conformance", () => {
       expect(result.exitCode).toBe(0);
       const json = result.json as any;
       expect(json.contracts[0].name).toBe("Counter");
+      const written = JSON.parse(
+        await readFile(path.join(debugDir.debugDir, "ethdebug.json"), "utf8"),
+      );
       expect(json.contracts[0].resources).toEqual(
-        withoutResourcesStamp(artifact.resources, json.contracts[0].resources),
+        withoutResourcesStamp(written, json.contracts[0].resources),
       );
       expect(
         json.contracts[0].resources.compilation.sources[0].contents,
@@ -495,6 +498,20 @@ describe("@ethdebug/conformance", () => {
       schema: "ethdebug/format/info/resources",
       version,
     });
+  });
+
+  it("puts a separate compilation into the resources it writes for SolDB", async () => {
+    const { compilation: _, ...resources } = validResources();
+    const debugDir = await writeSoldbDebugDir(
+      validArtifact({ resources: resources as any }),
+      { contractName: "Counter" },
+    );
+
+    const written = JSON.parse(
+      await readFile(path.join(debugDir.debugDir, "ethdebug.json"), "utf8"),
+    );
+
+    expect(written).toEqual({ ...resources, compilation: validCompilation() });
   });
 
   it("materializes non-empty resources into SolDB debug directories", async () => {

@@ -102,14 +102,19 @@ function contractName(artifact: EthdebugArtifact, fallback?: string): string {
   );
 }
 
+// SolDB reads source contents only from the `compilation` of the resources
+// file in its debug directory. A compiler can emit the compilation on its
+// own instead (solc does since argotorg/solidity#17179), so put it in the
+// resources here.
 function ethdebugResources(artifact: EthdebugArtifact): unknown {
-  if (artifact.resources) {
-    return artifact.resources;
+  const { resources, compilation } = artifact;
+  if (resources) {
+    return { compilation, ...resources };
   }
 
-  if (artifact.compilation) {
+  if (compilation) {
     return Data.stamp("ethdebug/format/info/resources", {
-      compilation: artifact.compilation,
+      compilation,
       types: {},
       pointers: {},
     });
