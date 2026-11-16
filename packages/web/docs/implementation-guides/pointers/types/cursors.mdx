@@ -36,7 +36,7 @@ Viewing a `Cursor` with a machine state yields two key results:
 - A collection of `Cursor.Region` objects representing the pointer in
   terms of fully-evaluated slots, offsets, conditionals, etc.
 
-- A `read(region: Cursor.Region): Promise<Data>` method for reading
+- A `read(region: Cursor.Region): Promise<Raw>` method for reading
   bytes from the machine
 
 **Importantly**, a `Cursor.Region` is a fully-evaluated

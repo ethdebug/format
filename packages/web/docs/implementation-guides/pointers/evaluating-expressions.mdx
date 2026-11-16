@@ -137,8 +137,8 @@ This schema provides the `{ "~sized<N>": <expression> }` and
 subexpression. A resize always produces bytes of the requested width, and
 so is the way to give an integer a width; this implementation encodes an
 integer as its minimal big-endian bytes and then uses the
-[`Data.prototype.resizeTo()`](/docs/implementation-guides/pointers/types/data-and-machines)
-method for both sorts.
+[`Raw.resizeTo()`](/docs/implementation-guides/pointers/types/data-and-machines)
+function for both sorts.
 
 <CodeListing
   packageName="@ethdebug/pointers"

@@ -52,14 +52,16 @@ const value = await view.read(view.regions[0]);
 Interpret raw bytes according to type:
 
 ```typescript
-function decodeValue(bytes: Data, type: Type): string {
+import { Raw } from "@ethdebug/common";
+
+function decodeValue(bytes: Raw, type: Type): string {
   switch (type.kind) {
     case "uint":
-      return bytes.asUint().toString();
+      return Raw.asUint(bytes).toString();
     case "bool":
-      return bytes.asUint() !== 0n ? "true" : "false";
+      return Raw.asUint(bytes) !== 0n ? "true" : "false";
     case "address":
-      return "0x" + bytes.toHex().slice(-40);
+      return "0x" + Raw.toHex(bytes).slice(-40);
     // ... other types
   }
 }
