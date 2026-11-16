@@ -1,6 +1,5 @@
 import { Pointer } from "@ethdebug/format";
-import type { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw } from "@ethdebug/common";
 import type { Cursor } from "#cursor";
 
 export interface ReadOptions {
@@ -10,7 +9,7 @@ export interface ReadOptions {
 export async function read(
   region: Cursor.Region,
   options: ReadOptions,
-): Promise<Data> {
+): Promise<Raw> {
   const { location } = region;
   const { state } = options;
 
@@ -104,20 +103,20 @@ const wordsize = 32n;
  */
 async function readSegment(
   { offset = 0n, length }: { offset?: bigint; length?: bigint },
-  readWord: (carry: bigint, slice: Machine.State.Slice) => Promise<Data>,
-): Promise<Data> {
+  readWord: (carry: bigint, slice: Machine.State.Slice) => Promise<Raw>,
+): Promise<Raw> {
   const startCarry = offset / wordsize;
   const startByte = offset % wordsize;
   const totalLength = length ?? wordsize - startByte;
 
   if (totalLength === 0n) {
-    return Data.zero();
+    return Raw.zero();
   }
 
   const endByte = startByte + totalLength;
   const wordCount = (endByte + wordsize - 1n) / wordsize;
 
-  const words: Data[] = [];
+  const words: Raw[] = [];
   for (let index = 0n; index < wordCount; index++) {
     const from = index === 0n ? startByte : 0n;
     const to = index === wordCount - 1n ? endByte - index * wordsize : wordsize;
@@ -130,19 +129,22 @@ async function readSegment(
     );
   }
 
-  return Data.zero().concat(...words);
+  return Raw.concat(...words);
 }
 
 /**
  * Compute the slot `carry` slots after `slot`, keeping at least the width
  * of the given slot data.
  */
-function slotAfter(slot: Data, carry: bigint): Data {
+function slotAfter(slot: Raw, carry: bigint): Raw {
   if (carry === 0n) {
     return slot;
   }
 
-  return Data.fromUint(slot.asUint() + carry).padUntilAtLeast(slot.length);
+  return Raw.padUntilAtLeast(
+    Raw.fromUint(Raw.asUint(slot) + carry),
+    slot.length,
+  );
 }
 
 type DataProperties<R extends Pointer.Region> = {
@@ -163,9 +165,9 @@ function withPropertiesAsUints<
 >(uintKeys: U[], region: Cursor.Region<R>): PickDataPropertiesAsUints<R, U> {
   const result: Partial<PickDataPropertiesAsUints<R, U>> = {};
   for (const key of uintKeys) {
-    const data: Data | undefined = region[key] as Data | undefined;
+    const data: Raw | undefined = region[key] as Raw | undefined;
     if (typeof data !== "undefined") {
-      result[key] = data.asUint();
+      result[key] = Raw.asUint(data);
     }
   }
 

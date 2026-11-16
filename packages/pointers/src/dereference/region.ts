@@ -1,6 +1,6 @@
 import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
-import type { Data } from "#data";
+import type { Raw } from "@ethdebug/common";
 import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 
 /**
@@ -21,7 +21,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
   options: EvaluateOptions,
 ): Promise<Cursor.Region<R>> {
   const evaluatedProperties: {
-    [K in keyof R]?: Data;
+    [K in keyof R]?: Raw;
   } = {};
   const propertyAttempts: {
     [K in keyof R]?: number;

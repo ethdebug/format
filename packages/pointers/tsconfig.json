@@ -6,9 +6,7 @@
     "baseUrl": "./",
     "paths": {
       "#cursor": ["./src/cursor"],
-      "#data": ["./src/data"],
       "#evaluate": ["./src/evaluate"],
-      "#machine": ["./src/machine"],
       "#read": ["./src/read"],
       "#dereference": ["./src/dereference/index"],
       "#dereference/*": ["./src/dereference/*"],
@@ -16,5 +14,5 @@
     }
   },
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../format" }]
+  "references": [{ "path": "../common" }, { "path": "../format" }]
 }

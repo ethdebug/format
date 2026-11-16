@@ -1,7 +1,6 @@
 import { vitest, expect, describe, it, beforeEach } from "vitest";
 import { Pointer } from "@ethdebug/format";
-import { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw } from "@ethdebug/common";
 import { dereference } from "./index.js";
 
 describe("dereference", () => {
@@ -11,39 +10,25 @@ describe("dereference", () => {
     state = {
       stack: {
         length: Promise.resolve(10n),
-        peek: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
-        ),
+        peek: vitest.fn(async () => new Uint8Array([0x11, 0x22, 0x33, 0x44])),
       },
       memory: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0x55, 0x66, 0x77, 0x88])),
       },
       storage: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
       },
       calldata: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0x11, 0x22, 0x33, 0x44])),
       },
       returndata: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0x55, 0x66, 0x77, 0x88])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0x55, 0x66, 0x77, 0x88])),
       },
       transient: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd])),
       },
       code: {
-        read: vitest.fn(async () =>
-          Data.fromBytes(new Uint8Array([0x11, 0x22, 0x33, 0x44])),
-        ),
+        read: vitest.fn(async () => new Uint8Array([0x11, 0x22, 0x33, 0x44])),
       },
     } as unknown as Machine.State;
   });
@@ -64,8 +49,8 @@ describe("dereference", () => {
     expect(regions).toHaveLength(1);
     expect(regions[0]).toEqual({
       location: "memory",
-      offset: Data.fromNumber(0x60),
-      length: Data.fromNumber(0x20),
+      offset: Raw.fromNumber(0x60),
+      length: Raw.fromNumber(0x20),
     });
   });
 
@@ -98,13 +83,13 @@ describe("dereference", () => {
     expect(regions.lookup["a"]).toEqual({
       name: "a",
       location: "memory",
-      offset: Data.fromNumber(0x60),
-      length: Data.fromNumber(0x20),
+      offset: Raw.fromNumber(0x60),
+      length: Raw.fromNumber(0x20),
     });
     expect(regions[1]).toEqual({
       location: "memory",
-      offset: Data.fromNumber(0x80),
-      length: Data.fromNumber(0x20),
+      offset: Raw.fromNumber(0x80),
+      length: Raw.fromNumber(0x20),
     });
   });
 
@@ -135,8 +120,8 @@ describe("dereference", () => {
       expect(region).toEqual({
         name: "item",
         location: "memory",
-        offset: Data.fromUint(BigInt(index) * 32n),
-        length: Data.fromNumber(32),
+        offset: Raw.fromUint(BigInt(index) * 32n),
+        length: Raw.fromNumber(32),
       });
     }
   });
@@ -155,8 +140,8 @@ describe("dereference", () => {
     expect(regions).toHaveLength(1);
     expect(regions[0]).toEqual({
       location: "memory",
-      offset: Data.fromNumber(32),
-      length: Data.fromNumber(32),
+      offset: Raw.fromNumber(32),
+      length: Raw.fromNumber(32),
     });
   });
 
@@ -174,8 +159,8 @@ describe("dereference", () => {
     expect(regions).toHaveLength(1);
     expect(regions[0]).toEqual({
       location: "memory",
-      offset: Data.fromNumber(32),
-      length: Data.fromNumber(32),
+      offset: Raw.fromNumber(32),
+      length: Raw.fromNumber(32),
     });
   });
 
@@ -194,9 +179,9 @@ describe("dereference", () => {
     expect(regions).toHaveLength(1);
     expect(regions[0]).toEqual({
       location: "storage",
-      slot: Data.fromNumber(32),
-      offset: Data.fromNumber(32),
-      length: Data.fromNumber(32),
+      slot: Raw.fromNumber(32),
+      offset: Raw.fromNumber(32),
+      length: Raw.fromNumber(32),
     });
   });
 
@@ -225,7 +210,7 @@ describe("dereference", () => {
 
     const { regions } = await cursor.view(state);
 
-    expect(regions.map(({ offset }) => offset!.asUint())).toEqual([
+    expect(regions.map(({ offset }) => Raw.asUint(offset!))).toEqual([
       64n,
       96n,
       128n,
@@ -305,8 +290,8 @@ describe("dereference", () => {
     const { regions } = await cursor.view(state);
 
     expect(regions).toHaveLength(1);
-    expect(regions[0].offset).toEqual(Data.fromNumber(0));
-    expect(regions[0].length).toEqual(Data.fromNumber(32));
+    expect(regions[0].offset).toEqual(Raw.fromNumber(0));
+    expect(regions[0].length).toEqual(Raw.fromNumber(32));
   });
 
   it("scopes defined variables to their `in`", async () => {
@@ -332,8 +317,8 @@ describe("dereference", () => {
     const { regions } = await cursor.view(state);
 
     expect(regions.map(({ name }) => name)).toEqual(["a", "b"]);
-    expect(regions[0]).toMatchObject({ slot: Data.fromNumber(1) });
-    expect(regions[1]).toMatchObject({ slot: Data.fromNumber(2) });
+    expect(regions[0]).toMatchObject({ slot: Raw.fromNumber(1) });
+    expect(regions[1]).toMatchObject({ slot: Raw.fromNumber(2) });
   });
 
   it("scopes variables defined inside referenced templates", async () => {
@@ -366,8 +351,8 @@ describe("dereference", () => {
 
     const { regions } = await cursor.view(state);
 
-    expect(regions[0]).toMatchObject({ slot: Data.fromNumber(1) });
-    expect(regions[1]).toMatchObject({ slot: Data.fromNumber(2) });
+    expect(regions[0]).toMatchObject({ slot: Raw.fromNumber(1) });
+    expect(regions[1]).toMatchObject({ slot: Raw.fromNumber(2) });
   });
 
   it("works for templates", async () => {
@@ -397,8 +382,8 @@ describe("dereference", () => {
     const { regions } = await cursor.view(state);
 
     expect(regions).toHaveLength(1);
-    expect(regions[0].offset).toEqual(Data.fromNumber(0));
-    expect(regions[0].length).toEqual(Data.fromNumber(32));
+    expect(regions[0].offset).toEqual(Raw.fromNumber(0));
+    expect(regions[0].length).toEqual(Raw.fromNumber(32));
   });
 
   it("works for template references with yields (basic rename)", async () => {
@@ -547,13 +532,13 @@ describe("dereference", () => {
 
     expect(regions).toHaveLength(2);
     expect(regions[0].name).toEqual("my-first");
-    expect(regions[0].offset).toEqual(Data.fromNumber(64));
-    expect(regions[0].length).toEqual(Data.fromNumber(32));
+    expect(regions[0].offset).toEqual(Raw.fromNumber(64));
+    expect(regions[0].length).toEqual(Raw.fromNumber(32));
 
     // Second region depends on first via internal reference
     expect(regions[1].name).toEqual("my-second");
-    expect(regions[1].offset).toEqual(Data.fromNumber(96)); // 64 + 32
-    expect(regions[1].length).toEqual(Data.fromNumber(32));
+    expect(regions[1].offset).toEqual(Raw.fromNumber(96)); // 64 + 32
+    expect(regions[1].length).toEqual(Raw.fromNumber(32));
   });
 
   it("works for nested template references with yields", async () => {
@@ -621,8 +606,8 @@ describe("dereference", () => {
         const { regions } = await cursor.view(state);
 
         expect(regions).toHaveLength(2);
-        expect(regions[1].offset).toEqual(Data.fromNumber(32));
-        expect(regions[1].length).toEqual(Data.fromNumber(4));
+        expect(regions[1].offset).toEqual(Raw.fromNumber(32));
+        expect(regions[1].length).toEqual(Raw.fromNumber(4));
       });
 
       it("allows renaming the region with yields", async () => {
@@ -703,8 +688,8 @@ describe("dereference", () => {
     const { regions } = await cursor.view(state);
 
     expect(regions).toHaveLength(1);
-    expect(regions[0].offset).toEqual(Data.fromNumber(0));
-    expect(regions[0].length).toEqual(Data.fromNumber(32));
+    expect(regions[0].offset).toEqual(Raw.fromNumber(0));
+    expect(regions[0].length).toEqual(Raw.fromNumber(32));
   });
 
   it("inline templates take precedence over external templates", async () => {
@@ -784,7 +769,7 @@ describe("dereference", () => {
 
     expect(regions).toHaveLength(1);
     expect(regions[0].name).toEqual("data");
-    expect(regions[0].offset).toEqual(Data.fromNumber(128));
+    expect(regions[0].offset).toEqual(Raw.fromNumber(128));
   });
 
   it("inline templates with yields work correctly", async () => {
@@ -835,8 +820,8 @@ describe("dereference", () => {
 
       expect(regions[1]).toEqual({
         location: "memory",
-        offset: Data.fromNumber(0x40),
-        length: Data.fromNumber(0x10),
+        offset: Raw.fromNumber(0x40),
+        length: Raw.fromNumber(0x10),
       });
     });
 
@@ -864,8 +849,8 @@ describe("dereference", () => {
 
       expect(regions[0]).toEqual({
         location: "memory",
-        offset: Data.fromNumber(7),
-        length: Data.fromNumber(7),
+        offset: Raw.fromNumber(7),
+        length: Raw.fromNumber(7),
       });
     });
 

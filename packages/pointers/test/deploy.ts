@@ -1,13 +1,13 @@
 import type { EthereumProvider } from "ganache";
 
-import { Data } from "../src/data.js";
+import { Raw } from "@ethdebug/common";
 
 export async function deployContract(
-  createBytecode: Data,
+  createBytecode: Raw,
   provider: EthereumProvider,
 ): Promise<{
-  transactionHash: Data;
-  contractAddress: Data;
+  transactionHash: Raw;
+  contractAddress: Raw;
 }> {
   // just use the first unlocked account
   const [account] = await provider.request({
@@ -16,25 +16,25 @@ export async function deployContract(
   });
 
   // issue a transaction that will be mined immediately
-  const transactionHash = Data.fromHex(
+  const transactionHash = Raw.fromHex(
     await provider.request({
       method: "eth_sendTransaction",
       params: [
         {
           from: account,
           gas: "0x989680",
-          data: createBytecode.toHex(),
+          data: Raw.toHex(createBytecode),
         },
       ],
     }),
   );
 
   // read the receipt and extract the deployed contract address
-  const contractAddress = Data.fromHex(
+  const contractAddress = Raw.fromHex(
     (
       await provider.request({
         method: "eth_getTransactionReceipt",
-        params: [transactionHash.toHex()],
+        params: [Raw.toHex(transactionHash)],
       })
     ).contractAddress,
   );
