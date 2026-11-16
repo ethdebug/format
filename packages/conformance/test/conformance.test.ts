@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { accessSync, constants } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -242,6 +242,59 @@ describe("@ethdebug/conformance", () => {
       expect(
         json.contracts[0].resources.compilation.sources[0].contents,
       ).toContain("contract Counter");
+    },
+  );
+
+  // Expected failure (#416): SolDB reads sources only from the compilation
+  // inside its resources file, and writeSoldbDebugDir shims this by merging
+  // the separate compilation in. This test gives SolDB the directory as
+  // solc's `--ethdebug` output writes it: `ethdebug_resources.json` without
+  // a compilation and `ethdebug_compilation.json` next to it. SolDB now
+  // rejects that resources file, so it reports no sources. The check fails
+  // once SolDB reports the sources from this directory; then remove the
+  // shim in ethdebugResources and this test.
+  it.skipIf(!soldb || !solc)(
+    "[soldb] does not yet read a compilation separate from resources",
+    async () => {
+      const artifact = await compileEthdebug({
+        kind: "solc",
+        solcPath: solc!,
+        sourcePath: path.join(root, "test/fixtures/solc/Counter.sol"),
+      });
+      const { compilation: _, ...resources } = artifact.resources ?? {};
+      const compilation =
+        artifact.compilation ?? artifact.resources?.compilation;
+      expect(compilation).toBeDefined();
+
+      const debugDir = await writeSoldbDebugDir(artifact, {
+        contractName: "Counter",
+      });
+      const dir = debugDir.debugDir;
+      await rm(path.join(dir, "ethdebug.json"));
+      await writeFile(
+        path.join(dir, "ethdebug_resources.json"),
+        JSON.stringify(resources),
+      );
+      await writeFile(
+        path.join(dir, "ethdebug_compilation.json"),
+        JSON.stringify(compilation),
+      );
+
+      const result = await runSoldb({
+        executable: soldb!,
+        args: ["info", "resources", "--ethdebug-dir", debugDir.spec, "--json"],
+      });
+      const sources =
+        result.exitCode === 0
+          ? JSON.parse(result.stdout).contracts[0].resources.compilation
+              ?.sources
+          : undefined;
+
+      expect(
+        sources,
+        "SolDB now reads the separate compilation; " +
+          "remove the shim in ethdebugResources (#416)",
+      ).toBeUndefined();
     },
   );
 
