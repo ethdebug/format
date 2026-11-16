@@ -6,7 +6,7 @@
  * for pointer dereferencing.
  */
 
-import { type Machine, Data } from "@ethdebug/pointers";
+import { type Machine, Raw } from "@ethdebug/common";
 import type { TraceStep } from "./mockTrace.js";
 
 /**
@@ -17,21 +17,21 @@ import type { TraceStep } from "./mockTrace.js";
  * @returns A Machine.State backed by the step's data
  */
 export function traceStepToMachineState(step: TraceStep): Machine.State {
-  // Build stack entries (Data objects, 32-byte padded)
+  // Build stack entries (Raw objects, 32-byte padded)
   const stackEntries = (step.stack || []).map((entry) =>
     typeof entry === "string"
-      ? Data.fromHex(entry).padUntilAtLeast(32)
-      : Data.fromUint(entry).padUntilAtLeast(32),
+      ? Raw.padUntilAtLeast(Raw.fromHex(entry), 32)
+      : Raw.padUntilAtLeast(Raw.fromUint(entry), 32),
   );
 
   // Parse memory from hex string
-  const memoryData = step.memory ? Data.fromHex(step.memory) : Data.zero();
+  const memoryData = step.memory ? Raw.fromHex(step.memory) : Raw.zero();
 
   // Build storage map (normalized 32-byte keys)
-  const storageMap = new Map<string, Data>();
+  const storageMap = new Map<string, Raw>();
   for (const [slot, value] of Object.entries(step.storage || {})) {
-    const key = Data.fromHex(slot).padUntilAtLeast(32).toHex();
-    storageMap.set(key, Data.fromHex(value).padUntilAtLeast(32));
+    const key = Raw.toHex(Raw.padUntilAtLeast(Raw.fromHex(slot), 32));
+    storageMap.set(key, Raw.padUntilAtLeast(Raw.fromHex(value), 32));
   }
 
   const stack: Machine.State.Stack = {
@@ -51,9 +51,7 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
         return entry;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        entry.slice(Number(offset), Number(offset + length)),
-      );
+      return entry.slice(Number(offset), Number(offset + length));
     },
   };
 
@@ -61,22 +59,20 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
 
   const storage: Machine.State.Words = {
     async read({ slot, slice }) {
-      const key = slot.padUntilAtLeast(32).toHex();
-      const value = storageMap.get(key) || Data.zero().padUntilAtLeast(32);
+      const key = Raw.toHex(Raw.padUntilAtLeast(slot, 32));
+      const value = storageMap.get(key) || Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) {
         return value;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 
   // Returndata from the step, if available
   const returndataData = step.returndata
-    ? Data.fromHex(step.returndata)
-    : Data.zero();
+    ? Raw.fromHex(step.returndata)
+    : Raw.zero();
 
   return {
     get traceIndex() {
@@ -91,17 +87,17 @@ export function traceStepToMachineState(step: TraceStep): Machine.State {
     stack,
     memory,
     storage,
-    calldata: makeBytesReader(Data.zero()),
+    calldata: makeBytesReader(Raw.zero()),
     returndata: makeBytesReader(returndataData),
-    code: makeBytesReader(Data.zero()),
+    code: makeBytesReader(Raw.zero()),
     transient: makeEmptyWordsReader(),
   };
 }
 
 /**
- * Create a Machine.State.Bytes reader from a Data buffer.
+ * Create a Machine.State.Bytes reader from a Raw buffer.
  */
-function makeBytesReader(data: Data): Machine.State.Bytes {
+function makeBytesReader(data: Raw): Machine.State.Bytes {
   return {
     get length() {
       return Promise.resolve(BigInt(data.length));
@@ -117,9 +113,9 @@ function makeBytesReader(data: Data): Machine.State.Bytes {
         if (available > 0 && start < data.length) {
           result.set(data.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(data.slice(start, end));
+      return data.slice(start, end);
     },
   };
 }
@@ -131,14 +127,12 @@ function makeBytesReader(data: Data): Machine.State.Bytes {
 function makeEmptyWordsReader(): Machine.State.Words {
   return {
     async read({ slice }) {
-      const value = Data.zero().padUntilAtLeast(32);
+      const value = Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) {
         return value;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 }

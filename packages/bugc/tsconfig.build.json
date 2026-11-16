@@ -11,6 +11,7 @@
   ],
   "references": [
     { "path": "../format/tsconfig.build.json" },
+    { "path": "../common/tsconfig.build.json" },
     { "path": "../pointers/tsconfig.build.json" },
     { "path": "../evm/tsconfig.build.json" }
   ]

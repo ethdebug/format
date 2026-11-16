@@ -9,6 +9,7 @@
  * `return` data pointer must read the returned value.
  */
 import { describe, it, expect } from "vitest";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import { Program } from "@ethdebug/format";
 import type * as Format from "@ethdebug/format";
@@ -157,7 +158,7 @@ describe("call frame timing", () => {
                 const state = stateAt(i);
                 const cursor = await dereference(ret.data.pointer, { state });
                 const view = await cursor.view(state);
-                read.push((await view.read(view.regions[0])).asUint());
+                read.push(Raw.asUint(await view.read(view.regions[0])));
               } else {
                 read.push(undefined);
               }

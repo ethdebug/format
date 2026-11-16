@@ -9,6 +9,7 @@ import { join } from "node:path";
 // type-checks with skipLibCheck off, so a broken .d.ts fails.
 const packed = [
   "format",
+  "common",
   "pointers",
   "evm",
   "programs-react",

@@ -63,6 +63,7 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     { "path": "../format" },
+    { "path": "../common" },
     { "path": "../pointers" },
     { "path": "../evm" }
   ]

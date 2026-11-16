@@ -41,6 +41,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ethdebug/common": "^0.1.0-preview.2",
     "@ethdebug/format": "^0.1.0-draft.2",
     "@ethdebug/pointers": "^0.1.0-preview.2"
   },
