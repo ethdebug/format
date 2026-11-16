@@ -5,7 +5,9 @@
     "outDir": "./dist/",
     "baseUrl": "./",
     "paths": {
-      "#raw": ["./src/raw"]
+      "#raw": ["./src/raw"],
+      "#machine": ["./src/machine"],
+      "#keccak": ["./src/keccak"]
     }
   },
   "exclude": ["node_modules", "dist"]

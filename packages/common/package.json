@@ -22,6 +22,14 @@
     "#raw": {
       "types": "./src/raw.ts",
       "default": "./dist/src/raw.js"
+    },
+    "#machine": {
+      "types": "./src/machine.ts",
+      "default": "./dist/src/machine.js"
+    },
+    "#keccak": {
+      "types": "./src/keccak.ts",
+      "default": "./dist/src/keccak.js"
     }
   },
   "scripts": {
