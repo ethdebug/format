@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { readWorkspaces } from "./publish-tagged.js";
+import { readWorkspaces } from "./release/workspaces.js";
 
 const built = [/packages\/[^/]+\/dist\//, /node_modules\/@ethdebug\//];
 
