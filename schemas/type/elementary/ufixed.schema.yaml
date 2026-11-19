@@ -30,3 +30,6 @@ examples:
   - kind: ufixed
     bits: 256
     places: 10
+  - kind: ufixed
+    bits: 64
+    places: 0

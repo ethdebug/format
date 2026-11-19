@@ -30,3 +30,6 @@ examples:
   - kind: fixed
     bits: 256
     places: 10
+  - kind: fixed
+    bits: 64
+    places: 0
