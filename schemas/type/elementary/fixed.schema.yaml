@@ -20,7 +20,7 @@ properties:
     description:
       How many decimal places, implying that a raw value `v` of this type
       should be interpreted as `v / (10**places)`
-    minimum: 1
+    minimum: 0
     maximum: 80
 required:
   - kind
