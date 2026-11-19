@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
 
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import { createMachineState } from "@ethdebug/evm";
 
@@ -136,7 +137,7 @@ describe("packed storage struct field pointers", () => {
       });
       const view = await cursor.view(state);
       const read = async (name: string) =>
-        (await view.read(view.regions.lookup[name])).asUint();
+        Raw.asUint(await view.read(view.regions.lookup[name]));
 
       expect(await read("a")).toBe(7n);
       expect(await read("b")).toBe(1988n);

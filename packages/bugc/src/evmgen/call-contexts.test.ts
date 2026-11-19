@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { compile } from "#compiler";
 import type * as Format from "@ethdebug/format";
 import { Pointer, Program } from "@ethdebug/format";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import { traceLocals } from "#test/evm/locals";
 
@@ -140,7 +141,7 @@ code {
     const view = await cursor.view(state);
     const values = await Promise.all(
       ["a", "b"].map(async (name) =>
-        (await view.read(view.regions.lookup[name])).asUint(),
+        Raw.asUint(await view.read(view.regions.lookup[name])),
       ),
     );
     expect(values).toEqual([10n, 20n]);

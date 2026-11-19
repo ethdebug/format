@@ -12,6 +12,7 @@
 import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import type * as Format from "@ethdebug/format";
 
@@ -173,7 +174,7 @@ describe("storage array pointers", () => {
           const read = await Promise.all(
             view.regions
               .filter((region) => region.name === regionName)
-              .map(async (region) => (await view.read(region)).asUint()),
+              .map(async (region) => Raw.asUint(await view.read(region))),
           );
           expect(read, `${identifier}: ${regionName}`).toEqual(values);
         }

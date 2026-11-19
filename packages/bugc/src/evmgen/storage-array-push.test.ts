@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { bytesToHex } from "ethereum-cryptography/utils";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import type * as Format from "@ethdebug/format";
 
@@ -143,7 +144,7 @@ code { h.push(5); h.push(7); h.push(9); }`,
     const read = await Promise.all(
       view.regions
         .filter((region) => region.name === "element")
-        .map(async (region) => (await view.read(region)).asUint()),
+        .map(async (region) => Raw.asUint(await view.read(region))),
     );
     expect(read).toEqual([5n, 7n, 9n]);
   });

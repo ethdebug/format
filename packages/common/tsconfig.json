@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist/",
+    "baseUrl": "./",
+    "paths": {
+      "#raw": ["./src/raw"],
+      "#machine": ["./src/machine"],
+      "#keccak": ["./src/keccak"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

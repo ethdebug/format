@@ -4,7 +4,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import type { Pointer } from "@ethdebug/format";
-import { dereference, type Cursor, Data } from "@ethdebug/pointers";
+import { Raw } from "@ethdebug/common";
+import { dereference, type Cursor } from "@ethdebug/pointers";
 import { createMockState, type MockStateSpec } from "#utils/mockState";
 
 /**
@@ -14,7 +15,7 @@ export interface ResolutionResult {
   /** The resolved regions */
   regions: Cursor.Region[];
   /** Values read from each region */
-  values: Map<Cursor.Region, Data>;
+  values: Map<Cursor.Region, Raw>;
   /** Named region lookup */
   namedRegions: Record<string, Cursor.Region[]>;
   /** Most recent region for each name */
@@ -107,7 +108,7 @@ export function usePointerResolution(
       const view = await cursor.view(state);
 
       // Read values for each region
-      const values = new Map<Cursor.Region, Data>();
+      const values = new Map<Cursor.Region, Raw>();
       for (const region of view.regions) {
         try {
           const data = await view.read(region);

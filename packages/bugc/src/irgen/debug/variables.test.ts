@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { bytesToHex, hexToBytes } from "ethereum-cryptography/utils";
 import { Executor, createMachineState } from "@ethdebug/evm";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import * as Format from "@ethdebug/format";
 
@@ -242,7 +243,7 @@ code {
         expect(inner.name).toEqual("value");
         if (!("slot" in inner)) throw new Error("not a storage region");
         const cell = entryOf(pointerOf("grid"), templates, "value-entry", {
-          slot: inner.slot.toHex(),
+          slot: Raw.toHex(inner.slot),
           key: text.length,
         });
         expect(await readRegions(cell, state, templates, "value")).toEqual([

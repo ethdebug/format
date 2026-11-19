@@ -6,6 +6,15 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Breaking
+
+- `Data` and `Machine` moved to the new `@ethdebug/common` package, and this
+  package no longer exports them. `Data` is now `Raw`: a plain `Uint8Array`
+  type with functions in place of methods, so `data.toHex()` becomes
+  `Raw.toHex(data)` and `Data.fromBytes(bytes)` becomes `bytes`.
+  `Cursor.View.read` gives a `Raw`, and the `Machine` interfaces read and give
+  `Raw` values.
+
 ### Added
 
 - `dereference` and `read` support virtual regions. A concrete virtual
@@ -15,6 +24,8 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Changed
 
+- `ethereum-cryptography` is now a development dependency only. The
+  package no longer uses it at run time.
 - `dereference` evaluates the members of a scope's `define` in dependency
   order, not member order. A member sees the other members by name, and its
   own name means the variable of the enclosing scope. A cycle of members throws
@@ -27,11 +38,6 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   which the region begins). It threw "does not have ... needed by lookup"
   before. A concrete region of these locations now always has `offset` and
   `length` ([#411]).
-- The published type declarations no longer reference Node's `util` types.
-  `Data.inspect` and its `util.inspect.custom` hook used
-  `util.InspectOptionsStylized`, which newer `@types/node` versions no longer
-  export, so consumers that type-checked with `skipLibCheck: false` got errors.
-  The options parameter is now a small local interface.
 
 ## 0.1.0-preview.2 — 2026-10-07
 

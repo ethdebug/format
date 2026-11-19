@@ -100,14 +100,14 @@ describe("createTrace", () => {
       traceIndex: sstore,
     });
     expect(await state.opcode).toBe("SSTORE");
-    const { Data } = await import("@ethdebug/pointers");
-    const slot0 = await state.storage.read({ slot: Data.fromUint(0n) });
-    expect(slot0.asUint()).toBe(0n);
+    const { Raw } = await import("@ethdebug/common");
+    const slot0 = await state.storage.read({ slot: Raw.fromUint(0n) });
+    expect(Raw.asUint(slot0)).toBe(0n);
     const calldata = await state.calldata.read({
       slice: { offset: 0n, length: 32n },
     });
-    expect(calldata.asUint()).toBe(7n);
-    expect((await state.stack.peek({ depth: 1n })).asUint()).toBe(7n);
+    expect(Raw.asUint(calldata)).toBe(7n);
+    expect(Raw.asUint(await state.stack.peek({ depth: 1n }))).toBe(7n);
 
     // a trace's state knows its step
     const own = createMachineState(trace.stateAt(sstore));
@@ -474,14 +474,14 @@ describe("createMachine", () => {
     await executor.execute();
 
     const machine = createMachine(executor);
-    const { Data } = await import("@ethdebug/pointers");
+    const { Raw } = await import("@ethdebug/common");
 
     for await (const state of machine.trace()) {
       const val = await state.storage.read({
-        slot: Data.fromUint(0n),
+        slot: Raw.fromUint(0n),
       });
       // After the first execute, slot 0 = 42
-      expect(val.asUint()).toBe(42n);
+      expect(Raw.asUint(val)).toBe(42n);
       break; // just check first state
     }
   });

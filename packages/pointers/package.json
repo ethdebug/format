@@ -23,17 +23,9 @@
       "types": "./src/cursor.ts",
       "default": "./dist/src/cursor.js"
     },
-    "#data": {
-      "types": "./src/data.ts",
-      "default": "./dist/src/data.js"
-    },
     "#evaluate": {
       "types": "./src/evaluate.ts",
       "default": "./dist/src/evaluate.js"
-    },
-    "#machine": {
-      "types": "./src/machine.ts",
-      "default": "./dist/src/machine.js"
     },
     "#read": {
       "types": "./src/read.ts",
@@ -60,6 +52,7 @@
   "devDependencies": {
     "chalk": "^5.6.2",
     "cli-highlight": "^2.1.11",
+    "ethereum-cryptography": "^2.2.1",
     "ganache": "7.9.x",
     "solc": "^0.8.33",
     "ts-node": "^10.9.2",
@@ -67,8 +60,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@ethdebug/format": "^0.1.0-draft.2",
-    "ethereum-cryptography": "^2.2.1"
+    "@ethdebug/common": "^0.1.0-preview.2",
+    "@ethdebug/format": "^0.1.0-draft.2"
   },
   "publishConfig": {
     "access": "public"

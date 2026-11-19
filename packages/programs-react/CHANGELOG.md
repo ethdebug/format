@@ -9,6 +9,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Changed
 
+- Trace state and region values are `Raw` values (a `Uint8Array`) from
+  `@ethdebug/common` in place of `Data` from `@ethdebug/pointers`.
 - The `react` and `react-dom` peer ranges now include React 19
   (`^18.0.0 || ^19.0.0`) ([#374]). The components' return types now
   read `React.JSX.Element`, which both React 18 and 19 types define;

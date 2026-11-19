@@ -13,7 +13,8 @@ import path from "path";
 import { glob } from "glob";
 import * as Format from "@ethdebug/format";
 import { createMachineState } from "@ethdebug/evm";
-import { dereference, type Data, type Machine } from "@ethdebug/pointers";
+import { type Machine, Raw } from "@ethdebug/common";
+import { dereference } from "@ethdebug/pointers";
 
 import { localsOf, traceLocals } from "#test/evm/locals";
 import { parseTestBlocks } from "#test/examples/annotations";
@@ -97,15 +98,15 @@ async function read(
     ).view(state);
     const regions = [];
     for (const region of view.regions) {
-      const at = (["slot", "offset", "length"] as const).map((key) => [
-        key,
-        (region as Partial<Record<typeof key, Data>>)[key]?.toHex(),
-      ]);
+      const at = (["slot", "offset", "length"] as const).map((key) => {
+        const value = (region as Partial<Record<typeof key, Raw>>)[key];
+        return [key, value && Raw.toHex(value)];
+      });
       regions.push({
         name: region.name,
         location: region.location,
         ...Object.fromEntries(at),
-        bytes: (await view.read(region)).toHex(),
+        bytes: Raw.toHex(await view.read(region)),
       });
     }
     return regions;

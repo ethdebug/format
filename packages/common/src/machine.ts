@@ -1,4 +1,4 @@
-import type { Data } from "#data";
+import type { Raw } from "#raw";
 
 export interface Machine {
   trace(): AsyncIterable<Machine.State>;
@@ -29,17 +29,17 @@ export namespace Machine {
       get length(): Promise<bigint>;
 
       /** read element at position from top of stack */
-      peek(options: { depth: bigint; slice?: Slice }): Promise<Data>;
+      peek(options: { depth: bigint; slice?: Slice }): Promise<Raw>;
     }
 
     export interface Bytes {
       get length(): Promise<bigint>;
 
-      read(options: { slice: Slice }): Promise<Data>;
+      read(options: { slice: Slice }): Promise<Raw>;
     }
 
     export interface Words {
-      read(options: { slot: Data; slice?: Slice }): Promise<Data>;
+      read(options: { slot: Raw; slice?: Slice }): Promise<Raw>;
     }
   }
 }

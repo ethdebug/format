@@ -2,7 +2,7 @@
  * Utilities for creating mock Machine.State objects for visualization.
  */
 
-import { type Machine, Data } from "@ethdebug/pointers";
+import { type Machine, Raw } from "@ethdebug/common";
 
 /**
  * Specification for creating a mock Machine.State.
@@ -39,30 +39,35 @@ export interface MockStateSpec {
 export function createMockState(spec: MockStateSpec): Machine.State {
   const stackEntries = (spec.stack || []).map((entry) =>
     typeof entry === "string"
-      ? Data.fromHex(entry).padUntilAtLeast(32)
-      : Data.fromUint(entry).padUntilAtLeast(32),
+      ? Raw.padUntilAtLeast(Raw.fromHex(entry), 32)
+      : Raw.padUntilAtLeast(Raw.fromUint(entry), 32),
   );
 
-  const memoryData = spec.memory ? Data.fromHex(spec.memory) : Data.zero();
+  const memoryData = spec.memory ? Raw.fromHex(spec.memory) : Raw.zero();
 
-  const storageMap = new Map<string, Data>();
+  const storageMap = new Map<string, Raw>();
   for (const [slot, value] of Object.entries(spec.storage || {})) {
-    const normalizedSlot = Data.fromHex(slot).padUntilAtLeast(32).toHex();
-    storageMap.set(normalizedSlot, Data.fromHex(value).padUntilAtLeast(32));
+    const normalizedSlot = Raw.toHex(
+      Raw.padUntilAtLeast(Raw.fromHex(slot), 32),
+    );
+    storageMap.set(normalizedSlot, Raw.padUntilAtLeast(Raw.fromHex(value), 32));
   }
 
-  const calldataData = spec.calldata
-    ? Data.fromHex(spec.calldata)
-    : Data.zero();
+  const calldataData = spec.calldata ? Raw.fromHex(spec.calldata) : Raw.zero();
   const returndataData = spec.returndata
-    ? Data.fromHex(spec.returndata)
-    : Data.zero();
-  const codeData = spec.code ? Data.fromHex(spec.code) : Data.zero();
+    ? Raw.fromHex(spec.returndata)
+    : Raw.zero();
+  const codeData = spec.code ? Raw.fromHex(spec.code) : Raw.zero();
 
-  const transientMap = new Map<string, Data>();
+  const transientMap = new Map<string, Raw>();
   for (const [slot, value] of Object.entries(spec.transient || {})) {
-    const normalizedSlot = Data.fromHex(slot).padUntilAtLeast(32).toHex();
-    transientMap.set(normalizedSlot, Data.fromHex(value).padUntilAtLeast(32));
+    const normalizedSlot = Raw.toHex(
+      Raw.padUntilAtLeast(Raw.fromHex(slot), 32),
+    );
+    transientMap.set(
+      normalizedSlot,
+      Raw.padUntilAtLeast(Raw.fromHex(value), 32),
+    );
   }
 
   const stack: Machine.State.Stack = {
@@ -79,9 +84,7 @@ export function createMockState(spec: MockStateSpec): Machine.State {
         return entry;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        entry.slice(Number(offset), Number(offset + length)),
-      );
+      return entry.slice(Number(offset), Number(offset + length));
     },
   };
 
@@ -100,24 +103,22 @@ export function createMockState(spec: MockStateSpec): Machine.State {
         if (available > 0 && start < memoryData.length) {
           result.set(memoryData.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(memoryData.slice(start, end));
+      return memoryData.slice(start, end);
     },
   };
 
   const storage: Machine.State.Words = {
     async read({ slot, slice }) {
-      const normalizedSlot = slot.padUntilAtLeast(32).toHex();
+      const normalizedSlot = Raw.toHex(Raw.padUntilAtLeast(slot, 32));
       const value =
-        storageMap.get(normalizedSlot) || Data.zero().padUntilAtLeast(32);
+        storageMap.get(normalizedSlot) || Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) {
         return value;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 
@@ -135,9 +136,9 @@ export function createMockState(spec: MockStateSpec): Machine.State {
         if (available > 0 && start < calldataData.length) {
           result.set(calldataData.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(calldataData.slice(start, end));
+      return calldataData.slice(start, end);
     },
   };
 
@@ -155,9 +156,9 @@ export function createMockState(spec: MockStateSpec): Machine.State {
         if (available > 0 && start < returndataData.length) {
           result.set(returndataData.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(returndataData.slice(start, end));
+      return returndataData.slice(start, end);
     },
   };
 
@@ -175,24 +176,22 @@ export function createMockState(spec: MockStateSpec): Machine.State {
         if (available > 0 && start < codeData.length) {
           result.set(codeData.slice(start, start + available), 0);
         }
-        return Data.fromBytes(result);
+        return result;
       }
-      return Data.fromBytes(codeData.slice(start, end));
+      return codeData.slice(start, end);
     },
   };
 
   const transient: Machine.State.Words = {
     async read({ slot, slice }) {
-      const normalizedSlot = slot.padUntilAtLeast(32).toHex();
+      const normalizedSlot = Raw.toHex(Raw.padUntilAtLeast(slot, 32));
       const value =
-        transientMap.get(normalizedSlot) || Data.zero().padUntilAtLeast(32);
+        transientMap.get(normalizedSlot) || Raw.padUntilAtLeast(Raw.zero(), 32);
       if (!slice) {
         return value;
       }
       const { offset, length } = slice;
-      return Data.fromBytes(
-        value.slice(Number(offset), Number(offset + length)),
-      );
+      return value.slice(Number(offset), Number(offset + length));
     },
   };
 
@@ -217,10 +216,10 @@ export function createMockState(spec: MockStateSpec): Machine.State {
 }
 
 /**
- * Format a Data value as a shortened hex string for display.
+ * Format a Raw value as a shortened hex string for display.
  */
-export function formatDataShort(data: Data, maxLength = 10): string {
-  const hex = data.toHex();
+export function formatDataShort(data: Raw, maxLength = 10): string {
+  const hex = Raw.toHex(data);
   if (hex.length <= maxLength + 2) {
     return hex;
   }
@@ -230,8 +229,8 @@ export function formatDataShort(data: Data, maxLength = 10): string {
 }
 
 /**
- * Format a Data value as a full hex string.
+ * Format a Raw value as a full hex string.
  */
-export function formatData(data: Data): string {
-  return data.toHex();
+export function formatData(data: Raw): string {
+  return Raw.toHex(data);
 }

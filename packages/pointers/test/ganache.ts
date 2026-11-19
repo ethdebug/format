@@ -1,7 +1,6 @@
 import type { EthereumProvider } from "ganache";
 
-import { Machine } from "../src/machine.js";
-import { Data } from "../src/data.js";
+import { type Machine, Raw } from "@ethdebug/common";
 
 export async function loadGanache() {
   const originalWarn = console.warn;
@@ -25,14 +24,14 @@ export async function loadGanache() {
 
 export function machineForProvider(
   provider: EthereumProvider,
-  transactionHash: Data,
+  transactionHash: Raw,
 ): Machine {
   return {
     trace(): AsyncIterable<Machine.State> {
       return {
         async *[Symbol.asyncIterator]() {
           const structLogs = await requestStructLogs(
-            transactionHash.toHex(),
+            Raw.toHex(transactionHash),
             provider,
           );
 
@@ -83,7 +82,7 @@ function toMachineState(step: StructLog, index: number): Machine.State {
 }
 
 function constantUint(value: number): Promise<bigint> {
-  return Promise.resolve(Data.fromNumber(value).asUint());
+  return Promise.resolve(Raw.asUint(Raw.fromNumber(value)));
 }
 
 function makeStack(stack: StructLog["stack"]): Machine.State.Stack {
@@ -94,26 +93,28 @@ function makeStack(stack: StructLog["stack"]): Machine.State.Stack {
 
     async peek({ depth, slice: { offset = 0n, length = 32n } = {} }) {
       const entry = stack.at(-Number(depth));
-      const data = Data.fromHex(`0x${entry || ""}`);
+      const data = Raw.fromHex(`0x${entry || ""}`);
 
       const sliced = new Uint8Array(data).slice(
         Number(offset),
         Number(offset + length),
       );
 
-      return new Data(sliced);
+      return new Uint8Array(sliced);
     },
   };
 }
 
 function makeBytes(words: StructLog["memory"]): Machine.State.Bytes {
-  const data = Data.fromHex(`0x${words.join("")}`);
+  const data = Raw.fromHex(`0x${words.join("")}`);
 
   return {
     length: constantUint(data.length),
 
     async read({ slice: { offset, length } }) {
-      return new Data(data.slice(Number(offset), Number(offset + length)));
+      return new Uint8Array(
+        data.slice(Number(offset), Number(offset + length)),
+      );
     },
   };
 }
@@ -122,13 +123,15 @@ function makeWords(slots: StructLog["storage"]): Machine.State.Words {
   return {
     async read({ slot, slice: { offset = 0n, length = 32n } = {} }) {
       const rawHex =
-        slots[slot.resizeTo(32).toHex().slice(2) as keyof typeof slots];
+        slots[Raw.toHex(Raw.resizeTo(slot, 32)).slice(2) as keyof typeof slots];
 
       // slots untouched by the transaction so far are absent from the
       // struct log; treat them as zero
-      const data = Data.fromHex(`0x${rawHex ?? "00".repeat(32)}`);
+      const data = Raw.fromHex(`0x${rawHex ?? "00".repeat(32)}`);
 
-      return new Data(data.slice(Number(offset), Number(offset + length)));
+      return new Uint8Array(
+        data.slice(Number(offset), Number(offset + length)),
+      );
     },
   };
 }

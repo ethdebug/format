@@ -1,6 +1,5 @@
 import type { Pointer } from "@ethdebug/format";
-import type { Machine } from "#machine";
-import type { Data } from "#data";
+import type { Machine, Raw } from "@ethdebug/common";
 
 /**
  * The result of dereferencing a pointer
@@ -25,7 +24,7 @@ export namespace Cursor {
      * Read bytes from the machine state corresponding to the bytes range
      * for a particular concrete Cursor.Region
      */
-    read(region: Cursor.Region): Promise<Data>;
+    read(region: Cursor.Region): Promise<Raw>;
   }
 
   /**
@@ -36,9 +35,9 @@ export namespace Cursor {
   export type Region<R extends Pointer.Region = Pointer.Region> = {
     [K in keyof R]: K extends "slot" | "offset" | "length" | "expression"
       ? R[K] extends Pointer.Expression
-        ? Data
+        ? Raw
         : R[K] extends Pointer.Expression | undefined
-          ? Data | undefined
+          ? Raw | undefined
           : R[K]
       : R[K];
   };

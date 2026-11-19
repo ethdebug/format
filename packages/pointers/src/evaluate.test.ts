@@ -4,8 +4,7 @@ import { keccak256 } from "ethereum-cryptography/keccak";
 
 import { Pointer } from "@ethdebug/format";
 
-import { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw } from "@ethdebug/common";
 import { Cursor } from "#cursor";
 import { evaluate, Value, type EvaluateOptions } from "./evaluate.js";
 
@@ -19,7 +18,7 @@ const state: Machine.State = {
   } as any,
   memory: {
     read: vitest.fn(async ({ slice: { length } }) =>
-      Data.fromBytes(new Uint8Array(Number(length)).fill(0xee)),
+      new Uint8Array(Number(length)).fill(0xee),
     ),
   } as any,
   storage: {} as any,
@@ -29,8 +28,7 @@ const state: Machine.State = {
   code: {} as any,
 };
 
-const word = (byte: number): Data =>
-  Data.fromBytes(new Uint8Array(32).fill(byte));
+const word = (byte: number): Raw => new Uint8Array(32).fill(byte);
 
 describe("evaluate", () => {
   let regions: { [identifier: string]: Cursor.Region };
@@ -40,22 +38,22 @@ describe("evaluate", () => {
   beforeEach(() => {
     variables = {
       foo: Value.integer(42n),
-      bar: Value.bytes(Data.fromHex("0x1f")),
+      bar: Value.bytes(Raw.fromHex("0x1f")),
     };
 
     regions = {
       stack: {
         name: "stack",
         location: "stack",
-        slot: Data.fromNumber(42),
-        offset: Data.fromNumber(0x60),
-        length: Data.fromNumber(0x1f / 2),
+        slot: Raw.fromNumber(42),
+        offset: Raw.fromNumber(0x60),
+        length: Raw.fromNumber(0x1f / 2),
       },
       memory: {
         name: "memory",
         location: "memory",
-        offset: Data.fromNumber(0x20 * 0x05),
-        length: Data.fromNumber(42 - 0x1f),
+        offset: Raw.fromNumber(0x20 * 0x05),
+        length: Raw.fromNumber(42 - 0x1f),
       },
     };
 
@@ -74,11 +72,11 @@ describe("evaluate", () => {
 
     it("evaluates even-digit hex to bytes of that width", async () => {
       expect(await evaluate("0x1f", options)).toEqual(
-        Value.bytes(Data.fromHex("0x1f")),
+        Value.bytes(Raw.fromHex("0x1f")),
       );
 
       const zeros = await evaluate("0x0000", options);
-      expect(zeros).toEqual(Value.bytes(Data.fromHex("0x0000")));
+      expect(zeros).toEqual(Value.bytes(Raw.fromHex("0x0000")));
       expect(Value.isBytes(zeros) && zeros.data.length).toBe(2);
     });
 
@@ -96,7 +94,7 @@ describe("evaluate", () => {
     expect(await evaluate("foo", options)).toEqual(Value.integer(42n));
 
     expect(await evaluate("bar", options)).toEqual(
-      Value.bytes(Data.fromHex("0x1f")),
+      Value.bytes(Raw.fromHex("0x1f")),
     );
   });
 
@@ -175,8 +173,8 @@ describe("evaluate", () => {
       const thisRegion = {
         name: "~this",
         location: "memory",
-        offset: Data.fromNumber(0x120),
-        length: Data.fromNumber(0x40),
+        offset: Raw.fromNumber(0x120),
+        length: Raw.fromNumber(0x40),
       } as const;
 
       expect(
@@ -215,75 +213,73 @@ describe("evaluate", () => {
   it("evaluates ~read to bytes of the region's length", async () => {
     const result = await evaluate({ "~read": "memory" }, options);
 
-    expect(result).toEqual(
-      Value.bytes(Data.fromBytes(new Uint8Array(11).fill(0xee))),
-    );
+    expect(result).toEqual(Value.bytes(new Uint8Array(11).fill(0xee)));
   });
 
   describe("resize", () => {
     it("gives an integer a width", async () => {
       expect(await evaluate({ "~sized1": 0 }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x00")),
+        Value.bytes(Raw.fromHex("0x00")),
       );
 
       expect(await evaluate({ "~sized2": 42 }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x002a")),
+        Value.bytes(Raw.fromHex("0x002a")),
       );
 
       expect(await evaluate({ "~wordsized": 0xabcd }, options)).toEqual(
-        Value.bytes(Data.fromNumber(0xabcd).resizeTo(32)),
+        Value.bytes(Raw.resizeTo(Raw.fromNumber(0xabcd), 32)),
       );
     });
 
     it("resizes bytes, padding or truncating on the left", async () => {
       expect(await evaluate({ "~sized1": "0xabcd" }, options)).toEqual(
-        Value.bytes(Data.fromHex("0xcd")),
+        Value.bytes(Raw.fromHex("0xcd")),
       );
 
       expect(await evaluate({ "~sized4": "0xabcd" }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x0000abcd")),
+        Value.bytes(Raw.fromHex("0x0000abcd")),
       );
 
       expect(await evaluate({ "~wordsized": "0xabcd" }, options)).toEqual(
-        Value.bytes(Data.fromHex("0xabcd").resizeTo(32)),
+        Value.bytes(Raw.resizeTo(Raw.fromHex("0xabcd"), 32)),
       );
     });
 
     it("truncates an integer too large for the requested width", async () => {
       expect(await evaluate({ "~sized1": 0x1234 }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x34")),
+        Value.bytes(Raw.fromHex("0x34")),
       );
     });
 
     it("gives arithmetic results a width", async () => {
       expect(
         await evaluate({ "~sized2": { "~sum": [1, 2] } }, options),
-      ).toEqual(Value.bytes(Data.fromHex("0x0003")));
+      ).toEqual(Value.bytes(Raw.fromHex("0x0003")));
     });
   });
 
   describe("~concat", () => {
     it("concatenates hex literals", async () => {
       expect(await evaluate({ "~concat": ["0x00", "0x00"] }, options)).toEqual(
-        Value.bytes(Data.fromHex("0x0000")),
+        Value.bytes(Raw.fromHex("0x0000")),
       );
     });
 
     it("concatenates multiple values preserving byte widths", async () => {
       expect(
         await evaluate({ "~concat": ["0xdead", "0xbeef"] }, options),
-      ).toEqual(Value.bytes(Data.fromHex("0xdeadbeef")));
+      ).toEqual(Value.bytes(Raw.fromHex("0xdeadbeef")));
     });
 
     it("returns empty bytes for an empty operand list", async () => {
       expect(await evaluate({ "~concat": [] }, options)).toEqual(
-        Value.bytes(Data.zero()),
+        Value.bytes(Raw.zero()),
       );
     });
 
     it("preserves a single operand unchanged", async () => {
       expect(await evaluate({ "~concat": ["0xabcdef"] }, options)).toEqual(
-        Value.bytes(Data.fromHex("0xabcdef")),
+        Value.bytes(Raw.fromHex("0xabcdef")),
       );
     });
 
@@ -293,7 +289,7 @@ describe("evaluate", () => {
         options,
       );
 
-      expect(result).toEqual(Value.bytes(Data.fromHex("0x00010002")));
+      expect(result).toEqual(Value.bytes(Raw.fromHex("0x00010002")));
     });
 
     it("concatenates bytes-valued variables and resized integers", async () => {
@@ -306,7 +302,7 @@ describe("evaluate", () => {
       };
 
       expect(await evaluate(expression, options)).toEqual(
-        Value.bytes(Data.fromHex("0x002a1f03")),
+        Value.bytes(Raw.fromHex("0x002a1f03")),
       );
     });
 
@@ -361,16 +357,15 @@ describe("evaluate", () => {
         ],
       };
 
-      const preimage = Data.fromNumber(42)
-        .resizeTo(32)
-        .concat(
-          Data.fromHex("0x1f"),
-          Data.fromHex("0x2a"),
-          Data.fromHex("0x1f"),
-        );
+      const preimage = Raw.concat(
+        Raw.resizeTo(Raw.fromNumber(42), 32),
+        Raw.fromHex("0x1f"),
+        Raw.fromHex("0x2a"),
+        Raw.fromHex("0x1f"),
+      );
 
       expect(await evaluate(expression, options)).toEqual(
-        Value.bytes(Data.fromBytes(keccak256(preimage))),
+        Value.bytes(keccak256(preimage)),
       );
     });
 
@@ -378,9 +373,7 @@ describe("evaluate", () => {
       const result = await evaluate({ "~keccak256": [] }, options);
 
       expect(Value.isBytes(result) && result.data.length).toBe(32);
-      expect(result).toEqual(
-        Value.bytes(Data.fromBytes(keccak256(new Uint8Array(0)))),
-      );
+      expect(result).toEqual(Value.bytes(keccak256(new Uint8Array(0))));
     });
 
     it("hashes a word-sized key and slot over 64 bytes", async () => {
@@ -388,11 +381,14 @@ describe("evaluate", () => {
         "~keccak256": [{ "~wordsized": "0x1234" }, { "~wordsized": 0 }],
       };
 
-      const preimage = Data.fromHex("0x1234").resizeTo(32).concat(word(0));
+      const preimage = Raw.concat(
+        Raw.resizeTo(Raw.fromHex("0x1234"), 32),
+        word(0),
+      );
       expect(preimage).toHaveLength(64);
 
       expect(await evaluate(expression, options)).toEqual(
-        Value.bytes(Data.fromBytes(keccak256(preimage))),
+        Value.bytes(keccak256(preimage)),
       );
     });
 
@@ -419,8 +415,8 @@ describe("evaluate, with names that start with $", () => {
   const region = (name: string, offset: number): Cursor.Region => ({
     name,
     location: "memory",
-    offset: Data.fromNumber(offset),
-    length: Data.fromNumber(0x20),
+    offset: Raw.fromNumber(offset),
+    length: Raw.fromNumber(0x20),
   });
 
   const options: EvaluateOptions = {
@@ -467,16 +463,16 @@ describe("evaluate, with names that start with $", () => {
 
 describe("Value", () => {
   it("coerces bytes to a big-endian integer", () => {
-    expect(Value.toInteger(Value.bytes(Data.fromHex("0x0100")))).toBe(256n);
-    expect(Value.toInteger(Value.bytes(Data.zero()))).toBe(0n);
+    expect(Value.toInteger(Value.bytes(Raw.fromHex("0x0100")))).toBe(256n);
+    expect(Value.toInteger(Value.bytes(Raw.zero()))).toBe(0n);
     expect(Value.toInteger(Value.integer(7n))).toBe(7n);
   });
 
   it("encodes an integer as minimal big-endian bytes for region data", () => {
-    expect(Value.toData(Value.integer(0n))).toEqual(Data.zero());
-    expect(Value.toData(Value.integer(256n))).toEqual(Data.fromHex("0x0100"));
-    expect(Value.toData(Value.bytes(Data.fromHex("0x0000")))).toEqual(
-      Data.fromHex("0x0000"),
+    expect(Value.toData(Value.integer(0n))).toEqual(Raw.zero());
+    expect(Value.toData(Value.integer(256n))).toEqual(Raw.fromHex("0x0100"));
+    expect(Value.toData(Value.bytes(Raw.fromHex("0x0000")))).toEqual(
+      Raw.fromHex("0x0000"),
     );
   });
 });

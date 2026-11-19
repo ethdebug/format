@@ -7,6 +7,7 @@
 
 import type * as Evm from "#evm";
 import * as Format from "@ethdebug/format";
+import { Raw } from "@ethdebug/common";
 import { dereference } from "@ethdebug/pointers";
 import { bytesToHex } from "ethereum-cryptography/utils";
 
@@ -184,7 +185,7 @@ async function checkScalarValue(
     }
 
     const data = await view.read(view.regions[0]);
-    const actual = data.asUint();
+    const actual = Raw.asUint(data);
     const expected = BigInt(expectedValue);
 
     if (actual !== expected) {
@@ -275,7 +276,7 @@ async function checkRegionValues(
 
         for (let i = 0; i < expectedValue.length; i++) {
           const data = await view.read(regions[i]);
-          const actual = data.asUint();
+          const actual = Raw.asUint(data);
           const expected = BigInt(expectedValue[i]);
 
           if (actual !== expected) {
@@ -292,7 +293,7 @@ async function checkRegionValues(
       } else {
         // Check single region
         const data = await view.read(regions[0]);
-        const actual = data.asUint();
+        const actual = Raw.asUint(data);
         const expected = BigInt(expectedValue);
 
         if (actual !== expected) {

@@ -90,6 +90,12 @@ const config: Config = {
               "../format/tsconfig.json",
             ),
           },
+          "@ethdebug/common": {
+            tsConfigFilePath: path.resolve(
+              __dirname,
+              "../common/tsconfig.json",
+            ),
+          },
           "@ethdebug/pointers": {
             tsConfigFilePath: path.resolve(
               __dirname,

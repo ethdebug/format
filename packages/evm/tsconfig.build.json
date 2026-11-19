@@ -9,5 +9,5 @@
     "**/*.test.tsx",
     "test/**"
   ],
-  "references": [{ "path": "../pointers/tsconfig.build.json" }]
+  "references": [{ "path": "../common/tsconfig.build.json" }]
 }

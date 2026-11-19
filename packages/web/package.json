@@ -22,6 +22,7 @@
     "@docusaurus/types": "^3.9.2",
     "@ethdebug/bugc": "^0.1.0-preview.2",
     "@ethdebug/bugc-react": "^0.1.0-preview.2",
+    "@ethdebug/common": "^0.1.0-preview.2",
     "@ethdebug/evm": "^0.1.0-preview.2",
     "@ethdebug/format": "^0.1.0-draft.2",
     "@ethdebug/pointers": "^0.1.0-preview.2",

@@ -1,9 +1,7 @@
 import { Pointer } from "@ethdebug/format";
-import type { Machine } from "#machine";
-import { Data } from "#data";
+import { type Machine, Raw, keccak256 } from "@ethdebug/common";
 import type { Cursor } from "#cursor";
 import { read } from "#read";
-import { keccak256 } from "ethereum-cryptography/keccak";
 
 /**
  * The result of evaluating an expression: one of two sorts of value.
@@ -27,7 +25,7 @@ export namespace Value {
 
   export interface Bytes {
     sort: "bytes";
-    data: Data;
+    data: Raw;
   }
 
   export const integer = (value: bigint): Integer => ({
@@ -35,7 +33,7 @@ export namespace Value {
     value,
   });
 
-  export const bytes = (data: Data): Bytes => ({ sort: "bytes", data });
+  export const bytes = (data: Raw): Bytes => ({ sort: "bytes", data });
 
   export const isInteger = (value: Value): value is Integer =>
     value.sort === "integer";
@@ -49,16 +47,16 @@ export namespace Value {
    * are read as the non-negative integer they encode big-endian.
    */
   export const toInteger = (value: Value): bigint =>
-    isInteger(value) ? value.value : value.data.asUint();
+    isInteger(value) ? value.value : Raw.asUint(value.data);
 
   /**
-   * Represent as `Data` for storage on a concrete `Cursor.Region`. Bytes
+   * Represent as `Raw` for storage on a concrete `Cursor.Region`. Bytes
    * keep their width; an integer is encoded as its minimal big-endian
    * bytes (a region's slot/offset/length are integers, so this width is
    * not significant).
    */
-  export const toData = (value: Value): Data =>
-    isBytes(value) ? value.data : Data.fromUint(value.value);
+  export const toData = (value: Value): Raw =>
+    isBytes(value) ? value.data : Raw.fromUint(value.value);
 }
 
 export interface EvaluateOptions {
@@ -167,7 +165,7 @@ async function evaluateBytesOperands(
   operation: "~concat" | "~keccak256",
   operands: Pointer.Expression[],
   options: EvaluateOptions,
-): Promise<Data[]> {
+): Promise<Raw[]> {
   return await Promise.all(
     operands.map(async (operand, index) => {
       const value = await evaluate(operand, options);
@@ -199,7 +197,7 @@ async function evaluateLiteral(
         return Value.integer(BigInt(literal));
       }
 
-      return Value.bytes(Data.fromHex(literal));
+      return Value.bytes(Raw.fromHex(literal));
     }
     case "number":
       return Value.integer(BigInt(literal));
@@ -276,9 +274,9 @@ async function evaluateKeccak256(
     options,
   );
 
-  const preimage = Data.zero().concat(...operands);
+  const preimage = Raw.concat(...operands);
 
-  return Value.bytes(Data.fromBytes(keccak256(preimage)));
+  return Value.bytes(keccak256(preimage));
 }
 
 async function evaluateConcat(
@@ -291,7 +289,7 @@ async function evaluateConcat(
     options,
   );
 
-  return Value.bytes(Data.zero().concat(...operands));
+  return Value.bytes(Raw.concat(...operands));
 }
 
 async function evaluateResize(
@@ -306,7 +304,7 @@ async function evaluateResize(
 
   const value = await evaluate(subexpression, options);
 
-  return Value.bytes(Value.toData(value).resizeTo(newLength));
+  return Value.bytes(Raw.resizeTo(Value.toData(value), newLength));
 }
 
 async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
@@ -324,7 +322,7 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
 
   const property = Pointer.Expression.Lookup.propertyFrom(operation);
 
-  const data = region[property as keyof typeof region] as Data | undefined;
+  const data = region[property as keyof typeof region] as Raw | undefined;
 
   if (typeof data === "undefined") {
     throw new Error(
@@ -332,7 +330,7 @@ async function evaluateLookup<O extends Pointer.Expression.Lookup.Operation>(
     );
   }
 
-  return Value.integer(data.asUint());
+  return Value.integer(Raw.asUint(data));
 }
 
 async function evaluateRead(

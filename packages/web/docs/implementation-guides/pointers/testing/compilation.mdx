@@ -23,7 +23,7 @@ thus observe pointers only via the trace of a contract creation transaction.
 This testing infrastructure includes the `compileCreateBytecode()` function,
 which accepts input resembling Solidity's compiler input data as argument (i.e.,
 the collection of source contents by path and additional contract target
-information) and asynchronously returns `Data` with the create (deployment)
+information) and asynchronously returns `Raw` bytes with the create (deployment)
 bytecode for the target contract.
 
 <CodeListing

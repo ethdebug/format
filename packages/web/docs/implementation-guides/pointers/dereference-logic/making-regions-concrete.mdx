@@ -10,7 +10,7 @@ import SchemaExample from "@site/src/components/SchemaExample";
 There are two main aspects involved when converting from a `Pointer.Region`,
 which is full of properties whose values are the dynamic `Pointer.Expression`
 objects, into a `Cursor.Region`, whose expression properties have been replaced
-with actual bytes `Data`:
+with actual bytes (`Raw` values):
 
 ## Fixing stack-located regions' `slot` offset
 
@@ -30,7 +30,7 @@ This behavior is encapsulated by the `adjustStackLength` function:
 
 The more substantial aspect of making a region concrete, however, is the
 process by which this implementation evaluates each of the `Pointer.Region`'s
-expression properties and converts them into their `Data` values.
+expression properties and converts them into their `Raw` byte values.
 
 This process would be very straightforward, except that pointer expressions
 may reference the region in which they are specified by use of the special

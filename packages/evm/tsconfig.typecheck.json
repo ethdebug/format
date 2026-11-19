@@ -6,8 +6,7 @@
     "incremental": false,
     "rootDir": "../..",
     "paths": {
-      "@ethdebug/format": ["../format/src/index.ts"],
-      "@ethdebug/pointers": ["../pointers/src/index.ts"]
+      "@ethdebug/common": ["../common/src/index.ts"]
     }
   }
 }

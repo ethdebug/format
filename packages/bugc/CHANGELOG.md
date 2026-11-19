@@ -40,6 +40,8 @@ support. Changes to the specification itself are tracked in the root
 
 ### Changed
 
+- The tests read machine state as `Raw` from `@ethdebug/common`, a new
+  development dependency.
 - `==`, `!=` and a mapping key with bytes or a string in calldata are
   now type errors. Before, they compared or hashed the calldata
   reference's word (offset and length), not the bytes ([#379]).

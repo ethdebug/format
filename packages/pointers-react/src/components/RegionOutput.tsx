@@ -3,14 +3,15 @@
  */
 
 import React from "react";
-import type { Cursor, Data } from "@ethdebug/pointers";
+import { Raw } from "@ethdebug/common";
+import type { Cursor } from "@ethdebug/pointers";
 import { formatData, formatDataShort } from "#utils/mockState";
 
 export interface RegionOutputProps {
   /** Resolved regions to display */
   regions: Cursor.Region[];
   /** Values read from each region */
-  values: Map<Cursor.Region, Data>;
+  values: Map<Cursor.Region, Raw>;
   /** Whether to show full hex values or shortened */
   showFullValues?: boolean;
 }
@@ -52,7 +53,7 @@ function RegionItem({
   index,
 }: {
   region: Cursor.Region;
-  value: Data | undefined;
+  value: Raw | undefined;
   showFullValues: boolean;
   index: number;
 }): React.JSX.Element {

@@ -92,6 +92,14 @@ The sections do not signal obligations; the prefixes do.
     it uses. If members depend on each other in a cycle, the pointer is
     invalid."
 
+- The description of `places` in the fixed-point types calls the integer
+  before scaling an "unscaled value" instead of a "raw value". "Raw" now
+  means bytes only.
+  - Schemas: **ethdebug/format/type/elementary/fixed**,
+    **ethdebug/format/type/elementary/ufixed**
+  - Producers: no change needed.
+  - Consumers: no change needed.
+
 - Variables now have a stated sort. A list's `each` variable is an integer.
   A `define` variable has the sort of its expression, so a bytes variable
   keeps its width. A template's `expect`ed variable takes the sort of the

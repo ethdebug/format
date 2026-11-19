@@ -11,8 +11,9 @@ fi
 
 # Run the commands with concurrently
 concurrently \
-  --names=format,pointers,evm,bugc,bugc-react,pointers-react,programs-react,playground,web,tests \
+  --names=format,common,pointers,evm,bugc,bugc-react,pointers-react,programs-react,playground,web,tests \
   "cd ./packages/format && yarn watch" \
+  "cd ./packages/common && yarn watch" \
   "cd ./packages/pointers && yarn watch" \
   "cd ./packages/evm && yarn watch" \
   "cd ./packages/bugc && yarn watch" \

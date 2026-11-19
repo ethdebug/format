@@ -18,8 +18,8 @@ properties:
   places:
     type: integer
     description:
-      How many decimal places, implying that a raw value `v` of this type
-      should be interpreted as `v / (10**places)`
+      How many decimal places, implying that an unscaled value `v` of this
+      type should be interpreted as `v / (10**places)`
     minimum: 0
     maximum: 80
 required:

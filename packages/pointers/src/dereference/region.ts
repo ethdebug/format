@@ -1,6 +1,6 @@
 import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
-import { Data } from "#data";
+import { Raw } from "@ethdebug/common";
 import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 
 /**
@@ -21,7 +21,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
   options: EvaluateOptions,
 ): Promise<Cursor.Region<R>> {
   const evaluatedProperties: {
-    [K in keyof R]?: Data;
+    [K in keyof R]?: Raw;
   } = {};
   const propertyAttempts: {
     [K in keyof R]?: number;
@@ -128,7 +128,7 @@ export async function evaluateRegion<R extends Pointer.Region>(
  */
 async function evaluateFragment(
   region: Pointer.Region.Virtual,
-  { offset, length }: { offset?: Data; length?: Data },
+  { offset, length }: { offset?: Raw; length?: Raw },
   options: EvaluateOptions,
 ): Promise<Cursor.Region<Pointer.Region.Virtual>> {
   const value = await evaluate(region.expression, options);
@@ -143,10 +143,10 @@ async function evaluateFragment(
   }
 
   const width = BigInt(value.data.length);
-  const start = offset?.asUint() ?? 0n;
-  const end = length ? start + length.asUint() : width;
+  const start = offset ? Raw.asUint(offset) : 0n;
+  const end = length ? start + Raw.asUint(length) : width;
   if (start > width || end > width) {
-    const fields = length ? `${start}, length ${length.asUint()}` : start;
+    const fields = length ? `${start}, length ${Raw.asUint(length)}` : start;
     throw new Error(
       `Fragment of virtual region (offset ${fields}) extends outside ` +
         `the ${width} bytes of its expression's value`,
@@ -156,8 +156,8 @@ async function evaluateFragment(
   return {
     ...region,
     expression: value.data,
-    offset: Data.fromUint(start),
-    length: Data.fromUint(end - start),
+    offset: Raw.fromUint(start),
+    length: Raw.fromUint(end - start),
   };
 }
 
