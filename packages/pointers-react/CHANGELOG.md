@@ -7,6 +7,8 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.3 — 2026-11-19
+
 ### Added
 
 - A region with `"location": "virtual"` has its own style: a pink badge

@@ -6,6 +6,8 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-draft.3 — 2026-11-19
+
 ### Added
 
 - The **ethdebug/format/pointer/region/virtual** and

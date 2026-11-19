@@ -6,6 +6,8 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.3 — 2026-11-19
+
 ### Breaking
 
 - `Data` and `Machine` moved to the new `@ethdebug/common` package, and this
