@@ -158,6 +158,7 @@ First publication.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
 [#373]: https://github.com/ethdebug/format/pull/373
+[#420]: https://github.com/ethdebug/format/pull/420
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e
@@ -168,4 +169,3 @@ First publication.
 [`e523e09`]: https://github.com/ethdebug/format/commit/e523e09
 [`f87f678`]: https://github.com/ethdebug/format/commit/f87f678
 [`fc976ed`]: https://github.com/ethdebug/format/commit/fc976ed
-[#420]: https://github.com/ethdebug/format/pull/420
