@@ -108,6 +108,16 @@ The sections do not signal obligations; the prefixes do.
     `bytesN` value on the right, concatenate it with zero bytes (`~concat`).
   - Consumers: no change needed. The evaluation rules did not change.
 
+- The rule for a lookup (`{ ".<property>": <region> }`) of an omitted
+  property said that the property's schema must specify a default. A
+  segment's `length` and a fragment's `length` have defaults that only their
+  descriptions give. The rule now accepts a default given either way
+  ([#411]).
+  - Schemas: **ethdebug/format/pointer/expression**
+  - Producers: no change needed.
+  - Consumers: no change needed if a lookup of an omitted segment `length`
+    already gives its default.
+
 ## 0.1.0-draft.2 — 2026-10-07
 
 ### Changed
