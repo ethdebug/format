@@ -169,6 +169,19 @@ describe("missingPackageChangelogs", () => {
     ]);
   });
 
+  it("ignores test files and JSON data under src", () => {
+    expect(
+      missingPackageChangelogs(
+        [
+          "packages/pointers/src/read.test.ts",
+          "packages/pointers/src/read.golden.json",
+          "packages/format/src/style.css",
+        ],
+        packagePrefixes,
+      ),
+    ).toEqual(["packages/format/CHANGELOG.md"]);
+  });
+
   it("omits a package whose CHANGELOG.md is already in the diff", () => {
     expect(
       missingPackageChangelogs(

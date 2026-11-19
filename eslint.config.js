@@ -16,9 +16,6 @@ export default tseslint.config(
         ...globals.node,
         ...globals.es2022,
       },
-      parserOptions: {
-        projectService: true,
-      },
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",

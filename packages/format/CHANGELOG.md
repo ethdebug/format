@@ -19,6 +19,8 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   module load, and the package declares `"sideEffects": false`. A bundle
   that imports only the types and guards no longer includes the `yaml`
   library or the schema sources. The API is unchanged ([#373]).
+- `Type.Elementary.isFixed` and `Type.Elementary.isUfixed` accept
+  `places: 0`. See the root [`CHANGELOG.md`](../../CHANGELOG.md) ([#420]).
 
 ## 0.1.0-draft.2 — 2026-10-07
 
@@ -164,6 +166,7 @@ First publication.
 [#325]: https://github.com/ethdebug/format/pull/325
 [#373]: https://github.com/ethdebug/format/pull/373
 [#411]: https://github.com/ethdebug/format/pull/411
+[#420]: https://github.com/ethdebug/format/pull/420
 [`0ef2f37`]: https://github.com/ethdebug/format/commit/0ef2f37
 [`10ab103`]: https://github.com/ethdebug/format/commit/10ab103
 [`21e532e`]: https://github.com/ethdebug/format/commit/21e532e

@@ -70,6 +70,14 @@ The sections do not signal obligations; the prefixes do.
 
 ### Changed
 
+- The `places` of a `fixed` or `ufixed` type may now be 0, as Solidity
+  allows. The minimum was 1 ([#420]).
+  - Schemas: **ethdebug/format/type/elementary/fixed**,
+    **ethdebug/format/type/elementary/ufixed**
+  - Producers: optional: a `fixed` or `ufixed` type may have `places: 0`.
+  - Consumers: required: the `minimum` of `places` is now 0. A consumer must
+    accept `places: 0`, which means the raw value is read unscaled.
+
 - The members of a `define` no longer depend on their order, since JSON
   objects are unordered. A member may use any other member of the same
   `define`. Inside its own expression, its own name means the variable of the
@@ -789,3 +797,4 @@ First published version of the specification.
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
 [#411]: https://github.com/ethdebug/format/pull/411
+[#420]: https://github.com/ethdebug/format/pull/420
