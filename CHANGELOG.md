@@ -53,6 +53,21 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- A region with `"location": "virtual"` holds the bytes of a computed value,
+  e.g., a variable the optimizer removed. It uses the new `fragment`
+  addressing scheme: a width-bearing `expression` supplies the bytes, and
+  optional `offset` and `length` select a range of them ([#411]).
+  - Schemas: **ethdebug/format/pointer/region/virtual**,
+    **ethdebug/format/pointer/scheme/fragment**,
+    **ethdebug/format/pointer/region**
+  - Producers: optional: a pointer may describe a value that no data location
+    stores as a virtual region.
+  - Consumers: required: a region may have `"location": "virtual"`. Its bytes
+    are the fragment of its `expression`'s value, which a consumer must
+    evaluate. A fragment outside the value's bytes is invalid.
+
 ### Changed
 
 - The `places` of a `fixed` or `ufixed` type may now be 0, as Solidity
@@ -100,6 +115,16 @@ The sections do not signal obligations; the prefixes do.
   - Producers: no change needed. The resize forms work as before. To pad a
     `bytesN` value on the right, concatenate it with zero bytes (`~concat`).
   - Consumers: no change needed. The evaluation rules did not change.
+
+- The rule for a lookup (`{ ".<property>": <region> }`) of an omitted
+  property said that the property's schema must specify a default. A
+  segment's `length` and a fragment's `length` have defaults that only their
+  descriptions give. The rule now accepts a default given either way
+  ([#411]).
+  - Schemas: **ethdebug/format/pointer/expression**
+  - Producers: no change needed.
+  - Consumers: required: a lookup of an omitted segment or fragment `length`
+    gives the default that its description defines.
 
 ## 0.1.0-draft.2 — 2026-10-07
 
@@ -771,4 +796,5 @@ First published version of the specification.
 [#402]: https://github.com/ethdebug/format/pull/402
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411
 [#420]: https://github.com/ethdebug/format/pull/420

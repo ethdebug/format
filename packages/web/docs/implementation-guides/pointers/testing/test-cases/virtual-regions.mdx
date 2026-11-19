@@ -1,0 +1,27 @@
+---
+sidebar_position: 4
+sidebar_label: virtual regions
+---
+
+import CodeListing from "@site/src/components/CodeListing";
+import TestedPointer from "./TestedPointer";
+
+# Test case: virtual regions
+
+A virtual region holds a computed value instead of stored bytes. This test
+computes two values from a `uint256` in storage: `x`, the value plus one,
+and `tag`, the first 4 bytes of the value's hash.
+
+## Test source
+
+<CodeListing
+  packageName="@ethdebug/pointers"
+  sourcePath="test/test-cases.ts"
+  extract={(sourceFile) =>
+    sourceFile.getVariableStatement("virtualRegionsTest")
+  }
+/>
+
+## Tested pointer
+
+<TestedPointer pointerQuery="virtual-operand" />

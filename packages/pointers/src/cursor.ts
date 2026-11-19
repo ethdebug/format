@@ -30,10 +30,11 @@ export namespace Cursor {
 
   /**
    * A Pointer region where all dynamic expressions have been replaced with
-   * concrete bytes values.
+   * concrete bytes values. A virtual region's `expression` becomes the
+   * bytes of its value.
    */
   export type Region<R extends Pointer.Region = Pointer.Region> = {
-    [K in keyof R]: K extends "slot" | "offset" | "length"
+    [K in keyof R]: K extends "slot" | "offset" | "length" | "expression"
       ? R[K] extends Pointer.Expression
         ? Data
         : R[K] extends Pointer.Expression | undefined

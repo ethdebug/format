@@ -6,6 +6,13 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `dereference` and `read` support virtual regions. A concrete virtual
+  region keeps the bytes of its `expression` and has `offset` and `length`
+  filled in with their defaults. An expression with no width, or a fragment
+  outside the value, throws ([#411]).
+
 ### Changed
 
 - `dereference` evaluates the members of a scope's `define` in dependency
@@ -15,6 +22,11 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Fixed
 
+- A lookup of a stack, storage or transient region's omitted `offset` or
+  `length` gives its default (`0`, and the bytes to the end of the slot in
+  which the region begins). It threw "does not have ... needed by lookup"
+  before. A concrete region of these locations now always has `offset` and
+  `length` ([#411]).
 - The published type declarations no longer reference Node's `util` types.
   `Data.inspect` and its `util.inspect.custom` hook used
   `util.InspectOptionsStylized`, which newer `@types/node` versions no longer
@@ -155,3 +167,4 @@ First publication.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411

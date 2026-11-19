@@ -176,7 +176,9 @@ $defs:
 
       `<property-name>` **must** be a valid and present property on the
       corresponding region, or it **must** correspond to an optional property
-      whose schema specifies a default value for that property.
+      that has a default value. The default may be given by the property's
+      schema `default` or by its description (e.g., the `length` of a
+      segment or a fragment).
     type: object
     patternProperties:
       "^\\.(offset|length|slot)$":

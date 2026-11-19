@@ -297,3 +297,26 @@ examples:
             slot: "start-slot"
             offset: 0
             length: "string-length"
+
+  - # example computed values: `x = a + 1` after the optimizer removed `x`,
+    # and `tag`, the first 4 bytes of the hash of `a`, where `a` is a
+    # `uint256` in storage slot 0
+    group:
+      - name: "virtual-operand"
+        location: storage
+        slot: 0
+
+      - name: "x"
+        location: virtual
+        expression:
+          ~wordsized:
+            ~sum:
+              - ~read: "virtual-operand"
+              - 1
+
+      - name: "tag"
+        location: virtual
+        expression:
+          ~keccak256:
+            - ~read: "virtual-operand"
+        length: 4

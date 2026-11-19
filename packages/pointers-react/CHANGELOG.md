@@ -7,6 +7,13 @@ root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- A region with `"location": "virtual"` has its own style: a pink badge
+  with a dashed border, and a dashed left border in the region output.
+  The new `--pointers-region-virtual` and `--pointers-region-virtual-bg`
+  variables set its colors ([#411]).
+
 ### Changed
 
 - The `react` and `react-dom` peer ranges now include React 19
@@ -54,3 +61,4 @@ First publication.
 [#300]: https://github.com/ethdebug/format/pull/300
 [#323]: https://github.com/ethdebug/format/pull/323
 [#374]: https://github.com/ethdebug/format/pull/374
+[#411]: https://github.com/ethdebug/format/pull/411
