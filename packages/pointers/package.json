@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/pointers",
-  "version": "0.1.0-preview.2",
+  "version": "0.1.0-preview.3",
   "description": "Reference implementation for ethdebug/format pointers",
   "main": "dist/src/index.js",
   "type": "module",
@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "@ethdebug/common": "^0.1.0-preview.2",
-    "@ethdebug/format": "^0.1.0-draft.2"
+    "@ethdebug/format": "^0.1.0-draft.3"
   },
   "publishConfig": {
     "access": "public"

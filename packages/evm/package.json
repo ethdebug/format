@@ -1,6 +1,6 @@
 {
   "name": "@ethdebug/evm",
-  "version": "0.1.0-preview.2",
+  "version": "0.1.0-preview.3",
   "description": "EVM execution and state access for ethdebug/format",
   "type": "module",
   "main": "dist/src/index.js",
