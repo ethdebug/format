@@ -115,8 +115,8 @@ The sections do not signal obligations; the prefixes do.
   ([#411]).
   - Schemas: **ethdebug/format/pointer/expression**
   - Producers: no change needed.
-  - Consumers: no change needed if a lookup of an omitted segment `length`
-    already gives its default.
+  - Consumers: required: a lookup of an omitted segment or fragment `length`
+    gives the default that its description defines.
 
 ## 0.1.0-draft.2 — 2026-10-07
 
