@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-420/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-420/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-420/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-420/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-420/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-420/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-420/assets/css/styles.a387824d.css">
-<script src="/format/pr-preview/pr-420/assets/js/runtime~main.eb0ac4c7.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-420/assets/js/runtime~main.07e3d2f1.js" defer="defer"></script>
 <script src="/format/pr-preview/pr-420/assets/js/main.6bc3cc58.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -61,6 +61,17 @@ The sections do not signal obligations; the prefixes do.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Direct link to Unreleased" title="Direct link to Unreleased" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_SAay" id="changed">Changed<a href="#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed" translate="no">​</a></h3>
 <ul>
+<li class="">
+<p>The <code>places</code> of a <code>fixed</code> or <code>ufixed</code> type may now be 0, as Solidity
+allows. The minimum was 1 (<a href="https://github.com/ethdebug/format/pull/420" target="_blank" rel="noopener noreferrer" class="">#420<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/type/elementary/fixed</strong>,
+<strong>ethdebug/format/type/elementary/ufixed</strong></li>
+<li class="">Producers: optional: a <code>fixed</code> or <code>ufixed</code> type may have <code>places: 0</code>.</li>
+<li class="">Consumers: required: the <code>minimum</code> of <code>places</code> is now 0. A consumer must
+accept <code>places: 0</code>, which means the raw value is read unscaled.</li>
+</ul>
+</li>
 <li class="">
 <p>The members of a <code>define</code> no longer depend on their order, since JSON
 objects are unordered. A member may use any other member of the same
@@ -787,7 +798,7 @@ gains the same statement. The change removed <code>context</code> from an instru
 <code>required</code> and removed <code>minProperties: 1</code> from the context schema. An explicit
 <code>{}</code> still did not validate: the context schema&#x27;s <code>anyOf</code> rejected it, because
 each of its members requires its own key, until <a href="https://github.com/ethdebug/format/pull/150" target="_blank" rel="noopener noreferrer" class="">#150<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a> replaced the union.
-(<a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->  ﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
+(<a href="https://github.com/ethdebug/format/pull/145" target="_blank" rel="noopener noreferrer" class="">#145<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>)</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/program</strong>,
 <strong>ethdebug/format/program/instruction</strong>, <strong>ethdebug/format/program/context</strong></li>
