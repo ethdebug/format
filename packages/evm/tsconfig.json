@@ -12,5 +12,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../common" }, { "path": "../pointers" }]
+  "references": [{ "path": "../common" }]
 }

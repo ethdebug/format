@@ -24,6 +24,8 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Changed
 
+- `ethereum-cryptography` is now a development dependency only. The
+  package no longer uses it at run time.
 - `dereference` evaluates the members of a scope's `define` in dependency
   order, not member order. A member sees the other members by name, and its
   own name means the variable of the enclosing scope. A cycle of members throws

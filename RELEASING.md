@@ -21,8 +21,8 @@ guards that run in CI live in `bin/check-tarballs.ts` and
   packages work but implement a draft. Releases before `0.1.0-draft.0`
   used a plain number (`0.1.0-0` to `0.1.0-2`); they sort before the
   named ones.
-- Ten workspaces can take part in a release: the seven public
-  packages (`format`, `pointers`, `evm`, `bugc`, `bugc-react`,
+- Eleven workspaces can take part in a release: the eight public
+  packages (`format`, `common`, `pointers`, `evm`, `bugc`, `bugc-react`,
   `pointers-react`, `programs-react`) and the three private ones
   (`format-web`, `bug-playground`, `conformance`). Private workspaces
   get versions and tags like the others, but the publish script skips
@@ -32,8 +32,9 @@ guards that run in CI live in `bin/check-tarballs.ts` and
   not count), `@ethdebug/format` when `schemas/` changed (the schemas
   live outside the package directory but ship inside it), and every
   workspace that depends on a moving one, directly or transitively.
-  Every workspace depends on `@ethdebug/format`, so a specification
-  change moves all ten.
+  Every workspace except `@ethdebug/common` and `@ethdebug/evm`
+  depends on `@ethdebug/format`, so a specification change moves the
+  other nine.
 - Series convention, for now: all workspaces start a `major.minor`
   series together and graduate together with the spec; between those
   events each workspace moves only when it or a dependency changed,

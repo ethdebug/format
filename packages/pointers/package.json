@@ -52,6 +52,7 @@
   "devDependencies": {
     "chalk": "^5.6.2",
     "cli-highlight": "^2.1.11",
+    "ethereum-cryptography": "^2.2.1",
     "ganache": "7.9.x",
     "solc": "^0.8.33",
     "ts-node": "^10.9.2",
@@ -60,8 +61,7 @@
   },
   "dependencies": {
     "@ethdebug/common": "^0.1.0-preview.2",
-    "@ethdebug/format": "^0.1.0-draft.2",
-    "ethereum-cryptography": "^2.2.1"
+    "@ethdebug/format": "^0.1.0-draft.2"
   },
   "publishConfig": {
     "access": "public"

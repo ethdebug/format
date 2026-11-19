@@ -1,7 +1,7 @@
 /**
  * Machine.State Adapter
  *
- * Implements the @ethdebug/pointers Machine.State interface over a
+ * Implements the @ethdebug/common Machine.State interface over a
  * complete step state, to enable pointer evaluation at a trace step.
  */
 

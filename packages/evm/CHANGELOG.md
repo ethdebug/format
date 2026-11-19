@@ -46,6 +46,8 @@ specification itself are tracked in the root
   their reads give a `Raw` (a `Uint8Array`) from that package instead of
   `Data` from `@ethdebug/pointers`. Use `Raw.asUint(value)` and
   `Raw.toHex(value)` where you used `value.asUint()` and `value.toHex()`.
+- The package no longer depends on `@ethdebug/pointers`. To evaluate
+  pointers against its machine state, install `@ethdebug/pointers` too.
 - **Breaking:** a `TraceStep` is the event only: `pc`, `opcode`, `op`
   (the opcode byte), `gasRemaining`, `gasCost`, `depth`, `address` and
   `codeAddress`. Its stack and memory moved to `Trace.stateAt` ([#375]).
