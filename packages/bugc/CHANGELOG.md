@@ -7,6 +7,8 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.3 — 2026-11-19
+
 ### Added
 
 - A function parameter may be `string calldata` or `bytes calldata`:

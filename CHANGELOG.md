@@ -53,6 +53,8 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+## 0.1.0-draft.3 — 2026-11-19
+
 ### Added
 
 - A region with `"location": "virtual"` holds the bytes of a computed value,
@@ -76,7 +78,7 @@ The sections do not signal obligations; the prefixes do.
     **ethdebug/format/type/elementary/ufixed**
   - Producers: optional: a `fixed` or `ufixed` type may have `places: 0`.
   - Consumers: required: the `minimum` of `places` is now 0. A consumer must
-    accept `places: 0`, which means the raw value is read unscaled.
+    accept `places: 0`, which means the value is not scaled.
 
 - The members of a `define` no longer depend on their order, since JSON
   objects are unordered. A member may use any other member of the same
@@ -94,7 +96,7 @@ The sections do not signal obligations; the prefixes do.
 
 - The description of `places` in the fixed-point types calls the integer
   before scaling an "unscaled value" instead of a "raw value". "Raw" now
-  means bytes only.
+  means bytes only ([#413]).
   - Schemas: **ethdebug/format/type/elementary/fixed**,
     **ethdebug/format/type/elementary/ufixed**
   - Producers: no change needed.
@@ -805,4 +807,5 @@ First published version of the specification.
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
 [#411]: https://github.com/ethdebug/format/pull/411
+[#413]: https://github.com/ethdebug/format/pull/413
 [#420]: https://github.com/ethdebug/format/pull/420

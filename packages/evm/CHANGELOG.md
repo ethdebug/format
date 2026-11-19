@@ -7,6 +7,8 @@ specification itself are tracked in the root
 
 ## Unreleased
 
+## 0.1.0-preview.3 — 2026-11-19
+
 ### Added
 
 - Transactions from any account: `deploy({ from, create, value })`

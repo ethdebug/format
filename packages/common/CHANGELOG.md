@@ -6,6 +6,8 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+## 0.1.0-preview.2 — 2026-11-19
+
 ### Added
 
 - First release. `Raw` is a byte string (a `Uint8Array`) with functions to
