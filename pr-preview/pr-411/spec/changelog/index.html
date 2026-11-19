@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-411/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-411/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-411/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-411/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-411/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-411/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-411/assets/css/styles.a890ddee.css">
-<script src="/format/pr-preview/pr-411/assets/js/runtime~main.351bbbb0.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-411/assets/js/main.3895a859.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-411/assets/js/runtime~main.3bfe1697.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-411/assets/js/main.eb5c4512.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -124,6 +124,19 @@ truncates <code>bytesN</code> on the right. The description now says so (<a href
 <li class="">Producers: no change needed. The resize forms work as before. To pad a
 <code>bytesN</code> value on the right, concatenate it with zero bytes (<code>~concat</code>).</li>
 <li class="">Consumers: no change needed. The evaluation rules did not change.</li>
+</ul>
+</li>
+<li class="">
+<p>The rule for a lookup (<code>{ &quot;.&lt;property&gt;&quot;: &lt;region&gt; }</code>) of an omitted
+property said that the property&#x27;s schema must specify a default. A
+segment&#x27;s <code>length</code> and a fragment&#x27;s <code>length</code> have defaults that only their
+descriptions give. The rule now accepts a default given either way
+(<a href="https://github.com/ethdebug/format/pull/411" target="_blank" rel="noopener noreferrer" class="">#411<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<ul>
+<li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong></li>
+<li class="">Producers: no change needed.</li>
+<li class="">Consumers: no change needed if a lookup of an omitted segment <code>length</code>
+already gives its default.</li>
 </ul>
 </li>
 </ul>
