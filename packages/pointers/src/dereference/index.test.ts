@@ -108,6 +108,38 @@ describe("dereference", () => {
     });
   });
 
+  it("gives a segment's omitted offset and length their defaults", async () => {
+    const pointer: Pointer = {
+      group: [
+        { name: "a", location: "storage", slot: 0 },
+        { name: "b", location: "storage", slot: 1, offset: 12 },
+        {
+          location: "memory",
+          offset: { ".offset": "a" },
+          length: { "~sum": [{ ".length": "a" }, { ".length": "b" }] },
+        },
+      ],
+    };
+
+    const cursor = await dereference(pointer);
+
+    const { regions } = await cursor.view(state);
+
+    expect(regions.lookup["a"]).toMatchObject({
+      offset: Data.fromNumber(0),
+      length: Data.fromNumber(32),
+    });
+    expect(regions.lookup["b"]).toMatchObject({
+      offset: Data.fromNumber(12),
+      length: Data.fromNumber(20),
+    });
+    expect(regions[2]).toEqual({
+      location: "memory",
+      offset: Data.fromNumber(0),
+      length: Data.fromNumber(52),
+    });
+  });
+
   it("works for a list of regions", async () => {
     const pointer: Pointer = {
       list: {

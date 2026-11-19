@@ -51,6 +51,26 @@ export async function evaluateRegion<R extends Pointer.Region>(
       Pointer.Expression,
     ][];
 
+  // a segment's omitted offset and length have defaults, which lookups
+  // (including ~this) must see: offset 0, and a length that ends the
+  // segment at the end of the slot in which it begins
+  if (Pointer.Scheme.isSegment(region)) {
+    if (!("offset" in region)) {
+      expressionQueue.push(["offset" as keyof R, 0]);
+    }
+    if (!("length" in region)) {
+      expressionQueue.push([
+        "length" as keyof R,
+        {
+          "~difference": [
+            "~wordsize",
+            { "~remainder": [{ ".offset": "~this" }, "~wordsize"] },
+          ],
+        },
+      ]);
+    }
+  }
+
   while (expressionQueue.length > 0) {
     const [property, expression] = expressionQueue.shift()!;
 

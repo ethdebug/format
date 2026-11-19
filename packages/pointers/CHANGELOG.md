@@ -22,6 +22,11 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### Fixed
 
+- A lookup of a stack, storage or transient region's omitted `offset` or
+  `length` gives its default (`0`, and the bytes to the end of the slot in
+  which the region begins). It threw "does not have ... needed by lookup"
+  before. A concrete region of these locations now always has `offset` and
+  `length` ([#411]).
 - The published type declarations no longer reference Node's `util` types.
   `Data.inspect` and its `util.inspect.custom` hook used
   `util.InspectOptionsStylized`, which newer `@types/node` versions no longer
