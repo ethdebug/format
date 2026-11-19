@@ -46,6 +46,8 @@
   --pointers-region-code-bg: rgba(110, 119, 129, 0.1);
   --pointers-region-transient: #953800;
   --pointers-region-transient-bg: rgba(149, 56, 0, 0.1);
+  --pointers-region-virtual: #bf3989;
+  --pointers-region-virtual-bg: rgba(191, 57, 137, 0.1);
 
   /* Accent colors */
   --pointers-accent-blue: #0969da;
@@ -101,6 +103,8 @@
   --pointers-region-code-bg: rgba(133, 133, 133, 0.15);
   --pointers-region-transient: #ce9178;
   --pointers-region-transient-bg: rgba(206, 145, 120, 0.15);
+  --pointers-region-virtual: #f778ba;
+  --pointers-region-virtual-bg: rgba(247, 120, 186, 0.15);
 
   /* Accent colors */
   --pointers-accent-blue: #569cd6;

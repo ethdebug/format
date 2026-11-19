@@ -37,6 +37,7 @@ function getLocationClass(location: string): string {
     returndata: "region-returndata",
     code: "region-code",
     transient: "region-transient",
+    virtual: "region-virtual",
   };
   return locationClasses[location] || "region-unknown";
 }

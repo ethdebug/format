@@ -107,6 +107,14 @@
   background: var(--pointers-region-transient-bg);
 }
 
+/* A virtual region's bytes are computed, not stored: dashed */
+.region-virtual .region-location-badge {
+  color: var(--pointers-region-virtual);
+  background: var(--pointers-region-virtual-bg);
+  outline: 1px dashed var(--pointers-region-virtual);
+  outline-offset: -1px;
+}
+
 .region-details {
   font-size: 0.75rem;
   font-family: var(--ifm-font-family-monospace, monospace);
