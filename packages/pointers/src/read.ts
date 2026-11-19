@@ -83,6 +83,15 @@ export async function read(
 
       return await state.code.read({ slice: { offset, length } });
     }
+    case "virtual": {
+      const { offset = 0n, length } = withPropertiesAsUints(
+        ["offset", "length"],
+        region,
+      );
+      const end = length === undefined ? undefined : Number(offset + length);
+
+      return region.expression.slice(Number(offset), end);
+    }
   }
 }
 

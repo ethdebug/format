@@ -1,6 +1,6 @@
 import { Pointer } from "@ethdebug/format";
 import type { Cursor } from "#cursor";
-import type { Raw } from "@ethdebug/common";
+import { Raw } from "@ethdebug/common";
 import { evaluate, Value, type EvaluateOptions } from "#evaluate";
 
 /**
@@ -51,6 +51,26 @@ export async function evaluateRegion<R extends Pointer.Region>(
       Pointer.Expression,
     ][];
 
+  // a segment's omitted offset and length have defaults, which lookups
+  // (including ~this) must see: offset 0, and a length that ends the
+  // segment at the end of the slot in which it begins
+  if (Pointer.Scheme.isSegment(region)) {
+    if (!("offset" in region)) {
+      expressionQueue.push(["offset" as keyof R, 0]);
+    }
+    if (!("length" in region)) {
+      expressionQueue.push([
+        "length" as keyof R,
+        {
+          "~difference": [
+            "~wordsize",
+            { "~remainder": [{ ".offset": "~this" }, "~wordsize"] },
+          ],
+        },
+      ]);
+    }
+  }
+
   while (expressionQueue.length > 0) {
     const [property, expression] = expressionQueue.shift()!;
 
@@ -86,10 +106,59 @@ export async function evaluateRegion<R extends Pointer.Region>(
     }
   }
 
+  if (Pointer.Region.isVirtual(region)) {
+    const fragment = await evaluateFragment(
+      region,
+      evaluatedProperties,
+      options,
+    );
+    return fragment as Cursor.Region<R>;
+  }
+
   return {
     ...region,
     ...evaluatedProperties,
   } as Cursor.Region<R>;
+}
+
+/**
+ * Evaluate a virtual region's `expression` to the bytes it addresses into,
+ * and fill in the default `offset` and `length` so that later regions may
+ * look them up
+ */
+async function evaluateFragment(
+  region: Pointer.Region.Virtual,
+  { offset, length }: { offset?: Raw; length?: Raw },
+  options: EvaluateOptions,
+): Promise<Cursor.Region<Pointer.Region.Virtual>> {
+  const value = await evaluate(region.expression, options);
+  if (Value.isInteger(value)) {
+    throw new Error(
+      [
+        `Expression of virtual region (${JSON.stringify(region.expression)}) `,
+        `evaluates to the integer ${value.value}, which has no byte `,
+        `width; give it a width with ~wordsized or ~sizedN`,
+      ].join(""),
+    );
+  }
+
+  const width = BigInt(value.data.length);
+  const start = offset ? Raw.asUint(offset) : 0n;
+  const end = length ? start + Raw.asUint(length) : width;
+  if (start > width || end > width) {
+    const fields = length ? `${start}, length ${Raw.asUint(length)}` : start;
+    throw new Error(
+      `Fragment of virtual region (offset ${fields}) extends outside ` +
+        `the ${width} bytes of its expression's value`,
+    );
+  }
+
+  return {
+    ...region,
+    expression: value.data,
+    offset: Raw.fromUint(start),
+    length: Raw.fromUint(end - start),
+  };
 }
 
 /**

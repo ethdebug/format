@@ -102,10 +102,12 @@ function contractName(artifact: EthdebugArtifact, fallback?: string): string {
   );
 }
 
-// SolDB reads source contents only from the `compilation` of the resources
-// file in its debug directory. A compiler can emit the compilation on its
-// own instead (solc does since argotorg/solidity#17179), so put it in the
-// resources here.
+// Shim for an expected failure (#416): SolDB reads source contents only from
+// the `compilation` of the resources file in its debug directory. A compiler
+// can emit the compilation on its own instead (solc does since
+// argotorg/solidity#17179), so put it in the resources here. A tripwire in
+// the conformance test fails once SolDB reads the separate compilation; then
+// write the resources as they are.
 function ethdebugResources(artifact: EthdebugArtifact): unknown {
   const { resources, compilation } = artifact;
   if (resources) {

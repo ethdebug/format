@@ -158,7 +158,7 @@ export namespace Type {
       value.bits % 8 === 0 &&
       "places" in value &&
       typeof value.places === "number" &&
-      value.places >= 1 &&
+      value.places >= 0 &&
       value.places <= 80;
 
     export interface Fixed {
@@ -180,7 +180,7 @@ export namespace Type {
       value.bits % 8 === 0 &&
       "places" in value &&
       typeof value.places === "number" &&
-      value.places >= 1 &&
+      value.places >= 0 &&
       value.places <= 80;
 
     export interface Bool {

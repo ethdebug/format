@@ -147,3 +147,7 @@
 .region-output-item.region-transient {
   border-left: 3px solid var(--pointers-region-transient);
 }
+
+.region-output-item.region-virtual {
+  border-left: 3px dashed var(--pointers-region-virtual);
+}

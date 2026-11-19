@@ -18,7 +18,7 @@ To resolve regions against live EVM state interactively, see the
 ## Addressing schemes
 
 The EVM uses two different models for organizing bytes, and regions reflect
-this:
+this. A third scheme addresses bytes that are computed instead of stored:
 
 ### Slice-based locations
 
@@ -43,6 +43,32 @@ begins. This covers packed storage, such as a 20-byte address held at byte 12
 of a slot, as well as data spanning many slots — the multi-slot
 `string storage` example in the [pointer schema](/spec/pointer) reads a long
 string's bytes as a single region.
+
+### Computed values
+
+A **virtual** region holds bytes that no EVM data location stores: the value
+of an `expression`, computed from the machine state. The expression must be
+width-bearing (bytes), and it may read only regions that come before it.
+`offset` (default `0`) and `length` (default: to the end of the value) select
+the bytes of the value that the region holds.
+
+For example, after the optimizer removes `x = a + 1`, a compiler can still
+describe `x`:
+
+```json
+{
+  "group": [
+    { "name": "a", "location": "stack", "slot": 2 },
+    {
+      "name": "x",
+      "location": "virtual",
+      "expression": {
+        "~wordsized": { "~sum": [{ "~read": "a" }, 1] }
+      }
+    }
+  ]
+}
+```
 
 ## Location-specific details
 
@@ -89,7 +115,8 @@ Any region can have a `name` that other parts of the pointer reference.
 Names enable:
 
 - Reading the region's value with `{ "~read": "token-balance" }`
-- Referencing properties with `{ ".slot": "token-balance" }`
+- Referencing properties with `{ ".slot": "token-balance" }` (a lookup
+  works only on a field the region has, so a virtual region has no `.slot`)
 - Building self-documenting pointer structures
 
 ## Dynamic addresses

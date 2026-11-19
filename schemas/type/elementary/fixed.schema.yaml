@@ -20,7 +20,7 @@ properties:
     description:
       How many decimal places, implying that an unscaled value `v` of this
       type should be interpreted as `v / (10**places)`
-    minimum: 1
+    minimum: 0
     maximum: 80
 required:
   - kind
@@ -30,3 +30,6 @@ examples:
   - kind: fixed
     bits: 256
     places: 10
+  - kind: fixed
+    bits: 64
+    places: 0

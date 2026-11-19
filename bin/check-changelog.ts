@@ -14,10 +14,15 @@ function touchesSchemas(changedPaths: string[]): boolean {
 // change, and this also covers the *.examples.test.ts suites
 const testFile = /\.test\.tsx?(\.snap)?$/;
 
+// tsc copies a JSON file into dist only when code imports it, so a JSON
+// file under src (such as data a test reads) is not published by itself
+const jsonFile = /\.json$/;
+
 function touchesPackage(changedPaths: string[], prefix: string): boolean {
   return changedPaths.some(
     (path) =>
       !testFile.test(path) &&
+      !(jsonFile.test(path) && path !== `${prefix}/package.json`) &&
       (path.startsWith(`${prefix}/src/`) ||
         path.startsWith(`${prefix}/bin/`) ||
         path === `${prefix}/package.json`),

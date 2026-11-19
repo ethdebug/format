@@ -433,4 +433,23 @@ describe("read (segment carry)", () => {
     });
     expect(result).toEqual(bytes([0xa2, 2], [0xa3, 2]));
   });
+
+  it("reads the fragment of a virtual region", async () => {
+    const expression = Raw.fromHex("0xdeadbeef");
+
+    expect(
+      await read(
+        {
+          location: "virtual",
+          expression,
+          offset: Raw.fromNumber(1),
+          length: Raw.fromNumber(2),
+        },
+        options,
+      ),
+    ).toEqual(Raw.fromHex("0xadbe"));
+    expect(await read({ location: "virtual", expression }, options)).toEqual(
+      expression,
+    );
+  });
 });

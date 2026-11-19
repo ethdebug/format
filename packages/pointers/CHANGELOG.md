@@ -15,12 +15,27 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   `Cursor.View.read` gives a `Raw`, and the `Machine` interfaces read and give
   `Raw` values.
 
+### Added
+
+- `dereference` and `read` support virtual regions. A concrete virtual
+  region keeps the bytes of its `expression` and has `offset` and `length`
+  filled in with their defaults. An expression with no width, or a fragment
+  outside the value, throws ([#411]).
+
 ### Changed
 
 - `dereference` evaluates the members of a scope's `define` in dependency
   order, not member order. A member sees the other members by name, and its
   own name means the variable of the enclosing scope. A cycle of members throws
   "Circular reference detected" ([#408]).
+
+### Fixed
+
+- A lookup of a stack, storage or transient region's omitted `offset` or
+  `length` gives its default (`0`, and the bytes to the end of the slot in
+  which the region begins). It threw "does not have ... needed by lookup"
+  before. A concrete region of these locations now always has `offset` and
+  `length` ([#411]).
 
 ## 0.1.0-preview.2 — 2026-10-07
 
@@ -156,3 +171,4 @@ First publication.
 [#323]: https://github.com/ethdebug/format/pull/323
 [#325]: https://github.com/ethdebug/format/pull/325
 [#408]: https://github.com/ethdebug/format/pull/408
+[#411]: https://github.com/ethdebug/format/pull/411

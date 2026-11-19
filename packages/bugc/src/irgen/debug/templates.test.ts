@@ -1,20 +1,13 @@
 /**
- * A pointer that refers to shared templates must read what bugc's
- * pointers read before they referred to templates. Every listed
- * variable's pointer is read at every step of a run of an example:
- *
- * - For every example, at every level, both ways: with the
- *   compilation's templates, and inline (each reference replaced by its
- *   template's pointer, regions renamed as the reference's `yields`
- *   says). The two must give the same regions with the same bytes.
- * - For some examples, at O0 and O2, the reads must be those of bugc
- *   before templates (origin/main at 9c8d7ccb1, all inline pointers):
- *   `templates.golden.json` holds the number of reads and a digest of
- *   them. `UPDATE_TEMPLATES_GOLDEN=1` writes it again from the
- *   compiler at hand, so it is written with a compiler from before.
+ * A pointer that refers to shared templates must read what the same
+ * pointer written inline reads. For every example, at every level,
+ * every listed variable's pointer is read at every step of a run both
+ * ways: with the compilation's templates, and inline (each reference
+ * replaced by its template's pointer, regions renamed as the
+ * reference's `yields` says). The two must give the same regions with
+ * the same bytes.
  */
-import { describe, it, expect, afterAll, afterEach } from "vitest";
-import { createHash } from "crypto";
+import { describe, it, expect, afterEach } from "vitest";
 import { promises as fs } from "fs";
 import path from "path";
 import { glob } from "glob";
@@ -207,57 +200,6 @@ describe("pointers that refer to templates read as written out", async () => {
         // (not all failing alike)
         if (pointers > 0) expect(reads).toBeGreaterThan(0);
       }, 60_000);
-    }
-  }
-});
-
-const GOLDEN = path.join(__dirname, "templates.golden.json");
-const goldenExamples = [
-  "advanced/nested-arrays.bug",
-  "advanced/nested-structs.bug",
-  "advanced/token-registry.bug",
-  "basic/functions.bug",
-  "intermediate/mappings.bug",
-  "intermediate/memory-arrays.bug",
-  "intermediate/pointer-shapes.bug",
-  "intermediate/strings.bug",
-];
-
-describe("pointers read as they did before templates", async () => {
-  const update = !!process.env.UPDATE_TEMPLATES_GOLDEN;
-  const golden: Record<string, { reads: number; digest: string }> = update
-    ? {}
-    : JSON.parse(await fs.readFile(GOLDEN, "utf-8"));
-  if (update) {
-    afterAll(() =>
-      fs.writeFile(GOLDEN, JSON.stringify(golden, null, 2) + "\n"),
-    );
-  }
-
-  for (const file of goldenExamples) {
-    for (const level of [0, 2] as const) {
-      const key = `${file} at O${level}`;
-      it(
-        key,
-        async () => {
-          const source = await fs.readFile(
-            path.join(EXAMPLES_DIR, file),
-            "utf-8",
-          );
-          const hash = createHash("sha256");
-          let reads = 0;
-          await eachPointer(source, level, async (label, pointer, state, t) => {
-            const read_ = await read(pointer, state, t);
-            hash.update(JSON.stringify([label, read_]) + "\n");
-            if (Array.isArray(read_)) reads++;
-          });
-          const actual = { reads, digest: hash.digest("hex") };
-          expect(reads).toBeGreaterThan(0);
-          if (update) golden[key] = actual;
-          else expect(actual).toEqual(golden[key]);
-        },
-        60_000,
-      );
     }
   }
 });

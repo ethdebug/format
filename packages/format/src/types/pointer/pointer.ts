@@ -15,7 +15,8 @@ export namespace Pointer {
     | Region.Calldata
     | Region.Returndata
     | Region.Transient
-    | Region.Code;
+    | Region.Code
+    | Region.Virtual;
 
   export const isRegion = (value: unknown): value is Region =>
     [
@@ -26,6 +27,7 @@ export namespace Pointer {
       Region.isReturndata,
       Region.isTransient,
       Region.isCode,
+      Region.isVirtual,
     ].some((guard) => guard(value));
 
   export namespace Region {
@@ -71,6 +73,10 @@ export namespace Pointer {
     export type Code = Base & Scheme.Slice & { location: "code" };
     export const isCode = (value: unknown): value is Code =>
       isBase(value) && Scheme.isSlice(value) && value.location === "code";
+
+    export type Virtual = Base & Scheme.Fragment & { location: "virtual" };
+    export const isVirtual = (value: unknown): value is Virtual =>
+      isBase(value) && Scheme.isFragment(value) && value.location === "virtual";
   }
 
   export namespace Scheme {
@@ -99,6 +105,20 @@ export namespace Pointer {
       isExpression(value.offset) &&
       "length" in value &&
       isExpression(value.length);
+
+    export interface Fragment {
+      expression: Expression;
+      offset?: Expression;
+      length?: Expression;
+    }
+
+    export const isFragment = (value: unknown): value is Fragment =>
+      !!value &&
+      typeof value === "object" &&
+      "expression" in value &&
+      isExpression(value.expression) &&
+      (!("offset" in value) || isExpression(value.offset)) &&
+      (!("length" in value) || isExpression(value.length));
   }
 
   export type Collection =
