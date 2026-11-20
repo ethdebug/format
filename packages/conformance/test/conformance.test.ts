@@ -159,14 +159,17 @@ function withoutResourcesStamp(
 
 // Expected failure (#423): solc's `resources.types` still uses the type
 // kinds that #282 replaced, so its resources do not validate. Conformance
-// checks solc resources without the table. The tripwire test below fails
-// once solc's types validate; then remove this function and the tripwire.
-function withoutResourcesTypes(artifact: EthdebugArtifact): EthdebugArtifact {
+// checks solc resources with an empty table (the schema requires `types`).
+// The tripwire test below fails once solc's types validate; then remove
+// this function and the tripwire.
+function withEmptyResourcesTypes(artifact: EthdebugArtifact): EthdebugArtifact {
   if (!artifact.resources) {
     return artifact;
   }
-  const { types: _, ...resources } = artifact.resources;
-  return { ...artifact, resources } as EthdebugArtifact;
+  return {
+    ...artifact,
+    resources: { ...artifact.resources, types: {} },
+  };
 }
 
 function validArtifact(
@@ -215,7 +218,7 @@ describe("@ethdebug/conformance", () => {
       });
 
       const result = await validateStaticConformance(
-        withoutResourcesTypes(artifact),
+        withEmptyResourcesTypes(artifact),
       );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
@@ -225,7 +228,7 @@ describe("@ethdebug/conformance", () => {
     },
   );
 
-  // Expected failure (#423): see withoutResourcesTypes.
+  // Expected failure (#423): see withEmptyResourcesTypes.
   it.skipIf(!solc)(
     "[solc] resources types do not yet validate (#423)",
     async () => {
@@ -239,7 +242,7 @@ describe("@ethdebug/conformance", () => {
 
       expect(
         result.ok,
-        "solc's types now validate; remove withoutResourcesTypes (#423)",
+        "solc's types now validate; remove withEmptyResourcesTypes (#423)",
       ).toBe(false);
       for (const { message } of result.issues) {
         expect(message).toContain("schema:ethdebug/format/info/resources");
@@ -348,7 +351,7 @@ describe("@ethdebug/conformance", () => {
         ],
       });
       const result = await validateStaticConformance(
-        withoutResourcesTypes(artifact),
+        withEmptyResourcesTypes(artifact),
       );
       expect(result.issues).toEqual([]);
       expect(result.ok).toBe(true);
