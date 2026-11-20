@@ -6,9 +6,9 @@ description: |
   Schema describing the representation of an address type. An address
   type with a `definition` is a reference to a contract.
 
-  Standard interpretation: read the bytes of the value as a big-endian
-  unsigned integer. That integer is the address. This type has no size.
-  The number of bytes comes from the value's location.
+  Standard interpretation: the bytes of the value are the address. If the
+  type has a `definition`, the value refers to that contract. This type has
+  no size. The number of bytes comes from the value's location.
 
 type: object
 properties:
