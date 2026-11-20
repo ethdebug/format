@@ -53,14 +53,36 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- The **ethdebug/format/type/elementary/flags** type is new. It is a set of
+  named members, with `values` (a list of unique strings) and an optional
+  `definition`. A set bit `i` in the value's bytes means `values[i]` is
+  present. Zero is the empty set. A set bit at or past the length of `values`
+  is invalid ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/flags**
+  - Producers: optional: a type may have kind `flags`.
+  - Consumers: required: a type may have kind `flags`. A consumer must read it
+    as described to read the data at all.
+
+- The **ethdebug/format/type/complex/variant** type is new. It has `cases`,
+  a list of `name`, `discriminant` (an **ethdebug/format/data/value**) and
+  optional `payload` (a type wrapper), and an optional `definition`. The type
+  says what each case is. The active case is the one whose `discriminant`
+  matches the value read as the discriminant. No match is invalid ([#282]).
+  - Schemas: **ethdebug/format/type/complex/variant**
+  - Producers: optional: a type may have kind `variant`.
+  - Consumers: required: a type may have kind `variant`. A consumer must read
+    it as described to read the data at all.
+
 ### Changed
 
 - Every type kind is replaced. A type now says what a value is, and no longer
   says where its bytes are or how many there are. The layout keywords `bits`,
   `size` and `count` are gone, and the integer, fixed-point, address and
-  tuple kinds merge into fewer kinds. Each kind's description now states its
-  standard interpretation: how a consumer reads a value from the bytes the
-  value occupies. Every type may have an optional `label`, the type as its
+  tuple kinds merge into fewer kinds. The descriptions of most kinds now
+  state their standard interpretation: how a consumer reads a value from the
+  bytes the value occupies. Every type may have an optional `label`, the type as its
   language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for display
   only. Nothing interprets a label ([#282]).
   - Schemas: **ethdebug/format/type**, **ethdebug/format/type/base**,
@@ -77,9 +99,9 @@ The sections do not signal obligations; the prefixes do.
   The value is the big-endian integer over the value's bytes, in two's
   complement if `signed`, divided by 10 to the power of `places`. For
   example, `{ "kind": "uint", "bits": 256 }` becomes
-  `{ "kind": "number", "label": "uint256" }`, and `{ "kind": "int",
-"bits": 8 }` becomes `{ "kind": "number", "signed": true, "label": "int8" }`
-  ([#282]).
+  `{ "kind": "number", "label": "uint256" }`, and
+  `{ "kind": "int", "bits": 8 }` becomes
+  `{ "kind": "number", "signed": true, "label": "int8" }` ([#282]).
   - Schemas: **ethdebug/format/type/elementary/number**,
     **ethdebug/format/type/elementary/uint**,
     **ethdebug/format/type/elementary/int**,
@@ -123,26 +145,17 @@ The sections do not signal obligations; the prefixes do.
   - Consumers: required: read an enum value as the index into `values`
     described above.
 
-- The **ethdebug/format/type/elementary/flags** type is new. It is a set of
-  named members, with `values` (a list of unique strings) and an optional
-  `definition`. A set bit `i` in the value's bytes means `values[i]` is
-  present. Zero is the empty set. A set bit at or past the length of `values`
-  is invalid ([#282]).
-  - Schemas: **ethdebug/format/type/elementary/flags**
-  - Producers: optional: a type may have kind `flags`.
-  - Consumers: required: a type may have kind `flags`. A consumer must read it
-    as described to read the data at all.
-
 - The **ethdebug/format/type/elementary/bool** and
-  **ethdebug/format/type/elementary/string** types are unchanged except for
-  the `label` and the standard interpretation in their descriptions. A bool
-  is 0 (false) or 1 (true), and any other value is invalid. A string is text
-  in its `encoding` (default utf-8), and an invalid sequence is invalid
+  **ethdebug/format/type/elementary/string** types may have a `label`, and
+  their descriptions now state the standard interpretation. A bool is 0
+  (false) or 1 (true). A string is text in its `encoding` (default utf-8)
   ([#282]).
   - Schemas: **ethdebug/format/type/elementary/bool**,
     **ethdebug/format/type/elementary/string**
-  - Producers: no change needed.
-  - Consumers: no change needed.
+  - Producers: optional: a type may have a `label`.
+  - Consumers: required: "Any other value is invalid" (bool) and "If the
+    bytes are not a valid sequence in that encoding, the value is invalid"
+    (string). The previous text did not say how to read such values.
 
 - The **ethdebug/format/type/complex/struct** type replaces the `tuple`
   kind. A struct has an ordered `contains` list whose items may each have a
@@ -164,16 +177,6 @@ The sections do not signal obligations; the prefixes do.
   - Consumers: required: an array type has no length. Take the item count
     from the pointer.
 
-- The **ethdebug/format/type/complex/variant** type is new. It has `cases`,
-  a list of `name`, `discriminant` (an **ethdebug/format/data/value**) and
-  optional `payload` (a type wrapper), and an optional `definition`. The type
-  says what each case is. The active case is the one whose `discriminant`
-  matches the value read as the discriminant. No match is invalid ([#282]).
-  - Schemas: **ethdebug/format/type/complex/variant**
-  - Producers: optional: a type may have kind `variant`.
-  - Consumers: required: a type may have kind `variant`. A consumer must read
-    it as described to read the data at all.
-
 - The **ethdebug/format/type/complex/function** type has a new shape.
   `parameters` and `returns` are top-level lists (`returns` is required, and
   `[]` means no values). They replace `contains.parameters` and
@@ -188,13 +191,12 @@ The sections do not signal obligations; the prefixes do.
     top level of the function type.
 
 - The **ethdebug/format/type/complex/alias** and
-  **ethdebug/format/type/complex/mapping** types keep their structure and
-  gain the `label` and the standard interpretation in their descriptions
+  **ethdebug/format/type/complex/mapping** types may have a `label`
   ([#282]).
   - Schemas: **ethdebug/format/type/complex/alias**,
     **ethdebug/format/type/complex/mapping**
-  - Producers: no change needed.
-  - Consumers: no change needed.
+  - Producers: optional: a type may have a `label`.
+  - Consumers: no change needed. A label is for display only.
 
 - The examples that embed types now use the new kinds ([#282]).
   - Schemas: **ethdebug/format/info**, **ethdebug/format/info/resources**,
