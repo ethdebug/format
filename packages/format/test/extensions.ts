@@ -57,9 +57,6 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/alias": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
-  "schema:ethdebug/format/type/complex/tuple": {
-    extends: new Set(["schema:ethdebug/format/type/complex"]),
-  },
   "schema:ethdebug/format/type/complex/array": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
@@ -69,7 +66,6 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/struct": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
-  "schema:ethdebug/format/type/complex/function": {
-    extends: new Set(["schema:ethdebug/format/type/complex"]),
-  },
+  // function and variant are absent on purpose. They have no `contains`,
+  // so they are not valid base complex types.
 };

@@ -58,10 +58,6 @@ testSchemaGuards("ethdebug/format/type", [
     guard: Type.Complex.isAlias,
   },
   {
-    schema: "schema:ethdebug/format/type/complex/tuple",
-    guard: Type.Complex.isTuple,
-  },
-  {
     schema: "schema:ethdebug/format/type/complex/array",
     guard: Type.Complex.isArray,
   },
@@ -72,6 +68,14 @@ testSchemaGuards("ethdebug/format/type", [
   {
     schema: "schema:ethdebug/format/type/complex/struct",
     guard: Type.Complex.isStruct,
+  },
+  {
+    schema: "schema:ethdebug/format/type/complex/variant",
+    guard: Type.Complex.isVariant,
+  },
+  {
+    schema: "schema:ethdebug/format/type/complex/function",
+    guard: Type.Complex.isFunction,
   },
 
   // type reference and specifier
@@ -186,6 +190,57 @@ describe("rejected values", () => {
     {
       title: "a repeated flags value",
       value: { kind: "flags", values: ["A", "A"] },
+    },
+    {
+      title: "the removed tuple kind",
+      value: { kind: "tuple", contains: [] },
+    },
+    {
+      title: "a variant case without a discriminant",
+      value: { kind: "variant", cases: [{ name: "A" }] },
+    },
+    {
+      title: "a variant case with a payload that is not a wrapper",
+      value: {
+        kind: "variant",
+        cases: [{ name: "A", discriminant: 0, payload: { kind: "bool" } }],
+      },
+    },
+    {
+      title: "a function without returns",
+      value: { kind: "function", internal: true, parameters: [] },
+    },
+    {
+      title: "the old function shape",
+      value: {
+        kind: "function",
+        internal: true,
+        contains: { parameters: { type: { kind: "struct", contains: [] } } },
+      },
+    },
+    {
+      title: "a function with neither internal nor external",
+      value: { kind: "function", parameters: [], returns: [] },
+    },
+    {
+      title: "an internal function with a contract",
+      value: {
+        kind: "function",
+        internal: true,
+        parameters: [],
+        returns: [],
+        contract: { type: { id: "C" } },
+      },
+    },
+    {
+      title: "an external function with a plain address contract",
+      value: {
+        kind: "function",
+        external: true,
+        parameters: [],
+        returns: [],
+        contract: { type: { kind: "address" } },
+      },
     },
     {
       title: "a non-string label",

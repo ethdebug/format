@@ -1,3 +1,4 @@
+import { Data } from "#types/data";
 import { Materials } from "#types/materials";
 
 import * as _Base from "./base.js";
@@ -231,11 +232,11 @@ export namespace Type {
 
   export type Complex =
     | Complex.Alias
-    | Complex.Tuple
     | Complex.Array
     | Complex.Mapping
-    | Complex.Struct;
-  /* currently unsupported: | Complex.Function */
+    | Complex.Struct
+    | Complex.Variant
+    | Complex.Function;
 
   export const hasComplexKind = (
     value: unknown,
@@ -246,22 +247,18 @@ export namespace Type {
     !!value &&
     "kind" in value &&
     typeof value.kind === "string" &&
-    [
-      "alias",
-      "tuple",
-      "array",
-      "mapping",
-      "struct",
-      // "function"
-    ].includes(value.kind);
+    ["alias", "array", "mapping", "struct", "variant", "function"].includes(
+      value.kind,
+    );
 
   export const isComplex = (value: unknown): value is Complex =>
     [
       Complex.isAlias,
-      Complex.isTuple,
       Complex.isArray,
       Complex.isMapping,
       Complex.isStruct,
+      Complex.isVariant,
+      Complex.isFunction,
     ].some((guard) => guard(value));
 
   export namespace Complex {
@@ -282,27 +279,6 @@ export namespace Type {
       "contains" in value &&
       isWrapper(value.contains) &&
       (!("definition" in value) || isDefinition(value.definition));
-
-    export interface Tuple {
-      class?: "complex";
-      kind: "tuple";
-      label?: string;
-      contains: (Wrapper & { name?: string })[];
-    }
-
-    export const isTuple = (value: unknown): value is Tuple =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "complex") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "tuple") &&
-      "contains" in value &&
-      Array.isArray(value.contains) &&
-      value.contains.every(
-        (element) =>
-          isWrapper(element) &&
-          (!("name" in element) || typeof element.name === "string"),
-      );
 
     export interface Array {
       class?: "complex";
@@ -348,7 +324,7 @@ export namespace Type {
       class?: "complex";
       kind: "struct";
       label?: string;
-      contains: (Wrapper & { name?: string })[];
+      contains: Named[];
       definition?: Definition;
     }
 
@@ -360,12 +336,89 @@ export namespace Type {
       hasKind(value, "struct") &&
       "contains" in value &&
       Array.isArray(value.contains) &&
-      value.contains.every(
-        (field) =>
-          isWrapper(field) &&
-          (!("name" in field) || typeof field.name === "string"),
-      ) &&
+      value.contains.every(isNamed) &&
       (!("definition" in value) || isDefinition(value.definition));
+
+    export interface Variant {
+      class?: "complex";
+      kind: "variant";
+      label?: string;
+      cases: Variant.Case[];
+      definition?: Definition;
+    }
+
+    export namespace Variant {
+      export interface Case {
+        name: string;
+        discriminant: Data.Value;
+        payload?: Wrapper;
+      }
+
+      export const isCase = (value: unknown): value is Case =>
+        typeof value === "object" &&
+        !!value &&
+        "name" in value &&
+        typeof value.name === "string" &&
+        "discriminant" in value &&
+        Data.isValue(value.discriminant) &&
+        (!("payload" in value) || isWrapper(value.payload));
+    }
+
+    export const isVariant = (value: unknown): value is Variant =>
+      typeof value === "object" &&
+      !!value &&
+      mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
+      hasKind(value, "variant") &&
+      "cases" in value &&
+      Array.isArray(value.cases) &&
+      value.cases.every(Variant.isCase) &&
+      (!("definition" in value) || isDefinition(value.definition));
+
+    export interface Function {
+      class?: "complex";
+      kind: "function";
+      label?: string;
+      internal?: boolean;
+      external?: boolean;
+      parameters: Named[];
+      returns: Named[];
+      definition?: Definition;
+      contract?: Wrapper;
+    }
+
+    const isContractWrapper = (value: unknown): value is Wrapper =>
+      isWrapper(value) &&
+      (isReference(value.type) ||
+        (Elementary.isAddress(value.type) && !!value.type.definition));
+
+    export const isFunction = (value: unknown): value is Function =>
+      typeof value === "object" &&
+      !!value &&
+      mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
+      hasKind(value, "function") &&
+      "parameters" in value &&
+      Array.isArray(value.parameters) &&
+      value.parameters.every(isNamed) &&
+      "returns" in value &&
+      Array.isArray(value.returns) &&
+      value.returns.every(isNamed) &&
+      (!("definition" in value) || isDefinition(value.definition)) &&
+      // exactly one of internal / external is true
+      ("external" in value && value.external === true
+        ? (!("internal" in value) || value.internal === false) &&
+          (!("contract" in value) || isContractWrapper(value.contract))
+        : "internal" in value &&
+          value.internal === true &&
+          (!("external" in value) || value.external === false) &&
+          !("contract" in value));
+
+    type Named = Wrapper & { name?: string };
+
+    const isNamed = (value: unknown): value is Named =>
+      isWrapper(value) &&
+      (!("name" in value) || typeof value.name === "string");
   }
 
   export interface Definition {

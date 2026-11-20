@@ -1,0 +1,92 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/complex/variant"
+
+title: ethdebug/format/type/complex/variant
+description: |
+  Schema for representing variant types. A variant type is a value that is
+  exactly one of a list of cases. Each case has a name, a `discriminant`
+  and, optionally, a `payload` type.
+
+  The active case is the case whose `discriminant` equals the value read
+  for the discriminant. If no case matches, the value is invalid.
+
+  This type says what each case is. It does not say where the discriminant
+  and the payload are. A realization gives their locations.
+
+type: object
+properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
+  class:
+    type: string
+    const: complex
+  kind:
+    type: string
+    const: variant
+  cases:
+    type: array
+    items:
+      $ref: "#/$defs/Case"
+  definition:
+    $ref: "schema:ethdebug/format/type/definition"
+
+required:
+  - kind
+  - cases
+
+examples:
+  - # a variant with a case that has no payload
+    kind: variant
+    label: Option<uint8>
+    cases:
+      - name: None
+        discriminant: 0
+      - name: Some
+        discriminant: 1
+        payload:
+          type:
+            kind: number
+
+  - # a variant with different payloads
+    kind: variant
+    definition:
+      name: Shape
+    cases:
+      - name: Circle
+        discriminant: "0x00"
+        payload:
+          type:
+            kind: number
+      - name: Rectangle
+        discriminant: "0x01"
+        payload:
+          type:
+            kind: struct
+            contains:
+              - name: width
+                type:
+                  kind: number
+              - name: height
+                type:
+                  kind: number
+
+$defs:
+  Case:
+    type: object
+    title: Variant case
+    properties:
+      name:
+        type: string
+        description: The name of this case.
+      discriminant:
+        description: |
+          The value of the discriminant that selects this case.
+        $ref: "schema:ethdebug/format/data/value"
+      payload:
+        description: |
+          The type of the data this case holds, if any. A case without a
+          `payload` holds no data.
+        $ref: "schema:ethdebug/format/type/wrapper"
+    required:
+      - name
+      - discriminant

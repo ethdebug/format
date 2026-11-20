@@ -11,9 +11,12 @@ description: |
   Internal function types require the `"internal": true` field; external
   function types require `"external": true`.
 
-  Note that external function types may include a representation of the
-  contract type that defines or provides this function as an external
-  interface.
+  A function type lists its `parameters` and its `returns`. An empty
+  `returns` list means that the function returns no values.
+
+  External function types may include a `contract` field. It is a wrapper
+  around the contract type that provides this function as an external
+  interface. Internal function types must not have a `contract` field.
 
 type: object
 properties:
@@ -25,48 +28,31 @@ properties:
   kind:
     type: string
     const: function
-  contains:
-    type: object
-    title: Parameter and return types
+  parameters:
+    type: array
+    title: Parameter types
     description: |
-      Types this function type composes. Function types inherently compose
-      two groupings of types (an ordered list of parameter types and typically
-      either a return value or return parameters). Function types' `contains`
-      field is organized as a mapping of `parameters` types (a type wrapper for
-      a tuple type) and an optional `returns` type (either a generic type
-      wrapper or a type wrapper for a tuple type).
-
-      This definition applies for both cases (internal and external function
-      types). Each of those specific types may expand this `contains` field
-      schema with other semantic details (such as an external function type
-      indicating the contract type from which it is exposed).
-    properties:
-      parameters:
-        $ref: "#/$defs/Parameters"
-      returns:
-        type: object
-        title: Return type (or tuple of types)
-        description: |
-          To accommodate languages differing in whether functions return single
-          values or lists of values, this field may be either a generic type
-          wrapper or explicitly defined as a type wrapper around a tuple type.
-
-          Debuggers that implement this schema **should** be aware that
-          languages whose functions return sole values might return tuple
-          types. Resolving this ambiguity remains outside the scope of the
-          schema (but compilers **must** be consistent when representing
-          function types in this schema).
-        anyOf:
-          - $ref: "schema:ethdebug/format/type/wrapper"
-          - $ref: "#/$defs/Parameters"
-    required:
-      - parameters
+      The ordered list of parameter types. Each item is an
+      **ethdebug/format/type/wrapper** that may have a `name`.
+    items:
+      $ref: "#/$defs/Value"
+  returns:
+    type: array
+    title: Return types
+    description: |
+      The ordered list of return types. Each item is an
+      **ethdebug/format/type/wrapper** that may have a `name`.
+      An empty list means that the function returns no values. A function
+      that returns one tuple value has a list of one struct type.
+    items:
+      $ref: "#/$defs/Value"
   definition:
     $ref: "schema:ethdebug/format/type/definition"
 
 required:
   - kind
-  - contains
+  - parameters
+  - returns
 
 oneOf:
   - type: object
@@ -76,25 +62,25 @@ oneOf:
         const: false
       external:
         const: true
-      contains:
-        type: object
-        title: Additional contents
-        properties:
-          contract:
-            type: object
-            title: Contract type providing external function
-            description:
-              A wrapper around the contract type that composes this external
-              function type.
-            allOf:
-              - $ref: "schema:ethdebug/format/type/wrapper"
-              - type: object
-                title: Contract type wrapper
-                properties:
-                  type:
-                    oneOf:
+      contract:
+        title: Contract type providing external function
+        description: |
+          A wrapper around the contract type that provides this external
+          function. The type is an **ethdebug/format/type/elementary/address**
+          that has a `definition`, or an **ethdebug/format/type/reference**.
+        allOf:
+          - $ref: "schema:ethdebug/format/type/wrapper"
+          - type: object
+            title: Contract type wrapper
+            properties:
+              type:
+                oneOf:
+                  - allOf:
                       - $ref: "schema:ethdebug/format/type/elementary/address"
-                      - $ref: "schema:ethdebug/format/type/reference"
+                      - type: object
+                        required:
+                          - definition
+                  - $ref: "schema:ethdebug/format/type/reference"
     required:
       - external
 
@@ -105,6 +91,8 @@ oneOf:
         const: true
       external:
         const: false
+      contract:
+        not: {}
     required:
       - internal
 
@@ -113,59 +101,45 @@ examples:
     internal: true
     definition:
       name: increment
-    contains:
-      parameters:
-        type:
-          kind: tuple
-          contains:
-            - name: value
-              type:
-                kind: number
-      returns:
+    parameters:
+      - name: value
         type:
           kind: number
+    returns:
+      - type:
+          kind: number
+
   - kind: function
     external: true
     definition:
       name: withdraw
-    contains:
-      contract:
+    contract:
+      type:
+        kind: address
+        payable: true
+        definition:
+          name: Bank
+          interface: true
+    parameters:
+      - name: beneficiary
         type:
           kind: address
           payable: true
-          definition:
-            name: Bank
-            interface: true
-      parameters:
+      - name: amount
         type:
-          kind: tuple
-          contains:
-            - name: beneficiary
-              type:
-                kind: address
-                payable: true
-            - name: amount
-              type:
-                kind: number
-                places: 18
-      returns:
-        type:
-          kind: tuple
-          contains: []
+          kind: number
+          places: 18
+    returns: []
 
 $defs:
-  Parameters:
+  Value:
     type: object
-    title: Parameters
-    description:
-      A type wrapper around a tuple of types. This schema uses a tuple type to
-      represent an ordered list of types.
+    title: Parameter or return type
+    description: |
+      An **ethdebug/format/type/wrapper** with an optional `name`.
     allOf:
       - $ref: "schema:ethdebug/format/type/wrapper"
-      - title: Tuple type wrapper
-        type: object
+      - type: object
         properties:
-          type:
-            oneOf:
-              - $ref: "schema:ethdebug/format/type/complex/tuple"
-              - $ref: "schema:ethdebug/format/type/reference"
+          name:
+            type: string
