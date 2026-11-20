@@ -82,9 +82,9 @@ The sections do not signal obligations; the prefixes do.
   `size` and `count` are gone, and the integer, fixed-point, address and
   tuple kinds merge into fewer kinds. The descriptions of most kinds now
   state their standard interpretation: how a consumer reads a value from the
-  bytes the value occupies. Every type may have an optional `label`, the type as its
-  language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for display
-  only. Nothing interprets a label ([#282]).
+  bytes the value occupies. Every type may have an optional `label`, the type
+  as its language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for
+  display only. Nothing interprets a label ([#282]).
   - Schemas: **ethdebug/format/type**, **ethdebug/format/type/base**,
     **ethdebug/format/type/elementary**, **ethdebug/format/type/complex**,
     **ethdebug/format/type/specifier**
@@ -109,7 +109,8 @@ The sections do not signal obligations; the prefixes do.
     **ethdebug/format/type/elementary/fixed**
   - Producers: required: the schemas for kinds `uint`, `int`, `ufixed` and
     `fixed` are removed, so a type with one of those kinds no longer
-    validates. Use kind `number`. The `bits` keyword is not allowed.
+    validates. Use kind `number`. The `bits` keyword has no meaning now, and
+    consumers ignore it.
   - Consumers: required: a type with kind `number` is an integer or fixed-point
     number as described. The width comes from the pointer, not the type.
 
@@ -129,9 +130,9 @@ The sections do not signal obligations; the prefixes do.
 - The **ethdebug/format/type/elementary/bytes** type no longer has `size`.
   Its value is the bytes of the value, in order ([#282]).
   - Schemas: **ethdebug/format/type/elementary/bytes**
-  - Producers: required: the `size` keyword is removed, so a type with it no
-    longer validates. A fixed-size `bytes` type is `{ "kind": "bytes" }`, and
-    the pointer gives the size.
+  - Producers: required: the `size` keyword is removed. It has no meaning now,
+    and consumers ignore it. A fixed-size `bytes` type is
+    `{ "kind": "bytes" }`, and the pointer gives the size.
   - Consumers: required: a type with kind `bytes` has no `size`. Take the
     length from the bytes the value occupies.
 
@@ -172,8 +173,9 @@ The sections do not signal obligations; the prefixes do.
   items are all of the `contains` type. The pointer gives how many there are
   ([#282]).
   - Schemas: **ethdebug/format/type/complex/array**
-  - Producers: required: the `count` keyword is removed, so an array with it no
-    longer validates.
+  - Producers: required: the `count` keyword is removed. It has no meaning
+    now, and consumers ignore it. A stale `count` does not fix the length of
+    the array.
   - Consumers: required: an array type has no length. Take the item count
     from the pointer.
 
@@ -185,18 +187,23 @@ The sections do not signal obligations; the prefixes do.
   with a `definition` or a type reference. It replaces `contains.contract`.
   Exactly one of `internal` and `external` is true, as before ([#282]).
   - Schemas: **ethdebug/format/type/complex/function**
-  - Producers: required: `contains` is not allowed in a function type, and
-    `returns` is required. Data in the old shape no longer validates.
+  - Producers: required: `returns` is required, so data in the old shape no
+    longer validates. `contains` has no meaning in a function type now, and
+    consumers ignore it.
   - Consumers: required: read `parameters`, `returns` and `contract` at the
     top level of the function type.
 
 - The **ethdebug/format/type/complex/alias** and
-  **ethdebug/format/type/complex/mapping** types may have a `label`
-  ([#282]).
+  **ethdebug/format/type/complex/mapping** types may have a `label`, and
+  their descriptions now state the standard interpretation. An alias is read
+  as its `contains` type. A mapping entry's value is read as the `value` type
+  and its key as the `key` type ([#282]).
   - Schemas: **ethdebug/format/type/complex/alias**,
     **ethdebug/format/type/complex/mapping**
   - Producers: optional: a type may have a `label`.
-  - Consumers: no change needed. A label is for display only.
+  - Consumers: required: "An alias does not change how the value is
+    read" (alias) and "This type does not define how a key selects its entry's
+    bytes" (mapping). The previous text did not say how to read such values.
 
 - The examples that embed types now use the new kinds ([#282]).
   - Schemas: **ethdebug/format/info**, **ethdebug/format/info/resources**,
