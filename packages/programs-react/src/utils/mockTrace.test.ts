@@ -67,7 +67,7 @@ describe("extractVariablesFromInstruction", () => {
 
   it("composes two entries for one variable", () => {
     const declaration = { source: { id: 0 }, range: { offset: 1 } };
-    const typed = { identifier: "x", declaration, type: { kind: "uint" } };
+    const typed = { identifier: "x", declaration, type: { kind: "number" } };
     const located = { identifier: "x", declaration, pointer: x.pointer };
     expect(
       extractVariablesFromInstruction(
@@ -113,8 +113,8 @@ describe("extractVariablesFromInstruction", () => {
       extractVariablesFromInstruction(
         instr(0, {
           pick: [
-            { variables: [x({ kind: "uint", bits: 8 })] },
-            { variables: [x({ kind: "int", bits: 8 })] },
+            { variables: [x({ kind: "number", label: "uint8" })] },
+            { variables: [x({ kind: "number", label: "int8" })] },
           ],
         }),
       ),
@@ -145,7 +145,7 @@ describe("extractVariablesFromInstruction", () => {
       extractVariablesFromInstruction(
         instr(0, {
           gather: [
-            { variables: [{ identifier: "x", type: { kind: "uint" } }] },
+            { variables: [{ identifier: "x", type: { kind: "number" } }] },
             { variables: [{ identifier: "x", pointer: x.pointer }] },
           ],
         }),
@@ -154,7 +154,7 @@ describe("extractVariablesFromInstruction", () => {
   });
 
   it("keeps entries from different frames apart", () => {
-    const typed = { ...declared("x", 1), type: { kind: "uint" } };
+    const typed = { ...declared("x", 1), type: { kind: "number" } };
     const located = declared("x", 1, memory(0));
     expect(
       extractVariablesFromInstruction(
@@ -169,7 +169,7 @@ describe("extractVariablesFromInstruction", () => {
   });
 
   it("matches declarations whatever the order of their keys", () => {
-    const typed = { ...declared("x", 1), type: { kind: "uint" } };
+    const typed = { ...declared("x", 1), type: { kind: "number" } };
     const located = {
       identifier: "x",
       declaration: { range: { length: 1, offset: 1 }, source: { id: 0 } },

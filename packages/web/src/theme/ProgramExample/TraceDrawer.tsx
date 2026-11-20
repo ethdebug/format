@@ -1291,20 +1291,11 @@ function formatType(type: unknown): string {
 
   const t = type as Record<string, unknown>;
 
-  if (t.kind === "uint" && typeof t.bits === "number") {
-    return `uint${t.bits}`;
+  if (typeof t.label === "string") {
+    return t.label;
   }
-  if (t.kind === "int" && typeof t.bits === "number") {
-    return `int${t.bits}`;
-  }
-  if (t.kind === "bool") {
-    return "bool";
-  }
-  if (t.kind === "address") {
-    return "address";
-  }
-  if (t.kind === "bytes" && typeof t.size === "number") {
-    return `bytes${t.size}`;
+  if (typeof t.kind === "string") {
+    return t.kind;
   }
 
   return JSON.stringify(type);
