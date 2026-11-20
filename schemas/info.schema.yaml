@@ -142,19 +142,15 @@ examples:
                     kind: "address"
           - name: "amount"
             type:
-              kind: "uint"
-              bits: 256
+              kind: "number"
+              label: "uint256"
           - name: "canRemit"
             type:
               kind: "function"
               internal: true
-              contains:
-                parameters:
-                  type:
-                    kind: "tuple"
-                    contains: []
-                returns:
-                  type:
+              parameters: []
+              returns:
+                - type:
                     kind: "bool"
 
     pointers:

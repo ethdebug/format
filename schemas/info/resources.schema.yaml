@@ -65,12 +65,12 @@ examples:
         contains:
           - name: x
             type:
-              kind: uint
-              bits: 128
+              kind: number
+              label: uint128
           - name: y
             type:
-              kind: uint
-              bits: 128
+              kind: number
+              label: uint128
         definition:
           name: Coordinate
           location:
