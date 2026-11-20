@@ -60,7 +60,8 @@ function decodeValue(bytes: Raw, type: Type): string {
       // unsigned integer; `signed` and `places` need more decoding
       return Raw.asUint(bytes).toString();
     case "bool":
-      return Raw.asUint(bytes) !== 0n ? "true" : "false";
+      // 0 is false, 1 is true, any other value is invalid
+      return ["false", "true"][Number(Raw.asUint(bytes))] ?? "invalid";
     case "address":
       return "0x" + Raw.toHex(bytes).slice(-40);
     // ... other types
