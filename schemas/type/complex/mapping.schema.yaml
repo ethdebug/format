@@ -2,7 +2,12 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/mapping"
 
 title: ethdebug/format/type/complex/mapping
-description: Schema for representing mapping types
+description: |
+  Schema for representing mapping types.
+
+  Standard interpretation: each entry's value is read as the `value` type,
+  and its key as the `key` type. This type does not define how a key selects
+  its entry's bytes.
 
 type: object
 properties:
