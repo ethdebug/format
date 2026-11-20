@@ -22,13 +22,6 @@ allOf:
   - if:
       properties:
         kind:
-          const: tuple
-    then:
-      $ref: "schema:ethdebug/format/type/complex/tuple"
-
-  - if:
-      properties:
-        kind:
           const: array
     then:
       $ref: "schema:ethdebug/format/type/complex/array"
@@ -54,6 +47,13 @@ allOf:
     then:
       $ref: "schema:ethdebug/format/type/complex/function"
 
+  - if:
+      properties:
+        kind:
+          const: variant
+    then:
+      $ref: "schema:ethdebug/format/type/complex/variant"
+
 $defs:
   Kind:
     title: Known complex kind
@@ -63,8 +63,8 @@ $defs:
     type: string
     enum:
       - alias
-      - tuple
       - array
       - mapping
       - struct
       - function
+      - variant

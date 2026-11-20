@@ -6,6 +6,24 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `Type.Elementary.Number`, `Type.Elementary.Flags`, `Type.Complex.Variant`
+  and `Type.Complex.Function`, with the guards `Type.Elementary.isNumber`,
+  `Type.Elementary.isFlags`, `Type.Complex.isVariant` and
+  `Type.Complex.isFunction`. `Type.Elementary.Address.Definition` and
+  `Type.Elementary.Address.isDefinition` cover an address that refers to a
+  contract. Every type has an optional `label` ([#282]).
+
+### Breaking
+
+- The type kinds follow the schemas. The types and guards for `Uint`,
+  `Int`, `Ufixed`, `Fixed`, `Contract` and `Tuple` are removed. Use
+  `Number`, `Address` and `Struct`. `Elementary.Bytes` has no `size`,
+  `Complex.Array` has no `count`, `Elementary.Enum.values` is `string[]`,
+  and `Complex.Function` has top-level `parameters`, `returns` and
+  `contract`. See the root [`CHANGELOG.md`](../../CHANGELOG.md) ([#282]).
+
 ## 0.1.0-draft.3 — 2026-11-19
 
 ### Added
@@ -158,6 +176,7 @@ First publication.
 [#245]: https://github.com/ethdebug/format/pull/245
 [#246]: https://github.com/ethdebug/format/pull/246
 [#276]: https://github.com/ethdebug/format/pull/276
+[#282]: https://github.com/ethdebug/format/issues/282
 [#284]: https://github.com/ethdebug/format/pull/284
 [#286]: https://github.com/ethdebug/format/pull/286
 [#293]: https://github.com/ethdebug/format/pull/293

@@ -92,7 +92,7 @@ code { r = add(3, 4); }`;
         expect(entry, `variables entry for ${name}`).toBeDefined();
         expect(entry!.identifier).toBe(name);
         expect(isFrameRelative(entry!.pointer)).toBe(true);
-        expect(entry!.type).toEqual({ kind: "uint", bits: 256 });
+        expect(entry!.type).toEqual({ kind: "number", label: "uint256" });
       }
     });
 

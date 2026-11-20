@@ -7,6 +7,22 @@ support. Changes to the specification itself are tracked in the root
 
 ## Unreleased
 
+### Changed
+
+- The debug information's types use the new type kinds. An integer type is
+  `{ "kind": "number", "label": "uint256" }`, and a signed one adds
+  `"signed": true`. `bytes` and `bytesN` are `{ "kind": "bytes" }`, with the
+  spelling in `label` and no `size`. An array has no `count`. `address`,
+  `bool` and `string` types carry a `label`. A scalar that comes from the
+  compiler and not from a source type is `{ "kind": "number" }` or
+  `{ "kind": "address" }` and has no label. The emitted code is the same
+  ([#282]).
+
+### Fixed
+
+- An array type's element count was emitted as `length`, which the schema
+  does not define. It is no longer emitted ([#282]).
+
 ## 0.1.0-preview.3 — 2026-11-19
 
 ### Added
@@ -574,6 +590,7 @@ The version scheme changed: prerelease versions are now `preview.<n>`, and
 
 First publication.
 
+[#282]: https://github.com/ethdebug/format/issues/282
 [#286]: https://github.com/ethdebug/format/pull/286
 [#298]: https://github.com/ethdebug/format/pull/298
 [#300]: https://github.com/ethdebug/format/pull/300

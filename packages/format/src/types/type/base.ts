@@ -6,6 +6,7 @@ export const isType = (value: unknown): value is Type =>
 export interface Elementary {
   class?: "elementary";
   kind: string;
+  label?: string;
 }
 
 export const isElementary = (value: unknown): value is Elementary =>
@@ -13,13 +14,16 @@ export const isElementary = (value: unknown): value is Elementary =>
   !!value &&
   "kind" in value &&
   typeof value.kind === "string" &&
+  (!("label" in value) || typeof value.label === "string") &&
   (!("class" in value) || value.class === "elementary") &&
   !("contains" in value);
 
 export interface Complex {
   class?: "complex";
   kind: string;
-  contains:
+  label?: string;
+  /** Required unless `class` is `"complex"`. */
+  contains?:
     | Wrapper
     | Wrapper[]
     | {
@@ -32,13 +36,15 @@ export const isComplex = (value: unknown): value is Complex =>
   !!value &&
   "kind" in value &&
   typeof value.kind === "string" &&
+  (!("label" in value) || typeof value.label === "string") &&
   (!("class" in value) || value.class === "complex") &&
-  "contains" in value &&
-  !!value.contains &&
-  (isWrapper(value.contains) ||
-    (Array.isArray(value.contains) && value.contains.every(isWrapper)) ||
-    (typeof value.contains === "object" &&
-      Object.values(value.contains).every(isWrapper)));
+  (("class" in value && !("contains" in value)) ||
+    ("contains" in value &&
+      !!value.contains &&
+      (isWrapper(value.contains) ||
+        (Array.isArray(value.contains) && value.contains.every(isWrapper)) ||
+        (typeof value.contains === "object" &&
+          Object.values(value.contains).every(isWrapper)))));
 
 export interface Wrapper {
   type: Type | { id: any };

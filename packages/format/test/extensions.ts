@@ -18,10 +18,10 @@ export const schemaExtensions: {
       "schema:ethdebug/format/type/base#/$defs/ElementaryType",
     ]),
   },
-  "schema:ethdebug/format/type/elementary/uint": {
+  "schema:ethdebug/format/type/elementary/number": {
     extends: new Set(["schema:ethdebug/format/type/elementary"]),
   },
-  "schema:ethdebug/format/type/elementary/int": {
+  "schema:ethdebug/format/type/elementary/flags": {
     extends: new Set(["schema:ethdebug/format/type/elementary"]),
   },
   "schema:ethdebug/format/type/elementary/bool": {
@@ -33,16 +33,7 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/elementary/string": {
     extends: new Set(["schema:ethdebug/format/type/elementary"]),
   },
-  "schema:ethdebug/format/type/elementary/ufixed": {
-    extends: new Set(["schema:ethdebug/format/type/elementary"]),
-  },
-  "schema:ethdebug/format/type/elementary/fixed": {
-    extends: new Set(["schema:ethdebug/format/type/elementary"]),
-  },
   "schema:ethdebug/format/type/elementary/address": {
-    extends: new Set(["schema:ethdebug/format/type/elementary"]),
-  },
-  "schema:ethdebug/format/type/elementary/contract": {
     extends: new Set(["schema:ethdebug/format/type/elementary"]),
   },
   "schema:ethdebug/format/type/elementary/enum": {
@@ -57,9 +48,6 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/alias": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
-  "schema:ethdebug/format/type/complex/tuple": {
-    extends: new Set(["schema:ethdebug/format/type/complex"]),
-  },
   "schema:ethdebug/format/type/complex/array": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
@@ -69,7 +57,8 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/struct": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
-  "schema:ethdebug/format/type/complex/function": {
-    extends: new Set(["schema:ethdebug/format/type/complex"]),
-  },
+  // function and variant are absent on purpose. Their examples omit
+  // `class` (it is optional on known kinds) and have no `contains`.
+  // The base complex type needs one of the two, so those examples are
+  // not valid base complex types. With `class: "complex"` they are.
 };

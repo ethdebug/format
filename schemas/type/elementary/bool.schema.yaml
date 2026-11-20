@@ -2,10 +2,17 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/bool"
 
 title: ethdebug/format/type/elementary/bool
-description: Schema describing the representation of the boolean type
+description: |
+  Schema describing the representation of the boolean type.
+
+  Standard interpretation: read the bytes of the value as a big-endian
+  unsigned integer. The value 0 is false and the value 1 is true. Any
+  other value is invalid.
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     const: elementary
   kind:
@@ -14,3 +21,5 @@ required:
   - kind
 examples:
   - kind: bool
+  - kind: bool
+    label: bool

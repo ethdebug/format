@@ -39,36 +39,20 @@ const typeSchemaIndex: SchemaIndex = {
   "schema:ethdebug/format/type/complex": {
     href: "/spec/type#complex-type-schema",
   },
-  ...[
-    "uint",
-    "int",
-    "ufixed",
-    "fixed",
-    "bool",
-    "bytes",
-    "string",
-    "address",
-    "contract",
-    "enum",
-  ]
+  ...["number", "bool", "bytes", "string", "address", "enum", "flags"]
     .map((kind) => ({
       [`schema:ethdebug/format/type/elementary/${kind}`]: {
         href: `/spec/type/elementary/${kind}`,
       },
     }))
     .reduce((a, b) => ({ ...a, ...b }), {}),
-  ...["alias", "tuple", "array", "mapping", "struct", "function"]
+  ...["alias", "array", "mapping", "struct", "function", "variant"]
     .map((kind) => ({
       [`schema:ethdebug/format/type/complex/${kind}`]: {
         href: `/spec/type/complex/${kind}`,
       },
     }))
     .reduce((a, b) => ({ ...a, ...b }), {}),
-
-  "schema:ethdebug/format/type/complex/function#/$defs/Parameters": {
-    title: "Parameters schema",
-    href: "/spec/type/complex/function#parameters-schema",
-  },
 };
 
 const pointerSchemaIndex: SchemaIndex = {

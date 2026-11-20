@@ -2,25 +2,23 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/bytes"
 
 title: ethdebug/format/type/elementary/bytes
-description: Schema describing the representation of a type of bytes string
-  (either dynamic or static)
+description: |
+  Schema describing the representation of a type of bytes string.
+
+  Standard interpretation: the value is the bytes, in order. This type has
+  no size. The number of bytes comes from the value's location.
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     const: elementary
   kind:
     const: bytes
-  size:
-    description:
-      The number of bytes in the bytes string. If this field is omitted, this
-      type is the dynamic bytes string type.
-    $ref: "schema:ethdebug/format/data/unsigned"
 required:
   - kind
 examples:
-  - # example static bytes type
-    kind: bytes
-    size: 32
-  - # example dynamic bytes type
-    kind: bytes
+  - kind: bytes
+  - kind: bytes
+    label: bytes32

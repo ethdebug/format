@@ -17,51 +17,57 @@ building blocks that complex types compose.
 
 ## Numeric types
 
-### Unsigned integers (`uint`)
+Unsigned integers, signed integers, and fixed-point numbers all use the
+`number` kind. A `number` type has no width. The type says what the value
+is; the value's pointer says where its bytes are, and so how many bytes
+there are.
 
-Unsigned integers range from 8 to 256 bits, in increments of 8:
-
-<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
-  {`{ "kind": "uint", "bits": 256 }`}
+<SchemaExample
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
+>
+  {`{ "kind": "number" }`}
 </SchemaExample>
 
-<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
-  {`{ "kind": "uint", "bits": 8 }`}
+The optional `label` field gives the type as the language spells it:
+
+<SchemaExample
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
+>
+  {`{ "kind": "number", "label": "uint8" }`}
 </SchemaExample>
 
-The `bits` field is required and must be a multiple of 8 between 8 and 256.
-
-### Signed integers (`int`)
+### Signed integers
 
 Signed integers use two's complement representation:
 
-<SchemaExample schema="type/elementary/int" href="/spec/type/elementary/int">
-  {`{ "kind": "int", "bits": 256 }`}
+<SchemaExample
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
+>
+  {`{ "kind": "number", "signed": true }`}
 </SchemaExample>
 
-Like `uint`, the `bits` field must be a multiple of 8 between 8 and 256.
+When `signed` is omitted, the number is unsigned.
 
-### Fixed-point numbers (`ufixed`, `fixed`)
+### Fixed-point numbers
 
-Fixed-point decimals specify both total bits and decimal places:
+Fixed-point decimals specify the number of decimal places:
 
 <SchemaExample
-  schema="type/elementary/ufixed"
-  href="/spec/type/elementary/ufixed"
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
 >
-  {`{ "kind": "ufixed", "bits": 128, "places": 18 }`}
+  {`{ "kind": "number", "signed": true, "places": 18 }`}
 </SchemaExample>
 
-<SchemaExample
-  schema="type/elementary/fixed"
-  href="/spec/type/elementary/fixed"
->
-  {`{ "kind": "fixed", "bits": 128, "places": 18 }`}
-</SchemaExample>
+The number is the integer value of its bytes divided by `10**places`. When
+`places` is omitted, the number is an integer.
 
 ## Address type
 
-Addresses represent 20-byte Ethereum addresses:
+Addresses represent Ethereum addresses:
 
 <SchemaExample
   schema="type/elementary/address"
@@ -90,34 +96,11 @@ Booleans represent true/false values:
   {`{ "kind": "bool" }`}
 </SchemaExample>
 
-In the EVM, booleans occupy a full 32-byte word where 0 is false and any
-non-zero value is true.
+The value 0 is false and the value 1 is true. Any other value is invalid.
 
 ## Byte types
 
-### Fixed-size bytes (`bytes`)
-
-Fixed-size byte arrays range from 1 to 32 bytes:
-
-<SchemaExample
-  schema="type/elementary/bytes"
-  href="/spec/type/elementary/bytes"
->
-  {`{ "kind": "bytes", "size": 32 }`}
-</SchemaExample>
-
-<SchemaExample
-  schema="type/elementary/bytes"
-  href="/spec/type/elementary/bytes"
->
-  {`{ "kind": "bytes", "size": 4 }`}
-</SchemaExample>
-
-The `size` field is required for fixed-size bytes.
-
-### Dynamic bytes (`bytes`)
-
-Dynamic byte arrays have no size limit:
+Byte strings use the `bytes` kind:
 
 <SchemaExample
   schema="type/elementary/bytes"
@@ -126,11 +109,20 @@ Dynamic byte arrays have no size limit:
   {`{ "kind": "bytes" }`}
 </SchemaExample>
 
-When `size` is omitted, the type represents dynamically-sized bytes.
+A `bytes` type has no size. Fixed-size and dynamic byte strings both use
+this kind; the value's pointer says how many bytes there are. The `label`
+field can keep the language's spelling:
+
+<SchemaExample
+  schema="type/elementary/bytes"
+  href="/spec/type/elementary/bytes"
+>
+  {`{ "kind": "bytes", "label": "bytes32" }`}
+</SchemaExample>
 
 ## String type
 
-Strings represent UTF-8 encoded text:
+Strings represent text in the type's `encoding` (default UTF-8):
 
 <SchemaExample
   schema="type/elementary/string"
@@ -139,8 +131,8 @@ Strings represent UTF-8 encoded text:
   {`{ "kind": "string" }`}
 </SchemaExample>
 
-Strings are dynamically sized. Languages that treat strings as character
-arrays may choose to represent them as `array` types instead.
+Languages that treat strings as character arrays may choose to represent them
+as `array` types instead.
 
 ## Enum type
 
@@ -156,38 +148,50 @@ Enums represent a fixed set of named values:
 }`}
 </SchemaExample>
 
-The `values` field lists all possible values in order. The underlying
-representation is typically a `uint8` (or larger if needed).
+The `values` field lists all possible values in order. The value is read
+as an unsigned integer `i`, which selects `values[i]`.
+
+## Flags type
+
+Flags represent a set of named flags:
+
+<SchemaExample
+  schema="type/elementary/flags"
+  href="/spec/type/elementary/flags"
+>
+  {`{
+  "kind": "flags",
+  "definition": {
+    "name": "Permissions"
+  },
+  "values": ["READ", "WRITE", "EXECUTE"]
+}`}
+</SchemaExample>
+
+The value is read as an unsigned integer. If bit `i` is set, `values[i]` is
+in the set. The value 0 is the empty set.
 
 ## Contract type
 
-Contract types represent references to contract instances:
+Contract types are `address` types with a `definition` field. The
+definition names the contract:
 
 <SchemaExample
-  schema="type/elementary/contract"
-  href="/spec/type/elementary/contract"
->
-  {`{ "kind": "contract" }`}
-</SchemaExample>
-
-Contract types may include a `definition` field when the contract is defined
-in source code:
-
-<SchemaExample
-  schema="type/elementary/contract"
-  href="/spec/type/elementary/contract"
+  schema="type/elementary/address"
+  href="/spec/type/elementary/address"
 >
   {`{
-  "kind": "contract",
+  "kind": "address",
   "definition": {
     "name": "MyToken"
   }
 }`}
 </SchemaExample>
 
-In the EVM, contract references are addresses (20 bytes), but the contract
-type carries additional semantic information about which contract interface
-applies.
+The value is an address, but the type carries additional semantic
+information about which contract interface applies. A definition may mark
+the contract as a library or an interface with the `library` or
+`interface` field.
 
 ## User-defined types with definitions
 

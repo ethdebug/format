@@ -81,6 +81,11 @@ of three forms:
 
 All three forms of composition polymorphically use the `"contains"` field.
 
+Some known kinds state their parts in other fields instead (`variant` uses
+`cases`, and `function` uses `parameters` and `returns`). Where such a type
+sits inside an unknown complex kind, it gives `"class": "complex"`. The base
+schema needs `"class"` or `"contains"`, and this type has no `"contains"`.
+
 As described in
 [Type specifiers, wrappers, and references](#type-specifiers-wrappers-and-references)
 below, complex types compose
@@ -98,15 +103,14 @@ possibly includes other fields alongside `"type"`.
         "kind": "array",
         "contains": {
           "type": {
-            "kind": "uint",
-            "bits": 256
+            "kind": "number"
           }
         }
       }
       ```
     </TabItem>
     <TabItem value="list" label="Ordered list of types">
-      This is an example array type, which composes an ordered list of member
+      This is an example struct type, which composes an ordered list of member
       types.
 
       ```json
@@ -115,8 +119,7 @@ possibly includes other fields alongside `"type"`.
         "contains": [{
           "name": "balance",
           "type": {
-            "kind": "uint",
-            "bits": 256
+            "kind": "number"
           }
         }, {
           "name": "scoreSheet",
@@ -146,8 +149,7 @@ possibly includes other fields alongside `"type"`.
           },
           "value": {
             "type": {
-              "kind": "uint",
-              "bits": 256
+              "kind": "number"
             }
           }
         }

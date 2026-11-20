@@ -1656,10 +1656,10 @@ code {
     const strings = await pointerOf("string calldata");
     const bytes = await pointerOf("bytes calldata");
     for (const entry of strings) {
-      expect(entry.type).toEqual({ kind: "string" });
+      expect(entry.type).toEqual({ kind: "string", label: "string" });
     }
     for (const entry of bytes) {
-      expect(entry.type).toEqual({ kind: "bytes" });
+      expect(entry.type).toEqual({ kind: "bytes", label: "bytes" });
     }
     expect(strings.map((entry) => entry.pointer)).toEqual(
       bytes.map((entry) => entry.pointer),
