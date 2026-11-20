@@ -151,6 +151,26 @@ Enums represent a fixed set of named values:
 The `values` field lists all possible values in order. The value is read
 as an unsigned integer `i`, which selects `values[i]`.
 
+## Flags type
+
+Flags represent a set of named flags:
+
+<SchemaExample
+  schema="type/elementary/flags"
+  href="/spec/type/elementary/flags"
+>
+  {`{
+  "kind": "flags",
+  "definition": {
+    "name": "Permissions"
+  },
+  "values": ["READ", "WRITE", "EXECUTE"]
+}`}
+</SchemaExample>
+
+The value is read as an unsigned integer. If bit `i` is set, `values[i]` is
+in the set. The value 0 is the empty set.
+
 ## Contract type
 
 Contract types are `address` types with a `definition` field. The

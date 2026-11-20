@@ -196,6 +196,29 @@ Function types must specify either `"internal": true` or
 language's own semantics; external functions are called via EVM
 contract call semantics (e.g., the Solidity ABI).
 
+## Variant types
+
+Variants represent a value that is exactly one of a list of cases:
+
+<SchemaExample schema="type/complex/variant" href="/spec/type/complex/variant">
+  {`{
+  "kind": "variant",
+  "label": "Option<uint8>",
+  "cases": [
+    { "name": "None", "discriminant": 0 },
+    {
+      "name": "Some",
+      "discriminant": 1,
+      "payload": { "type": { "kind": "number" } }
+    }
+  ]
+}`}
+</SchemaExample>
+
+Each case has a `name`, a `discriminant`, and an optional `payload` type. The
+active case is the case whose `discriminant` matches the value read for the
+discriminant.
+
 ## Using type references
 
 For deeply nested or repeated types, use references to avoid duplication:
