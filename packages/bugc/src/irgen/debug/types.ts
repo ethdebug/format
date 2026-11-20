@@ -51,7 +51,6 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
       contains: {
         type: elementType,
       },
-      ...(bugType.size !== undefined && { length: bugType.size }),
     };
   }
 
@@ -113,47 +112,30 @@ function convertElementaryType(
 
   switch (kind) {
     case "uint":
-      return {
-        kind: "uint",
-        bits: elementary.bits,
-      };
+      return { kind: "number", label: `uint${elementary.bits}` };
 
     case "int":
       return {
-        kind: "int",
-        bits: elementary.bits,
+        kind: "number",
+        signed: true,
+        label: `int${elementary.bits}`,
       };
 
     case "address":
-      return {
-        kind: "address",
-        // payable is optional, omit if unknown
-      };
+      return { kind: "address", label: "address" };
 
     case "bool":
-      return {
-        kind: "bool",
-      };
+      return { kind: "bool", label: "bool" };
 
-    case "bytes": {
-      if (elementary.size !== undefined) {
-        // Fixed-size bytes (bytes1 - bytes32)
-        return {
-          kind: "bytes",
-          size: elementary.size,
-        };
-      } else {
-        // Dynamic bytes
-        return {
-          kind: "bytes",
-        };
-      }
-    }
+    case "bytes":
+      return {
+        kind: "bytes",
+        label:
+          elementary.size !== undefined ? `bytes${elementary.size}` : "bytes",
+      };
 
     case "string":
-      return {
-        kind: "string",
-      };
+      return { kind: "string", label: "string" };
 
     default:
       return undefined;
@@ -168,28 +150,13 @@ function convertElementaryType(
  */
 function convertSyntheticType(irType: Ir.Type): Format.Type | undefined {
   if (Ir.Type.isScalar(irType)) {
-    // Scalar types - infer based on size
-    const bits = irType.size * 8;
-
-    // Common patterns for synthetic scalars
-    if (irType.size === 32) {
-      // Most 32-byte scalars are uint256
-      return { kind: "uint", bits: 256 };
-    }
-
+    // Scalar types - infer based on size; bugc knows no spelling,
+    // so synthetic types carry no label
     if (irType.size === 20) {
-      // 20-byte scalars are addresses
       return { kind: "address" };
     }
 
-    if (irType.size === 1) {
-      // 1-byte scalars could be bool or uint8
-      // Default to uint8 for safety
-      return { kind: "uint", bits: 8 };
-    }
-
-    // For other sizes, use uint with appropriate bit size
-    return { kind: "uint", bits };
+    return { kind: "number" };
   }
 
   if (Ir.Type.isRef(irType)) {
