@@ -101,20 +101,20 @@ schema.
 
 ## Example schema extensions for particular types
 
-These examples show valid schemas that extend **ethdebug/format/types/base**
+These examples show valid schemas that extend **ethdebug/format/type/base**
 for particular kinds of types.
 
 _**Note**: These are just examples and may not
 correspond to the canonical **ethdebug/format/type** schema._
 
 <Tabs
-  defaultValue="uint"
+  defaultValue="number"
   values={[
-    { value: "uint", label: "Example uint type schema" },
+    { value: "number", label: "Example number type schema" },
     { value: "array", label: "Example array type schema" },
     { value: "mapping", label: "Example mapping type schema" },
   ]}>
-  <TabItem value="uint">
+  <TabItem value="number">
     <SchemaViewer
       schema={yaml`
         $schema: "https://json-schema.org/draft/2020-12/schema"
@@ -125,18 +125,14 @@ correspond to the canonical **ethdebug/format/type** schema._
             const: elementary
           kind:
             type: string
-            const: uint
-          bits:
-            type: number
-            multipleOf: 8
-            minimum: 8
-            maximum: 256
+            const: number
+          signed:
+            type: boolean
         required:
           - kind
-          - bits
         examples:
-          - kind: uint
-            bits: 64
+          - kind: number
+            signed: true
       `}
       />
   </TabItem>
@@ -186,7 +182,7 @@ correspond to the canonical **ethdebug/format/type** schema._
             const: complex
           kind:
             type: string
-            const: array
+            const: mapping
           contains:
             type: object
             properties:
@@ -219,8 +215,7 @@ correspond to the canonical **ethdebug/format/type** schema._
                   payable: true
               value:
                 type:
-                  kind: uint
-                  bits: 256
+                  kind: number
         description:
           An example schema for mapping types. See example value for a mapping
           from an \`address payable\` to a \`uint256\`, adhering to this

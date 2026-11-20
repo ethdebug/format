@@ -56,7 +56,8 @@ import { Raw } from "@ethdebug/common";
 
 function decodeValue(bytes: Raw, type: Type): string {
   switch (type.kind) {
-    case "uint":
+    case "number":
+      // unsigned integer; `signed` and `places` need more decoding
       return Raw.asUint(bytes).toString();
     case "bool":
       return Raw.asUint(bytes) !== 0n ? "true" : "false";

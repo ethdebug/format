@@ -28,13 +28,13 @@ Type information describes the structure of data. Here's what a simple
 `uint256` type looks like in **ethdebug/format**:
 
 <SchemaExample
-  schema="type/elementary/uint"
-  href="/spec/type/elementary/uint"
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
   title="A uint256 type"
 >
   {`{
-  "kind": "uint",
-  "bits": 256
+  "kind": "number",
+  "label": "uint256"
 }`}
 </SchemaExample>
 
@@ -51,8 +51,8 @@ And a more complex struct:
     "name": "Position"
   },
   "contains": [
-    { "name": "x", "type": { "kind": "int", "bits": 256 } },
-    { "name": "y", "type": { "kind": "int", "bits": 256 } }
+    { "name": "x", "type": { "kind": "number", "signed": true } },
+    { "name": "y", "type": { "kind": "number", "signed": true } }
   ]
 }`}
 </SchemaExample>

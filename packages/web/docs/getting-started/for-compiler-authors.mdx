@@ -28,13 +28,13 @@ experiences for your users.
 Here's how to describe a simple `uint256`:
 
 <SchemaExample
-  schema="type/elementary/uint"
-  href="/spec/type/elementary/uint"
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
   title="A uint256 type"
 >
   {`{
-  "kind": "uint",
-  "bits": 256
+  "kind": "number",
+  "label": "uint256"
 }`}
 </SchemaExample>
 
@@ -49,7 +49,7 @@ A storage mapping from addresses to balances:
   "kind": "mapping",
   "contains": {
     "key": { "type": { "kind": "address" } },
-    "value": { "type": { "kind": "uint", "bits": 256 } }
+    "value": { "type": { "kind": "number" } }
   }
 }`}
 </SchemaExample>

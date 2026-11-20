@@ -37,7 +37,7 @@ A variable has up to four optional fields (at least one required):
 >
   {`{
   "identifier": "balance",
-  "type": { "kind": "uint", "bits": 256 },
+  "type": { "kind": "number" },
   "pointer": {
     "location": "storage",
     "slot": 0
@@ -72,7 +72,7 @@ structures:
   "type": {
     "kind": "struct",
     "contains": [
-      { "name": "id", "type": { "kind": "uint", "bits": 256 } },
+      { "name": "id", "type": { "kind": "number" } },
       { "name": "active", "type": { "kind": "bool" } }
     ]
   },
@@ -168,7 +168,7 @@ An instruction's context can declare multiple variables:
       },
       {
         "identifier": "value",
-        "type": { "kind": "uint", "bits": 256 },
+        "type": { "kind": "number" },
         "pointer": { "location": "stack", "slot": 1 }
       },
       {
