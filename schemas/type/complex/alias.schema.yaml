@@ -6,6 +6,8 @@ description: Schema representing a type alias to another type
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     type: string
     const: complex

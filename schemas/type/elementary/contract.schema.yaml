@@ -6,6 +6,8 @@ description: Schema describing the representation of a contract type
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     const: elementary
   kind:

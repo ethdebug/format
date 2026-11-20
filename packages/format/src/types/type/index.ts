@@ -108,6 +108,7 @@ export namespace Type {
     export interface Uint {
       class?: "elementary";
       kind: "uint";
+      label?: string;
       bits: number;
     }
 
@@ -115,6 +116,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "uint") &&
       "bits" in value &&
       typeof value.bits === "number" &&
@@ -125,6 +127,7 @@ export namespace Type {
     export interface Int {
       class?: "elementary";
       kind: "int";
+      label?: string;
       bits: number;
     }
 
@@ -132,6 +135,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "int") &&
       "bits" in value &&
       typeof value.bits === "number" &&
@@ -142,6 +146,7 @@ export namespace Type {
     export interface Ufixed {
       class?: "elementary";
       kind: "ufixed";
+      label?: string;
       bits: number;
       places: number;
     }
@@ -150,6 +155,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "ufixed") &&
       "bits" in value &&
       typeof value.bits === "number" &&
@@ -164,6 +170,7 @@ export namespace Type {
     export interface Fixed {
       class?: "elementary";
       kind: "fixed";
+      label?: string;
       bits: number;
       places: number;
     }
@@ -172,6 +179,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "fixed") &&
       "bits" in value &&
       typeof value.bits === "number" &&
@@ -186,17 +194,20 @@ export namespace Type {
     export interface Bool {
       class?: "elementary";
       kind: "bool";
+      label?: string;
     }
 
     export const isBool = (value: unknown): value is Bool =>
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "bool");
 
     export interface Bytes {
       class?: "elementary";
       kind: "bytes";
+      label?: string;
       size?: Data.Unsigned;
     }
 
@@ -204,12 +215,14 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "bytes") &&
       (!("size" in value) || Data.isUnsigned(value.size));
 
     export interface String {
       class?: "elementary";
       kind: "string";
+      label?: string;
       encoding?: string;
     }
 
@@ -217,12 +230,14 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "string") &&
       (!("encoding" in value) || typeof value.encoding === "string");
 
     export interface Address {
       class?: "elementary";
       kind: "address";
+      label?: string;
       payable?: boolean;
     }
 
@@ -230,12 +245,14 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "address") &&
       (!("payable" in value) || typeof value.payable === "boolean");
 
     export interface Contract {
       class?: "elementary";
       kind: "contract";
+      label?: string;
       payable?: boolean;
       library?: boolean;
       interface?: boolean;
@@ -246,6 +263,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "contract") &&
       (!("payable" in value) || typeof value.payable === "boolean") &&
       (!("library" in value) || typeof value.library === "boolean") &&
@@ -265,6 +283,7 @@ export namespace Type {
     export interface Enum {
       class?: "elementary";
       kind: "enum";
+      label?: string;
       values: any[];
       definition?: Definition;
     }
@@ -273,6 +292,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
       hasKind(value, "enum") &&
       "values" in value &&
       Array.isArray(value.values) &&
@@ -318,6 +338,7 @@ export namespace Type {
     export interface Alias {
       class?: "complex";
       kind: "alias";
+      label?: string;
       contains: Wrapper;
       definition?: Definition;
     }
@@ -326,6 +347,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
       hasKind(value, "alias") &&
       "contains" in value &&
       isWrapper(value.contains) &&
@@ -334,6 +356,7 @@ export namespace Type {
     export interface Tuple {
       class?: "complex";
       kind: "tuple";
+      label?: string;
       contains: (Wrapper & { name?: string })[];
     }
 
@@ -341,6 +364,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
       hasKind(value, "tuple") &&
       "contains" in value &&
       Array.isArray(value.contains) &&
@@ -353,6 +377,7 @@ export namespace Type {
     export interface Array {
       class?: "complex";
       kind: "array";
+      label?: string;
       contains: Wrapper;
     }
 
@@ -360,6 +385,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
       hasKind(value, "array") &&
       "contains" in value &&
       isWrapper(value.contains);
@@ -367,6 +393,7 @@ export namespace Type {
     export interface Mapping {
       class?: "complex";
       kind: "mapping";
+      label?: string;
       contains: {
         key: Wrapper;
         value: Wrapper;
@@ -377,6 +404,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
       hasKind(value, "mapping") &&
       "contains" in value &&
       typeof value.contains === "object" &&
@@ -389,6 +417,7 @@ export namespace Type {
     export interface Struct {
       class?: "complex";
       kind: "struct";
+      label?: string;
       contains: (Wrapper & { name?: string })[];
       definition?: Definition;
     }
@@ -397,6 +426,7 @@ export namespace Type {
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "complex") &&
+      mayHaveLabel(value) &&
       hasKind(value, "struct") &&
       "contains" in value &&
       Array.isArray(value.contains) &&
@@ -427,6 +457,9 @@ export const mayHaveClass = <Class extends string>(
   class_: Class,
 ): object is { class: Class } =>
   !("class" in object) || object.class === class_;
+
+export const mayHaveLabel = (object: object): boolean =>
+  !("label" in object) || typeof object.label === "string";
 
 export const hasKind = <Kind extends string>(
   object: object,

@@ -9,6 +9,8 @@ description: |
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     type: string
     const: complex

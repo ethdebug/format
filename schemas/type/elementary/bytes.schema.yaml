@@ -7,6 +7,8 @@ description: Schema describing the representation of a type of bytes string
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     const: elementary
   kind:

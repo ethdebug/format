@@ -152,3 +152,33 @@ describe("Type.Elementary.isContract flag semantics", () => {
     );
   });
 });
+
+describe("rejected values", () => {
+  const typeSchema = "schema:ethdebug/format/type";
+
+  const rejected = [
+    {
+      title: "the removed uint kind",
+      value: { kind: "uint", bits: 256 },
+    },
+    {
+      title: "an unknown complex kind with a removed-kind child",
+      value: {
+        class: "complex",
+        kind: "pair",
+        contains: [{ type: { kind: "uint", bits: 256 } }],
+      },
+    },
+    {
+      title: "a non-string label",
+      value: { kind: "bool", label: 7 },
+    },
+  ] as const;
+
+  for (const { title, value } of rejected) {
+    it(`rejects ${title}`, async () => {
+      expect(isType(value)).toBe(false);
+      await expect(value).not.toValidate({ schema: typeSchema });
+    });
+  }
+});

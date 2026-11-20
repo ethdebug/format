@@ -6,6 +6,7 @@ export const isType = (value: unknown): value is Type =>
 export interface Elementary {
   class?: "elementary";
   kind: string;
+  label?: string;
 }
 
 export const isElementary = (value: unknown): value is Elementary =>
@@ -13,12 +14,14 @@ export const isElementary = (value: unknown): value is Elementary =>
   !!value &&
   "kind" in value &&
   typeof value.kind === "string" &&
+  (!("label" in value) || typeof value.label === "string") &&
   (!("class" in value) || value.class === "elementary") &&
   !("contains" in value);
 
 export interface Complex {
   class?: "complex";
   kind: string;
+  label?: string;
   contains:
     | Wrapper
     | Wrapper[]
@@ -32,6 +35,7 @@ export const isComplex = (value: unknown): value is Complex =>
   !!value &&
   "kind" in value &&
   typeof value.kind === "string" &&
+  (!("label" in value) || typeof value.label === "string") &&
   (!("class" in value) || value.class === "complex") &&
   "contains" in value &&
   !!value.contains &&

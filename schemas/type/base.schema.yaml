@@ -11,6 +11,12 @@ oneOf:
   - $ref: "#/$defs/ComplexType"
 
 $defs:
+  Label:
+    title: Type label
+    description: The type as the source language spells it. For display
+      only; no standard interpretation uses this field.
+    type: string
+
   ElementaryType:
     title: Base elementary type
     description: Represents an elementary type (one that does not compose other types)
@@ -21,6 +27,8 @@ $defs:
         const: elementary
       kind:
         type: string
+      label:
+        $ref: "#/$defs/Label"
       contains:
         not:
           description: "Elementary types **must not** specify a `contains` field
@@ -28,8 +36,12 @@ $defs:
     required:
       - kind
     examples:
-      - kind: uint
-        bits: 256
+      - kind: number
+      - kind: number
+        signed: true
+        label: int16
+      - kind: address
+        payable: true
 
   ComplexType:
     title: Base complex type
@@ -45,6 +57,8 @@ $defs:
       kind:
         type: string
         description: The specific kind of complex type, e.g., array or struct
+      label:
+        $ref: "#/$defs/Label"
       contains:
         title: Complex type `contains` field
         description:
@@ -62,18 +76,15 @@ $defs:
       - kind: array
         contains:
           type:
-            kind: uint
-            bits: 256
+            kind: number
       - kind: struct
         contains:
           - name: x
             type:
-              kind: uint
-              bits: 256
+              kind: number
           - name: y
             type:
-              kind: uint
-              bits: 256
+              kind: number
       - kind: mapping
         contains:
           key:
@@ -82,8 +93,7 @@ $defs:
               payable: true
           value:
             type:
-              kind: uint
-              bits: 256
+              kind: number
 
   TypeWrapper:
     title: '{ "type": ... }'
