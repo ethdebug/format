@@ -93,9 +93,9 @@ The sections do not signal obligations; the prefixes do.
   - Producers: required: the kinds below replace the old kinds, and the old
     kinds no longer validate. See the entries for each kind.
   - Consumers: required: producers emit the new kinds. A consumer must read
-    them and must not expect the old kinds. See the entries for each kind. A consumer that
-    uses **ethdebug/format/type/base** to classify complex types must accept
-    a complex type without `contains`.
+    them and must not expect the old kinds. See the entries for each kind.
+    A consumer that uses **ethdebug/format/type/base** to classify complex
+    types must accept a complex type without `contains`.
 
 - The **ethdebug/format/type/elementary/number** type replaces the `uint`,
   `int`, `ufixed` and `fixed` kinds. It has an optional `signed` (default
@@ -205,9 +205,8 @@ The sections do not signal obligations; the prefixes do.
   - Schemas: **ethdebug/format/type/complex/alias**,
     **ethdebug/format/type/complex/mapping**
   - Producers: optional: a type may have a `label`.
-  - Consumers: required: "An alias does not change how the value is
-    read" (alias) and "This type does not define how a key selects its entry's
-    bytes" (mapping). The previous text did not say how to read such values.
+  - Consumers: no change needed. The new prose describes how these kinds
+    were already read.
 
 - The examples that embed types now use the new kinds ([#282]).
   - Schemas: **ethdebug/format/info**, **ethdebug/format/info/resources**,
