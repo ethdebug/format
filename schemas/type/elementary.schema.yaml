@@ -19,16 +19,9 @@ allOf:
   - if:
       properties:
         kind:
-          const: uint
+          const: number
     then:
-      $ref: "schema:ethdebug/format/type/elementary/uint"
-
-  - if:
-      properties:
-        kind:
-          const: int
-    then:
-      $ref: "schema:ethdebug/format/type/elementary/int"
+      $ref: "schema:ethdebug/format/type/elementary/number"
 
   - if:
       properties:
@@ -54,19 +47,6 @@ allOf:
   - if:
       properties:
         kind:
-          const: ufixed
-    then:
-      $ref: "schema:ethdebug/format/type/elementary/ufixed"
-
-  - if:
-      properties:
-        kind:
-          const: fixed
-    then:
-      $ref: "schema:ethdebug/format/type/elementary/fixed"
-  - if:
-      properties:
-        kind:
           const: address
     then:
       $ref: "schema:ethdebug/format/type/elementary/address"
@@ -74,16 +54,16 @@ allOf:
   - if:
       properties:
         kind:
-          const: contract
+          const: enum
     then:
-      $ref: "schema:ethdebug/format/type/elementary/contract"
+      $ref: "schema:ethdebug/format/type/elementary/enum"
 
   - if:
       properties:
         kind:
-          const: enum
+          const: flags
     then:
-      $ref: "schema:ethdebug/format/type/elementary/enum"
+      $ref: "schema:ethdebug/format/type/elementary/flags"
 
 $defs:
   Kind:
@@ -93,13 +73,10 @@ $defs:
       included in ethdebug/format
     type: string
     enum:
-      - uint
-      - int
+      - number
       - bool
       - bytes
       - string
-      - ufixed
-      - fixed
       - address
-      - contract
       - enum
+      - flags

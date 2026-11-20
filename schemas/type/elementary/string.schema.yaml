@@ -2,7 +2,12 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/string"
 
 title: ethdebug/format/type/elementary/string
-description: Schema describing the representation of a string type
+description: |
+  Schema describing the representation of a string type.
+
+  Standard interpretation: decode the bytes of the value with `encoding`.
+  If the bytes are not a valid sequence in that encoding, the value is
+  invalid.
 
 type: object
 properties:
@@ -23,3 +28,5 @@ examples:
   - kind: string
   - kind: string
     encoding: utf-16le
+  - kind: string
+    label: string

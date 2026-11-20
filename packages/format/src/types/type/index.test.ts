@@ -19,24 +19,24 @@ testSchemaGuards("ethdebug/format/type", [
     guard: Type.isElementary,
   },
   {
-    schema: "schema:ethdebug/format/type/elementary/uint",
-    guard: Type.Elementary.isUint,
+    schema: "schema:ethdebug/format/type/elementary/number",
+    guard: Type.Elementary.isNumber,
   },
   {
-    schema: "schema:ethdebug/format/type/elementary/int",
-    guard: Type.Elementary.isInt,
-  },
-  {
-    schema: "schema:ethdebug/format/type/elementary/ufixed",
-    guard: Type.Elementary.isUfixed,
-  },
-  {
-    schema: "schema:ethdebug/format/type/elementary/fixed",
-    guard: Type.Elementary.isFixed,
+    schema: "schema:ethdebug/format/type/elementary/address",
+    guard: Type.Elementary.isAddress,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/bool",
     guard: Type.Elementary.isBool,
+  },
+  {
+    schema: "schema:ethdebug/format/type/elementary/enum",
+    guard: Type.Elementary.isEnum,
+  },
+  {
+    schema: "schema:ethdebug/format/type/elementary/flags",
+    guard: Type.Elementary.isFlags,
   },
   {
     schema: "schema:ethdebug/format/type/elementary/bytes",
@@ -45,18 +45,6 @@ testSchemaGuards("ethdebug/format/type", [
   {
     schema: "schema:ethdebug/format/type/elementary/string",
     guard: Type.Elementary.isString,
-  },
-  {
-    schema: "schema:ethdebug/format/type/elementary/address",
-    guard: Type.Elementary.isAddress,
-  },
-  {
-    schema: "schema:ethdebug/format/type/elementary/contract",
-    guard: Type.Elementary.isContract,
-  },
-  {
-    schema: "schema:ethdebug/format/type/elementary/enum",
-    guard: Type.Elementary.isEnum,
   },
 
   // complex types
@@ -102,55 +90,67 @@ testSchemaGuards("ethdebug/format/type", [
   },
 ] as const);
 
-// The contract type's schema uses a oneOf to distinguish normal /
+// The address type's schema uses a oneOf to distinguish normal /
 // library / interface contracts via the `library` and `interface`
-// flags. The guard must carry those flags and agree with the schema —
-// in particular it must reject a contract that sets both flags true
-// (which matches two oneOf branches at once).
-describe("Type.Elementary.isContract flag semantics", () => {
-  const contractSchema = "schema:ethdebug/format/type/elementary/contract";
+// flags of its definition. The guard must agree with the schema, in
+// particular it must reject a definition that sets both flags true.
+describe("Type.Elementary.isAddress definition flags", () => {
+  const addressSchema = "schema:ethdebug/format/type/elementary/address";
 
   const legal = [
-    { title: "normal (flags omitted)", value: { kind: "contract" } },
+    { title: "plain", value: { kind: "address" } },
     {
-      title: "normal (flags explicitly false)",
-      value: { kind: "contract", library: false, interface: false },
+      title: "normal contract",
+      value: { kind: "address", definition: { name: "T" } },
     },
-    { title: "library", value: { kind: "contract", library: true } },
-    { title: "interface", value: { kind: "contract", interface: true } },
+    {
+      title: "normal contract (flags explicitly false)",
+      value: {
+        kind: "address",
+        definition: { name: "T", library: false, interface: false },
+      },
+    },
+    {
+      title: "library",
+      value: { kind: "address", definition: { name: "T", library: true } },
+    },
+    {
+      title: "interface",
+      value: { kind: "address", definition: { name: "T", interface: true } },
+    },
   ] as const;
 
   const illegal = [
     {
       title: "both library and interface true",
-      value: { kind: "contract", library: true, interface: true },
+      value: {
+        kind: "address",
+        definition: { name: "T", library: true, interface: true },
+      },
+    },
+    {
+      title: "a non-boolean library flag",
+      value: { kind: "address", definition: { name: "T", library: "true" } },
+    },
+    {
+      title: "a non-boolean interface flag",
+      value: { kind: "address", definition: { name: "T", interface: 1 } },
     },
   ] as const;
 
   for (const { title, value } of legal) {
-    it(`accepts the ${title} contract shape`, async () => {
-      expect(Type.Elementary.isContract(value)).toBe(true);
-      // guard agrees with the schema
-      await expect(value).toValidate({ schema: contractSchema });
+    it(`accepts the ${title} address shape`, async () => {
+      expect(Type.Elementary.isAddress(value)).toBe(true);
+      await expect(value).toValidate({ schema: addressSchema });
     });
   }
 
   for (const { title, value } of illegal) {
-    it(`rejects a contract with ${title}`, async () => {
-      expect(Type.Elementary.isContract(value)).toBe(false);
-      // guard agrees with the schema
-      await expect(value).not.toValidate({ schema: contractSchema });
+    it(`rejects an address with ${title}`, async () => {
+      expect(Type.Elementary.isAddress(value)).toBe(false);
+      await expect(value).not.toValidate({ schema: addressSchema });
     });
   }
-
-  it("rejects non-boolean flag values", () => {
-    expect(
-      Type.Elementary.isContract({ kind: "contract", library: "true" }),
-    ).toBe(false);
-    expect(Type.Elementary.isContract({ kind: "contract", interface: 1 })).toBe(
-      false,
-    );
-  });
 });
 
 describe("rejected values", () => {
@@ -168,6 +168,24 @@ describe("rejected values", () => {
         kind: "pair",
         contains: [{ type: { kind: "uint", bits: 256 } }],
       },
+    },
+    {
+      title: "a negative number places",
+      value: { kind: "number", places: -1 },
+    },
+    {
+      title: "a non-boolean number signed",
+      value: { kind: "number", signed: "yes" },
+    },
+    { title: "an empty enum", value: { kind: "enum", values: [] } },
+    {
+      title: "a repeated enum value",
+      value: { kind: "enum", values: ["A", "A"] },
+    },
+    { title: "an empty flags", value: { kind: "flags", values: [] } },
+    {
+      title: "a repeated flags value",
+      value: { kind: "flags", values: ["A", "A"] },
     },
     {
       title: "a non-string label",

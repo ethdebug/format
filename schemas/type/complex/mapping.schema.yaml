@@ -38,5 +38,4 @@ examples:
           kind: address
       value:
         type:
-          kind: uint
-          bits: 256
+          kind: number

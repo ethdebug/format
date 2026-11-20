@@ -37,8 +37,7 @@ examples:
   - kind: array
     contains:
       type:
-        kind: uint
-        bits: 256
+        kind: number
 
   # example: a fixed-size array of 10 addresses
   - kind: array

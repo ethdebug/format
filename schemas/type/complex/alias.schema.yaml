@@ -27,8 +27,7 @@ examples:
   - kind: alias
     contains:
       type:
-        kind: uint
-        bits: 256
+        kind: number
 
   - kind: alias
     contains:

@@ -1,4 +1,3 @@
-import { Data } from "#types/data";
 import { Materials } from "#types/materials";
 
 import * as _Base from "./base.js";
@@ -57,16 +56,13 @@ export namespace Type {
     isSpecifier(value.type);
 
   export type Elementary =
-    | Elementary.Uint
-    | Elementary.Int
-    | Elementary.Ufixed
-    | Elementary.Fixed
-    | Elementary.Bool
-    | Elementary.Bytes
-    | Elementary.String
+    | Elementary.Number
     | Elementary.Address
-    | Elementary.Contract
-    | Elementary.Enum;
+    | Elementary.Bool
+    | Elementary.Enum
+    | Elementary.Flags
+    | Elementary.Bytes
+    | Elementary.String;
 
   export const hasElementaryKind = (
     value: unknown,
@@ -77,119 +73,77 @@ export namespace Type {
     !!value &&
     "kind" in value &&
     typeof value.kind === "string" &&
-    [
-      "uint",
-      "int",
-      "ufixed",
-      "fixed",
-      "bool",
-      "bytes",
-      "string",
-      "address",
-      "contract",
-      "enum",
-    ].includes(value.kind);
+    ["number", "address", "bool", "enum", "flags", "bytes", "string"].includes(
+      value.kind,
+    );
 
   export const isElementary = (value: unknown): value is Elementary =>
     [
-      Elementary.isUint,
-      Elementary.isInt,
-      Elementary.isUfixed,
-      Elementary.isFixed,
+      Elementary.isNumber,
+      Elementary.isAddress,
       Elementary.isBool,
+      Elementary.isEnum,
+      Elementary.isFlags,
       Elementary.isBytes,
       Elementary.isString,
-      Elementary.isAddress,
-      Elementary.isContract,
-      Elementary.isEnum,
     ].some((guard) => guard(value));
 
   export namespace Elementary {
-    export interface Uint {
+    export interface Number {
       class?: "elementary";
-      kind: "uint";
+      kind: "number";
       label?: string;
-      bits: number;
+      signed?: boolean;
+      places?: number;
     }
 
-    export const isUint = (value: unknown): value is Uint =>
+    export const isNumber = (value: unknown): value is Number =>
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
       mayHaveLabel(value) &&
-      hasKind(value, "uint") &&
-      "bits" in value &&
-      typeof value.bits === "number" &&
-      value.bits >= 8 &&
-      value.bits <= 256 &&
-      value.bits % 8 === 0;
+      hasKind(value, "number") &&
+      (!("signed" in value) || typeof value.signed === "boolean") &&
+      (!("places" in value) ||
+        (typeof value.places === "number" &&
+          globalThis.Number.isInteger(value.places) &&
+          value.places >= 0));
 
-    export interface Int {
-      class?: "elementary";
-      kind: "int";
-      label?: string;
-      bits: number;
+    export namespace Address {
+      export type Definition = Type.Definition & {
+        library?: boolean;
+        interface?: boolean;
+      };
+
+      export const isDefinition = (value: unknown): value is Definition =>
+        Type.isDefinition(value) &&
+        (!("library" in value) || typeof value.library === "boolean") &&
+        (!("interface" in value) || typeof value.interface === "boolean") &&
+        // the schema's oneOf rejects a type that is both
+        !(
+          "library" in value &&
+          value.library === true &&
+          "interface" in value &&
+          value.interface === true
+        );
     }
 
-    export const isInt = (value: unknown): value is Int =>
+    export interface Address {
+      class?: "elementary";
+      kind: "address";
+      label?: string;
+      payable?: boolean;
+      definition?: Address.Definition;
+    }
+
+    export const isAddress = (value: unknown): value is Address =>
       typeof value === "object" &&
       !!value &&
       mayHaveClass(value, "elementary") &&
       mayHaveLabel(value) &&
-      hasKind(value, "int") &&
-      "bits" in value &&
-      typeof value.bits === "number" &&
-      value.bits >= 8 &&
-      value.bits <= 256 &&
-      value.bits % 8 === 0;
-
-    export interface Ufixed {
-      class?: "elementary";
-      kind: "ufixed";
-      label?: string;
-      bits: number;
-      places: number;
-    }
-
-    export const isUfixed = (value: unknown): value is Ufixed =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "elementary") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "ufixed") &&
-      "bits" in value &&
-      typeof value.bits === "number" &&
-      value.bits >= 8 &&
-      value.bits <= 256 &&
-      value.bits % 8 === 0 &&
-      "places" in value &&
-      typeof value.places === "number" &&
-      value.places >= 0 &&
-      value.places <= 80;
-
-    export interface Fixed {
-      class?: "elementary";
-      kind: "fixed";
-      label?: string;
-      bits: number;
-      places: number;
-    }
-
-    export const isFixed = (value: unknown): value is Fixed =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "elementary") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "fixed") &&
-      "bits" in value &&
-      typeof value.bits === "number" &&
-      value.bits >= 8 &&
-      value.bits <= 256 &&
-      value.bits % 8 === 0 &&
-      "places" in value &&
-      typeof value.places === "number" &&
-      value.places >= 0 &&
-      value.places <= 80;
+      hasKind(value, "address") &&
+      (!("payable" in value) || typeof value.payable === "boolean") &&
+      (!("definition" in value) || Address.isDefinition(value.definition));
 
     export interface Bool {
       class?: "elementary";
@@ -204,11 +158,52 @@ export namespace Type {
       mayHaveLabel(value) &&
       hasKind(value, "bool");
 
+    const isNames = (value: unknown): value is string[] =>
+      Array.isArray(value) &&
+      value.length >= 1 &&
+      value.every((name) => typeof name === "string") &&
+      new Set(value).size === value.length;
+
+    export interface Enum {
+      class?: "elementary";
+      kind: "enum";
+      label?: string;
+      values: string[];
+      definition?: Definition;
+    }
+
+    export const isEnum = (value: unknown): value is Enum =>
+      typeof value === "object" &&
+      !!value &&
+      mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
+      hasKind(value, "enum") &&
+      "values" in value &&
+      isNames(value.values) &&
+      (!("definition" in value) || isDefinition(value.definition));
+
+    export interface Flags {
+      class?: "elementary";
+      kind: "flags";
+      label?: string;
+      values: string[];
+      definition?: Definition;
+    }
+
+    export const isFlags = (value: unknown): value is Flags =>
+      typeof value === "object" &&
+      !!value &&
+      mayHaveClass(value, "elementary") &&
+      mayHaveLabel(value) &&
+      hasKind(value, "flags") &&
+      "values" in value &&
+      isNames(value.values) &&
+      (!("definition" in value) || isDefinition(value.definition));
+
     export interface Bytes {
       class?: "elementary";
       kind: "bytes";
       label?: string;
-      size?: Data.Unsigned;
     }
 
     export const isBytes = (value: unknown): value is Bytes =>
@@ -216,8 +211,7 @@ export namespace Type {
       !!value &&
       mayHaveClass(value, "elementary") &&
       mayHaveLabel(value) &&
-      hasKind(value, "bytes") &&
-      (!("size" in value) || Data.isUnsigned(value.size));
+      hasKind(value, "bytes");
 
     export interface String {
       class?: "elementary";
@@ -233,70 +227,6 @@ export namespace Type {
       mayHaveLabel(value) &&
       hasKind(value, "string") &&
       (!("encoding" in value) || typeof value.encoding === "string");
-
-    export interface Address {
-      class?: "elementary";
-      kind: "address";
-      label?: string;
-      payable?: boolean;
-    }
-
-    export const isAddress = (value: unknown): value is Address =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "elementary") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "address") &&
-      (!("payable" in value) || typeof value.payable === "boolean");
-
-    export interface Contract {
-      class?: "elementary";
-      kind: "contract";
-      label?: string;
-      payable?: boolean;
-      library?: boolean;
-      interface?: boolean;
-      definition?: Definition;
-    }
-
-    export const isContract = (value: unknown): value is Contract =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "elementary") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "contract") &&
-      (!("payable" in value) || typeof value.payable === "boolean") &&
-      (!("library" in value) || typeof value.library === "boolean") &&
-      (!("interface" in value) || typeof value.interface === "boolean") &&
-      // The schema's oneOf splits contract types three ways (normal /
-      // library / interface). `library` and `interface` cannot both be
-      // true: that shape satisfies two branches at once, which the
-      // oneOf rejects.
-      !(
-        "library" in value &&
-        value.library === true &&
-        "interface" in value &&
-        value.interface === true
-      ) &&
-      (!("definition" in value) || isDefinition(value.definition));
-
-    export interface Enum {
-      class?: "elementary";
-      kind: "enum";
-      label?: string;
-      values: any[];
-      definition?: Definition;
-    }
-
-    export const isEnum = (value: unknown): value is Enum =>
-      typeof value === "object" &&
-      !!value &&
-      mayHaveClass(value, "elementary") &&
-      mayHaveLabel(value) &&
-      hasKind(value, "enum") &&
-      "values" in value &&
-      Array.isArray(value.values) &&
-      (!("definition" in value) || isDefinition(value.definition));
   }
 
   export type Complex =

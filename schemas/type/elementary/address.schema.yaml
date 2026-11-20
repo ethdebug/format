@@ -2,7 +2,13 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/address"
 
 title: ethdebug/format/type/elementary/address
-description: Schema describing the representation of an address type
+description: |
+  Schema describing the representation of an address type. An address
+  type with a `definition` is a reference to a contract.
+
+  Standard interpretation: read the bytes of the value as a big-endian
+  unsigned integer. That integer is the address. This type has no size.
+  The number of bytes comes from the value's location.
 
 type: object
 properties:
@@ -16,6 +22,43 @@ properties:
     type: boolean
     description: If this field is omitted, this type represents an address whose
       payability is not known.
+  definition:
+    description: |
+      If this field is omitted, this type is a plain address. If present,
+      this type is a reference to a contract. A contract can be a library
+      or an interface. The `library` and `interface` fields cannot both be
+      true.
+    allOf:
+      - $ref: "schema:ethdebug/format/type/definition"
+      - type: object
+        properties:
+          library:
+            type: boolean
+            description: Indicates that this is a type representing a library
+          interface:
+            type: boolean
+            description: Indicates that this is a type representing an interface
+        oneOf:
+          - title: Normal contract type
+            properties:
+              library:
+                const: false
+              interface:
+                const: false
+
+          - title: Contract library type
+            properties:
+              library:
+                const: true
+            required:
+              - library
+
+          - title: Contract interface type
+            properties:
+              interface:
+                const: true
+            required:
+              - interface
 required:
   - kind
 examples:
@@ -25,3 +68,22 @@ examples:
   - # a type for payable addresses
     kind: address
     payable: true
+
+  - # a type for a reference to a contract
+    kind: address
+    payable: true
+    definition:
+      name: Ballot
+
+  - # a type for a reference to a library
+    kind: address
+    label: MathLib
+    definition:
+      name: MathLib
+      library: true
+
+  - # a type for a reference to an interface
+    kind: address
+    definition:
+      name: IERC20
+      interface: true

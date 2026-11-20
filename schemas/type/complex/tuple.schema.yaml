@@ -32,12 +32,10 @@ examples:
     contains:
       - name: x
         type:
-          kind: uint
-          bits: 128
+          kind: number
       - name: y
         type:
-          kind: uint
-          bits: 128
+          kind: number
 
 $defs:
   Element:

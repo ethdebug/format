@@ -93,7 +93,7 @@ oneOf:
                 properties:
                   type:
                     oneOf:
-                      - $ref: "schema:ethdebug/format/type/elementary/contract"
+                      - $ref: "schema:ethdebug/format/type/elementary/address"
                       - $ref: "schema:ethdebug/format/type/reference"
     required:
       - external
@@ -120,12 +120,10 @@ examples:
           contains:
             - name: value
               type:
-                kind: uint
-                bits: 256
+                kind: number
       returns:
         type:
-          kind: uint
-          bits: 256
+          kind: number
   - kind: function
     external: true
     definition:
@@ -133,11 +131,11 @@ examples:
     contains:
       contract:
         type:
-          kind: contract
+          kind: address
           payable: true
-          interface: true
           definition:
             name: Bank
+            interface: true
       parameters:
         type:
           kind: tuple
@@ -148,8 +146,7 @@ examples:
                 payable: true
             - name: amount
               type:
-                kind: ufixed
-                bits: 128
+                kind: number
                 places: 18
       returns:
         type:
