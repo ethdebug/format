@@ -84,14 +84,18 @@ The sections do not signal obligations; the prefixes do.
   state their standard interpretation: how a consumer reads a value from the
   bytes the value occupies. Every type may have an optional `label`, the type
   as its language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for
-  display only. Nothing interprets a label ([#282]).
+  display only. Nothing interprets a label. A complex base type may now omit
+  `contains` if it gives `class` as `complex`, since the new `variant` and
+  `function` kinds have no `contains` ([#282]).
   - Schemas: **ethdebug/format/type**, **ethdebug/format/type/base**,
     **ethdebug/format/type/elementary**, **ethdebug/format/type/complex**,
     **ethdebug/format/type/specifier**
   - Producers: required: the kinds below replace the old kinds, and the old
     kinds no longer validate. See the entries for each kind.
   - Consumers: required: producers emit the new kinds. A consumer must read
-    them and must not expect the old kinds. See the entries for each kind.
+    them and must not expect the old kinds. See the entries for each kind. A consumer that
+    uses **ethdebug/format/type/base** to classify complex types must accept
+    a complex type without `contains`.
 
 - The **ethdebug/format/type/elementary/number** type replaces the `uint`,
   `int`, `ufixed` and `fixed` kinds. It has an optional `signed` (default

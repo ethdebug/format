@@ -255,3 +255,50 @@ describe("rejected values", () => {
     });
   }
 });
+
+describe("complex types without contains", () => {
+  const typeSchema = "schema:ethdebug/format/type";
+  const baseSchema = "schema:ethdebug/format/type/base";
+
+  const variant = {
+    class: "complex",
+    kind: "variant",
+    discriminant: { type: { kind: "number" } },
+    cases: [{ name: "A", discriminant: 0 }],
+  };
+  const fn = {
+    class: "complex",
+    kind: "function",
+    internal: true,
+    parameters: [],
+    returns: [],
+  };
+
+  const accepted = [
+    {
+      title: "an unknown complex kind that contains a known variant",
+      value: { class: "complex", kind: "pair", contains: [{ type: variant }] },
+    },
+    {
+      title: "an unknown complex kind that contains a known function",
+      value: { class: "complex", kind: "pair", contains: [{ type: fn }] },
+    },
+  ] as const;
+
+  for (const { title, value } of accepted) {
+    it(`accepts ${title}`, async () => {
+      expect(isType(value)).toBe(true);
+      await expect(value).toValidate({ schema: typeSchema });
+    });
+  }
+
+  it("accepts a complex base type with a class and no contains", async () => {
+    const value = { class: "complex", kind: "thing" };
+    expect(Type.Base.isType(value)).toBe(true);
+    await expect(value).toValidate({ schema: baseSchema });
+  });
+
+  it("rejects an unknown kind without a class", () => {
+    expect(isType({ kind: "thing" })).toBe(false);
+  });
+});

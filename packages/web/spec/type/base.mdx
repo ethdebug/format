@@ -63,13 +63,14 @@ When extending this schema, there **should** exist exactly one corresponding
 schema for each `kind` value.
 :::
 
-### The `class` field is always optional
+### The `class` field
 
 Although **ethdebug/format/type** does not require the `class` field to be
 defined for known types, it does require this field for representations of
 unknown types.
 
-The **ethdebug/format/type/base** schema does not ever require this field.
+The **ethdebug/format/type/base** schema does not require this field for
+elementary types. A complex base type gives either `class` or `contains`.
 
 ### A complex base type `contains` other base types
 
@@ -77,7 +78,11 @@ As described in key concept
 [Elementary vs. complex types](/spec/type/concepts#elementary-vs-complex-types),
 this format allows the representation of types whose definition
 includes other types. Both the primary schema and this base schema
-require type composition to be represented via complex types' `contains` field.
+require an unknown complex kind to give `class` as `"complex"` and, if it
+composes other types, to put them under `contains`. Known kinds have their
+own schemas, and some state their parts in other fields (`variant` uses
+`cases`, and `function` uses `parameters` and `returns`). A complex base type
+gives `contains`, `class`, or both.
 
 These two schemas differ by which type schema this field is
 permitted to compose. Naturally, **ethdebug/format/type**'s `contains` field

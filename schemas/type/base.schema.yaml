@@ -47,7 +47,11 @@ $defs:
     title: Base complex type
     description:
       Represents a complex type, one that composes other types (e.g., arrays,
-      structs, mappings)
+      structs, mappings). A complex type gives `contains`, or gives
+      `class` as `complex`, or both. A complex type with `class` and no
+      `contains` is one whose kind states its parts in other fields (e.g.,
+      `variant` has `cases`, and `function` has `parameters` and `returns`).
+      When `contains` is present, it follows the rules below.
     type: object
     properties:
       class:
@@ -71,7 +75,11 @@ $defs:
 
     required:
       - kind
-      - contains
+    anyOf:
+      - required:
+          - contains
+      - required:
+          - class
     examples:
       - kind: array
         contains:

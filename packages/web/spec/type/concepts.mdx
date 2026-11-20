@@ -81,6 +81,11 @@ of three forms:
 
 All three forms of composition polymorphically use the `"contains"` field.
 
+Some known kinds state their parts in other fields instead (`variant` uses
+`cases`, and `function` uses `parameters` and `returns`). Where such a type
+sits inside an unknown complex kind, it gives `"class": "complex"`. The base
+schema needs `"class"` or `"contains"`, and this type has no `"contains"`.
+
 As described in
 [Type specifiers, wrappers, and references](#type-specifiers-wrappers-and-references)
 below, complex types compose
