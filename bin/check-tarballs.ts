@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { checkPackList, packList } from "./packlist.js";
-import { readWorkspaces } from "./publish-tagged.js";
+import { checkPackList, packList } from "./release/packlist.js";
+import { readWorkspaces } from "./release/workspaces.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 

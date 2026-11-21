@@ -1,22 +1,15 @@
 import type { SpawnSyncReturns } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   classifyView,
-  distTag,
   npmEnv,
-  parseTags,
   publishArgs,
-  readWorkspaces,
   registry,
   selectPackages,
-  topoSort,
   viewVersions,
-  type Workspace,
 } from "./publish-tagged.js";
+import type { Workspace } from "./release/workspaces.js";
 
 vi.mock("node:child_process", () => ({
   execFileSync: vi.fn(),
@@ -33,15 +26,14 @@ const ws = (
   version,
   dir: `/repo/packages/${name.replace("@ethdebug/", "")}`,
   private: isPrivate,
+  text: "{}",
+  json: {},
+  runtime: deps,
+  peer: [],
+  dev: [],
+  optional: [],
   dependencies: deps,
-});
-
-describe("parseTags", () => {
-  it("keeps only @ethdebug package tags", () => {
-    expect(
-      parseTags(["@ethdebug/format@0.1.0-1", "v1", "@other/x@1.0.0", ""]),
-    ).toEqual([{ name: "@ethdebug/format", version: "0.1.0-1" }]);
-  });
+  all: deps,
 });
 
 describe("selectPackages", () => {
@@ -82,21 +74,6 @@ describe("selectPackages", () => {
       "@ethdebug/nope: no such workspace, ignoring",
     );
     warn.mockRestore();
-  });
-});
-
-describe("topoSort", () => {
-  it("orders dependencies before dependents, including peers", () => {
-    const sorted = topoSort([
-      ws("@ethdebug/evm", "1", ["@ethdebug/pointers"]),
-      ws("@ethdebug/pointers", "1", ["@ethdebug/format"]),
-      ws("@ethdebug/format", "1"),
-    ]).map((w) => w.name);
-    expect(sorted).toEqual([
-      "@ethdebug/format",
-      "@ethdebug/pointers",
-      "@ethdebug/evm",
-    ]);
   });
 });
 
@@ -197,63 +174,6 @@ describe("viewVersions", () => {
   });
 });
 
-describe("readWorkspaces", () => {
-  let root: string | undefined;
-
-  afterEach(() => {
-    if (root) {
-      rmSync(root, { recursive: true, force: true });
-      root = undefined;
-    }
-  });
-
-  it("merges dependencies and peerDependencies, filtered", () => {
-    root = mkdtempSync(join(tmpdir(), "ws-"));
-    const packagesDir = join(root, "packages");
-    mkdirSync(join(packagesDir, "a"), { recursive: true });
-    mkdirSync(join(packagesDir, "b"), { recursive: true });
-    mkdirSync(join(packagesDir, "c"), { recursive: true });
-    writeFileSync(
-      join(packagesDir, "a", "package.json"),
-      JSON.stringify({ name: "@ethdebug/a", version: "1.0.0" }),
-    );
-    writeFileSync(
-      join(packagesDir, "b", "package.json"),
-      JSON.stringify({
-        name: "@ethdebug/b",
-        version: "1.0.0",
-        dependencies: { "@ethdebug/a": "^1.0.0", lodash: "^4" },
-        peerDependencies: { "@ethdebug/c": "^1.0.0" },
-      }),
-    );
-    writeFileSync(
-      join(packagesDir, "c", "package.json"),
-      JSON.stringify({
-        name: "@ethdebug/c",
-        version: "1.0.0",
-        private: true,
-      }),
-    );
-    writeFileSync(join(packagesDir, ".DS_Store"), "");
-
-    const workspaces = readWorkspaces(root);
-    expect(workspaces).toHaveLength(3);
-    expect(workspaces.some((w) => w.dir.endsWith(".DS_Store"))).toBe(false);
-
-    const byName = new Map(workspaces.map((w) => [w.name, w]));
-    expect(byName.get("@ethdebug/a")?.dependencies).toEqual([]);
-    expect(byName.get("@ethdebug/b")?.dependencies).toEqual([
-      "@ethdebug/a",
-      "@ethdebug/c",
-    ]);
-    expect(byName.get("@ethdebug/c")?.private).toBe(true);
-    for (const name of ["a", "b", "c"]) {
-      const dir = byName.get(`@ethdebug/${name}`)?.dir ?? "";
-      expect(dir.endsWith(join("packages", name))).toBe(true);
-    }
-  });
-});
-
 describe("publishArgs", () => {
   it("tags a publish as latest, on registry.npmjs.org", () => {
     expect(publishArgs(false, {}, "latest")).toEqual([
@@ -319,35 +239,5 @@ describe("publishArgs", () => {
     expect(publishArgs(true, { GITHUB_ACTIONS: "true" }, "latest")).toContain(
       registry,
     );
-  });
-});
-
-describe("distTag", () => {
-  it(
-    "publishes a prerelease under latest while no stable version " + "exists",
-    () => {
-      expect(distTag("0.1.0-draft.0", ["0.1.0-0", "0.1.0-1", "0.1.0-2"])).toBe(
-        "latest",
-      );
-      expect(distTag("0.1.0-preview.0", [])).toBe("latest");
-    },
-  );
-
-  it("publishes a prerelease under its identifier once a stable exists", () => {
-    expect(distTag("0.2.0-draft.0", ["0.1.0-draft.3", "0.1.0"])).toBe("draft");
-    expect(distTag("0.2.0-preview.1", ["0.1.0"])).toBe("preview");
-  });
-
-  it("publishes the highest stable version under latest", () => {
-    expect(distTag("0.1.0", ["0.1.0-draft.4"])).toBe("latest");
-    expect(distTag("0.2.1", ["0.1.0", "0.2.0"])).toBe("latest");
-  });
-
-  it("keeps latest from moving backwards on a back-port", () => {
-    expect(distTag("0.1.1", ["0.1.0", "0.2.0"])).toBe("release-0.1");
-  });
-
-  it("rejects an identifier that is not a valid tag name", () => {
-    expect(() => distTag("0.1.0-3", ["0.1.0"])).toThrow(/dist-tag/);
   });
 });

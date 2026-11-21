@@ -1,38 +1,15 @@
 import { describe, expect, it } from "vitest";
-import {
-  changelogProblems,
-  forcedNames,
-  hasReleaseSection,
-  hasUnreleasedEntries,
-  identifierFor,
-  keywordProblems,
-  type Manifest,
-  type Move,
-  nextVersion,
-  parseArgs,
-  parseChanged,
-  planMoves,
-  planProblems,
-  requiredChangelogs,
-  rewriteManifest,
-  undoAdvice,
-} from "./version.js";
 
-function manifest(
-  name: string,
-  version: string,
-  dependencies: string[] = [],
-  isPrivate = false,
-): Manifest {
-  return {
-    name,
-    version,
-    dir: `/repo/packages/${name.replace("@ethdebug/", "")}`,
-    private: isPrivate,
-    dependencies,
-    json: { name, version },
-  };
-}
+import type { Plan } from "./release/plan.js";
+import { versionSites } from "./release/schema-versions.js";
+import type { Workspace } from "./release/workspaces.js";
+import {
+  check,
+  decide,
+  type Options,
+  parseArgs,
+  type Survey,
+} from "./version.js";
 
 describe("parseArgs", () => {
   it("defaults to prerelease", () => {
@@ -64,586 +41,281 @@ describe("parseArgs", () => {
   });
 });
 
-describe("identifierFor", () => {
-  it("gives draft to the spec package and preview to the rest", () => {
-    expect(identifierFor("@ethdebug/format")).toBe("draft");
-    expect(identifierFor("@ethdebug/bugc")).toBe("preview");
-    expect(identifierFor("@ethdebug/format-web")).toBe("preview");
-  });
+const repo: Survey["repo"] = {
+  branch: "main",
+  dirty: false,
+  tagsAtHead: [],
+  nearestAnnotated: { name: "@ethdebug/format@0.1.0-draft.0", commit: "a" },
+  nearestRelease: { name: "@ethdebug/format@0.1.0-draft.0", commit: "a" },
+};
+
+const surveyOf = (over: Partial<Survey> = {}): Survey => ({
+  root: "/repo",
+  workspaces: [],
+  tags: [],
+  directlyChanged: [],
+  listed: [],
+  specTag: undefined,
+  schemasChanged: false,
+  schemas: [],
+  changelogs: [],
+  repo,
+  ...over,
 });
 
-describe("keywordProblems", () => {
-  const stable = [
-    manifest("@ethdebug/format", "0.1.0"),
-    manifest("@ethdebug/bugc", "0.1.3"),
-  ];
-  const drafts = [
-    manifest("@ethdebug/format", "0.1.0-draft.7"),
-    manifest("@ethdebug/bugc", "0.1.0-preview.2"),
-  ];
+function workspace(name: string, version: string): Workspace {
+  const json = { name, version };
+  return {
+    name,
+    version,
+    dir: `/repo/packages/${name.replace("@ethdebug/", "")}`,
+    private: false,
+    text: `${JSON.stringify(json, null, 2)}\n`,
+    json,
+    runtime: [],
+    peer: [],
+    dev: [],
+    optional: [],
+    dependencies: [],
+    all: [],
+  };
+}
 
-  it("accepts prerelease and patch without flags in any state", () => {
-    expect(keywordProblems("prerelease", false, drafts)).toEqual([]);
-    expect(keywordProblems("patch", false, drafts)).toEqual([]);
-    expect(keywordProblems("prerelease", false, stable)).toEqual([]);
+const empty: Plan = { moves: [], manifests: [], schemas: [] };
+const options: Options = { keyword: "prerelease", all: false, dryRun: true };
+
+describe("check findings", () => {
+  it("is silent on a clean repo on main", () => {
+    expect(check(surveyOf(), empty, options).findings).toEqual([]);
   });
 
-  it("requires --all for a series start", () => {
-    for (const keyword of ["preminor", "premajor", "minor", "major"]) {
-      expect(keywordProblems(keyword, false, stable)).toEqual([
-        `${keyword} starts a series for every workspace: pass --all`,
-      ]);
-      expect(keywordProblems(keyword, true, stable)).toEqual([]);
-    }
-  });
-
-  it("rejects a series start while a prerelease exists", () => {
-    const mixed = [
-      manifest("@ethdebug/format", "0.1.0"),
-      manifest("@ethdebug/format-web", "0.1.1-preview.0", [], true),
-    ];
-    expect(keywordProblems("preminor", true, mixed)).toEqual([
-      "cannot start a series while @ethdebug/format-web is a " +
-        "prerelease; run `patch` first",
+  it("reports a branch that is not main", () => {
+    const survey = surveyOf({ repo: { ...repo, branch: "feature" } });
+    expect(check(survey, empty, options).findings).toEqual([
+      "on branch feature, not main",
     ]);
   });
 
-  it("allows a series start when all are prereleases of one version", () => {
-    expect(keywordProblems("preminor", true, drafts)).toEqual([]);
-    expect(keywordProblems("premajor", true, drafts)).toEqual([]);
-    const split = [
-      manifest("@ethdebug/format", "0.1.0-draft.7"),
-      manifest("@ethdebug/bugc", "0.1.1-preview.0"),
-    ];
-    expect(keywordProblems("preminor", true, split)).toHaveLength(1);
-  });
-
-  // minor/major on a prerelease graduate in place, so the exception
-  // for one whole draft series must not admit them
-  it("rejects minor and major while any prerelease exists", () => {
-    const rejected = [
-      "cannot start a series while @ethdebug/format, @ethdebug/bugc " +
-        "are prereleases; run `patch` first",
-    ];
-    expect(keywordProblems("minor", true, drafts)).toEqual(rejected);
-    expect(keywordProblems("major", true, drafts)).toEqual(rejected);
-  });
-});
-
-describe("nextVersion", () => {
-  it("switches a numeric prerelease to the named identifier", () => {
-    expect(nextVersion("0.1.0-2", "prerelease", "@ethdebug/format", true)).toBe(
-      "0.1.0-draft.0",
-    );
-    expect(nextVersion("0.1.0-2", "prerelease", "@ethdebug/bugc", true)).toBe(
-      "0.1.0-preview.0",
-    );
-  });
-
-  it("counts up, graduates, and starts series", () => {
-    const n = (v: string, k: string) =>
-      nextVersion(v, k, "@ethdebug/bugc", true);
-    expect(n("0.1.0-preview.9", "prerelease")).toBe("0.1.0-preview.10");
-    expect(n("0.1.0", "prerelease")).toBe("0.1.1-preview.0");
-    expect(n("0.1.0-preview.4", "patch")).toBe("0.1.0");
-    expect(n("0.1.0", "patch")).toBe("0.1.1");
-    expect(n("0.1.3", "preminor")).toBe("0.2.0-preview.0");
-    expect(n("0.1.3", "premajor")).toBe("1.0.0-preview.0");
-    expect(n("0.1.7", "minor")).toBe("0.2.0");
-    expect(n("0.1.7", "major")).toBe("1.0.0");
-  });
-
-  it(
-    "keeps the manifest version for a workspace that was never " + "released",
-    () => {
-      expect(
-        nextVersion("0.1.0-preview.0", "prerelease", "@ethdebug/codec", false),
-      ).toBe("0.1.0-preview.0");
-    },
-  );
-
-  it("throws when semver cannot increment", () => {
-    expect(() =>
-      nextVersion("banana", "patch", "@ethdebug/bugc", true),
-    ).toThrow(/banana/);
-  });
-});
-
-const cut = [
-  "# Changelog",
-  "",
-  "## Unreleased",
-  "",
-  "## 0.1.0-draft.0 — 2026-09-18",
-  "",
-  "### Changed",
-  "",
-  "- Something changed ([#310]).",
-  "",
-  "## 0.1.0-2 — 2026-09-17",
-  "",
-  "No changes to the specification.",
-  "",
-  "[#310]: https://github.com/ethdebug/format/pull/310",
-].join("\n");
-
-describe("hasReleaseSection", () => {
-  it("finds a dated section that has an entry", () => {
-    expect(hasReleaseSection(cut, "0.1.0-draft.0")).toBe(true);
-  });
-
-  it("accepts a section that holds one sentence", () => {
-    expect(hasReleaseSection(cut, "0.1.0-2")).toBe(true);
-  });
-
-  it("does not match a longer version with the same prefix", () => {
-    expect(hasReleaseSection(cut, "0.1.0")).toBe(false);
-    expect(hasReleaseSection(cut, "0.1.0-draft.0.1")).toBe(false);
-  });
-
-  it(
-    "is false for a section with only sub-headings or link " + "definitions",
-    () => {
-      expect(
-        hasReleaseSection("## 0.1.0\n\n### Changed\n\n## 0.0.1\n", "0.1.0"),
-      ).toBe(false);
-      expect(
-        hasReleaseSection("## 0.1.0\n\n[#1]: https://example.com\n", "0.1.0"),
-      ).toBe(false);
-    },
-  );
-
-  it("reads CRLF line endings", () => {
-    const text =
-      "## Unreleased\r\n\r\n- Left.\r\n\r\n## 0.1.0\r\n\r\n- Entry.\r\n";
-    expect(hasUnreleasedEntries(text)).toBe(true);
-    expect(hasReleaseSection(text, "0.1.0")).toBe(true);
-  });
-});
-
-describe("changelogProblems", () => {
-  it("is empty for a changelog that was cut", () => {
-    expect(
-      changelogProblems([
-        { path: "CHANGELOG.md", version: "0.1.0-draft.0", text: cut },
-      ]),
-    ).toEqual([]);
-  });
-
-  it("reports a missing section, leftovers, and a missing file", () => {
-    const leftover = "## Unreleased\n\n- Left behind.\n";
-    expect(
-      changelogProblems([
-        { path: "a/CHANGELOG.md", version: "0.1.0-preview.1", text: leftover },
-        { path: "b/CHANGELOG.md", version: "0.1.0-preview.1", text: undefined },
-      ]),
-    ).toEqual([
-      'a/CHANGELOG.md: no "## 0.1.0-preview.1" section with an entry',
-      'a/CHANGELOG.md: entries remain under "## Unreleased"',
-      "b/CHANGELOG.md: file is missing",
+  it("reports a dirty working tree", () => {
+    const survey = surveyOf({ repo: { ...repo, dirty: true } });
+    expect(check(survey, empty, options).findings).toEqual([
+      "the working tree has uncommitted changes",
     ]);
   });
-});
 
-describe("parseChanged", () => {
-  it("reads names from the JSON that follows any log noise", () => {
-    const stdout = 'lerna notice\n[\n  { "name": "@ethdebug/evm" }\n]\n';
-    expect(parseChanged(stdout, "", 0)).toEqual(["@ethdebug/evm"]);
+  it("reports a foreign annotated tag nearer than the release tag", () => {
+    const survey = surveyOf({
+      repo: { ...repo, nearestAnnotated: { name: "v9", commit: "b" } },
+    });
+    expect(check(survey, empty, options).findings).toEqual([
+      "the nearest annotated tag v9 is not the nearest release tag " +
+        "@ethdebug/format@0.1.0-draft.0; Lerna would miss changes " +
+        "(a foreign tag, or a release tag that is not annotated)",
+    ]);
   });
 
-  it("is empty when Lerna says nothing changed", () => {
-    expect(parseChanged("", "lerna info No changed packages found", 1)).toEqual(
+  it("reports a missing annotated release tag", () => {
+    const survey = surveyOf({
+      repo: { ...repo, nearestAnnotated: undefined },
+    });
+    expect(check(survey, empty, options).findings).toEqual([
+      "no annotated release tag is reachable from HEAD",
+    ]);
+  });
+
+  it("reports release tags at HEAD only when something changed", () => {
+    const atHead = { ...repo, tagsAtHead: ["@ethdebug/a@0.1.0"] };
+    expect(check(surveyOf({ repo: atHead }), empty, options).findings).toEqual(
       [],
     );
-  });
 
-  it("throws for any other failure", () => {
-    expect(() => parseChanged("", "lerna ERR! boom", 1)).toThrow(/boom/);
-    expect(() => parseChanged("", "", null)).toThrow(/lerna changed failed/);
-  });
-});
-
-describe("forcedNames", () => {
-  const ms = [
-    manifest("@ethdebug/format", "0.1.0-draft.1"),
-    manifest("@ethdebug/bugc", "0.1.0"),
-    manifest("@ethdebug/evm", "0.1.1-preview.0"),
-  ];
-
-  it("forces the spec package when schemas changed", () => {
-    expect(forcedNames(ms, "prerelease", true)).toEqual(["@ethdebug/format"]);
-    expect(forcedNames(ms, "prerelease", false)).toEqual([]);
-  });
-
-  it("forces every prerelease workspace under patch", () => {
-    expect(forcedNames(ms, "patch", false)).toEqual([
-      "@ethdebug/format",
-      "@ethdebug/evm",
-    ]);
-  });
-});
-
-describe("planMoves", () => {
-  const ms = [
-    manifest("@ethdebug/format", "0.1.0-draft.1"),
-    manifest("@ethdebug/pointers", "0.1.0-preview.3", ["@ethdebug/format"]),
-    manifest("@ethdebug/bugc", "0.1.0-preview.5", ["@ethdebug/pointers"]),
-    manifest(
-      "@ethdebug/format-web",
-      "0.1.0-preview.2",
-      ["@ethdebug/bugc"],
-      true,
-    ),
-  ];
-  const released = ms.map((m) => m.name);
-
-  it("labels direct changes, dependents, and schema-driven moves", () => {
-    const plan = planMoves({
-      manifests: ms,
-      listed: [
-        "@ethdebug/format",
-        "@ethdebug/pointers",
-        "@ethdebug/bugc",
-        "@ethdebug/format-web",
-      ],
-      directlyChanged: ["@ethdebug/bugc"],
-      released,
-      schemasChanged: true,
-      keyword: "prerelease",
-      all: false,
-    });
-    expect(plan).toEqual([
-      {
-        name: "@ethdebug/format",
-        from: "0.1.0-draft.1",
-        to: "0.1.0-draft.2",
-        reason: "schemas",
-        firstRelease: false,
-      },
-      {
-        name: "@ethdebug/pointers",
-        from: "0.1.0-preview.3",
-        to: "0.1.0-preview.4",
-        reason: "dependent",
-        firstRelease: false,
-      },
-      {
-        name: "@ethdebug/bugc",
-        from: "0.1.0-preview.5",
-        to: "0.1.0-preview.6",
-        reason: "changed",
-        firstRelease: false,
-      },
-      {
-        name: "@ethdebug/format-web",
-        from: "0.1.0-preview.2",
-        to: "0.1.0-preview.3",
-        reason: "dependent",
-        firstRelease: false,
-      },
+    const loud = surveyOf({ repo: atHead, directlyChanged: ["@ethdebug/a"] });
+    expect(check(loud, empty, options).findings).toEqual([
+      "HEAD already carries release tags: @ethdebug/a@0.1.0; " +
+        "Lerna skips change detection here",
     ]);
   });
 
-  it("moves only listed workspaces without --all", () => {
-    const plan = planMoves({
-      manifests: ms,
-      listed: ["@ethdebug/bugc", "@ethdebug/format-web"],
-      directlyChanged: ["@ethdebug/bugc"],
-      released,
-      schemasChanged: false,
-      keyword: "prerelease",
-      all: false,
-    });
-    expect(plan.map((m) => m.name)).toEqual([
-      "@ethdebug/bugc",
-      "@ethdebug/format-web",
-    ]);
-  });
-
-  it("labels graduations and --all moves", () => {
-    const plan = planMoves({
-      manifests: ms,
-      listed: [
-        "@ethdebug/format",
-        "@ethdebug/pointers",
-        "@ethdebug/bugc",
-        "@ethdebug/format-web",
-      ],
-      directlyChanged: [],
-      released,
-      schemasChanged: false,
-      keyword: "patch",
-      all: false,
-    });
-    expect(plan.map((m) => [m.to, m.reason])).toEqual([
-      ["0.1.0", "graduates"],
-      ["0.1.0", "graduates"],
-      ["0.1.0", "graduates"],
-      ["0.1.0", "graduates"],
-    ]);
-    const all = planMoves({
-      manifests: ms,
-      listed: [],
-      directlyChanged: [],
-      released,
-      schemasChanged: false,
-      keyword: "prerelease",
-      all: true,
-    });
-    expect(all.every((m) => m.reason === "all")).toBe(true);
-  });
-
-  it("keeps the manifest version of a never-released workspace", () => {
-    const withNew = [
-      ...ms,
-      manifest("@ethdebug/codec", "0.1.0-preview.0", ["@ethdebug/format"]),
-    ];
-    const plan = planMoves({
-      manifests: withNew,
-      listed: ["@ethdebug/codec"],
-      directlyChanged: ["@ethdebug/codec"],
-      released,
-      schemasChanged: false,
-      keyword: "prerelease",
-      all: false,
-    });
-    expect(plan).toEqual([
-      {
-        name: "@ethdebug/codec",
-        from: "0.1.0-preview.0",
-        to: "0.1.0-preview.0",
-        reason: "changed",
-        firstRelease: true,
-      },
-    ]);
-  });
-});
-
-describe("planProblems", () => {
-  const ms = [
-    manifest("@ethdebug/format", "0.1.0-draft.1"),
-    manifest("@ethdebug/bugc", "0.1.0", ["@ethdebug/format"]),
-  ];
-  const move = (
-    name: string,
-    from: string,
-    to: string,
-    reason: Move["reason"] = "changed",
-  ): Move => ({ name, from, to, reason, firstRelease: false });
-
-  it("is empty for a sane plan", () => {
-    expect(
-      planProblems(
-        [move("@ethdebug/format", "0.1.0-draft.1", "0.1.0-draft.2")],
-        ms,
-        "prerelease",
-      ),
-    ).toEqual([]);
-  });
-
-  it("rejects a version that does not move forward", () => {
-    expect(
-      planProblems(
-        [move("@ethdebug/bugc", "0.1.0-preview.3", "0.1.0-draft.0")],
-        ms,
-        "prerelease",
-      ),
-    ).toEqual([
-      "@ethdebug/bugc: 0.1.0-draft.0 does not sort after 0.1.0-preview.3",
-    ]);
-  });
-
-  it("rejects a stable workspace that depends on a prerelease", () => {
-    expect(
-      planProblems(
-        [move("@ethdebug/bugc", "0.1.0-preview.3", "0.1.0", "graduates")],
-        ms,
-        "patch",
-      ),
-    ).toEqual([
-      "@ethdebug/bugc: stable 0.1.0 would depend on " +
-        "@ethdebug/format 0.1.0-draft.1",
-    ]);
-  });
-
-  it("requires equal versions for a series start", () => {
-    const plan = [
-      move("@ethdebug/format", "0.1.0", "0.2.0-draft.0", "all"),
-      move("@ethdebug/bugc", "0.1.7", "0.2.0-preview.0", "all"),
-    ];
-    expect(planProblems(plan, ms, "preminor")).toEqual([]);
-    const split = [
-      move("@ethdebug/format", "0.1.0", "0.2.0-draft.0", "all"),
-      move("@ethdebug/bugc", "0.2.0", "0.3.0-preview.0", "all"),
-    ];
-    expect(planProblems(split, ms, "preminor")).toEqual([
-      "a series start must give every workspace the same " +
-        "major.minor.patch; got 0.2.0, 0.3.0",
-    ]);
-  });
-});
-
-describe("requiredChangelogs", () => {
-  const ms = [
-    manifest("@ethdebug/format", "0.1.0-draft.1"),
-    manifest("@ethdebug/evm", "0.1.0-preview.3"),
-    manifest("@ethdebug/format-web", "0.1.0-preview.2", [], true),
-  ];
-
-  it("lists the root file when the spec moves and each public package", () => {
-    const plan: Move[] = [
-      {
-        name: "@ethdebug/format",
-        from: "0.1.0-draft.1",
-        to: "0.1.0-draft.2",
-        reason: "schemas",
-        firstRelease: false,
-      },
-      {
-        name: "@ethdebug/evm",
-        from: "0.1.0-preview.3",
-        to: "0.1.0-preview.4",
-        reason: "dependent",
-        firstRelease: false,
-      },
-      {
-        name: "@ethdebug/format-web",
-        from: "0.1.0-preview.2",
-        to: "0.1.0-preview.3",
-        reason: "dependent",
-        firstRelease: false,
-      },
-    ];
-    expect(requiredChangelogs(plan, ms, "/repo")).toEqual([
-      { path: "CHANGELOG.md", version: "0.1.0-draft.2" },
-      { path: "packages/format/CHANGELOG.md", version: "0.1.0-draft.2" },
-      { path: "packages/evm/CHANGELOG.md", version: "0.1.0-preview.4" },
-    ]);
-  });
-
-  it("omits the root file when the spec does not move", () => {
-    const plan: Move[] = [
-      {
-        name: "@ethdebug/evm",
-        from: "0.1.0-preview.3",
-        to: "0.1.0-preview.4",
-        reason: "changed",
-        firstRelease: false,
-      },
-    ];
-    expect(requiredChangelogs(plan, ms, "/repo")).toEqual([
-      { path: "packages/evm/CHANGELOG.md", version: "0.1.0-preview.4" },
-    ]);
-  });
-});
-
-describe("rewriteManifest", () => {
-  const text =
-    JSON.stringify(
-      {
-        name: "@ethdebug/bugc",
-        version: "0.1.0-preview.5",
-        dependencies: { "@ethdebug/evm": "^0.1.0-preview.3", lodash: "^4.0.0" },
-        devDependencies: { "@ethdebug/format": "^0.1.0-draft.1" },
-        peerDependencies: { "@ethdebug/pointers": "^0.1.0-preview.3" },
-      },
-      null,
-      2,
-    ) + "\n";
-  const versions = new Map([
-    ["@ethdebug/bugc", "0.1.0-preview.6"],
-    ["@ethdebug/format", "0.1.0-draft.2"],
-    ["@ethdebug/pointers", "0.1.0-preview.4"],
-  ]);
-
-  it("rewrites the version and every internal range, keeping the rest", () => {
-    const out = JSON.parse(rewriteManifest(text, versions));
-    expect(out.version).toBe("0.1.0-preview.6");
-    expect(out.dependencies["@ethdebug/evm"]).toBe("^0.1.0-preview.3");
-    expect(out.dependencies.lodash).toBe("^4.0.0");
-    expect(out.devDependencies["@ethdebug/format"]).toBe("^0.1.0-draft.2");
-    expect(out.peerDependencies["@ethdebug/pointers"]).toBe("^0.1.0-preview.4");
-  });
-
-  it(
-    "preserves key order, two-space indentation and the trailing " + "newline",
-    () => {
-      const out = rewriteManifest(text, versions);
-      expect(out.endsWith("}\n")).toBe(true);
-      expect(out.indexOf('"name"')).toBeLessThan(out.indexOf('"version"'));
-      expect(out.split("\n")[1]).toBe('  "name": "@ethdebug/bugc",');
-    },
-  );
-
-  it(
-    "leaves a manifest of a workspace that does not move untouched " +
-      "except ranges",
-    () => {
-      const out = JSON.parse(
-        rewriteManifest(text, new Map([["@ethdebug/format", "0.1.0-draft.2"]])),
-      );
-      expect(out.version).toBe("0.1.0-preview.5");
-      expect(out.devDependencies["@ethdebug/format"]).toBe("^0.1.0-draft.2");
-    },
-  );
-});
-
-describe("undoAdvice", () => {
-  it("removes the tags and the commit when this run committed", () => {
-    expect(undoAdvice(["@ethdebug/evm@1.0.0"], true)).toBe(
-      "undo: git tag -d @ethdebug/evm@1.0.0 && git reset --hard HEAD~1",
-    );
-  });
-
-  it("removes the commit alone when it failed before any tag", () => {
-    expect(undoAdvice([], true)).toBe("undo: git reset --hard HEAD~1");
-  });
-
-  // a first-release-only plan tags HEAD without committing
-  it("removes the tags alone when no commit was made", () => {
-    expect(
-      undoAdvice(["@ethdebug/evm@1.0.0", "@ethdebug/bugc@1.0.0"], false),
-    ).toBe("undo: git tag -d @ethdebug/evm@1.0.0 @ethdebug/bugc@1.0.0");
-  });
-
-  it("restores the manifests when nothing was committed or tagged", () => {
-    expect(undoAdvice([], false)).toBe(
-      "undo: git checkout HEAD -- packages/*/package.json schemas/",
-    );
-  });
-});
-
-// the premise of the first-release-only branch of commitAndTag: such a
-// plan changes no manifest text, so there is nothing to commit
-describe("a plan of first releases only", () => {
-  it("rewrites no manifest, because each version already matches", () => {
-    const text =
-      JSON.stringify(
+  it("reports the planned tags that already exist", () => {
+    const survey = surveyOf({ tags: ["@ethdebug/a@0.1.1", "v9"] });
+    const plan: Plan = {
+      ...empty,
+      moves: [
         {
-          name: "@ethdebug/newcomer",
-          version: "0.1.0",
-          dependencies: { "@ethdebug/other": "^0.1.0" },
+          name: "@ethdebug/a",
+          from: "0.1.0",
+          to: "0.1.1",
+          reason: "changed",
+          firstRelease: false,
         },
-        null,
-        2,
-      ) + "\n";
-    const plan: Move[] = [
-      {
-        name: "@ethdebug/newcomer",
-        from: "0.1.0",
-        to: "0.1.0",
-        reason: "changed",
-        firstRelease: true,
+      ],
+    };
+    expect(check(survey, plan, options).findings).toEqual([
+      "tags already exist: @ethdebug/a@0.1.1",
+    ]);
+  });
+
+  it("emits the findings in preflight's order", () => {
+    const survey = surveyOf({
+      directlyChanged: ["@ethdebug/a"],
+      tags: ["@ethdebug/a@0.1.1"],
+      repo: {
+        branch: "feature",
+        dirty: true,
+        tagsAtHead: ["@ethdebug/a@0.1.0"],
+        nearestAnnotated: { name: "v9", commit: "b" },
+        nearestRelease: { name: "@ethdebug/a@0.1.0", commit: "a" },
       },
+    });
+    const plan: Plan = {
+      ...empty,
+      moves: [
+        {
+          name: "@ethdebug/a",
+          from: "0.1.0",
+          to: "0.1.1",
+          reason: "changed",
+          firstRelease: false,
+        },
+      ],
+    };
+    const { findings } = check(survey, plan, options);
+    expect(findings).toHaveLength(5);
+    expect(findings[0]).toContain("on branch");
+    expect(findings[1]).toContain("uncommitted changes");
+    expect(findings[2]).toContain("nearest annotated tag");
+    expect(findings[3]).toContain("HEAD already carries");
+    expect(findings[4]).toContain("tags already exist");
+  });
+});
+
+const schemaText = [
+  "examples:",
+  "  - ethdebug:",
+  '      schema: "ethdebug/format/info"',
+  '      version: "0.1.0-draft.0"',
+  "",
+].join("\n");
+
+const specSurvey = (version: string) =>
+  surveyOf({
+    workspaces: [workspace("@ethdebug/format", "0.1.0-draft.0")],
+    tags: ["@ethdebug/format@0.1.0-draft.0"],
+    listed: ["@ethdebug/format"],
+    specTag: "@ethdebug/format@0.1.0-draft.0",
+    schemasChanged: true,
+    schemas: [
       {
-        name: "@ethdebug/other",
-        from: "0.1.0",
-        to: "0.1.0",
-        reason: "changed",
-        firstRelease: true,
+        path: "schemas/info.schema.yaml",
+        text: schemaText.replace("0.1.0-draft.0", version),
+        sites: versionSites(schemaText.replace("0.1.0-draft.0", version)),
       },
-    ];
-    const versions = new Map(plan.map((move) => [move.name, move.to]));
-    expect(rewriteManifest(text, versions)).toBe(text);
+    ],
+  });
+
+describe("decide", () => {
+  it("rewrites the manifest and schema texts to the target version", () => {
+    const plan = decide(specSurvey("0.1.0-draft.0"), options);
+    expect(plan.moves).toEqual([
+      {
+        name: "@ethdebug/format",
+        from: "0.1.0-draft.0",
+        to: "0.1.0-draft.1",
+        reason: "schemas",
+        firstRelease: false,
+      },
+    ]);
+    expect(plan.manifests).toEqual([
+      {
+        path: "packages/format/package.json",
+        text:
+          JSON.stringify(
+            { name: "@ethdebug/format", version: "0.1.0-draft.1" },
+            null,
+            2,
+          ) + "\n",
+      },
+    ]);
+    expect(plan.schemas).toEqual([
+      {
+        path: "schemas/info.schema.yaml",
+        text: schemaText.replace("0.1.0-draft.0", "0.1.0-draft.1"),
+      },
+    ]);
+  });
+
+  it("counts any tag named for the workspace as released", () => {
+    const survey = surveyOf({
+      workspaces: [workspace("@ethdebug/a", "0.1.0")],
+      tags: ["@ethdebug/a@not-semver"],
+      listed: ["@ethdebug/a"],
+    });
+    expect(decide(survey, options).moves[0].firstRelease).toBe(false);
+  });
+});
+
+describe("check errors", () => {
+  it("reports a drifted schema site when the spec package moves", () => {
+    const survey = specSurvey("0.0.9");
+    const plan = decide(survey, options);
+    expect(check(survey, plan, options).errors).toEqual([
+      "schemas/info.schema.yaml:4: examples/0/ethdebug names 0.0.9, " +
+        "expected 0.1.0-draft.0",
+    ]);
+  });
+
+  it("reports zero sites when the spec package moves", () => {
+    const survey = surveyOf({
+      ...specSurvey("0.1.0-draft.0"),
+      schemas: [{ path: "schemas/x.schema.yaml", text: "", sites: [] }],
+    });
+    const plan = decide(survey, options);
+    expect(check(survey, plan, options).errors).toEqual([
+      "schemas/: no example names the specification version; " +
+        "the release would rewrite nothing",
+    ]);
+  });
+
+  it("puts the keyword guards before the plan problems", () => {
+    const survey = surveyOf({
+      workspaces: [workspace("@ethdebug/a", "0.1.0-preview.1")],
+    });
+    const backwards: Plan = {
+      ...empty,
+      moves: [
+        {
+          name: "@ethdebug/a",
+          from: "0.1.0-preview.1",
+          to: "0.1.0-preview.0",
+          reason: "changed",
+          firstRelease: false,
+        },
+      ],
+    };
+    const minor: Options = { keyword: "minor", all: false, dryRun: true };
+    const errors = check(survey, backwards, minor).errors;
+    expect(errors).toEqual([
+      "minor starts a series for every workspace: pass --all",
+      "cannot start a series while @ethdebug/a is a prerelease; " +
+        "run `patch` first",
+      "@ethdebug/a: 0.1.0-preview.0 does not sort after 0.1.0-preview.1",
+    ]);
+  });
+});
+
+describe("check changelogs", () => {
+  it("reads the planned changelogs from the survey", () => {
+    const survey = surveyOf({
+      ...specSurvey("0.1.0-draft.0"),
+      changelogs: [
+        { path: "CHANGELOG.md", text: "## 0.1.0-draft.1\n\n- entry\n" },
+        { path: "packages/format/CHANGELOG.md", text: undefined },
+        { path: "packages/other/CHANGELOG.md", text: undefined },
+      ],
+    });
+    const plan = decide(survey, options);
+    expect(check(survey, plan, options).changelogs).toEqual([
+      "packages/format/CHANGELOG.md: file is missing",
+    ]);
   });
 });
