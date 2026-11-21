@@ -27,7 +27,7 @@ examples:
       - identifier: x
         declaration:
           source:
-            id: 5
+            id: "5"
           range:
             offset: 10
             length: 56
@@ -74,7 +74,7 @@ $defs:
       - identifier: x
         declaration:
           source:
-            id: 5
+            id: "5"
           range:
             offset: 10
             length: 56

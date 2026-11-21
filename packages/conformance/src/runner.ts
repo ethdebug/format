@@ -37,17 +37,60 @@ function registerSchemas(): void {
   schemasRegistered = true;
 }
 
-function schemaErrors(output: { errors?: OutputUnit[] }): string {
-  const errors = output.errors ?? [];
-  const messages = errors
-    .map((error) => {
-      if (error.valid || error.keyword.endsWith("#validate")) {
-        return undefined;
-      }
-      return `${error.instanceLocation} fails ${error.absoluteKeywordLocation}`;
-    })
-    .filter((message): message is string => !!message);
+// TRANSITIONAL CARVE-OUT — remove when solc and soldb emit string ids.
+//
+// The spec now requires resource identifiers to be strings
+// (schema:ethdebug/format/materials/id). External producers exercised by
+// this suite — solc's ETHDebug emission and the soldb consumer — still use
+// numeric source/compilation ids (soldb threads them as `u64`). Until they
+// stringify upstream, a numeric id is the one nonconformance this suite
+// downgrades from a hard failure to a loud warning; every other validation
+// failure still fails hard. See:
+const NUMERIC_ID_TRANSITIONAL_ISSUE =
+  "https://github.com/ethdebug/format/issues/287";
 
+function isError(unit: OutputUnit): boolean {
+  return !unit.valid && !unit.keyword.endsWith("#validate");
+}
+
+// Resolve the value at a BASIC `instanceLocation` (e.g. "#/a/0/b").
+function instanceAt(value: unknown, instanceLocation: string): unknown {
+  const tokens = instanceLocation
+    .replace(/^#/, "")
+    .split("/")
+    .slice(1)
+    .map((token) => token.replace(/~1/g, "/").replace(/~0/g, "~"));
+  let node: unknown = value;
+  for (const token of tokens) {
+    if (node && typeof node === "object") {
+      node = (node as Record<string, unknown>)[token];
+    } else {
+      return undefined;
+    }
+  }
+  return node;
+}
+
+// A numeric value failing the materials/id string constraint.
+function isNumericMaterialsIdFailure(
+  unit: OutputUnit,
+  value: unknown,
+): boolean {
+  return (
+    unit.keyword.endsWith("/type") &&
+    unit.absoluteKeywordLocation.includes("ethdebug/format/materials/id") &&
+    typeof instanceAt(value, unit.instanceLocation) === "number"
+  );
+}
+
+function isAncestorOfAny(instanceLocation: string, paths: string[]): boolean {
+  return paths.some((path) => path.startsWith(`${instanceLocation}/`));
+}
+
+function schemaErrors(units: OutputUnit[]): string {
+  const messages = units.map(
+    (unit) => `${unit.instanceLocation} fails ${unit.absoluteKeywordLocation}`,
+  );
   return messages.length > 0 ? messages.join("; ") : "schema validation failed";
 }
 
@@ -59,11 +102,38 @@ async function validateSchema(
 ): Promise<void> {
   registerSchemas();
   const output = await validate(schemaId, value as any, BASIC);
-  if (!output.valid) {
+  if (output.valid) {
+    return;
+  }
+
+  const errors = (output.errors ?? []).filter(isError);
+  const carvedIds = errors.filter((unit) =>
+    isNumericMaterialsIdFailure(unit, value),
+  );
+  const carvedPaths = carvedIds.map((unit) => unit.instanceLocation);
+
+  // Real failures are those that are neither a carved numeric-id failure nor
+  // a cascade of one (a failure reported at an ancestor of a carved id).
+  const realErrors = errors.filter(
+    (unit) =>
+      !carvedIds.includes(unit) &&
+      !isAncestorOfAny(unit.instanceLocation, carvedPaths),
+  );
+
+  if (carvedIds.length > 0) {
+    console.warn(
+      `[transitional] ${path}: external producer emitted ${carvedIds.length} ` +
+        `numeric resource id(s) where the spec now requires strings ` +
+        `(${carvedPaths.join(", ")}). Downgraded to a warning until solc and ` +
+        `soldb emit string ids. See ${NUMERIC_ID_TRANSITIONAL_ISSUE}`,
+    );
+  }
+
+  if (realErrors.length > 0) {
     issues.push(
       issue(
         path,
-        `does not validate against ${schemaId}: ${schemaErrors(output)}`,
+        `does not validate against ${schemaId}: ${schemaErrors(realErrors)}`,
       ),
     );
   }

@@ -79,7 +79,7 @@ required:
 unevaluatedProperties: false
 
 examples:
-  - id: 5
+  - id: "5"
     path: ./contracts/SimpleStorage.sol
     contents: |
       // SPDX-License-Identifier: GPL-3.0
