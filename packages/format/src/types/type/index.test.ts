@@ -246,6 +246,32 @@ describe("rejected values", () => {
       title: "a non-string label",
       value: { kind: "bool", label: 7 },
     },
+    {
+      title: "an unknown complex kind without contains",
+      value: { class: "complex", kind: "weird" },
+    },
+    {
+      title: "an unknown complex kind with its children outside contains",
+      value: {
+        class: "complex",
+        kind: "tagged",
+        cases: [{ payload: { type: { kind: "uint", bits: 256 } } }],
+      },
+    },
+    {
+      title: "a variant with contains",
+      value: { kind: "variant", cases: [], contains: "x" },
+    },
+    {
+      title: "a function with contains",
+      value: {
+        kind: "function",
+        internal: true,
+        parameters: [],
+        returns: [],
+        contains: 7,
+      },
+    },
   ] as const;
 
   for (const { title, value } of rejected) {
@@ -263,7 +289,6 @@ describe("complex types without contains", () => {
   const variant = {
     class: "complex",
     kind: "variant",
-    discriminant: { type: { kind: "number" } },
     cases: [{ name: "A", discriminant: 0 }],
   };
   const fn = {

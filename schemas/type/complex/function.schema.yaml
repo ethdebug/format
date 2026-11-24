@@ -51,6 +51,10 @@ properties:
       $ref: "#/$defs/Value"
   definition:
     $ref: "schema:ethdebug/format/type/definition"
+  contains:
+    not:
+      description: Function types **must not** specify a `contains` field.
+        They give their parts in `parameters` and `returns`.
 
 required:
   - kind
@@ -100,7 +104,8 @@ oneOf:
       - internal
 
 examples:
-  - kind: function
+  - class: complex
+    kind: function
     internal: true
     definition:
       name: increment
@@ -112,7 +117,8 @@ examples:
       - type:
           kind: number
 
-  - kind: function
+  - class: complex
+    kind: function
     external: true
     definition:
       name: withdraw

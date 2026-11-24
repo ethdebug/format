@@ -57,8 +57,10 @@ export const schemaExtensions: {
   "schema:ethdebug/format/type/complex/struct": {
     extends: new Set(["schema:ethdebug/format/type/complex"]),
   },
-  // function and variant are absent on purpose. Their examples omit
-  // `class` (it is optional on known kinds) and have no `contains`.
-  // The base complex type needs one of the two, so those examples are
-  // not valid base complex types. With `class: "complex"` they are.
+  "schema:ethdebug/format/type/complex/variant": {
+    extends: new Set(["schema:ethdebug/format/type/complex"]),
+  },
+  "schema:ethdebug/format/type/complex/function": {
+    extends: new Set(["schema:ethdebug/format/type/complex"]),
+  },
 };

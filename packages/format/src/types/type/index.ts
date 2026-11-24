@@ -22,14 +22,18 @@ export namespace Type {
     class: Exclude<Base.Type["class"], undefined>;
   };
 
+  // an unknown complex kind must give `contains`, so a consumer that
+  // does not know the kind can find its child types
   export const isUnknown = (value: unknown): value is Unknown =>
     Base.isType(value) &&
     "class" in value &&
-    (!("contains" in value) ||
-      Type.isWrapper(value.contains) ||
-      (Array.isArray(value.contains) && value.contains.every(Type.isWrapper)) ||
-      (typeof value.contains === "object" &&
-        Object.values(value.contains).every(Type.isWrapper)));
+    (!("contains" in value)
+      ? value.class !== "complex"
+      : Type.isWrapper(value.contains) ||
+        (Array.isArray(value.contains) &&
+          value.contains.every(Type.isWrapper)) ||
+        (typeof value.contains === "object" &&
+          Object.values(value.contains).every(Type.isWrapper)));
 
   export interface Reference {
     id: string | number;
@@ -370,6 +374,7 @@ export namespace Type {
       mayHaveClass(value, "complex") &&
       mayHaveLabel(value) &&
       hasKind(value, "variant") &&
+      !("contains" in value) &&
       "cases" in value &&
       Array.isArray(value.cases) &&
       value.cases.every(Variant.isCase) &&
@@ -398,6 +403,7 @@ export namespace Type {
       mayHaveClass(value, "complex") &&
       mayHaveLabel(value) &&
       hasKind(value, "function") &&
+      !("contains" in value) &&
       "parameters" in value &&
       Array.isArray(value.parameters) &&
       value.parameters.every(isNamed) &&

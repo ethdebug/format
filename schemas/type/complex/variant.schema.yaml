@@ -37,6 +37,10 @@ properties:
       $ref: "#/$defs/Case"
   definition:
     $ref: "schema:ethdebug/format/type/definition"
+  contains:
+    not:
+      description: Variant types **must not** specify a `contains` field.
+        They give their parts in `cases`.
 
 required:
   - kind
@@ -44,6 +48,7 @@ required:
 
 examples:
   - # a variant with a case that has no payload
+    class: complex
     kind: variant
     label: Option<uint8>
     cases:
@@ -56,6 +61,7 @@ examples:
             kind: number
 
   - # a variant with different payloads
+    class: complex
     kind: variant
     definition:
       name: Shape
