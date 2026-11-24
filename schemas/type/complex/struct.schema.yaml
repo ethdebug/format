@@ -7,6 +7,10 @@ description: |
   of member types. Members may have names. A struct with no named members
   is a tuple. A struct with no members is legal.
 
+  Standard interpretation: the value is the ordered list of its members'
+  values, in `contains` order. Each member's value is read as that
+  member's type. This type does not define where each member's bytes are.
+
 type: object
 properties:
   label:

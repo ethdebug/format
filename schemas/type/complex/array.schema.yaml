@@ -7,6 +7,11 @@ description: |
   element type it contains. It has no element count. The number of
   elements comes from the value's location.
 
+  Standard interpretation: the value is the ordered list of its elements,
+  each read as the `contains` type. The number of elements comes from the
+  value's location, never from this type. This type does not define where
+  each element's bytes are.
+
 type: object
 properties:
   label:

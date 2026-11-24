@@ -18,6 +18,9 @@ description: |
   around the contract type that provides this function as an external
   interface. Internal function types must not have a `contract` field.
 
+  This format does not yet define a standard interpretation for a value of
+  a function type.
+
 type: object
 properties:
   label:

@@ -5,13 +5,21 @@ title: ethdebug/format/type/complex/variant
 description: |
   Schema for representing variant types. A variant type is a value that is
   exactly one of a list of cases. Each case has a name, a `discriminant`
-  and, optionally, a `payload` type.
+  and, optionally, a `payload` type. The names of the cases should be
+  unique. A variant with no cases is legal; no value is valid for it.
 
-  The active case is the case whose `discriminant` equals the value read
-  for the discriminant. If no case matches, the value is invalid.
+  Standard interpretation: read the bytes of the discriminant as a
+  big-endian unsigned integer. Read each case's `discriminant` (an
+  **ethdebug/format/data/value**) as an unsigned integer too, so `0`,
+  `"0x00"` and `"0x0000"` are the same discriminant. The active case is
+  the case whose `discriminant` equals the integer read. If no case
+  matches, the value is invalid. If the case has a `payload`, the value
+  holds a value of the payload type. Two cases with the same discriminant
+  make the type invalid; this schema cannot check this.
 
-  This type says what each case is. It does not say where the discriminant
-  and the payload are. A realization gives their locations.
+  This type gives each case's discriminant and payload type. Where the
+  bytes of the discriminant and of the payload are is not part of the
+  type.
 
 type: object
 properties:

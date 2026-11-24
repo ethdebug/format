@@ -7,8 +7,9 @@ description: |
   flags.
 
   Standard interpretation: read the bytes of the value as a big-endian
-  unsigned integer. If bit `i` is set, `values[i]` is in the set. The
-  value 0 is the empty set. A value with a bit set at or above
+  unsigned integer. Bit `i` is the bit with the value `2**i` (bit 0 is
+  the least significant bit). If bit `i` is set, `values[i]` is in the
+  set. The value 0 is the empty set. A value with a bit set at or above
   `values.length` is invalid.
 
 type: object
@@ -20,7 +21,8 @@ properties:
   kind:
     const: flags
   values:
-    description: The names of the flags, where `values[i]` is bit `i`.
+    description: The names of the flags, where `values[i]` is bit `i`
+      (the bit with the value `2**i`).
     type: array
     items:
       type: string
