@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Key concepts | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-424/spec/type/concepts"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Key concepts | ethdebug format"><meta data-rh="true" name="description" content="The ethdebug/format/type schema includes definitions for a few"><meta data-rh="true" property="og:description" content="The ethdebug/format/type schema includes definitions for a few"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-424/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/type/concepts"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/type/concepts" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/type/concepts" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Key concepts","item":"https://ethdebug.github.io/format/pr-preview/pr-424/spec/type/concepts"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-424/assets/css/styles.cf688909.css">
-<script src="/format/pr-preview/pr-424/assets/js/runtime~main.01de1c47.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-424/assets/js/main.71fdcab6.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/runtime~main.06eae221.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/main.568fe6f1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -68,9 +68,14 @@ of three forms:</p>
 </ul>
 <p>All three forms of composition polymorphically use the <code>&quot;contains&quot;</code> field.</p>
 <p>Some known kinds state their parts in other fields instead (<code>variant</code> uses
-<code>cases</code>, and <code>function</code> uses <code>parameters</code> and <code>returns</code>). Where such a type
-sits inside an unknown complex kind, it gives <code>&quot;class&quot;: &quot;complex&quot;</code>. The base
-schema needs <code>&quot;class&quot;</code> or <code>&quot;contains&quot;</code>, and this type has no <code>&quot;contains&quot;</code>.</p>
+<code>cases</code>, and <code>function</code> uses <code>parameters</code> and <code>returns</code>). These kinds must not
+give <code>&quot;contains&quot;</code>.</p>
+<p>The rule that uses <code>&quot;class&quot;</code> and <code>&quot;contains&quot;</code> is for kinds that a consumer does
+not know. A complex type of an unknown kind <strong>must</strong> give <code>&quot;class&quot;: &quot;complex&quot;</code>
+and <code>&quot;contains&quot;</code>, so the consumer can find its child types. A consumer
+dispatches on a known kind by <code>&quot;kind&quot;</code>, not by this rule. Known kinds may omit
+<code>&quot;class&quot;</code>, so a <code>variant</code> or <code>function</code> without <code>&quot;class&quot;</code> looks elementary to
+this rule.</p>
 <p>As described in
 <a href="#type-specifiers-wrappers-and-references" class="">Type specifiers, wrappers, and references</a>
 below, complex types compose

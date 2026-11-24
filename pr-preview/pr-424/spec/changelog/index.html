@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Changelog | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-424/spec/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-spec-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-spec-current"><meta data-rh="true" property="og:title" content="Changelog | ethdebug format"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-424/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/changelog"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/spec/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Changelog","item":"https://ethdebug.github.io/format/pr-preview/pr-424/spec/changelog"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-424/assets/css/styles.cf688909.css">
-<script src="/format/pr-preview/pr-424/assets/js/runtime~main.01de1c47.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-424/assets/js/main.71fdcab6.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/runtime~main.06eae221.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/main.568fe6f1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -64,8 +64,9 @@ The sections do not signal obligations; the prefixes do.</p>
 <li class="">
 <p>The <strong>ethdebug/format/type/elementary/flags</strong> type is new. It is a set of
 named members, with <code>values</code> (a list of unique strings) and an optional
-<code>definition</code>. A set bit <code>i</code> in the value&#x27;s bytes means <code>values[i]</code> is
-present. Zero is the empty set. A set bit at or past the length of <code>values</code>
+<code>definition</code>. The value&#x27;s bytes are read as a big-endian unsigned integer,
+and bit <code>i</code> is the bit with the value <code>2**i</code>. A set bit <code>i</code> means
+<code>values[i]</code> is present. Zero is the empty set. A set bit at or past the length of <code>values</code>
 is invalid (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/elementary/flags</strong></li>
@@ -78,8 +79,12 @@ as described to read the data at all.</li>
 <p>The <strong>ethdebug/format/type/complex/variant</strong> type is new. It has <code>cases</code>,
 a list of <code>name</code>, <code>discriminant</code> (an <strong>ethdebug/format/data/value</strong>) and
 optional <code>payload</code> (a type wrapper), and an optional <code>definition</code>. The type
-says what each case is. The active case is the one whose <code>discriminant</code>
-matches the value read as the discriminant. No match is invalid (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+gives each case&#x27;s discriminant and payload type. The discriminant is read
+as a big-endian unsigned integer, and each case&#x27;s <code>discriminant</code> is
+compared as that integer, so <code>0</code> and <code>&quot;0x00&quot;</code> are the same discriminant.
+The active case is the one whose <code>discriminant</code> equals the integer read.
+No match is invalid. Two cases with the same discriminant make the type
+invalid. A variant must not have <code>contains</code> (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/complex/variant</strong></li>
 <li class="">Producers: optional: a type may have kind <code>variant</code>.</li>
@@ -94,23 +99,30 @@ it as described to read the data at all.</li>
 <p>Every type kind is replaced. A type now says what a value is, and no longer
 says where its bytes are or how many there are. The layout keywords <code>bits</code>,
 <code>size</code> and <code>count</code> are gone, and the integer, fixed-point, address and
-tuple kinds merge into fewer kinds. The descriptions of most kinds now
-state their standard interpretation: how a consumer reads a value from the
-bytes the value occupies. Every type may have an optional <code>label</code>, the type
+tuple kinds merge into fewer kinds. The description of each kind except
+<code>function</code> now states its standard interpretation: how a consumer reads a
+value from the bytes the value occupies. Every type may have an optional <code>label</code>, the type
 as its language spells it (e.g., <code>uint256</code>, <code>bytes32</code>, <code>uint8[3]</code>), for
 display only. Nothing interprets a label. A complex base type may now omit
 <code>contains</code> if it gives <code>class</code> as <code>complex</code>, since the new <code>variant</code> and
-<code>function</code> kinds have no <code>contains</code> (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+<code>function</code> kinds have no <code>contains</code>. A complex type of an unknown kind must
+still give <code>contains</code>. The base rule (<code>class</code> and <code>contains</code>) is for kinds
+that a consumer does not know; a consumer dispatches on a known kind by
+<code>kind</code> (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type</strong>, <strong>ethdebug/format/type/base</strong>,
 <strong>ethdebug/format/type/elementary</strong>, <strong>ethdebug/format/type/complex</strong>,
 <strong>ethdebug/format/type/specifier</strong></li>
-<li class="">Producers: required: the kinds below replace the old kinds, and the old
-kinds no longer validate. See the entries for each kind.</li>
+<li class="">Producers: required: the kinds below replace the old kinds. A type with
+an old kind validates only as a type of an unknown kind: it must give
+<code>class</code>, and it has no meaning to a consumer. The format reserves no
+kind names. See the entries for each kind.</li>
 <li class="">Consumers: required: producers emit the new kinds. A consumer must read
 them and must not expect the old kinds. See the entries for each kind.
 A consumer that uses <strong>ethdebug/format/type/base</strong> to classify complex
-types must accept a complex type without <code>contains</code>.</li>
+types must accept a complex type without <code>contains</code>. A <code>variant</code> or
+<code>function</code> without <code>class</code> matches the base elementary type, so a
+consumer must classify known kinds by <code>kind</code>.</li>
 </ul>
 </li>
 <li class="">
@@ -130,8 +142,9 @@ example, <code>{ &quot;kind&quot;: &quot;uint&quot;, &quot;bits&quot;: 256 }</co
 <strong>ethdebug/format/type/elementary/ufixed</strong>,
 <strong>ethdebug/format/type/elementary/fixed</strong></li>
 <li class="">Producers: required: the schemas for kinds <code>uint</code>, <code>int</code>, <code>ufixed</code> and
-<code>fixed</code> are removed, so a type with one of those kinds no longer
-validates. Use kind <code>number</code>. The <code>bits</code> keyword has no meaning now, and
+<code>fixed</code> are removed. A type with one of those kinds validates only as a
+type of an unknown kind: it must give <code>class</code>, and it has no meaning to a
+consumer. Use kind <code>number</code>. The <code>bits</code> keyword has no meaning now, and
 consumers ignore it.</li>
 <li class="">Consumers: required: a type with kind <code>number</code> is an integer or fixed-point
 number as described. The width comes from the pointer, not the type.</li>
@@ -230,9 +243,8 @@ with a <code>definition</code> or a type reference. It replaces <code>contains.c
 Exactly one of <code>internal</code> and <code>external</code> is true, as before (<a href="https://github.com/ethdebug/format/issues/282" target="_blank" rel="noopener noreferrer" class="">#282<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/type/complex/function</strong></li>
-<li class="">Producers: required: <code>returns</code> is required, so data in the old shape no
-longer validates. <code>contains</code> has no meaning in a function type now, and
-consumers ignore it.</li>
+<li class="">Producers: required: <code>returns</code> is required, and a function type must not
+have <code>contains</code>, so data in the old shape no longer validates.</li>
 <li class="">Consumers: required: read <code>parameters</code>, <code>returns</code> and <code>contract</code> at the
 top level of the function type.</li>
 </ul>
@@ -549,7 +561,7 @@ context; the earlier text let a literal omit leading zeroes and padded it to
 the width of its context. No schema keyword changes, so a validator accepts
 the same documents as before, but an expression that passes a bare integer to
 <code>$concat</code> or <code>$keccak256</code>, as the schema&#x27;s own earlier examples did, no longer
-conforms. Those examples are corrected (<a href="https://github.com/ethdebug/format/pull/286" target="_blank" rel="noopener noreferrer" class="">#286<!-- -->  ﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
+conforms. Those examples are corrected (<a href="https://github.com/ethdebug/format/pull/286" target="_blank" rel="noopener noreferrer" class="">#286<!-- -->﻿<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_awgD"><use href="#theme-svg-external-link"></use></svg></a>).</p>
 <ul>
 <li class="">Schemas: <strong>ethdebug/format/pointer/expression</strong></li>
 <li class="">Producers: required: give each bare-integer operand of <code>$concat</code> or

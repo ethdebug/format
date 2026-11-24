@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Types | ethdebug format</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/types"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Types | ethdebug format"><meta data-rh="true" name="description" content="This page explains the mental model behind ethdebug/format type"><meta data-rh="true" property="og:description" content="This page explains the mental model behind ethdebug/format type"><link data-rh="true" rel="icon" href="/format/pr-preview/pr-424/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/types"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/types" hreflang="en"><link data-rh="true" rel="alternate" href="https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/types" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Concepts","item":"https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/"},{"@type":"ListItem","position":2,"name":"Types","item":"https://ethdebug.github.io/format/pr-preview/pr-424/docs/concepts/types"}]}</script><link rel="stylesheet" href="/format/pr-preview/pr-424/assets/css/styles.cf688909.css">
-<script src="/format/pr-preview/pr-424/assets/js/runtime~main.01de1c47.js" defer="defer"></script>
-<script src="/format/pr-preview/pr-424/assets/js/main.71fdcab6.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/runtime~main.06eae221.js" defer="defer"></script>
+<script src="/format/pr-preview/pr-424/assets/js/main.568fe6f1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -73,10 +73,15 @@ any additional requirements for unknown types.</p>
 <li class="">A struct with multiple member types</li>
 <li class="">A mapping from one type to another</li>
 </ul>
-<p>This distinction is expressed through the presence or absence of a <code>contains</code>
-field. Elementary types never have <code>contains</code>. Complex types of unknown kinds
-always have <code>contains</code>. Some known complex kinds use their own fields instead:
-<code>function</code> lists <code>parameters</code> and <code>returns</code>, and <code>variant</code> lists <code>cases</code>.</p>
+<p>This distinction is expressed through the <code>class</code> field and the presence or
+absence of a <code>contains</code> field. Elementary types never have <code>contains</code>. Complex
+types of unknown kinds always give <code>&quot;class&quot;: &quot;complex&quot;</code> and <code>contains</code>.</p>
+<p>This rule (<code>class</code> and <code>contains</code>) is for kinds that a consumer does not know.
+A consumer dispatches on a known kind by <code>kind</code>. Known kinds may omit <code>class</code>,
+and some known complex kinds use their own fields instead of <code>contains</code>:
+<code>function</code> lists <code>parameters</code> and <code>returns</code>, and <code>variant</code> lists <code>cases</code>. A
+<code>variant</code> or <code>function</code> without <code>class</code> thus looks elementary to the rule for
+unknown kinds.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="the-contains-field-for-complex-types">The <code>contains</code> field for complex types<a href="#the-contains-field-for-complex-types" class="hash-link" aria-label="Direct link to the-contains-field-for-complex-types" title="Direct link to the-contains-field-for-complex-types" translate="no">​</a></h2>
 <p>Most complex types use <code>contains</code> to specify what types they compose. This
 field is polymorphic — it takes one of three forms depending on the type kind:</p>
