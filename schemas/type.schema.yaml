@@ -37,7 +37,9 @@ else:
   type: object
   description:
     Else the object must be a valid **ethdebug/format/type/base** with
-    additional constraints
+    additional constraints. The base rule (`class` and `contains`) is for
+    kinds that a consumer does not know. A consumer dispatches on a known
+    kind by `kind`.
   allOf:
     - $ref: "schema:ethdebug/format/type/base"
     - title: Required `class` field
@@ -51,11 +53,15 @@ else:
           class:
             const: complex
       then:
-        description: Then the `contains` field must adhere to
+        description: Then the object must have a `contains` field, so a
+          consumer that does not know this kind can find its child types.
+          The `contains` field must adhere to
           **ethdebug/format/type/wrapper** schemas, not the
           **ethdebug/format/type/base** equivalent.
 
           (i.e., these additional constraints must apply recursively)
+        required:
+          - contains
         properties:
           contains:
             oneOf:

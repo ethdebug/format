@@ -303,7 +303,6 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
     return {
       kind: "array",
       contains: { type: elementType },
-      ...(bugType.size !== undefined && { count: bugType.size }),
     };
   }
 
@@ -313,8 +312,9 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
 
 The type conversion handles:
 
-- **Elementary types** — Direct mapping (`uint256` → `{kind: "uint", bits: 256}`)
-- **Arrays** — Recursive conversion with optional count
+- **Elementary types** — Direct mapping
+  (`uint256` → `{kind: "number", label: "uint256"}`)
+- **Arrays** — Recursive conversion of the element type
 - **Mappings** — Key/value type conversion
 - **Structs** — Field-by-field conversion with names
 
@@ -456,7 +456,7 @@ Each bytecode instruction includes context with:
         "variables": [
           {
             "identifier": "count",
-            "type": { "kind": "uint", "bits": 256 },
+            "type": { "kind": "number" },
             "pointer": { "location": "storage", "slot": 0 }
           }
         ]

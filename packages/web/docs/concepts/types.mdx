@@ -28,15 +28,22 @@ Together, they enable a debugger to find bytes (via the pointer) and interpret
 them correctly (via the type). The same type definition can be used regardless
 of where the data happens to be stored.
 
+A type also does not give the size of its value. A `number` type has no
+width, and an `array` type has no element count. The pointer gives the
+value's bytes, and so their number.
+
 ## All types have a `kind` field
 
 Every type representation is a JSON object with a `kind` field that identifies
 what kind of type it is:
 
-<SchemaExample schema="type/elementary/uint" href="/spec/type/elementary/uint">
+<SchemaExample
+  schema="type/elementary/number"
+  href="/spec/type/elementary/number"
+>
   {`{
-  "kind": "uint",
-  "bits": 256
+  "kind": "number",
+  "label": "uint256"
 }`}
 </SchemaExample>
 
@@ -54,9 +61,10 @@ for validation and how to interpret the rest of the object.
 **ethdebug/format** defines specific schemas for known type kinds. These
 correspond to reserved string values for `kind`:
 
-- Elementary types: `uint`, `int`, `bool`, `address`, `bytes`, `string`,
-  `fixed`, `ufixed`, `enum`, `contract`
-- Complex types: `array`, `struct`, `mapping`, `tuple`, `alias`, `function`
+- Elementary types: `number`, `bool`, `address`, `bytes`, `string`, `enum`,
+  `flags`
+- Complex types: `array`, `struct`, `mapping`, `alias`, `function`,
+  `variant`
 
 Type representations **should** use the specific schema when representing a
 known type. They **must not** reuse reserved `kind` values for other purposes.
@@ -82,7 +90,7 @@ Types fall into one of two classes:
 **Elementary types** don't contain other types. They represent atomic values:
 
 - `uint256` — an unsigned integer
-- `address` — a 20-byte account identifier
+- `address` — an account identifier
 - `bool` — true or false
 
 **Complex types** compose one or more other types:
@@ -91,13 +99,21 @@ Types fall into one of two classes:
 - A struct with multiple member types
 - A mapping from one type to another
 
-This distinction is expressed through the presence or absence of a `contains`
-field. Complex types always have `contains`; elementary types never do.
+This distinction is expressed through the `class` field and the presence or
+absence of a `contains` field. Elementary types never have `contains`. Complex
+types of unknown kinds always give `"class": "complex"` and `contains`.
+
+This rule (`class` and `contains`) is for kinds that a consumer does not know.
+A consumer dispatches on a known kind by `kind`. Known kinds may omit `class`,
+and some known complex kinds use their own fields instead of `contains`:
+`function` lists `parameters` and `returns`, and `variant` lists `cases`. A
+`variant` or `function` without `class` thus looks elementary to the rule for
+unknown kinds.
 
 ## The `contains` field for complex types
 
-Complex types use `contains` to specify what types they compose. This field is
-polymorphic — it takes one of three forms depending on the type kind:
+Most complex types use `contains` to specify what types they compose. This
+field is polymorphic — it takes one of three forms depending on the type kind:
 
 ### Single type (e.g., arrays)
 
@@ -108,8 +124,7 @@ Arrays compose exactly one element type:
   "kind": "array",
   "contains": {
     "type": {
-      "kind": "uint",
-      "bits": 256
+      "kind": "number"
     }
   }
 }`}
@@ -125,7 +140,7 @@ Structs compose an ordered list of named members:
   "contains": [
     {
       "name": "balance",
-      "type": { "kind": "uint", "bits": 256 }
+      "type": { "kind": "number" }
     },
     {
       "name": "owner",
@@ -147,7 +162,7 @@ Mappings compose a key type and a value type:
   "kind": "mapping",
   "contains": {
     "key": { "type": { "kind": "address" } },
-    "value": { "type": { "kind": "uint", "bits": 256 } }
+    "value": { "type": { "kind": "number" } }
   }
 }`}
 </SchemaExample>

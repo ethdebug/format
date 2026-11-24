@@ -2,20 +2,28 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/elementary/enum"
 
 title: ethdebug/format/type/elementary/enum
-description: Schema describing the representation of an enumerated type
+description: |
+  Schema describing the representation of an enumerated type.
+
+  Standard interpretation: read the bytes of the value as a big-endian
+  unsigned integer `i`. The value is `values[i]`. If `i` is not less than
+  `values.length`, the value is invalid.
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     const: elementary
   kind:
     const: enum
   values:
-    description:
-      The allowed values of an enum. This format makes no restriction on which
-      values are allowed here.
+    description: The names of the enum values, where `values[i]` is value `i`.
     type: array
-    items: true
+    items:
+      type: string
+    minItems: 1
+    uniqueItems: true
   definition:
     $ref: "schema:ethdebug/format/type/definition"
 
@@ -29,3 +37,10 @@ examples:
       - A
       - B
       - C
+  - kind: enum
+    label: Direction
+    values:
+      - North
+      - South
+    definition:
+      name: Direction

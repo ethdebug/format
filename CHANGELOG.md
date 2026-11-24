@@ -53,6 +53,179 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- The **ethdebug/format/type/elementary/flags** type is new. It is a set of
+  named members, with `values` (a list of unique strings) and an optional
+  `definition`. The value's bytes are read as a big-endian unsigned integer,
+  and bit `i` is the bit with the value `2**i`. A set bit `i` means
+  `values[i]` is present. Zero is the empty set. A set bit at or past the length of `values`
+  is invalid ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/flags**
+  - Producers: optional: a type may have kind `flags`.
+  - Consumers: required: a type may have kind `flags`. A consumer must read it
+    as described to read the data at all.
+
+- The **ethdebug/format/type/complex/variant** type is new. It has `cases`,
+  a list of `name`, `discriminant` (an **ethdebug/format/data/value**) and
+  optional `payload` (a type wrapper), and an optional `definition`. The type
+  gives each case's discriminant and payload type. The discriminant is read
+  as a big-endian unsigned integer, and each case's `discriminant` is
+  compared as that integer, so `0` and `"0x00"` are the same discriminant.
+  The active case is the one whose `discriminant` equals the integer read.
+  No match is invalid. Two cases with the same discriminant make the type
+  invalid. A variant must not have `contains` ([#282]).
+  - Schemas: **ethdebug/format/type/complex/variant**
+  - Producers: optional: a type may have kind `variant`.
+  - Consumers: required: a type may have kind `variant`. A consumer must read
+    it as described to read the data at all.
+
+### Changed
+
+- Every type kind is replaced. A type now says what a value is, and no longer
+  says where its bytes are or how many there are. The layout keywords `bits`,
+  `size` and `count` are gone, and the integer, fixed-point, address and
+  tuple kinds merge into fewer kinds. The description of each kind except
+  `function` now states its standard interpretation: how a consumer reads a
+  value from the bytes the value occupies. Every type may have an optional `label`, the type
+  as its language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for
+  display only. Nothing interprets a label. A complex base type may now omit
+  `contains` if it gives `class` as `complex`, since the new `variant` and
+  `function` kinds have no `contains`. A complex type of an unknown kind must
+  still give `contains`. The base rule (`class` and `contains`) is for kinds
+  that a consumer does not know; a consumer dispatches on a known kind by
+  `kind` ([#282]).
+  - Schemas: **ethdebug/format/type**, **ethdebug/format/type/base**,
+    **ethdebug/format/type/elementary**, **ethdebug/format/type/complex**,
+    **ethdebug/format/type/specifier**
+  - Producers: required: the kinds below replace the old kinds. A type with
+    an old kind validates only as a type of an unknown kind: it must give
+    `class`, and it has no meaning to a consumer. The format reserves no
+    kind names. See the entries for each kind.
+  - Consumers: required: producers emit the new kinds. A consumer must read
+    them and must not expect the old kinds. See the entries for each kind.
+    A consumer that uses **ethdebug/format/type/base** to classify complex
+    types must accept a complex type without `contains`. A `variant` or
+    `function` without `class` matches the base elementary type, so a
+    consumer must classify known kinds by `kind`.
+
+- The **ethdebug/format/type/elementary/number** type replaces the `uint`,
+  `int`, `ufixed` and `fixed` kinds. It has an optional `signed` (default
+  false) and an optional `places` (default 0, minimum 0), and has no width.
+  The value is the big-endian integer over the value's bytes, in two's
+  complement if `signed`, divided by 10 to the power of `places`. For
+  example, `{ "kind": "uint", "bits": 256 }` becomes
+  `{ "kind": "number", "label": "uint256" }`, and
+  `{ "kind": "int", "bits": 8 }` becomes
+  `{ "kind": "number", "signed": true, "label": "int8" }` ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/number**,
+    **ethdebug/format/type/elementary/uint**,
+    **ethdebug/format/type/elementary/int**,
+    **ethdebug/format/type/elementary/ufixed**,
+    **ethdebug/format/type/elementary/fixed**
+  - Producers: required: the schemas for kinds `uint`, `int`, `ufixed` and
+    `fixed` are removed. A type with one of those kinds validates only as a
+    type of an unknown kind: it must give `class`, and it has no meaning to a
+    consumer. Use kind `number`. The `bits` keyword has no meaning now, and
+    consumers ignore it.
+  - Consumers: required: a type with kind `number` is an integer or fixed-point
+    number as described. The width comes from the pointer, not the type.
+
+- The **ethdebug/format/type/elementary/address** type now also covers
+  contract references, and the `contract` kind is removed. An address has an
+  optional `payable` (absent means unknown) and an optional `definition`. A
+  type without `definition` is a plain address. A type with `definition` is a
+  reference to a contract, and the `definition` may also have `library` or
+  `interface` (not both true) ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/address**,
+    **ethdebug/format/type/elementary/contract**
+  - Producers: required: the schema for kind `contract` is removed. Use kind
+    `address` with a `definition`.
+  - Consumers: required: a type with kind `address` and a `definition`
+    refers to a contract. It is read as an address.
+
+- The **ethdebug/format/type/elementary/bytes** type no longer has `size`.
+  Its value is the bytes of the value, in order ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/bytes**
+  - Producers: required: the `size` keyword is removed. It has no meaning now,
+    and consumers ignore it. A fixed-size `bytes` type is
+    `{ "kind": "bytes" }`, and the pointer gives the size.
+  - Consumers: required: a type with kind `bytes` has no `size`. Take the
+    length from the bytes the value occupies.
+
+- The **ethdebug/format/type/elementary/enum** type now has `values` as a
+  non-empty list of unique strings. The value is the unsigned big-endian
+  integer `i` over the value's bytes, and the member is `values[i]`. An `i`
+  past the end of `values` is invalid ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/enum**
+  - Producers: required: `values` must be a non-empty list of unique
+    strings. Data with any other `values` no longer validates.
+  - Consumers: required: read an enum value as the index into `values`
+    described above.
+
+- The **ethdebug/format/type/elementary/bool** and
+  **ethdebug/format/type/elementary/string** types may have a `label`, and
+  their descriptions now state the standard interpretation. A bool is 0
+  (false) or 1 (true). A string is text in its `encoding` (default utf-8)
+  ([#282]).
+  - Schemas: **ethdebug/format/type/elementary/bool**,
+    **ethdebug/format/type/elementary/string**
+  - Producers: optional: a type may have a `label`.
+  - Consumers: required: "Any other value is invalid" (bool) and "If the
+    bytes are not a valid sequence in that encoding, the value is invalid"
+    (string). The previous text did not say how to read such values.
+
+- The **ethdebug/format/type/complex/struct** type replaces the `tuple`
+  kind. A struct has an ordered `contains` list whose items may each have a
+  `name`. An unnamed list is a tuple, and the list may be empty. The
+  `definition` is optional ([#282]).
+  - Schemas: **ethdebug/format/type/complex/struct**,
+    **ethdebug/format/type/complex/tuple**
+  - Producers: required: the schema for kind `tuple` is removed. Use kind
+    `struct` with unnamed items.
+  - Consumers: required: a type with kind `struct` may have unnamed items,
+    and may have none.
+
+- The **ethdebug/format/type/complex/array** type no longer has `count`. Its
+  items are all of the `contains` type. The pointer gives how many there are
+  ([#282]).
+  - Schemas: **ethdebug/format/type/complex/array**
+  - Producers: required: the `count` keyword is removed. It has no meaning
+    now, and consumers ignore it. A stale `count` does not fix the length of
+    the array.
+  - Consumers: required: an array type has no length. Take the item count
+    from the pointer.
+
+- The **ethdebug/format/type/complex/function** type has a new shape.
+  `parameters` and `returns` are top-level lists (`returns` is required, and
+  `[]` means no values). They replace `contains.parameters` and
+  `contains.returns`. An external function may have a top-level `contract`
+  wrapper, whose type is an **ethdebug/format/type/elementary/address**
+  with a `definition` or a type reference. It replaces `contains.contract`.
+  Exactly one of `internal` and `external` is true, as before ([#282]).
+  - Schemas: **ethdebug/format/type/complex/function**
+  - Producers: required: `returns` is required, and a function type must not
+    have `contains`, so data in the old shape no longer validates.
+  - Consumers: required: read `parameters`, `returns` and `contract` at the
+    top level of the function type.
+
+- The **ethdebug/format/type/complex/alias** and
+  **ethdebug/format/type/complex/mapping** types may have a `label`, and
+  their descriptions now state the standard interpretation. An alias is read
+  as its `contains` type. A mapping entry's value is read as the `value` type
+  and its key as the `key` type ([#282]).
+  - Schemas: **ethdebug/format/type/complex/alias**,
+    **ethdebug/format/type/complex/mapping**
+  - Producers: optional: a type may have a `label`.
+  - Consumers: no change needed. The new prose describes how these kinds
+    were already read.
+
+- The examples that embed types now use the new kinds ([#282]).
+  - Schemas: **ethdebug/format/info**, **ethdebug/format/info/resources**,
+    **ethdebug/format/program**
+  - Producers: no change needed.
+  - Consumers: no change needed.
+
 ## 0.1.0-draft.3 — 2026-11-19
 
 ### Added
@@ -793,6 +966,7 @@ First published version of the specification.
 [#279]: https://github.com/ethdebug/format/pull/279
 [#280]: https://github.com/ethdebug/format/pull/280
 [#281]: https://github.com/ethdebug/format/pull/281
+[#282]: https://github.com/ethdebug/format/issues/282
 [#284]: https://github.com/ethdebug/format/pull/284
 [#285]: https://github.com/ethdebug/format/pull/285
 [#286]: https://github.com/ethdebug/format/pull/286

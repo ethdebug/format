@@ -1,0 +1,47 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/number"
+
+title: ethdebug/format/type/elementary/number
+description: |
+  Schema describing the representation of a number type, covering unsigned
+  and signed integers and fixed-point numbers.
+
+  Standard interpretation: read the bytes of the value as a big-endian
+  integer `v`, in two's complement if `signed` is true. The number is
+  `v / 10**places`.
+
+  This type has no width. The number of bytes comes from the value's
+  location.
+
+type: object
+properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
+  class:
+    const: elementary
+  kind:
+    const: number
+  signed:
+    description: Whether the integer is in two's complement.
+    type: boolean
+    default: false
+  places:
+    description: The number of decimal places of the fixed-point number.
+    type: integer
+    minimum: 0
+    default: 0
+required:
+  - kind
+examples:
+  - # an unsigned integer
+    kind: number
+  - # a signed integer
+    kind: number
+    signed: true
+  - # a fixed-point number with 10 decimal places
+    kind: number
+    signed: true
+    places: 10
+  - # a number with a label
+    kind: number
+    label: uint8

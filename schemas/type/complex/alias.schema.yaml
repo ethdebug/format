@@ -2,10 +2,16 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/complex/alias"
 
 title: ethdebug/format/type/complex/alias
-description: Schema representing a type alias to another type
+description: |
+  Schema representing a type alias to another type.
+
+  Standard interpretation: the value is read as the `contains` type. An
+  alias does not change how the value is read.
 
 type: object
 properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
   class:
     type: string
     const: complex
@@ -25,8 +31,7 @@ examples:
   - kind: alias
     contains:
       type:
-        kind: uint
-        bits: 256
+        kind: number
 
   - kind: alias
     contains:

@@ -2,15 +2,30 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "schema:ethdebug/format/type/base"
 
 title: ethdebug/format/type/base
-description: Defines the minimally necessary schema for a data type.
+description: |
+  Defines the minimally necessary schema for a data type.
   Types belong to a particular `class` (`"elementary"` or `"complex"`),
   and are further identified by a particular `kind`.
+
+  The base rule (`class` and `contains`) is for kinds that a consumer does
+  not know. It tells such a consumer if a type is elementary or complex,
+  and where its child types are. A consumer dispatches on a known kind by
+  `kind`, not by this rule. Known kinds may omit `class`, and some known
+  complex kinds (e.g., `variant` and `function`) give their child types in
+  other fields. Without `class`, such a type matches the base elementary
+  type here.
 type: object
 oneOf:
   - $ref: "#/$defs/ElementaryType"
   - $ref: "#/$defs/ComplexType"
 
 $defs:
+  Label:
+    title: Type label
+    description: The type as the source language spells it. For display
+      only; no standard interpretation uses this field.
+    type: string
+
   ElementaryType:
     title: Base elementary type
     description: Represents an elementary type (one that does not compose other types)
@@ -21,6 +36,8 @@ $defs:
         const: elementary
       kind:
         type: string
+      label:
+        $ref: "#/$defs/Label"
       contains:
         not:
           description: "Elementary types **must not** specify a `contains` field
@@ -28,14 +45,24 @@ $defs:
     required:
       - kind
     examples:
-      - kind: uint
-        bits: 256
+      - kind: number
+      - kind: number
+        signed: true
+        label: int16
+      - kind: address
+        payable: true
 
   ComplexType:
     title: Base complex type
     description:
       Represents a complex type, one that composes other types (e.g., arrays,
-      structs, mappings)
+      structs, mappings). A complex type gives `contains`, or gives
+      `class` as `complex`, or both. A complex type with `class` and no
+      `contains` is one whose kind states its parts in other fields (e.g.,
+      `variant` has `cases`, and `function` has `parameters` and `returns`).
+      Only known kinds may do this; **ethdebug/format/type** requires a
+      complex type of an unknown kind to give `contains`. When `contains`
+      is present, it follows the rules below.
     type: object
     properties:
       class:
@@ -45,6 +72,8 @@ $defs:
       kind:
         type: string
         description: The specific kind of complex type, e.g., array or struct
+      label:
+        $ref: "#/$defs/Label"
       contains:
         title: Complex type `contains` field
         description:
@@ -57,23 +86,24 @@ $defs:
 
     required:
       - kind
-      - contains
+    anyOf:
+      - required:
+          - contains
+      - required:
+          - class
     examples:
       - kind: array
         contains:
           type:
-            kind: uint
-            bits: 256
+            kind: number
       - kind: struct
         contains:
           - name: x
             type:
-              kind: uint
-              bits: 256
+              kind: number
           - name: y
             type:
-              kind: uint
-              bits: 256
+              kind: number
       - kind: mapping
         contains:
           key:
@@ -82,8 +112,7 @@ $defs:
               payable: true
           value:
             type:
-              kind: uint
-              bits: 256
+              kind: number
 
   TypeWrapper:
     title: '{ "type": ... }'

@@ -1,0 +1,48 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schema:ethdebug/format/type/elementary/flags"
+
+title: ethdebug/format/type/elementary/flags
+description: |
+  Schema describing the representation of a flags type: a set of named
+  flags.
+
+  Standard interpretation: read the bytes of the value as a big-endian
+  unsigned integer. Bit `i` is the bit with the value `2**i` (bit 0 is
+  the least significant bit). If bit `i` is set, `values[i]` is in the
+  set. The value 0 is the empty set. A value with a bit set at or above
+  `values.length` is invalid.
+
+type: object
+properties:
+  label:
+    $ref: "schema:ethdebug/format/type/base#/$defs/Label"
+  class:
+    const: elementary
+  kind:
+    const: flags
+  values:
+    description: The names of the flags, where `values[i]` is bit `i`
+      (the bit with the value `2**i`).
+    type: array
+    items:
+      type: string
+    minItems: 1
+    uniqueItems: true
+  definition:
+    $ref: "schema:ethdebug/format/type/definition"
+required:
+  - kind
+  - values
+examples:
+  - kind: flags
+    values:
+      - READ
+      - WRITE
+      - EXECUTE
+  - kind: flags
+    label: Permissions
+    values:
+      - READ
+      - WRITE
+    definition:
+      name: Permissions

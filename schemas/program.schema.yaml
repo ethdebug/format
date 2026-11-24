@@ -106,8 +106,8 @@ examples:
         - &stored-value
           identifier: storedValue
           type:
-            kind: uint
-            bits: 256
+            kind: number
+            label: uint256
           pointer:
             location: storage
             slot: 0
@@ -127,8 +127,8 @@ examples:
             - &local-value
               identifier: localValue
               type:
-                kind: uint
-                bits: 256
+                kind: number
+                label: uint256
               pointer:
                 location: stack
                 slot: 0

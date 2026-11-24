@@ -15,6 +15,5 @@ else:
   $ref: "schema:ethdebug/format/type"
 
 examples:
-  - kind: uint
-    bits: 256
+  - kind: number
   - id: 42
