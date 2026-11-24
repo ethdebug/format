@@ -19,4 +19,24 @@ describe("convertBugType", () => {
       label: "int8",
     });
   });
+
+  it("labels a dynamic array with its spelling", () => {
+    expect(convertBugType(BugType.array(BugType.Elementary.uint(256)))).toEqual(
+      {
+        kind: "array",
+        label: "array<uint256>",
+        contains: { type: { kind: "number", label: "uint256" } },
+      },
+    );
+  });
+
+  it("labels a fixed-size array with its spelling", () => {
+    expect(
+      convertBugType(BugType.array(BugType.Elementary.uint(8), 3)),
+    ).toEqual({
+      kind: "array",
+      label: "array<uint8, 3>",
+      contains: { type: { kind: "number", label: "uint8" } },
+    });
+  });
 });

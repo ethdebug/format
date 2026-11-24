@@ -48,6 +48,7 @@ export function convertBugType(bugType: BugType): Format.Type | undefined {
 
     return {
       kind: "array",
+      label: BugType.format(bugType),
       contains: {
         type: elementType,
       },
