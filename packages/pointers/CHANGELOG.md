@@ -6,6 +6,14 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `Cursor.Region` has an optional `path`: the names of the named collections
+  that contain the region, outermost first. A named list adds its name and
+  then the element index. `dereference` omits `path` when no named
+  collection contains the region, so pointers without collection names give
+  the same regions as before ([#412]).
+
 ## 0.1.0-preview.3 — 2026-11-19
 
 ### Breaking
@@ -23,11 +31,6 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   region keeps the bytes of its `expression` and has `offset` and `length`
   filled in with their defaults. An expression with no width, or a fragment
   outside the value, throws ([#411]).
-- `Cursor.Region` has an optional `path`: the names of the named collections
-  that contain the region, outermost first. A named list adds its name and
-  then the element index. `dereference` omits `path` when no named
-  collection contains the region, so pointers without collection names give
-  the same regions as before ([#412]).
 
 ### Changed
 

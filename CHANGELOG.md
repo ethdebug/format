@@ -53,22 +53,7 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
-## 0.1.0-draft.3 — 2026-11-19
-
 ### Added
-
-- A region with `"location": "virtual"` holds the bytes of a computed value,
-  e.g., a variable the optimizer removed. It uses the new `fragment`
-  addressing scheme: a width-bearing `expression` supplies the bytes, and
-  optional `offset` and `length` select a range of them ([#411]).
-  - Schemas: **ethdebug/format/pointer/region/virtual**,
-    **ethdebug/format/pointer/scheme/fragment**,
-    **ethdebug/format/pointer/region**
-  - Producers: optional: a pointer may describe a value that no data location
-    stores as a virtual region.
-  - Consumers: required: a region may have `"location": "virtual"`. Its bytes
-    are the fragment of its `expression`'s value, which a consumer must
-    evaluate. A fragment outside the value's bytes is invalid.
 
 - Any pointer collection may have a `name`. A collection's name scopes the
   regions inside it in the result of the pointer, and a named list also scopes
@@ -88,6 +73,23 @@ The sections do not signal obligations; the prefixes do.
     schemas are closed objects (`additionalProperties: false`), so the previous
     version's schemas reject it. A consumer may ignore the name: the regions
     and their names do not change.
+
+## 0.1.0-draft.3 — 2026-11-19
+
+### Added
+
+- A region with `"location": "virtual"` holds the bytes of a computed value,
+  e.g., a variable the optimizer removed. It uses the new `fragment`
+  addressing scheme: a width-bearing `expression` supplies the bytes, and
+  optional `offset` and `length` select a range of them ([#411]).
+  - Schemas: **ethdebug/format/pointer/region/virtual**,
+    **ethdebug/format/pointer/scheme/fragment**,
+    **ethdebug/format/pointer/region**
+  - Producers: optional: a pointer may describe a value that no data location
+    stores as a virtual region.
+  - Consumers: required: a region may have `"location": "virtual"`. Its bytes
+    are the fragment of its `expression`'s value, which a consumer must
+    evaluate. A fragment outside the value's bytes is invalid.
 
 ### Changed
 

@@ -6,6 +6,12 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `Pointer.Collection.Base`, the optional `name` of every kind of
+  collection, with its guard `Pointer.Collection.isBase`. Each collection
+  guard accepts a `name` that is an identifier ([#412]).
+
 ## 0.1.0-draft.3 — 2026-11-19
 
 ### Added
@@ -14,9 +20,6 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   **ethdebug/format/pointer/scheme/fragment** schemas, with the types
   `Pointer.Region.Virtual` and `Pointer.Scheme.Fragment` and their guards
   `Pointer.Region.isVirtual` and `Pointer.Scheme.isFragment` ([#411]).
-- `Pointer.Collection.Base`, the optional `name` of every kind of
-  collection, with its guard `Pointer.Collection.isBase`. Each collection
-  guard accepts a `name` that is an identifier ([#412]).
 
 ### Changed
 
