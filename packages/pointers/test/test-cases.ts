@@ -323,7 +323,7 @@ const namedReferencesTest: ObserveTraceTest<{
           region.path?.length === 1 &&
           region.path[0] === member,
       )!;
-      return Number((await read(region)).asUint());
+      return Number(Raw.asUint(await read(region)));
     };
 
     return {

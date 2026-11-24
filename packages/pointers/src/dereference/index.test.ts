@@ -1186,15 +1186,15 @@ describe("dereference", () => {
       const { regions } = await (await dereference(example)).view(state);
 
       expect([...regions]).toMatchObject([
-        { name: "x", path: ["a"], slot: Data.fromNumber(0) },
-        { name: "y", path: ["a"], slot: Data.fromNumber(0) },
-        { name: "x", path: ["b"], slot: Data.fromNumber(1) },
-        { name: "y", path: ["b"], slot: Data.fromNumber(1) },
+        { name: "x", path: ["a"], slot: Raw.fromNumber(0) },
+        { name: "y", path: ["a"], slot: Raw.fromNumber(0) },
+        { name: "x", path: ["b"], slot: Raw.fromNumber(1) },
+        { name: "y", path: ["b"], slot: Raw.fromNumber(1) },
       ]);
 
       // region-name lookup ignores paths: the last "x" is b's
       expect(regions.named("x")).toHaveLength(2);
-      expect(regions.lookup["x"]).toMatchObject({ slot: Data.fromNumber(1) });
+      expect(regions.lookup["x"]).toMatchObject({ slot: Raw.fromNumber(1) });
     });
 
     it("does not rename collection names with yields", async () => {
@@ -1234,7 +1234,7 @@ describe("dereference", () => {
           ],
         })
       ).view(state);
-      expect(regions.lookup["b"].offset).toEqual(Data.fromNumber(0x40));
+      expect(regions.lookup["b"].offset).toEqual(Raw.fromNumber(0x40));
     });
   });
 });
