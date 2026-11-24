@@ -82,9 +82,15 @@ of three forms:
 All three forms of composition polymorphically use the `"contains"` field.
 
 Some known kinds state their parts in other fields instead (`variant` uses
-`cases`, and `function` uses `parameters` and `returns`). Where such a type
-sits inside an unknown complex kind, it gives `"class": "complex"`. The base
-schema needs `"class"` or `"contains"`, and this type has no `"contains"`.
+`cases`, and `function` uses `parameters` and `returns`). These kinds must not
+give `"contains"`.
+
+The rule that uses `"class"` and `"contains"` is for kinds that a consumer does
+not know. A complex type of an unknown kind **must** give `"class": "complex"`
+and `"contains"`, so the consumer can find its child types. A consumer
+dispatches on a known kind by `"kind"`, not by this rule. Known kinds may omit
+`"class"`, so a `variant` or `function` without `"class"` looks elementary to
+this rule.
 
 As described in
 [Type specifiers, wrappers, and references](#type-specifiers-wrappers-and-references)

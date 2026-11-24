@@ -168,8 +168,9 @@ Flags represent a set of named flags:
 }`}
 </SchemaExample>
 
-The value is read as an unsigned integer. If bit `i` is set, `values[i]` is
-in the set. The value 0 is the empty set.
+The value is read as a big-endian unsigned integer, as for `enum`. Bit `i` is
+the bit with the value `2**i` (bit 0 is the least significant bit). If bit `i`
+is set, `values[i]` is in the set. The value 0 is the empty set.
 
 ## Contract type
 

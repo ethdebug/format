@@ -99,10 +99,16 @@ Types fall into one of two classes:
 - A struct with multiple member types
 - A mapping from one type to another
 
-This distinction is expressed through the presence or absence of a `contains`
-field. Elementary types never have `contains`. Complex types of unknown kinds
-always have `contains`. Some known complex kinds use their own fields instead:
-`function` lists `parameters` and `returns`, and `variant` lists `cases`.
+This distinction is expressed through the `class` field and the presence or
+absence of a `contains` field. Elementary types never have `contains`. Complex
+types of unknown kinds always give `"class": "complex"` and `contains`.
+
+This rule (`class` and `contains`) is for kinds that a consumer does not know.
+A consumer dispatches on a known kind by `kind`. Known kinds may omit `class`,
+and some known complex kinds use their own fields instead of `contains`:
+`function` lists `parameters` and `returns`, and `variant` lists `cases`. A
+`variant` or `function` without `class` thus looks elementary to the rule for
+unknown kinds.
 
 ## The `contains` field for complex types
 

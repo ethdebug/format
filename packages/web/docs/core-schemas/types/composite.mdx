@@ -216,8 +216,16 @@ Variants represent a value that is exactly one of a list of cases:
 </SchemaExample>
 
 Each case has a `name`, a `discriminant`, and an optional `payload` type. The
-active case is the case whose `discriminant` matches the value read for the
-discriminant.
+names of the cases should be unique.
+
+The discriminant is read from the value's bytes as a big-endian unsigned
+integer. Each case's `discriminant` is compared as that integer, so `0` and
+`"0x00"` are the same discriminant. The active case is the case whose
+`discriminant` equals the integer read. If no case matches, the value is
+invalid. Two cases with the same discriminant make the type invalid.
+
+The type gives each case's discriminant and payload type. Where the bytes of
+the discriminant and of the payload are is not part of the type.
 
 ## Using type references
 

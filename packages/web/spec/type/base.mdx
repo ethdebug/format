@@ -72,14 +72,22 @@ unknown types.
 The **ethdebug/format/type/base** schema does not require this field for
 elementary types. A complex base type gives either `class` or `contains`.
 
+The base rule (`class` and `contains`) is for kinds that a consumer does not
+know. It tells such a consumer if a type is elementary or complex, and where
+its child types are. A consumer dispatches on a known kind by `kind`, not by
+this rule. Known kinds may omit `class`, and some known complex kinds give
+their child types in other fields. A `variant` or `function` without `class`
+thus matches the base elementary type.
+
 ### A complex base type `contains` other base types
 
 As described in key concept
 [Elementary vs. complex types](/spec/type/concepts#elementary-vs-complex-types),
 this format allows the representation of types whose definition
 includes other types. Both the primary schema and this base schema
-require an unknown complex kind to give `class` as `"complex"` and, if it
-composes other types, to put them under `contains`. Known kinds have their
+require an unknown complex kind to give `class` as `"complex"`.
+**ethdebug/format/type** also requires it to give `contains`, so a consumer
+that does not know the kind can find its child types. Known kinds have their
 own schemas, and some state their parts in other fields (`variant` uses
 `cases`, and `function` uses `parameters` and `returns`). A complex base type
 gives `contains`, `class`, or both.
