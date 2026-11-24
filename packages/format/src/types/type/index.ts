@@ -43,12 +43,16 @@ export namespace Type {
     typeof value === "object" &&
     !!value &&
     "id" in value &&
-    (typeof value.id === "string" || typeof value.id === "number");
+    (typeof value.id === "string" || typeof value.id === "number") &&
+    Object.keys(value).length === 1;
 
   export type Specifier = Type | Reference;
 
+  // as the schema does, a value with an `id` must be a reference
   export const isSpecifier = (value: unknown): value is Specifier =>
-    isType(value) || isReference(value);
+    typeof value === "object" && !!value && "id" in value
+      ? isReference(value)
+      : isType(value);
 
   export interface Wrapper {
     type: Specifier;
@@ -83,6 +87,9 @@ export namespace Type {
     );
 
   export const isElementary = (value: unknown): value is Elementary =>
+    typeof value === "object" &&
+    !!value &&
+    !("contains" in value) &&
     [
       Elementary.isNumber,
       Elementary.isAddress,

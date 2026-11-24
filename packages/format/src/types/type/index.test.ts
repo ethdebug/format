@@ -272,6 +272,32 @@ describe("rejected values", () => {
         contains: 7,
       },
     },
+    {
+      title: "a number with contains",
+      value: { kind: "number", contains: { type: { kind: "bool" } } },
+    },
+    {
+      title: "a bool with contains",
+      value: { kind: "bool", contains: [] },
+    },
+    {
+      title: "a type reference with more fields",
+      value: {
+        class: "complex",
+        kind: "pair",
+        contains: [{ type: { id: 1, kind: "bool" } }],
+      },
+    },
+    {
+      title: "an external function with a contract reference with more fields",
+      value: {
+        kind: "function",
+        external: true,
+        parameters: [],
+        returns: [],
+        contract: { type: { id: "C", kind: "address" } },
+      },
+    },
   ] as const;
 
   for (const { title, value } of rejected) {
