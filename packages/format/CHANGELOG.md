@@ -23,6 +23,12 @@ tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
   `Complex.Array` has no `count`, `Elementary.Enum.values` is `string[]`,
   and `Complex.Function` has top-level `parameters`, `returns` and
   `contract`. See the root [`CHANGELOG.md`](../../CHANGELOG.md) ([#282]).
+- The type guards reject what the schemas reject. `Type.isUnknown` rejects
+  an unknown complex kind without `contains`. `Type.isElementary` rejects a
+  type with `contains`, and so do `Type.Complex.isVariant` and
+  `Type.Complex.isFunction`. `Type.isReference` rejects a reference with
+  fields other than `id`, and `Type.isSpecifier` treats each value with an
+  `id` as a reference ([#282]).
 
 ## 0.1.0-draft.3 — 2026-11-19
 

@@ -57,8 +57,9 @@ The sections do not signal obligations; the prefixes do.
 
 - The **ethdebug/format/type/elementary/flags** type is new. It is a set of
   named members, with `values` (a list of unique strings) and an optional
-  `definition`. A set bit `i` in the value's bytes means `values[i]` is
-  present. Zero is the empty set. A set bit at or past the length of `values`
+  `definition`. The value's bytes are read as a big-endian unsigned integer,
+  and bit `i` is the bit with the value `2**i`. A set bit `i` means
+  `values[i]` is present. Zero is the empty set. A set bit at or past the length of `values`
   is invalid ([#282]).
   - Schemas: **ethdebug/format/type/elementary/flags**
   - Producers: optional: a type may have kind `flags`.
@@ -68,8 +69,12 @@ The sections do not signal obligations; the prefixes do.
 - The **ethdebug/format/type/complex/variant** type is new. It has `cases`,
   a list of `name`, `discriminant` (an **ethdebug/format/data/value**) and
   optional `payload` (a type wrapper), and an optional `definition`. The type
-  says what each case is. The active case is the one whose `discriminant`
-  matches the value read as the discriminant. No match is invalid ([#282]).
+  gives each case's discriminant and payload type. The discriminant is read
+  as a big-endian unsigned integer, and each case's `discriminant` is
+  compared as that integer, so `0` and `"0x00"` are the same discriminant.
+  The active case is the one whose `discriminant` equals the integer read.
+  No match is invalid. Two cases with the same discriminant make the type
+  invalid. A variant must not have `contains` ([#282]).
   - Schemas: **ethdebug/format/type/complex/variant**
   - Producers: optional: a type may have kind `variant`.
   - Consumers: required: a type may have kind `variant`. A consumer must read
@@ -80,22 +85,29 @@ The sections do not signal obligations; the prefixes do.
 - Every type kind is replaced. A type now says what a value is, and no longer
   says where its bytes are or how many there are. The layout keywords `bits`,
   `size` and `count` are gone, and the integer, fixed-point, address and
-  tuple kinds merge into fewer kinds. The descriptions of most kinds now
-  state their standard interpretation: how a consumer reads a value from the
-  bytes the value occupies. Every type may have an optional `label`, the type
+  tuple kinds merge into fewer kinds. The description of each kind except
+  `function` now states its standard interpretation: how a consumer reads a
+  value from the bytes the value occupies. Every type may have an optional `label`, the type
   as its language spells it (e.g., `uint256`, `bytes32`, `uint8[3]`), for
   display only. Nothing interprets a label. A complex base type may now omit
   `contains` if it gives `class` as `complex`, since the new `variant` and
-  `function` kinds have no `contains` ([#282]).
+  `function` kinds have no `contains`. A complex type of an unknown kind must
+  still give `contains`. The base rule (`class` and `contains`) is for kinds
+  that a consumer does not know; a consumer dispatches on a known kind by
+  `kind` ([#282]).
   - Schemas: **ethdebug/format/type**, **ethdebug/format/type/base**,
     **ethdebug/format/type/elementary**, **ethdebug/format/type/complex**,
     **ethdebug/format/type/specifier**
-  - Producers: required: the kinds below replace the old kinds, and the old
-    kinds no longer validate. See the entries for each kind.
+  - Producers: required: the kinds below replace the old kinds. A type with
+    an old kind validates only as a type of an unknown kind: it must give
+    `class`, and it has no meaning to a consumer. The format reserves no
+    kind names. See the entries for each kind.
   - Consumers: required: producers emit the new kinds. A consumer must read
     them and must not expect the old kinds. See the entries for each kind.
     A consumer that uses **ethdebug/format/type/base** to classify complex
-    types must accept a complex type without `contains`.
+    types must accept a complex type without `contains`. A `variant` or
+    `function` without `class` matches the base elementary type, so a
+    consumer must classify known kinds by `kind`.
 
 - The **ethdebug/format/type/elementary/number** type replaces the `uint`,
   `int`, `ufixed` and `fixed` kinds. It has an optional `signed` (default
@@ -112,8 +124,9 @@ The sections do not signal obligations; the prefixes do.
     **ethdebug/format/type/elementary/ufixed**,
     **ethdebug/format/type/elementary/fixed**
   - Producers: required: the schemas for kinds `uint`, `int`, `ufixed` and
-    `fixed` are removed, so a type with one of those kinds no longer
-    validates. Use kind `number`. The `bits` keyword has no meaning now, and
+    `fixed` are removed. A type with one of those kinds validates only as a
+    type of an unknown kind: it must give `class`, and it has no meaning to a
+    consumer. Use kind `number`. The `bits` keyword has no meaning now, and
     consumers ignore it.
   - Consumers: required: a type with kind `number` is an integer or fixed-point
     number as described. The width comes from the pointer, not the type.
@@ -191,9 +204,8 @@ The sections do not signal obligations; the prefixes do.
   with a `definition` or a type reference. It replaces `contains.contract`.
   Exactly one of `internal` and `external` is true, as before ([#282]).
   - Schemas: **ethdebug/format/type/complex/function**
-  - Producers: required: `returns` is required, so data in the old shape no
-    longer validates. `contains` has no meaning in a function type now, and
-    consumers ignore it.
+  - Producers: required: `returns` is required, and a function type must not
+    have `contains`, so data in the old shape no longer validates.
   - Consumers: required: read `parameters`, `returns` and `contract` at the
     top level of the function type.
 
