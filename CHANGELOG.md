@@ -53,6 +53,27 @@ The sections do not signal obligations; the prefixes do.
 
 ## Unreleased
 
+### Added
+
+- Any pointer collection may have a `name`. A collection's name scopes the
+  regions inside it in the result of the pointer, and a named list also scopes
+  each element by its index. This tells apart regions with the same name, such
+  as those of two references to one template, without `yields`. Expressions do
+  not see collection names ([#412]).
+  - Schemas: **ethdebug/format/pointer/collection**,
+    **ethdebug/format/pointer/collection/group**,
+    **ethdebug/format/pointer/collection/list**,
+    **ethdebug/format/pointer/collection/conditional**,
+    **ethdebug/format/pointer/collection/scope**,
+    **ethdebug/format/pointer/collection/reference**,
+    **ethdebug/format/pointer/collection/templates**
+  - Producers: optional: a pointer may name its collections to scope their
+    regions.
+  - Consumers: required: accept a `name` on any collection. The collection
+    schemas are closed objects (`additionalProperties: false`), so the previous
+    version's schemas reject it. A consumer may ignore the name: the regions
+    and their names do not change.
+
 ## 0.1.0-draft.3 — 2026-11-19
 
 ### Added
@@ -807,5 +828,6 @@ First published version of the specification.
 [#404]: https://github.com/ethdebug/format/pull/404
 [#408]: https://github.com/ethdebug/format/pull/408
 [#411]: https://github.com/ethdebug/format/pull/411
+[#412]: https://github.com/ethdebug/format/pull/412
 [#413]: https://github.com/ethdebug/format/pull/413
 [#420]: https://github.com/ethdebug/format/pull/420

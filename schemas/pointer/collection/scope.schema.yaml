@@ -35,6 +35,9 @@ description: |
 type: object
 
 properties:
+  name:
+    $ref: "schema:ethdebug/format/pointer/collection#/$defs/Name"
+
   define:
     title: Mapping of variables to expression value
     type: object

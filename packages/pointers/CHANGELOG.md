@@ -6,6 +6,14 @@ itself are tracked in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Unreleased
 
+### Added
+
+- `Cursor.Region` has an optional `path`: the names of the named collections
+  that contain the region, outermost first. A named list adds its name and
+  then the element index. `dereference` omits `path` when no named
+  collection contains the region, so pointers without collection names give
+  the same regions as before ([#412]).
+
 ## 0.1.0-preview.3 — 2026-11-19
 
 ### Breaking
@@ -176,3 +184,4 @@ First publication.
 [#325]: https://github.com/ethdebug/format/pull/325
 [#408]: https://github.com/ethdebug/format/pull/408
 [#411]: https://github.com/ethdebug/format/pull/411
+[#412]: https://github.com/ethdebug/format/pull/412
